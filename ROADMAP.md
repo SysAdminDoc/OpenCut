@@ -39,13 +39,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: Every 26.2/26.3 UXP API relevant to the three functions is catalogued with typed evidence per the established adobe_uxp_compatibility workflow; each high-risk function carries a dated verdict (portable now / needs live validation / no UXP equivalent); functions judged portable get a UXP implementation or an explicit blocked entry with the missing piece named; the migration dashboard reclassifies from the new catalogue.
   Complexity: M
 
-- [ ] P1 — F336 — Route long-file transcription through faster-whisper batched inference
-  Why: Upstream's `BatchedInferencePipeline` delivers roughly 4x on long files and `captions.py` only ever calls sequential `model.transcribe(...)` — long-file speed is simultaneously the top user complaint against paid competitors (AutoCut's 15-minute multi-track runs) and the dominant wall-clock cost of every transcript-driven OpenCut workflow.
-  Evidence: grep for `BatchedInferencePipeline` in `opencut/core/captions.py` returns nothing (2026-08-20); https://github.com/SYSTRAN/faster-whisper/releases (batched inference ~4x, VAD speedups); https://www.capterra.com/p/10036511/AutoCut/ (slowness complaints)
-  Touches: `opencut/core/captions.py`, `opencut/core/asr_router.py`, ASR provenance recording, `opencut/utils/config.py`, `tests/`
-  Acceptance: Files above a documented duration threshold route through the batched pipeline when the active backend supports it, preserving word timestamps and segment shape; provenance records batched vs sequential; a long fixture shows a measurable speedup; an opt-out parameter restores sequential decoding; unsupported backends are unaffected.
-  Complexity: M
-
 ### P2
 
 - [ ] P2 — F314 — Make caption burn-in incremental
