@@ -160,6 +160,50 @@ SECURITY_ADVISORIES: tuple[CveAdvisory, ...] = (
     ),
 )
 
+#: Advisories from the same 2026-07-22..24 disclosure batch that are published
+#: against "FFmpeg through 8.1.2" but are **not** graded above, because no
+#: upstream fix commit has been recorded for them here yet. Grading requires a
+#: specific commit whose ancestry can be checked; a plausible-looking hash would
+#: make the gate lie in the most dangerous direction. They are enumerated so the
+#: report can say what it has *not* checked — a clean verdict over a subset must
+#: never read as complete coverage.
+#:
+#: To graduate one: find the upstream fix commit and the date it landed on
+#: master, move it into SECURITY_ADVISORIES with its component and capability
+#: tokens, and delete it here. `tests/test_ffmpeg_cve_matrix.py` enforces that
+#: the two sets stay disjoint and that every graded entry carries a commit.
+UNGRADED_ADVISORIES: tuple[str, ...] = (
+    "CVE-2026-64830",  # VobSub demuxer heap overflow
+    "CVE-2026-64831",  # Vulkan HEVC hwaccel stack overflow
+    "CVE-2026-64834",  # RTP/ASF infinite loop
+    "CVE-2026-65703",
+    "CVE-2026-65704",
+    "CVE-2026-65705",
+    "CVE-2026-65706",  # vf_swaprect out-of-bounds write
+    "CVE-2026-66036",  # vf_hqdn3d out-of-bounds write
+    "CVE-2026-66037",
+    "CVE-2026-66038",
+    "CVE-2026-66039",
+    "CVE-2026-66040",  # native PNG/APNG encoder heap OOB write
+)
+
+
+def advisory_coverage() -> dict:
+    """What the matrix grades, and what it explicitly does not.
+
+    Consumers use this to state scope instead of implying completeness.
+    """
+    graded = [adv.cve for adv in SECURITY_ADVISORIES]
+    return {
+        "graded": graded,
+        "graded_count": len(graded),
+        "ungraded": list(UNGRADED_ADVISORIES),
+        "ungraded_count": len(UNGRADED_ADVISORIES),
+        "total_known": len(graded) + len(UNGRADED_ADVISORIES),
+        "complete": not UNGRADED_ADVISORIES,
+    }
+
+
 # The human-readable version string and exact redistribution inputs the
 # installers pin. Kept here so Python, C#, Inno, Docker, and release metadata
 # all agree on one full snapshot.
@@ -417,9 +461,16 @@ def _matrix_reason(
         extra = f" (+{len(unresolved) - 1} more)" if len(unresolved) > 1 else ""
         return f"{build} does not clear {blocking['cve']}{extra}: {blocking['reason']}"
 
-    parts = [f"{build} clears all {len(advisories)} recorded advisories"]
+    parts = [f"{build} clears all {len(advisories)} graded advisories"]
     if waived:
         parts.append(f"{len(waived)} not applicable to this build ({', '.join(waived)})")
+    if UNGRADED_ADVISORIES:
+        # Say what was not checked. "Clears everything graded" and "is clean"
+        # are different claims, and only the first one is supported here.
+        parts.append(
+            f"{len(UNGRADED_ADVISORIES)} advisories from the same batch are not yet "
+            f"graded and were not checked ({', '.join(UNGRADED_ADVISORIES)})"
+        )
     return "; ".join(parts)
 
 
@@ -443,6 +494,11 @@ def check_security_floor(banner: str, configure_line: str = "") -> dict:
         "reason": "",
         "cves": list(SECURITY_CVES),
         "fix_commits": list(SECURITY_FIX_COMMITS),
+        # `ok` means "clears everything this matrix grades", which is not the
+        # same as "clean". Coverage travels with the verdict so no consumer has
+        # to infer scope.
+        "coverage": advisory_coverage(),
+        "ungraded_cves": list(UNGRADED_ADVISORIES),
     }
 
     if not rec["raw"]:

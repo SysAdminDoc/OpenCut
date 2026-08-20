@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Security - The FFmpeg advisory gate states what it did not check
+
+- The per-CVE matrix graded five advisories and reported a clean verdict, while
+  twelve more from the same July 2026 disclosure batch — published against
+  FFmpeg through 8.1.2, including the Vulkan HEVC and VobSub paths — appeared
+  nowhere in the tree. Grading needs a specific upstream fix commit whose
+  ancestry can be checked, so the ungraded remainder is now enumerated instead
+  of being silently absent. `RESULT: OK` reads "clears all 5 graded advisories"
+  and names the 12 it did not check, the verdict carries machine-readable
+  coverage, and a graded entry without a real fix commit fails the suite.
+
 ### Changed - The project glossary now reaches the decoder
 
 - Glossary terms were applied as find/replace over a finished transcript, so a
