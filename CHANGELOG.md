@@ -5,6 +5,25 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - A caption fix no longer re-renders the whole video
+
+- Editing one caption and burning in again re-encoded the entire timeline,
+  which is the single most repeated complaint about captioning in Premiere.
+  A re-burn now works out which stretches of the video the edit actually
+  changed, re-encodes only those, and copies the rest straight from the
+  previous render, so the untouched footage comes back byte for byte
+  identical. A one-cue edit in a minute of 720p footage finished in about
+  two fifths of the time a full re-render took, and the saving grows with
+  the length of the video.
+- Burn-in output now carries a regular keyframe every couple of seconds.
+  Without it a short render can end up with a single keyframe and there is
+  nowhere to cut, so the first edit would have had to re-render everything
+  anyway.
+- When the edit touches too much of the video to be worth splitting up, or
+  the pieces cannot be joined cleanly, it falls back to a full render and
+  reports why rather than returning a timeline of the wrong length.
+
+
 ### Fixed - Face detection was broken by the OpenCV version OpenCut declares
 
 - OpenCV 5 removed the Haar cascade API and ships no bundled cascade files.
