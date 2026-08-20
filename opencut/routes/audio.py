@@ -453,7 +453,12 @@ def audio_separate(job_id, filepath, data):
     if output_dir:
         output_dir = validate_path(output_dir)
     allowed_demucs = {"htdemucs", "htdemucs_ft", "htdemucs_6s", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q"}
-    allowed_separator = {"mel_band_roformer", "bs_roformer", "scnet", "mdx23c", "htdemucs"}
+    # The restoration checkpoints (F342) are separation models too: they split
+    # an input into wanted and unwanted signal rather than into instruments.
+    allowed_separator = {
+        "mel_band_roformer", "bs_roformer", "scnet", "mdx23c", "htdemucs",
+        "uvr_denoise", "uvr_deverb",
+    }
 
     # Demucs was archived upstream on 2024-04-24; python-audio-separator is the
     # maintained backend and is now the default. A caller that names a
@@ -472,8 +477,17 @@ def audio_separate(job_id, filepath, data):
     if model not in allowed_models:
         raise ValueError(f"Unknown model: {model}. Allowed: {', '.join(sorted(allowed_models))}")
     stems = data.get("stems", ["vocals", "no_vocals"])
-    valid_stems = {"vocals", "drums", "bass", "other", "no_vocals", "guitar", "piano"}
-    stems = [s for s in stems if isinstance(s, str) and s in valid_stems] or ["vocals", "no_vocals"]
+    valid_stems = {
+        "vocals", "drums", "bass", "other", "no_vocals", "guitar", "piano",
+        # Restoration checkpoints emit the unwanted signal and the cleaned one.
+        "noise", "no_noise", "reverb", "no_reverb",
+    }
+    _restoration_defaults = {
+        "uvr_denoise": ["no_noise", "noise"],
+        "uvr_deverb": ["no_reverb", "reverb"],
+    }
+    requested_stems = [s for s in stems if isinstance(s, str) and s in valid_stems]
+    stems = requested_stems or _restoration_defaults.get(model, ["vocals", "no_vocals"])
     output_format = data.get("format", "wav")
     if output_format not in ("wav", "mp3", "flac"):
         output_format = "wav"

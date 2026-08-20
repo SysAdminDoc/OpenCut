@@ -18,12 +18,7 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Note: distinct from the blocked "Localize the Python/CLI backend and add panel locales beyond en/es" item in `Roadmap_Blocked.md` — this ships no new translations and needs no human translator; it is the static refactor that makes that blocked item affordable when it unblocks. The duplicated design-system assets that were part of this item are now covered by `tests/test_shared_panel_assets.py`, and the lint's file-scan boundary is fixed.
   Complexity: M
 
-- [ ] P3 — F350 — Rename the co-named per-panel assets so one filename means one file
-  Why: `backend-client.js`, `command-center.css`, `command-center-layout.css`, and `command-center-tokens.css` each exist under the same name in both panels while being genuinely different implementations (for example `command-center.css` is 2,416 lines in CEP and 2,627 in UXP) — one name for two files at the same cascade position invites edits landing in the wrong panel, which is the failure the shared-asset drift gate cannot catch because these were never copies.
-  Evidence: `tests/test_shared_panel_assets.py` records all four in `panel_specific` with byte comparisons; RESEARCH.md 2026-08-11 named `command-center.css` shipping "as two unrelated files under one name and cascade position"
-  Touches: `extension/com.opencut.panel/client/`, `extension/com.opencut.uxp/`, both `index.html` link/script tags, `scripts/i18n_lint.py` and any build/verification file lists, `tests/test_shared_panel_assets.py`
-  Acceptance: Each per-panel asset carries a name that identifies its panel (or lives under a panel-scoped directory), every referencing tag and tool list is updated, and the entries are removed from `panel_specific` because the collision no longer exists.
-  Complexity: S
+### P2
 
 - [ ] P2 — F348 — Grade the twelve remaining July 2026 FFmpeg advisories
   Why: F332 made the gate honest about its scope — it now reports "5 graded of 17 known" and names the twelve it did not check — but those twelve are still ungraded, so the pinned snapshot's status against the VobSub, Vulkan HEVC, RTP/ASF, `vf_swaprect`, `vf_hqdn3d`, and PNG/APNG encoder paths is unknown rather than clear.
@@ -40,8 +35,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: The UXP cut path builds a `TrackItemSelection`, creates the remove-items Action, and runs it inside `Project.executeTransaction` so the edit is undoable; the existing host-write read-back contract verifies the sequence actually changed; the capability drops `fixture_only` and the migration dashboard reclassifies `ocApplySequenceCuts` from `partial_uxp`; the CEP path stays as fallback until the live-host lane confirms the UXP one.
   Note: writing the code is headless, but confirming it mutates a real 26.x sequence needs the blocked live-Premiere lane — land it behind the existing verification contract so a user's bug report answers it.
   Complexity: M
-
-### P2
 
 - [ ] P2 — F314 — Make caption burn-in incremental
   Why: The most-repeated Premiere captioning complaint is that a small caption change forces a full timeline re-render; OpenCut burns captions with a whole-file FFmpeg re-encode, so it inherits the same cost and has an unclaimed differentiator available.
@@ -101,20 +94,13 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: Cut generation accepts wide-shot cadence (a wide angle every N cuts or T seconds), a cut-on-interruption toggle, and per-speaker track weighting, with current defaults unchanged; a fixture proves cuts generate from a single mixed-audio track and the README/docs state it; grammar settings flow through both the cut list and the multicam XML export.
   Complexity: M
 
-- [ ] P2 — F342 — Add de-reverb and denoise separation checkpoints through the pinned audio-separator
-  Why: The pinned `audio-separator` dependency exposes UVR-family de-reverb and denoise checkpoints beyond music stems, competitors sell the equivalent as metered "studio sound", and OpenCut's separator registry lists music-stem models only — so this is a registry entry on an existing dependency, the same shape as F316.
-  Evidence: https://github.com/nomadkaraoke/python-audio-separator (de-reverb/denoise/karaoke checkpoint registry, pushed 2026-07-20); `opencut/core/engine_registry.py` separator entries (music stems only); F316 precedent
-  Touches: `opencut/core/engine_registry.py`, `opencut/routes/audio.py`, `opencut/checks.py`, `opencut/model_cards.py`, `tests/`
-  Acceptance: De-reverb and denoise checkpoints are selectable through the existing backend/engine parameter with probed availability; model identifiers and licences are recorded on cards per the existing convention; current defaults are unchanged.
-  Complexity: S
-
 ### P3
 
-- [ ] P3 — F316 — Add Mel-Band RoFormer to the separator engine registry
-  Why: The engine registry offers Demucs, BS-RoFormer, and MDX-Net; Mel-Band RoFormer reports higher separation quality than BS-RoFormer on vocals and drums and is already reachable through the pinned `audio-separator` dependency, so this is a registry entry rather than a new dependency.
-  Evidence: `opencut/core/engine_registry.py:466-469` (BS-RoFormer entry, no Mel-Band variant); `audio-separator>=0.44,<1` in `pyproject.toml`; https://arxiv.org/abs/2310.01809
-  Touches: `opencut/core/engine_registry.py`, `opencut/routes/audio.py`, `opencut/checks.py`, `tests/`
-  Acceptance: The model is selectable through the existing `backend`/engine parameter, availability is probed rather than assumed, current defaults are unchanged, and the registry entry records the model identifier and licence alongside the existing entries.
+- [ ] P3 — F350 — Rename the co-named per-panel assets so one filename means one file
+  Why: `backend-client.js`, `command-center.css`, `command-center-layout.css`, and `command-center-tokens.css` each exist under the same name in both panels while being genuinely different implementations (for example `command-center.css` is 2,416 lines in CEP and 2,627 in UXP) — one name for two files at the same cascade position invites edits landing in the wrong panel, which is the failure the shared-asset drift gate cannot catch because these were never copies.
+  Evidence: `tests/test_shared_panel_assets.py` records all four in `panel_specific` with byte comparisons; RESEARCH.md 2026-08-11 named `command-center.css` shipping "as two unrelated files under one name and cascade position"
+  Touches: `extension/com.opencut.panel/client/`, `extension/com.opencut.uxp/`, both `index.html` link/script tags, `scripts/i18n_lint.py` and any build/verification file lists, `tests/test_shared_panel_assets.py`
+  Acceptance: Each per-panel asset carries a name that identifies its panel (or lives under a panel-scoped directory), every referencing tag and tool list is updated, and the entries are removed from `panel_specific` because the collision no longer exists.
   Complexity: S
 
 - [ ] P3 — F317 — Adopt PEP 751 `pylock.toml` and PEP 639 SPDX licence metadata
