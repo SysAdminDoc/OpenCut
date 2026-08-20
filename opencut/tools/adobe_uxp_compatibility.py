@@ -293,6 +293,39 @@ API_CATALOGUE = (
         fallback="Return an empty clip selection.",
         aliases=("Sequence.getSelection",),
     ),
+    # F337 (2026-08-20) — the typed successor to `ocApplySequenceCuts`, verified
+    # against the pinned @adobe/premierepro 26.3.0 typings
+    # (`src/premierepro.d.ts:3203-3232`). The editor is obtained with
+    # `SequenceEditor.getEditor(sequence)`, then
+    # `createRemoveItemsAction(trackItemSelection, ripple, mediaType,
+    # shiftOverLapping?) : Action`. Unlike the bare `sequence.rippleDelete()`
+    # call — which premiere-pro-mcp #21 measured returning success while
+    # mutating nothing on 26.3 — this is an undoable Action run through
+    # `Project.executeTransaction`, so its effect is observable and reversible.
+    # Catalogued as migration evidence, not yet consumed by either panel: the
+    # cut path still runs through CEP until F252's live-host lane unblocks, so
+    # these are fixture_only exactly like Sequence.setSelection below.
+    _capability(
+        "SequenceEditor.getEditor",
+        "SequenceEditor",
+        "getEditor",
+        sync_async="sync",
+        fallback="Report the UXP cut path unavailable and keep the CEP fallback.",
+        aliases=("SequenceEditor.getEditor",),
+        fixture_only=True,
+    ),
+    _capability(
+        "SequenceEditor.createRemoveItemsAction",
+        "SequenceEditor",
+        "createRemoveItemsAction",
+        sync_async="sync",
+        fallback=(
+            "Fall back to the CEP ExtendScript cut path and report the UXP "
+            "capability as unavailable."
+        ),
+        aliases=("SequenceEditor.createRemoveItemsAction",),
+        fixture_only=True,
+    ),
     _capability(
         "Sequence.setSelection",
         "Sequence",
