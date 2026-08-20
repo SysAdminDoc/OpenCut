@@ -72,13 +72,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: Installation documentation states plainly that artifacts are unsigned, shows the exact SmartScreen path to proceed, and gives the verification command; the release gate emits SHA-256 digests for every artifact into the release metadata so the published digests can be checked against the download.
   Complexity: S
 
-- [ ] P3 — F329 — Document the Premiere 2026 "Extensions (Legacy)" location and probe it at install time
-  Why: Premiere 2026 moved CEP panels under a separate **Extensions (Legacy)** menu, and neither the README nor `docs/` mentions it anywhere — this is the most predictable support question for a CEP-primary product and it has already stranded two comparable projects publicly with "extension not loading" reports that were really menu-location confusion.
-  Evidence: grep for "Legacy" across `README.md` and `docs/*.md` returns nothing; `README.md:65` claims CEP support for "Premiere Pro 2019 or later" with no version-specific note; https://github.com/tmoroney/auto-subs/issues/571 (2026-06-06, extension absent from Window > Extensions on PPro 2026); https://github.com/leancoderkavy/premiere-pro-mcp/issues/14
-  Touches: `README.md`, `docs/` (installation guidance), `Install.ps1`, `install.py`, `OpenCut.iss`, `installer/src/OpenCut.Installer/Services/InstallEngine.cs`
-  Acceptance: Installation documentation states where the panel appears on Premiere 2026+ versus earlier versions; the installer reports the detected Premiere major version and the expected menu path in its completion output; the same sentence appears in the panel's own connection-failure guidance.
-  Complexity: S
-
 - [ ] P3 — F331 — Pin OpenTimelineIO against the 0.19 bundle rewrite and contract-test the export path
   Why: The declared ceiling `opentimelineio>=0.17,<1` will silently admit 0.19, which moves `otioz`/`otiod` bundle handling out of Python into the C++ core — a behaviour change to a shipped export path — and the project has already been bitten once by an OTIO minor bump renaming `MediaReferencePolicy` enum members between 0.15 and 0.17.
   Evidence: `pyproject.toml:170,230`; `opencut/export/otio_export.py:547,566-567` (the enum-naming workaround); `opencut/export/otio_compat.py` reports the runtime version but pins and asserts nothing; https://github.com/AcademySoftwareFoundation/OpenTimelineIO/releases (0.18.1, 2025-11-09, still flagged prerelease, no release in 9 months)
@@ -91,13 +84,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Evidence: commit 72a795b6 (7 files, 4,137 insertions for ~70 lines of real content; `git diff --ignore-cr-at-eol --stat` reports 15/1/49); `.gitattributes` covers only 4 shell-script patterns; `git config core.autocrlf` is `false`; CLAUDE.md already records "CEP `main.js` is mixed CRLF/LF"; the 2026-08-12 in-flight refactor showed the same flip on `model_cards.py` and `dump_feature_readiness.py`
   Touches: `.gitattributes`, then a single mechanical `git add --renormalize .` pass
   Acceptance: `.gitattributes` declares the text/eol policy for the source types this repo actually edits (`*.py`, `*.js`, `*.json`, `*.md`, `*.css`, `*.html`, `*.jsx`) with binary types excluded; one renormalization commit lands separately from any content change and is labelled as mechanical; after it, editing one line in `en.json` produces a one-line diff; run it only when no other session has uncommitted work.
-  Complexity: S
-
-- [ ] P3 — F343 — Refresh the naming and positioning section against the OpenCut-app relaunch
-  Why: The README naming section still cites ~48K stars and says "when it relaunches", but the unrelated web OpenCut reached 85K stars, merged its ground-up rewrite around 2026-07-14 with a plugin store, headless rendering, and MCP direction, and carries an active name-infringement thread — the discoverability risk the section exists to manage grew while its facts went stale.
-  Evidence: `README.md` naming section ("~48K stars", "when it relaunches"); GitHub API star count 85,234 (2026-08-20); https://explainx.ai/blog/opencut-rewrite-plugins-headless-mcp-2026; https://github.com/OpenCut-app/OpenCut (issue #192, name infringement)
-  Touches: `README.md` (naming section and lede), repo description, `pyproject.toml` description
-  Acceptance: The section states the current facts with dates, keeps the `opencut-ppro` distribution decision, and the disambiguating phrase ("OpenCut for Premiere Pro") appears in the repo description and README lede; the prose follows the project's public-writing voice rules.
   Complexity: S
 
 - [ ] P3 — F344 — Rank repeat clusters with a best-take recommendation

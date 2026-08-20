@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Say where the panel actually appears on Premiere 2026
+
+- Premiere 2026 moved CEP panels to their own **Extensions (Legacy)** menu, so
+  an install that worked perfectly looks like it failed: the plain Extensions
+  menu is empty. Nothing in the docs mentioned it, and the same confusion has
+  been filed as a bug against comparable projects. The launch steps, the
+  troubleshooting section, and both installers' completion output now name the
+  2026 menu path alongside the older one. The naming section was also refreshed
+  against the unrelated browser-based OpenCut, which is now around 85K stars
+  and no longer "relaunching".
+
 ### Added - A guardrail against cut lists that make the timeline unusable
 
 - Aggressive silence settings on a long recording produce thousands of tiny
