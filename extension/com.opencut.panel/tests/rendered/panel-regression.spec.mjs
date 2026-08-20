@@ -875,8 +875,8 @@ test("panel styles use the compact radius scale without pill geometry", async ()
     new URL("../../client/command-center.css", import.meta.url),
     new URL("../../client/studio-workbench-v2.css", import.meta.url),
     new URL("../../../com.opencut.uxp/style.css", import.meta.url),
-    new URL("../../../com.opencut.uxp/command-center-layout.css", import.meta.url),
-    new URL("../../../com.opencut.uxp/command-center.css", import.meta.url),
+    new URL("../../../com.opencut.uxp/uxp-command-center-layout.css", import.meta.url),
+    new URL("../../../com.opencut.uxp/uxp-command-center.css", import.meta.url),
     new URL("../../../com.opencut.uxp/studio-workbench-v2.css", import.meta.url),
   ];
   const allowed = new Set([0, 4, 6, 8, 10, 12]);
