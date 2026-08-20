@@ -18,7 +18,7 @@
       }
     }
   },
-  "generated_at": "2026-08-20T19:34:36Z",
+  "generated_at": "2026-08-20T22:51:42Z",
   "homepage": "https://github.com/SysAdminDoc/OpenCut",
   "install": {
     "command": "pip install \"opencut[mcp]\"",
@@ -444,5 +444,5 @@
     "stdio",
     "http"
   ],
-  "version": "1.48.0"
+  "version": "1.49.0"
 }
