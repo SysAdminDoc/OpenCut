@@ -58,6 +58,13 @@ class CaptionConfig:
     # Optional bounds for diarisation (None = auto)
     min_speakers: Optional[int] = None
     max_speakers: Optional[int] = None
+    # Batched faster-whisper inference. Upstream reports roughly 4x on long
+    # audio; the win does not pay for the extra VRAM on short clips, so it
+    # engages only past `batch_threshold_seconds`. Set `batched` to False to
+    # force the sequential decoder.
+    batched: bool = True
+    batch_size: int = 8
+    batch_threshold_seconds: float = 600.0
 
 
 @dataclass

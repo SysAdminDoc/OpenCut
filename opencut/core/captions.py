@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..errors import OpenCutError
+from ..helpers import get_video_info
+from ..security import safe_bool
 from ..utils.config import CaptionConfig
 from . import transcript_cache
 from .asr_provenance import (
@@ -546,6 +548,9 @@ def _backend_provenance(
     device: str,
     compute_type: str,
     fallback_reason: str = "",
+    decode_mode: str = "",
+    decode_reason: str = "",
+    batch_size: int = 0,
 ) -> ASRProvenance:
     provenance = build_provenance(
         engine=engine,
@@ -562,6 +567,17 @@ def _backend_provenance(
     )
     provenance.device = device
     provenance.compute_type = compute_type
+    if decode_mode:
+        # Batched and sequential decoding can segment the same audio
+        # differently, so the transcript has to say which one produced it.
+        provenance.deterministic_options.update(
+            {
+                "decode_mode": decode_mode,
+                "decode_mode_reason": decode_reason,
+            }
+        )
+        if decode_mode == "batched" and batch_size:
+            provenance.deterministic_options["batch_size"] = batch_size
     apply_language_decision(provenance, language)
     return provenance
 
@@ -1039,6 +1055,87 @@ def _download_model(model_name: str, requested_revision: Optional[str] = None):
         logger.warning(f"Model download via huggingface_hub failed: {e}")
 
 
+# Below this the batching overhead outweighs the win, and short clips are the
+# common interactive case where extra VRAM is least welcome.
+BATCH_MIN_THRESHOLD_SECONDS = 60.0
+BATCH_SIZE_MAX = 32
+
+
+def plan_batched_inference(config: CaptionConfig, audio_path: str) -> dict:
+    """Decide whether this file transcribes through the batched pipeline.
+
+    Returns the decision plus the reason, which is recorded in ASR provenance
+    so a transcript says how it was produced.
+    """
+    batch_size = _clamp_batch_size(getattr(config, "batch_size", 8))
+    plan = {"batched": False, "batch_size": batch_size, "reason": "", "duration": 0.0}
+
+    if not safe_bool(getattr(config, "batched", True), True):
+        plan["reason"] = "disabled by request"
+        return plan
+
+    threshold = getattr(config, "batch_threshold_seconds", 600.0)
+    try:
+        threshold = float(threshold)
+    except (TypeError, ValueError):
+        threshold = 600.0
+    if threshold != threshold:  # NaN
+        threshold = 600.0
+    threshold = max(BATCH_MIN_THRESHOLD_SECONDS, threshold)
+
+    duration = _audio_duration_seconds(audio_path)
+    plan["duration"] = duration
+    if duration <= 0:
+        # An unreadable duration is not a reason to change decoding behaviour.
+        plan["reason"] = "duration unknown"
+        return plan
+    if duration < threshold:
+        plan["reason"] = f"shorter than {threshold:.0f}s threshold"
+        return plan
+
+    plan["batched"] = True
+    plan["reason"] = f"{duration:.0f}s at or above {threshold:.0f}s threshold"
+    return plan
+
+
+def _clamp_batch_size(value) -> int:
+    try:
+        size = int(value)
+    except (TypeError, ValueError):
+        return 8
+    return max(1, min(size, BATCH_SIZE_MAX))
+
+
+def _audio_duration_seconds(audio_path: str) -> float:
+    """Duration of the prepared WAV, or 0.0 when it cannot be determined."""
+    try:
+        import wave
+
+        with wave.open(audio_path, "rb") as handle:
+            rate = handle.getframerate()
+            if rate:
+                return handle.getnframes() / float(rate)
+    except Exception:  # noqa: BLE001 - fall through to ffprobe
+        pass
+    try:
+        return float(get_video_info(audio_path).get("duration") or 0.0)
+    except Exception:  # noqa: BLE001 - duration is advisory only
+        return 0.0
+
+
+def _batched_pipeline(model):
+    """Wrap *model* in faster-whisper's batched pipeline, or None if absent."""
+    try:
+        from faster_whisper import BatchedInferencePipeline
+    except ImportError:
+        return None
+    try:
+        return BatchedInferencePipeline(model=model)
+    except Exception as exc:  # noqa: BLE001 - never fail a job over a speed path
+        logger.warning("Could not construct BatchedInferencePipeline: %s", exc)
+        return None
+
+
 def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> TranscriptionResult:
     """Transcribe using faster-whisper (CTranslate2 backend)."""
     from faster_whisper import WhisperModel
@@ -1221,31 +1318,56 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
 
     logger.info(f"Starting transcription of {wav_path}")
 
-    try:
-        # Also wrap transcription in case CUDA fails mid-process
-        try:
-            result_segments, info = model.transcribe(
-                wav_path,
-                language=config.language,
-                task=task,
-                word_timestamps=config.word_timestamps,
-                vad_filter=True,
-            )
-            # Consume the generator to catch any CUDA errors during processing
-            result_segments = list(result_segments)
-        except RuntimeError as e:
-            if _is_cuda_backend_error(e):
-                failed_compute_type = compute_type
-                model = _retry_with_cpu(e, "inference")
+    batch_plan = plan_batched_inference(config, wav_path)
+    batch_size = batch_plan["batch_size"]
+
+    def _run_transcribe(active_model):
+        """Transcribe with the batched pipeline when this file earns it.
+
+        Falls back to the sequential decoder if the installed faster-whisper
+        predates BatchedInferencePipeline or refuses the batched call, so an
+        older wrapper degrades in speed rather than failing the job.
+        """
+        if batch_plan["batched"]:
+            pipeline = _batched_pipeline(active_model)
+            if pipeline is not None:
                 try:
-                    result_segments, info = model.transcribe(
+                    segs, inf = pipeline.transcribe(
                         wav_path,
                         language=config.language,
                         task=task,
                         word_timestamps=config.word_timestamps,
                         vad_filter=True,
+                        batch_size=batch_size,
                     )
-                    result_segments = list(result_segments)
+                    return list(segs), inf, "batched"
+                except RuntimeError:
+                    # CUDA faults must reach the CPU-retry path unchanged.
+                    raise
+                except Exception as exc:  # noqa: BLE001 - speed feature must never fail a job
+                    logger.warning(
+                        "Batched inference unavailable (%s); using the sequential decoder.",
+                        exc,
+                    )
+        segs, inf = active_model.transcribe(
+            wav_path,
+            language=config.language,
+            task=task,
+            word_timestamps=config.word_timestamps,
+            vad_filter=True,
+        )
+        return list(segs), inf, "sequential"
+
+    try:
+        # Also wrap transcription in case CUDA fails mid-process
+        try:
+            result_segments, info, decode_mode = _run_transcribe(model)
+        except RuntimeError as e:
+            if _is_cuda_backend_error(e):
+                failed_compute_type = compute_type
+                model = _retry_with_cpu(e, "inference")
+                try:
+                    result_segments, info, decode_mode = _run_transcribe(model)
                 except Exception as fallback_error:  # noqa: BLE001 - convert to typed backend failure
                     raise TranscriptionBackendError(
                         architecture=selected_architecture,
@@ -1299,6 +1421,9 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 device=device,
                 compute_type=compute_type,
                 fallback_reason=runtime_fallback_reason,
+                decode_mode=decode_mode,
+                decode_reason=batch_plan["reason"],
+                batch_size=batch_size,
             ),
         )
     finally:

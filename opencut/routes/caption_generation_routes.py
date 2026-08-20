@@ -84,6 +84,8 @@ def generate_captions(job_id, filepath, data):
         model_revision=model_revision,
         language=language,
         word_timestamps=word_timestamps,
+        # Long files decode through the batched pipeline unless asked not to.
+        batched=safe_bool(data.get("batched", True), True),
     )
 
     force_retranscribe = safe_bool(data.get("force_retranscribe", False), False)

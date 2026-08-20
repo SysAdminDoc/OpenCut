@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Long files transcribe through batched inference
+
+- faster-whisper's batched pipeline now decodes audio at or above ten minutes,
+  where upstream reports roughly a 4x speedup and where transcription cost
+  actually lands. Short clips keep the sequential decoder, since batching there
+  buys little and spends VRAM. `batched: false` forces sequential, and
+  `batch_size` / `batch_threshold_seconds` tune the policy. The transcript's
+  ASR provenance records which decoder ran and why, because batched and
+  sequential decoding can segment the same audio differently. A faster-whisper
+  without the batched pipeline transcribes at the old speed instead of failing.
+
 ### Fixed - Cut boundaries no longer click
 
 - Rendering a cut splices two non-adjacent waveforms sample-to-sample, and
