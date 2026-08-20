@@ -34,11 +34,81 @@ class TimeSegment:
         return f"TimeSegment({self.start:.3f}s - {self.end:.3f}s, {self.duration:.3f}s, '{self.label}')"
 
 
+def clamp_segments_to_range(
+    segments: List[TimeSegment],
+    start: Optional[float] = None,
+    end: Optional[float] = None,
+) -> List[TimeSegment]:
+    """Keep only the parts of *segments* that fall inside ``[start, end]``.
+
+    Timestamps stay absolute to the source, so a caller can hand the result
+    straight to the timeline without re-basing anything. A silence that
+    straddles the boundary is trimmed rather than dropped — the part inside the
+    selection is still silence the user asked about.
+    """
+    if start is None and end is None:
+        return list(segments)
+
+    lo = float(start) if start is not None else float("-inf")
+    hi = float(end) if end is not None else float("inf")
+    if hi < lo:
+        lo, hi = hi, lo
+
+    clamped: List[TimeSegment] = []
+    for seg in segments:
+        new_start = max(seg.start, lo)
+        new_end = min(seg.end, hi)
+        if new_end > new_start:
+            clamped.append(
+                TimeSegment(
+                    start=new_start,
+                    end=new_end,
+                    label=getattr(seg, "label", ""),
+                )
+            )
+    return clamped
+
+
+def tighten_silences(
+    segments: List[TimeSegment],
+    target_duration: float,
+) -> List[dict]:
+    """Shorten each silence to *target_duration* instead of removing it.
+
+    Editors repeatedly ask for "shorten my pauses to N seconds" rather than
+    "delete them": removing a pause entirely changes the rhythm of speech,
+    while tightening keeps it and just stops the dead air being dead. Returns
+    one plan entry per silence; silences already at or under the target are
+    reported with ``trim: 0.0`` so a caller can show them as untouched.
+    """
+    target = max(0.0, float(target_duration))
+    plan: List[dict] = []
+    for seg in segments:
+        duration = max(0.0, seg.end - seg.start)
+        trim = max(0.0, duration - target)
+        plan.append(
+            {
+                "start": seg.start,
+                "end": seg.end,
+                "duration": duration,
+                "keep_duration": min(duration, target),
+                # The span actually removed, anchored at the end of the pause so
+                # the speech before it keeps its original timing.
+                "trim": trim,
+                "trim_start": seg.start + min(duration, target),
+                "trim_end": seg.end,
+            }
+        )
+    return plan
+
+
 def detect_silences(
     filepath: str,
     threshold_db: float = -30.0,
     min_duration: float = 0.5,
     file_duration: float = 0.0,
+    range_start: Optional[float] = None,
+    range_end: Optional[float] = None,
 ) -> List[TimeSegment]:
     """
     Detect silent segments in an audio/video file using FFmpeg.
@@ -50,6 +120,10 @@ def detect_silences(
         min_duration: Minimum silence duration in seconds to detect.
         file_duration: Pre-probed file duration to avoid redundant ffprobe calls.
                        If 0, will probe the file.
+        range_start: Optional in-point in seconds. Silences are reported only
+                     from here onward, with timestamps still absolute to the
+                     source, so a sequence selection can be honoured.
+        range_end: Optional out-point in seconds.
 
     Returns:
         List of TimeSegment objects representing silent regions.
@@ -133,13 +207,15 @@ def detect_silences(
         if end > start:
             silences.append(TimeSegment(start=start, end=end, label="silence"))
 
-    return silences
+    return clamp_segments_to_range(silences, range_start, range_end)
 
 
 def detect_silences_vad(
     filepath: str,
     min_duration: float = 0.5,
     file_duration: float = 0.0,
+    range_start: Optional[float] = None,
+    range_end: Optional[float] = None,
 ) -> List[TimeSegment]:
     """
     Detect silent segments using Silero VAD (neural voice activity detection).
@@ -244,7 +320,7 @@ def detect_silences_vad(
                 label="silence",
             ))
 
-        return silences
+        return clamp_segments_to_range(silences, range_start, range_end)
     finally:
         # Clean up temp file
         if tmp_wav is not None:
@@ -292,6 +368,8 @@ def detect_speech(
     method: str = "energy",
     smart_pause: bool = False,
     transcript_segments: Optional[List[dict]] = None,
+    range_start: Optional[float] = None,
+    range_end: Optional[float] = None,
 ) -> List[TimeSegment]:
     """
     Detect speech segments by inverting silence detection results.
@@ -309,6 +387,10 @@ def detect_speech(
             after sentence-ending speech) instead of cutting them.
         transcript_segments: Optional transcript ``[{start, end, text}]``
             for context-aware smart-pause classification.
+        range_start: Optional in-point. Silence is only looked for from here on,
+            so media outside the selection inverts into one continuous speech
+            segment and is left exactly as it was.
+        range_end: Optional out-point, same contract as ``range_start``.
 
     Returns:
         List of TimeSegment objects representing speech regions.
@@ -332,6 +414,8 @@ def detect_speech(
             filepath,
             min_duration=config.min_duration,
             file_duration=total_duration,
+            range_start=range_start,
+            range_end=range_end,
         )
     elif method == "auto":
         try:
@@ -339,6 +423,8 @@ def detect_speech(
                 filepath,
                 min_duration=config.min_duration,
                 file_duration=total_duration,
+                range_start=range_start,
+                range_end=range_end,
             )
             logger.info("Using Silero VAD for silence detection")
         except ImportError as e:
@@ -348,6 +434,8 @@ def detect_speech(
                 threshold_db=config.threshold_db,
                 min_duration=config.min_duration,
                 file_duration=total_duration,
+                range_start=range_start,
+                range_end=range_end,
             )
         except Exception as e:  # noqa: BLE001 — VAD runtime failure must not kill the job
             # Log with full stack trace at debug level so real bugs surface
@@ -359,6 +447,8 @@ def detect_speech(
                 threshold_db=config.threshold_db,
                 min_duration=config.min_duration,
                 file_duration=total_duration,
+                range_start=range_start,
+                range_end=range_end,
             )
     else:
         # Default: energy-based (FFmpeg silencedetect)
@@ -367,6 +457,8 @@ def detect_speech(
             threshold_db=config.threshold_db,
             min_duration=config.min_duration,
             file_duration=total_duration,
+            range_start=range_start,
+            range_end=range_end,
         )
 
     if smart_pause:

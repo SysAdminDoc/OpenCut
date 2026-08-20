@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Silence work can be scoped to in/out points, or tighten instead of cut
+
+- Silence detection took no time range, so it always spanned the whole file and
+  a sequence selection could not be honoured. Detection now accepts optional
+  in/out points and reports only silences inside them, with timestamps still
+  absolute to the source; media outside the selection inverts into one
+  continuous speech segment and is left exactly as it was. A tighten mode
+  shortens each pause to a target duration instead of removing it, keeping the
+  rhythm of speech while dropping the dead air, and anchors the kept portion at
+  the head of the pause so preceding speech never moves.
+
 ### Security - A newer FFmpeg release is no longer assumed to carry older fixes
 
 - The advisory gate accepted any release numerically above the last affected

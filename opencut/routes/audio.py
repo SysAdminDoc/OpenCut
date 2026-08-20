@@ -113,11 +113,29 @@ def silence_remove(job_id, filepath, data):
     _file_info = _probe_media(filepath)
     _file_dur = _file_info.duration if _file_info else 0.0
 
+    # Optional in/out points, so a sequence selection can be honoured instead of
+    # always working the whole file. Absent values leave behaviour unchanged.
+    range_start = data.get("range_start")
+    range_end = data.get("range_end")
+    range_start = safe_float(range_start, 0.0, min_val=0.0) if range_start is not None else None
+    range_end = safe_float(range_end, 0.0, min_val=0.0) if range_end is not None else None
+
     method_label = "Silero VAD" if detection_method == "vad" else ("auto (VAD → energy fallback)" if detection_method == "auto" else "energy threshold")
     if smart_pause:
         method_label += " + smart pause"
+    if range_start is not None or range_end is not None:
+        method_label += f" in [{range_start if range_start is not None else 0:.2f}, " \
+                        f"{range_end if range_end is not None else _file_dur:.2f}]"
     _update_job(job_id, progress=15, message=f"Detecting silences via {method_label}...")
-    segments = detect_speech(filepath, config=scfg, file_duration=_file_dur, method=detection_method, smart_pause=smart_pause)
+    segments = detect_speech(
+        filepath,
+        config=scfg,
+        file_duration=_file_dur,
+        method=detection_method,
+        smart_pause=smart_pause,
+        range_start=range_start,
+        range_end=range_end,
+    )
 
     if _is_cancelled(job_id):
         return
