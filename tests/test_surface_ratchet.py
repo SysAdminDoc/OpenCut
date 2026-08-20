@@ -248,6 +248,48 @@ def test_cli_json_carries_the_whole_report():
     assert payload["largest_integration_only_families"]
 
 
+def _stale_baseline(tmp_path, manifest, **overrides) -> Path:
+    recorded = build_baseline(manifest)
+    recorded.update(overrides)
+    path = tmp_path / "surface_ratchet.json"
+    path.write_text(json.dumps(recorded, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
+def test_cli_check_exits_non_zero_when_the_ratio_has_fallen(tmp_path, manifest, baseline):
+    """A gate proven only in-process is not proven where it actually runs."""
+    stale = _stale_baseline(
+        tmp_path, manifest, coverage_floor_percent=baseline["coverage_floor_percent"] + 10.0
+    )
+
+    result = _cli("--check", "--baseline", str(stale))
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "fell to" in result.stdout
+    # The operator needs to know which families to look at, not just that it failed.
+    assert "largest integration-only families" in result.stdout
+
+
+def test_cli_check_exits_non_zero_when_a_family_has_grown(tmp_path, manifest, baseline):
+    ceilings = dict(baseline["family_ceilings"])
+    name = max(ceilings, key=lambda key: ceilings[key])
+    ceilings[name] = 1
+    stale = _stale_baseline(tmp_path, manifest, family_ceilings=ceilings)
+
+    result = _cli("--check", "--baseline", str(stale))
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert f"blueprint '{name}' grew from 1" in result.stdout
+
+
+def test_cli_check_exits_non_zero_when_the_baseline_is_deleted(tmp_path):
+    """Removing the baseline must not be a way to silence the gate."""
+    result = _cli("--check", "--baseline", str(tmp_path / "absent.json"))
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "baseline is missing" in result.stdout
+
+
 def test_the_release_gate_runs_the_ratchet():
     source = (REPO_ROOT / "scripts" / "release_smoke.py").read_text(encoding="utf-8")
 
