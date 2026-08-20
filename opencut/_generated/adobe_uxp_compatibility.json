@@ -26,7 +26,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 550,
+          "line": 555,
           "symbol": "module.import"
         }
       ],
@@ -78,27 +78,27 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 566,
+          "line": 571,
           "symbol": "module.app.getProjectList"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1242,
+          "line": 1376,
           "symbol": "module.app.getProjectList"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1309,
+          "line": 1443,
           "symbol": "module.app.getProjectList"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1353,
+          "line": 1487,
           "symbol": "module.app.getProjectList"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1723,
+          "line": 1857,
           "symbol": "module.app.getProjectList"
         }
       ],
@@ -130,7 +130,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1728,
+          "line": 1862,
           "symbol": "Project.getActiveSequence"
         }
       ],
@@ -189,17 +189,17 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1245,
+          "line": 1379,
           "symbol": "Project.getRootItem"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1312,
+          "line": 1446,
           "symbol": "Project.getRootItem"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1356,
+          "line": 1490,
           "symbol": "Project.getRootItem"
         }
       ],
@@ -231,12 +231,12 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1379,
+          "line": 1513,
           "symbol": "Project.importFiles"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1444,
+          "line": 1578,
           "symbol": "Project.importFiles"
         }
       ],
@@ -263,12 +263,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1374,
+          "line": 1508,
           "symbol": "Project.createBin"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1564,
+          "line": 1698,
           "symbol": "Project.createBin"
         }
       ],
@@ -295,7 +295,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1606,
+          "line": 1740,
           "symbol": "Project.deleteItem"
         }
       ],
@@ -322,37 +322,37 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 828,
+          "line": 833,
           "symbol": "Project.executeTransaction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 834,
+          "line": 839,
           "symbol": "Project.executeTransaction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 843,
+          "line": 848,
           "symbol": "Project.executeTransaction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1073,
+          "line": 1128,
           "symbol": "Project.executeTransaction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1086,
+          "line": 1145,
           "symbol": "Project.executeTransaction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1111,
+          "line": 1212,
           "symbol": "Project.executeTransaction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1114,
+          "line": 1215,
           "symbol": "Project.executeTransaction"
         }
       ],
@@ -379,32 +379,32 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 831,
+          "line": 836,
           "symbol": "Project.lockedAccess"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 832,
+          "line": 837,
           "symbol": "Project.lockedAccess"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1090,
+          "line": 1167,
           "symbol": "Project.lockedAccess"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1091,
+          "line": 1168,
           "symbol": "Project.lockedAccess"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1118,
+          "line": 1219,
           "symbol": "Project.lockedAccess"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1119,
+          "line": 1220,
           "symbol": "Project.lockedAccess"
         }
       ],
@@ -431,32 +431,52 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 835,
+          "line": 840,
           "symbol": "CompoundAction.addAction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 836,
+          "line": 841,
           "symbol": "CompoundAction.addAction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 844,
+          "line": 849,
           "symbol": "CompoundAction.addAction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 845,
+          "line": 850,
           "symbol": "CompoundAction.addAction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1087,
+          "line": 1154,
           "symbol": "CompoundAction.addAction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1115,
+          "line": 1155,
+          "symbol": "CompoundAction.addAction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1157,
+          "symbol": "CompoundAction.addAction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1158,
+          "symbol": "CompoundAction.addAction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1162,
+          "symbol": "CompoundAction.addAction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1216,
           "symbol": "CompoundAction.addAction"
         }
       ],
@@ -488,12 +508,12 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 707,
+          "line": 712,
           "symbol": "Sequence.getSettings"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 764,
+          "line": 769,
           "symbol": "Sequence.getSettings"
         }
       ],
@@ -525,22 +545,22 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 735,
+          "line": 740,
           "symbol": "Sequence.getName"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 766,
+          "line": 771,
           "symbol": "Sequence.getName"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1907,
+          "line": 2041,
           "symbol": "Sequence.getName"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2257,
+          "line": 2391,
           "symbol": "Sequence.getName"
         }
       ],
@@ -567,12 +587,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1990,
+          "line": 2124,
           "symbol": "Sequence.getPlayerPosition"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1999,
+          "line": 2133,
           "symbol": "Sequence.getPlayerPosition"
         }
       ],
@@ -604,12 +624,12 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 737,
+          "line": 742,
           "symbol": "Sequence.getEnd"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 767,
+          "line": 772,
           "symbol": "Sequence.getEnd"
         }
       ],
@@ -641,17 +661,17 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 708,
+          "line": 713,
           "symbol": "Sequence.getVideoTrackList"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 772,
+          "line": 777,
           "symbol": "Sequence.getVideoTrackList"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1044,
+          "line": 1050,
           "symbol": "Sequence.getVideoTrackList"
         }
       ],
@@ -683,17 +703,17 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 709,
+          "line": 714,
           "symbol": "Sequence.getAudioTrackList"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 771,
+          "line": 776,
           "symbol": "Sequence.getAudioTrackList"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1044,
+          "line": 1051,
           "symbol": "Sequence.getAudioTrackList"
         }
       ],
@@ -720,7 +740,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 730,
+          "line": 735,
           "symbol": "Sequence.getGuid"
         }
       ],
@@ -747,7 +767,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 852,
+          "line": 857,
           "symbol": "Sequence.getInPoint"
         }
       ],
@@ -774,7 +794,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 853,
+          "line": 858,
           "symbol": "Sequence.getOutPoint"
         }
       ],
@@ -801,17 +821,17 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 835,
+          "line": 840,
           "symbol": "Sequence.createSetInPointAction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 844,
+          "line": 849,
           "symbol": "Sequence.createSetInPointAction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2041,
+          "line": 2175,
           "symbol": "Sequence.createSetInPointAction"
         }
       ],
@@ -838,17 +858,17 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 836,
+          "line": 841,
           "symbol": "Sequence.createSetOutPointAction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 845,
+          "line": 850,
           "symbol": "Sequence.createSetOutPointAction"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2041,
+          "line": 2175,
           "symbol": "Sequence.createSetOutPointAction"
         }
       ],
@@ -875,12 +895,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2038,
+          "line": 2172,
           "symbol": "Sequence.createSubsequence"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2086,
+          "line": 2220,
           "symbol": "Sequence.createSubsequence"
         }
       ],
@@ -907,7 +927,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1324,
+          "line": 1458,
           "symbol": "Sequence.getSelection"
         }
       ],
@@ -934,7 +954,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1065,
+          "line": 1113,
           "symbol": "module.SequenceEditor.getEditor"
         }
       ],
@@ -982,7 +1002,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1077,
+          "line": 1134,
           "symbol": "module.TrackItemSelection.createEmptySelection"
         }
       ],
@@ -1040,12 +1060,12 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 886,
+          "line": 891,
           "symbol": "Sequence.getMarkerList"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 945,
+          "line": 950,
           "symbol": "Sequence.getMarkerList"
         }
       ],
@@ -1077,7 +1097,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1162,
+          "line": 1282,
           "symbol": "Sequence.rippleDelete"
         }
       ],
@@ -1104,7 +1124,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1908,
+          "line": 2042,
           "symbol": "Sequence.getCaptionTrackCount"
         }
       ],
@@ -1131,12 +1151,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1929,
+          "line": 2063,
           "symbol": "Sequence.getCaptionTrack"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1930,
+          "line": 2064,
           "symbol": "Sequence.getCaptionTrack"
         }
       ],
@@ -1163,7 +1183,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1993,
+          "line": 2127,
           "symbol": "Sequence.setPlayerPosition"
         }
       ],
@@ -1190,7 +1210,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1994,
+          "line": 2128,
           "symbol": "Sequence.setPlayheadPosition"
         }
       ],
@@ -1222,7 +1242,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 585,
+          "line": 590,
           "symbol": "TrackList.getTrackCount"
         }
       ],
@@ -1254,7 +1274,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 592,
+          "line": 597,
           "symbol": "TrackList.getTrackAtIndex"
         }
       ],
@@ -1286,12 +1306,12 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 607,
+          "line": 612,
           "symbol": "Track.getTrackItems"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1814,
+          "line": 1948,
           "symbol": "Track.getTrackItems"
         }
       ],
@@ -1318,12 +1338,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1262,
+          "line": 1396,
           "symbol": "Object.getItems"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1288,
+          "line": 1422,
           "symbol": "Object.getItems"
         }
       ],
@@ -1365,27 +1385,27 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 927,
+          "line": 932,
           "symbol": "Object.getName"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1273,
+          "line": 1407,
           "symbol": "Object.getName"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1292,
+          "line": 1426,
           "symbol": "Object.getName"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1330,
+          "line": 1464,
           "symbol": "Object.getName"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1368,
+          "line": 1502,
           "symbol": "Object.getName"
         }
       ],
@@ -1412,7 +1432,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1115,
+          "line": 1216,
           "symbol": "Object.createSetDisabledAction"
         }
       ],
@@ -1439,6 +1459,141 @@
       "source_refs": [],
       "sync_async": "async",
       "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Leave the boundary-crossing item alone and use the legacy ripple delete.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "Object.createSetStartAction",
+      "member": "createSetStartAction",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1157,
+          "symbol": "Object.createSetStartAction"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Leave the boundary-crossing item alone and use the legacy ripple delete.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "Object.createSetEndAction",
+      "member": "createSetEndAction",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1154,
+          "symbol": "Object.createSetEndAction"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Refuse the trim rather than shift a clip without correcting its source point.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "Object.createSetInPointAction",
+      "member": "createSetInPointAction",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1158,
+          "symbol": "Object.createSetInPointAction"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Refuse the trim rather than shift a clip without correcting its source point.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "Object.createSetOutPointAction",
+      "member": "createSetOutPointAction",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1155,
+          "symbol": "Object.createSetOutPointAction"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Treat the clip as retimed and refuse the trim; the arithmetic assumes 1x.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getSpeed",
+      "member": "getSpeed",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1069,
+          "symbol": "Object.getSpeed"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
     },
     {
       "api_version": 2,
@@ -1470,12 +1625,12 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1271,
+          "line": 1405,
           "symbol": "Object.getMediaPath"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1295,
+          "line": 1429,
           "symbol": "Object.getMediaPath"
         }
       ],
@@ -1502,12 +1657,17 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1274,
+          "line": 1068,
           "symbol": "Object.getOutPoint"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1332,
+          "line": 1408,
+          "symbol": "Object.getOutPoint"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1466,
           "symbol": "Object.getOutPoint"
         }
       ],
@@ -1539,7 +1699,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 926,
+          "line": 931,
           "symbol": "Object.getTime"
         }
       ],
@@ -1576,7 +1736,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1296,
+          "line": 1430,
           "symbol": "Object.getNodeId"
         }
       ],
@@ -1640,17 +1800,17 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1266,
+          "line": 1400,
           "symbol": "Object.isFolder"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1294,
+          "line": 1428,
           "symbol": "Object.isFolder"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1368,
+          "line": 1502,
           "symbol": "Object.isFolder"
         }
       ],
@@ -1677,12 +1837,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1506,
+          "line": 1640,
           "symbol": "Object.setName"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1513,
+          "line": 1647,
           "symbol": "Object.setName"
         }
       ],
@@ -1709,12 +1869,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1005,
+          "line": 1010,
           "symbol": "Object.delete"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1604,
+          "line": 1738,
           "symbol": "Object.delete"
         }
       ],
@@ -1741,12 +1901,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1006,
+          "line": 1011,
           "symbol": "Object.remove"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1605,
+          "line": 1739,
           "symbol": "Object.remove"
         }
       ],
@@ -1773,7 +1933,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 617,
+          "line": 622,
           "symbol": "Object.getProjectItem"
         }
       ],
@@ -1800,7 +1960,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 648,
+          "line": 653,
           "symbol": "Object.getComponentChain"
         }
       ],
@@ -1827,7 +1987,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1331,
+          "line": 1067,
+          "symbol": "Object.getInPoint"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1465,
           "symbol": "Object.getInPoint"
         }
       ],
@@ -1854,7 +2019,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1333,
+          "line": 1467,
           "symbol": "Object.getTrackIndex"
         }
       ],
@@ -1933,12 +2098,12 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 926,
+          "line": 931,
           "symbol": "Object.getStartTime"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1051,
+          "line": 1059,
           "symbol": "Object.getStartTime"
         }
       ],
@@ -1997,7 +2162,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1052,
+          "line": 1060,
           "symbol": "Object.getEndTime"
         }
       ],
@@ -2056,7 +2221,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 888,
+          "line": 893,
           "symbol": "MarkerList.createMarker"
         }
       ],
@@ -2088,7 +2253,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 891,
+          "line": 896,
           "symbol": "MarkerList.getFirstMarkerAtTime"
         }
       ],
@@ -2120,7 +2285,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 949,
+          "line": 954,
           "symbol": "MarkerList.getMarkers"
         }
       ],
@@ -2152,7 +2317,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 955,
+          "line": 960,
           "symbol": "MarkerList.getFirstMarker"
         }
       ],
@@ -2184,7 +2349,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 959,
+          "line": 964,
           "symbol": "MarkerList.getNextMarker"
         }
       ],
@@ -2211,7 +2376,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1004,
+          "line": 1009,
           "symbol": "MarkerList.removeMarker"
         }
       ],
@@ -2259,7 +2424,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 928,
+          "line": 933,
           "symbol": "Marker.getComment"
         }
       ],
@@ -2286,7 +2451,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 929,
+          "line": 934,
           "symbol": "Marker.getColorIndex"
         }
       ],
@@ -2318,7 +2483,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 893,
+          "line": 898,
           "symbol": "Marker.setName"
         }
       ],
@@ -2345,7 +2510,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 894,
+          "line": 899,
           "symbol": "Marker.setColorIndex"
         }
       ],
@@ -2414,7 +2579,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1650,
+          "line": 1784,
           "symbol": "module.ClipProjectItem.cast"
         }
       ],
@@ -2441,7 +2606,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1662,
+          "line": 1796,
           "symbol": "module.Transcript.querySupportedLanguages"
         }
       ],
@@ -2468,12 +2633,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1671,
+          "line": 1805,
           "symbol": "module.Transcript.hasTranscript"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1678,
+          "line": 1812,
           "symbol": "module.Transcript.hasTranscript"
         }
       ],
@@ -2500,12 +2665,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1680,
+          "line": 1814,
           "symbol": "module.Transcript.exportToJSON"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1681,
+          "line": 1815,
           "symbol": "module.Transcript.exportToJSON"
         }
       ],
@@ -2532,7 +2697,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1706,
+          "line": 1840,
           "symbol": "module.ObjectMaskUtils.hasObjectMask"
         }
       ],
@@ -2559,7 +2724,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 821,
+          "line": 826,
           "symbol": "module.TickTime.createWithSeconds"
         }
       ],
@@ -2586,7 +2751,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 822,
+          "line": 827,
           "symbol": "module.TickTime.createWithTicks"
         }
       ],
@@ -2613,7 +2778,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 1995,
+          "line": 2129,
           "symbol": "module.SourceMonitor.setPosition"
         }
       ],
@@ -2640,7 +2805,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2140,
+          "line": 2274,
           "symbol": "module.EncoderManager.getManager"
         }
       ],
@@ -2667,12 +2832,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2165,
+          "line": 2299,
           "symbol": "EncoderManager.launchEncoder"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2166,
+          "line": 2300,
           "symbol": "EncoderManager.launchEncoder"
         }
       ],
@@ -2699,7 +2864,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2172,
+          "line": 2306,
           "symbol": "EncoderManager.exportSequence"
         }
       ],
@@ -2726,12 +2891,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2175,
+          "line": 2309,
           "symbol": "EncoderManager.startBatchEncode"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2176,
+          "line": 2310,
           "symbol": "EncoderManager.startBatchEncode"
         }
       ],
@@ -2758,7 +2923,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2160,
+          "line": 2294,
           "symbol": "EncoderManager.isAMEInstalled"
         }
       ],
@@ -2785,7 +2950,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2256,
+          "line": 2390,
           "symbol": "module.ProjectConverter.exportAAF"
         }
       ],
@@ -2812,7 +2977,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2203,
+          "line": 2337,
           "symbol": "module.AAFExportOptions"
         }
       ],
@@ -3049,12 +3214,12 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2236,
+          "line": 2370,
           "symbol": "AAFExportOptions.setAudioFileFormat"
         },
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2237,
+          "line": 2371,
           "symbol": "AAFExportOptions.setAudioFileFormat"
         }
       ],
@@ -3081,7 +3246,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
-          "line": 2240,
+          "line": 2374,
           "symbol": "AAFExportOptions.setVideoMixdownPresetPath"
         }
       ],
@@ -3158,12 +3323,12 @@
       "used": false
     }
   ],
-  "capability_count": 103,
+  "capability_count": 108,
   "diagnostics": {
     "live_host_checks": "blocked_separate",
     "undeclared_capabilities": []
   },
-  "generated_at": "2026-08-20T07:07:59Z",
+  "generated_at": "2026-08-20T15:27:08Z",
   "host_bands": [
     {
       "api_version": 2,
@@ -3229,5 +3394,5 @@
     "extension/com.opencut.uxp/uxp-theme.js",
     "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts"
   ],
-  "used_capability_count": 83
+  "used_capability_count": 88
 }

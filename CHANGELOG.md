@@ -5,6 +5,21 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Cuts that only cover part of a clip now actually cut on Premiere 26.3
+
+- The UXP panel could only remove clips that fell entirely inside a cut range.
+  Anything overlapping an edge fell through to Premiere's older ripple delete,
+  which on 26.3 reports success and changes nothing, so those cuts quietly did
+  not happen. A clip crossing one edge of the range is now trimmed back to that
+  edge with its source point corrected, in the same undoable step as the
+  removals, and the cut range is left empty without shifting anything else.
+  Cutting a hole in the middle of a single clip still needs a razor that
+  Premiere's scripting API does not offer, and is still reported rather than
+  attempted. Every cut is checked against the exact clip boundaries it was
+  supposed to produce; if the timeline disagrees, the run stops there and says
+  what it found instead of piling more edits on top. Non-destructive mode never
+  trims, since the point of it is keeping the media.
+
 ### Added - Repeat detection now says which take to keep
 
 - Finding repeated takes told you where they were but not which one was any

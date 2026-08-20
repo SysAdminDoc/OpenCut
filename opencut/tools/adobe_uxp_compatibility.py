@@ -456,6 +456,55 @@ API_CATALOGUE = (
         fallback="Omit disabled state from the read-back fingerprint.",
         aliases=("Object.isDisabled", "TrackItem.isDisabled"),
     ),
+    # F351 boundary trims: `createRemoveItemsAction` takes whole track items, so
+    # a range that covers only part of a clip could not be expressed through it
+    # and fell through to `sequence.rippleDelete()`. Trimming the item back to
+    # the cut boundary — `createSetStartAction`/`createSetEndAction` for the
+    # sequence bound, `createSetInPointAction`/`createSetOutPointAction` for the
+    # matching source point — expresses that half of the problem. An item that
+    # encloses the whole range still needs a razor 26.3 does not offer.
+    # `createMoveAction` is the documented way to move an item, which is what
+    # reads these two as boundary setters; the cut path checks the result
+    # against the boundaries it predicted rather than trusting that reading.
+    _capability(
+        "Object.createSetStartAction",
+        "TrackItem",
+        "createSetStartAction",
+        sync_async="sync",
+        fallback="Leave the boundary-crossing item alone and use the legacy ripple delete.",
+        aliases=("Object.createSetStartAction", "TrackItem.createSetStartAction"),
+    ),
+    _capability(
+        "Object.createSetEndAction",
+        "TrackItem",
+        "createSetEndAction",
+        sync_async="sync",
+        fallback="Leave the boundary-crossing item alone and use the legacy ripple delete.",
+        aliases=("Object.createSetEndAction", "TrackItem.createSetEndAction"),
+    ),
+    _capability(
+        "Object.createSetInPointAction",
+        "TrackItem",
+        "createSetInPointAction",
+        sync_async="sync",
+        fallback="Refuse the trim rather than shift a clip without correcting its source point.",
+        aliases=("Object.createSetInPointAction", "TrackItem.createSetInPointAction"),
+    ),
+    _capability(
+        "Object.createSetOutPointAction",
+        "TrackItem",
+        "createSetOutPointAction",
+        sync_async="sync",
+        fallback="Refuse the trim rather than shift a clip without correcting its source point.",
+        aliases=("Object.createSetOutPointAction", "TrackItem.createSetOutPointAction"),
+    ),
+    _capability(
+        "Object.getSpeed",
+        "TrackItem",
+        "getSpeed",
+        fallback="Treat the clip as retimed and refuse the trim; the arithmetic assumes 1x.",
+        aliases=("Object.getSpeed", "TrackItem.getSpeed"),
+    ),
     _capability(
         "Object.getMediaPath",
         "ProjectItem",

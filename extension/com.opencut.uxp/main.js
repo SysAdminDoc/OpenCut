@@ -35,7 +35,12 @@ import { createUxpSettingsController } from "./uxp-settings-controller.js";
 import { createSequenceIndexFilterController } from "./uxp-sequence-index-controller.js";
 import { createTranscriptCorrectionController } from "./uxp-transcript-correction-controller.js";
 import { createHostWriteVerifier } from "./uxp-host-write-verification.js";
-import { planCutRemoval } from "./uxp-cut-planner.js";
+import {
+  TRIM_HEAD,
+  expectedPostState,
+  planCutRemoval,
+  verifyPostState,
+} from "./uxp-cut-planner.js";
 
 function escapeHtmlForUiController(str) {
   return escapeHtmlValue(str);
@@ -1041,7 +1046,10 @@ const PProBridge = (() => {
   async function _sequenceTrackItems(seq) {
     const collected = [];
     let readable = false;
-    for (const list of [await seq?.getVideoTrackList?.(), await seq?.getAudioTrackList?.()]) {
+    for (const [kind, list] of [
+      ["video", await seq?.getVideoTrackList?.()],
+      ["audio", await seq?.getAudioTrackList?.()],
+    ]) {
       if (list == null) continue;
       readable = true;
       for (const entry of await _trackListEntries(list)) {
@@ -1050,42 +1058,111 @@ const PProBridge = (() => {
           let end = null;
           try { start = _timeValueToSeconds(await item.getStartTime?.()); } catch (_) { start = null; }
           try { end = _timeValueToSeconds(await item.getEndTime?.()); } catch (_) { end = null; }
-          collected.push({ item, start, end });
+          // Source points and speed decide whether a boundary-crossing item can
+          // be trimmed clear of the range instead of blocking the typed path.
+          // An unreadable one leaves the planner to refuse rather than guess.
+          let inPoint = null;
+          let outPoint = null;
+          let speed = null;
+          try { inPoint = _timeValueToSeconds(await item.getInPoint?.()); } catch (_) { inPoint = null; }
+          try { outPoint = _timeValueToSeconds(await item.getOutPoint?.()); } catch (_) { outPoint = null; }
+          try { speed = Number(await item.getSpeed?.()); } catch (_) { speed = null; }
+          // An identity that survives a trim, so the same item can be found in
+          // the read-back. Boundaries are deliberately absent: they are what the
+          // trim changes. Host objects are re-proxied per read, so object
+          // identity is not usable here.
+          const nodeId = await _captionItemField(item, ["getNodeId", "getId"], ["nodeId", "id", "guid"]);
+          const name = await _captionItemField(item, ["getName"], ["name"]);
+          collected.push({
+            item,
+            start,
+            end,
+            inPoint,
+            outPoint,
+            speed,
+            id: `${kind}|${entry.index}|${nodeId || ""}|${name || ""}`,
+          });
         }
       }
     }
-    return readable ? collected : null;
+    if (!readable) return null;
+    // A name-only identity can collide on one track. An ambiguous id would let
+    // the read-back confirm the wrong item, so drop it and let the planner
+    // refuse the trim rather than verify against a lookalike.
+    const seen = new Map();
+    for (const entry of collected) seen.set(entry.id, (seen.get(entry.id) || 0) + 1);
+    for (const entry of collected) {
+      if (seen.get(entry.id) > 1) entry.id = "";
+    }
+    return collected;
   }
 
   /**
-   * Removes whole track items through the typed 26.3 editor action, inside a
-   * project transaction so the edit lands on Premiere's undo stack.
+   * Applies one planned cut through the typed 26.3 actions: the items the range
+   * fully covers are removed, and the items that cross one boundary are trimmed
+   * back to it. Everything goes into a single transaction, so a rejected action
+   * cannot leave the timeline half cut, and the whole cut is one undo step.
+   *
+   * Removal does not ripple. That matches the CEP host's `Clip.remove(false,
+   * true)`, and it is what makes a trim's predicted boundaries independent of a
+   * removal in the same transaction — a rippling removal would shift the very
+   * items the read-back is about to check. Closing the gaps is the separate
+   * ripple-edit pass.
    */
-  async function _removeItemsWithEditor(seq, entries) {
+  async function _writeCutWithEditor(seq, plan) {
     const editor = ppro?.SequenceEditor?.getEditor?.(seq);
-    if (!editor?.createRemoveItemsAction) {
+    if (plan.contained.length && !editor?.createRemoveItemsAction) {
       return { ok: false, reason: "SequenceEditor.createRemoveItemsAction is unavailable in this runtime." };
     }
-    if (typeof ppro?.TrackItemSelection?.createEmptySelection !== "function") {
+    if (plan.contained.length && typeof ppro?.TrackItemSelection?.createEmptySelection !== "function") {
       return { ok: false, reason: "TrackItemSelection.createEmptySelection is unavailable in this runtime." };
+    }
+    for (const trim of plan.trims) {
+      const setBoundary = trim.kind === TRIM_HEAD ? "createSetEndAction" : "createSetStartAction";
+      const setSource = trim.kind === TRIM_HEAD ? "createSetOutPointAction" : "createSetInPointAction";
+      if (typeof trim.item.item?.[setBoundary] !== "function" || typeof trim.item.item?.[setSource] !== "function") {
+        return { ok: false, reason: `TrackItem.${setBoundary}/${setSource} is unavailable in this runtime.` };
+      }
     }
     const context = await _projectRoot();
     if (!context?.proj?.executeTransaction) {
       return { ok: false, reason: "Project.executeTransaction is unavailable in this runtime." };
     }
+
     let selection = null;
-    ppro.TrackItemSelection.createEmptySelection((created) => { selection = created; });
-    if (!selection?.addItem) {
-      return { ok: false, reason: "createEmptySelection did not yield a usable selection." };
+    if (plan.contained.length) {
+      ppro.TrackItemSelection.createEmptySelection((created) => { selection = created; });
+      if (!selection?.addItem) {
+        return { ok: false, reason: "createEmptySelection did not yield a usable selection." };
+      }
+      for (const entry of plan.contained) {
+        // skipDuplicateCheck: the planner already emitted each item once.
+        selection.addItem(entry.item, true);
+      }
     }
-    for (const entry of entries) {
-      // skipDuplicateCheck: the planner already emitted each item once.
-      selection.addItem(entry.item, true);
-    }
+
     const mediaType = ppro?.Constants?.MediaType?.ANY ?? 0;
     const run = () => Boolean(context.proj.executeTransaction((compoundAction) => {
-      compoundAction.addAction(editor.createRemoveItemsAction(selection, true, mediaType));
+      for (const trim of plan.trims) {
+        const item = trim.item.item;
+        // Sequence boundary first, then the source point. Under the documented
+        // reading — `createMoveAction` is the one that moves an item, so these
+        // set a boundary — the second write confirms the value the first
+        // already implied. A host that disagrees is caught by the read-back
+        // rather than left to corrupt the timeline silently.
+        if (trim.kind === TRIM_HEAD) {
+          compoundAction.addAction(item.createSetEndAction(_tickTimeFromSeconds(trim.to.end)));
+          compoundAction.addAction(item.createSetOutPointAction(_tickTimeFromSeconds(trim.source.outPoint)));
+        } else {
+          compoundAction.addAction(item.createSetStartAction(_tickTimeFromSeconds(trim.to.start)));
+          compoundAction.addAction(item.createSetInPointAction(_tickTimeFromSeconds(trim.source.inPoint)));
+        }
+      }
+      if (selection) {
+        compoundAction.addAction(editor.createRemoveItemsAction(selection, false, mediaType));
+      }
     }, "OpenCut apply cuts"));
+
     let accepted = false;
     if (typeof context.proj.lockedAccess === "function") {
       context.proj.lockedAccess(() => { accepted = run(); });
@@ -1093,10 +1170,34 @@ const PProBridge = (() => {
       // eslint-disable-next-line @adobe/premierepro/prefer-locked-access-wrapper -- compatibility fallback when lockedAccess is absent
       accepted = run();
     }
-    return {
-      ok: accepted,
-      reason: accepted ? "" : "executeTransaction rejected the remove-items action.",
-    };
+    if (!accepted) {
+      return { ok: false, reason: "executeTransaction rejected the cut actions." };
+    }
+
+    // The plan states exactly where every affected item should now be, so the
+    // read-back can assert that rather than settling for "something changed".
+    const after = await _sequenceTrackItems(seq);
+    if (!after) {
+      return { ok: true, reason: "", verified: null, note: "Track lists became unreadable after the write." };
+    }
+    const mismatches = verifyPostState(expectedPostState(plan), after);
+    if (mismatches.length) {
+      return {
+        ok: false,
+        verified: false,
+        reason: `The timeline did not match the cut plan after the write (${_describeMismatches(mismatches)}). `
+          + "The cut is one undo step in Premiere.",
+      };
+    }
+    return { ok: true, reason: "", verified: true };
+  }
+
+  function _describeMismatches(mismatches) {
+    return mismatches.slice(0, 3).map((entry) => {
+      if (entry.kind !== "trim_landed_elsewhere") return `${entry.kind} ${entry.id}`;
+      return `${entry.id} expected ${entry.expected.start.toFixed(3)}-${entry.expected.end.toFixed(3)}s `
+        + `but read back ${entry.observed.start.toFixed(3)}-${entry.observed.end.toFixed(3)}s`;
+    }).join("; ");
   }
 
   /**
@@ -1141,15 +1242,34 @@ const PProBridge = (() => {
     }
     const plan = planCutRemoval(items, cut.start, cut.end);
     if (disableMode) {
+      // There is no partial disable: a boundary-crossing item can only be kept
+      // whole or trimmed, and trimming destroys the very media disable mode
+      // exists to preserve.
       if (!plan.removable) return { method: "skipped", note: plan.reason };
+      if (plan.trims.length) {
+        return {
+          method: "skipped",
+          note: `${plan.trims.length} track item(s) cross a cut boundary; disabling them whole `
+            + "would mute media outside the range, and trimming would delete it.",
+        };
+      }
       const disabled = await _disableItemsWithEditor(plan.contained);
       return disabled.ok
         ? { method: "set_disabled_action", note: "" }
         : { method: "skipped", note: disabled.reason };
     }
     if (plan.removable) {
-      const typed = await _removeItemsWithEditor(seq, plan.contained);
-      if (typed.ok) return { method: "remove_items_action", note: "" };
+      const typed = await _writeCutWithEditor(seq, plan);
+      if (typed.ok) {
+        return {
+          method: plan.trims.length ? "trim_and_remove_action" : "remove_items_action",
+          note: typed.note || "",
+        };
+      }
+      // A read-back that disproved the plan is a wrong result, not a missing
+      // capability: repeating the range through the legacy path would edit an
+      // already-edited timeline. Report it and let the operator undo.
+      if (typed.verified === false) return { method: "failed", note: typed.reason };
       return await _rippleDeleteFallback(seq, cut, typed.reason);
     }
     return await _rippleDeleteFallback(seq, cut, plan.reason);
@@ -1180,13 +1300,24 @@ const PProBridge = (() => {
       let beforeAll = await _sequenceTrackSnapshot(seq);
       let canVerify = beforeAll !== null;
       let verifiedCuts = 0;
-      const methodCounts = { remove_items_action: 0, ripple_delete: 0, set_disabled_action: 0, skipped: 0 };
+      const methodCounts = {
+        remove_items_action: 0,
+        trim_and_remove_action: 0,
+        ripple_delete: 0,
+        set_disabled_action: 0,
+        skipped: 0,
+        failed: 0,
+      };
       const fallbackReasons = [];
       for (const cut of sorted) {
         const beforeCut = canVerify ? await _sequenceTrackSnapshot(seq) : null;
         const outcome = await _applyOneCut(seq, cut, disableMode);
         methodCounts[outcome.method] += 1;
         if (outcome.note && !fallbackReasons.includes(outcome.note)) fallbackReasons.push(outcome.note);
+        // One cut whose read-back disproved its plan stops the batch. Carrying
+        // on would stack further edits on a timeline that is already not what
+        // the plan described, and bury the one undo step that reverses it.
+        if (outcome.method === "failed") break;
         if (canVerify) {
           const afterCut = await _sequenceTrackSnapshot(seq);
           if (afterCut === null) canVerify = false;
@@ -1196,17 +1327,20 @@ const PProBridge = (() => {
       }
       const afterAll = canVerify ? await _sequenceTrackSnapshot(seq) : null;
       if (afterAll === null) canVerify = false;
-      const status = _verificationStatus(sorted.length, canVerify ? verifiedCuts : null, canVerify);
+      const written = sorted.length - methodCounts.skipped - methodCounts.failed;
+      const status = methodCounts.failed
+        ? "failed"
+        : _verificationStatus(sorted.length, canVerify ? verifiedCuts : null, canVerify);
       return await _attachHostWriteVerification(
-        { ok: status !== "failed", applied: sorted.length },
+        { ok: status !== "failed", applied: written },
         {
           action: "ocApplySequenceCuts",
           attempted: sorted.length,
-          reported: sorted.length - methodCounts.skipped,
+          reported: written,
           verified: canVerify ? verifiedCuts : null,
           status,
           readBackMethod: canVerify
-            ? "video/audio track-item boundary and disabled-state fingerprint diff per cut"
+            ? "video/audio track-item boundary and disabled-state fingerprint diff per cut, plus a per-cut check of every affected item against the boundaries the plan predicted"
             : "unavailable: track-item traversal",
           beforeState: { track_item_count: beforeAll?.length ?? null },
           afterState: {
@@ -1215,7 +1349,7 @@ const PProBridge = (() => {
             methods: methodCounts,
             fallback_reasons: fallbackReasons,
           },
-          detail: "Delete mode prefers SequenceEditor.createRemoveItemsAction inside a project transaction and falls back to rippleDelete when the range crosses a track-item boundary. Disable mode sets the track items disabled instead and never falls back, because removing media the user asked to keep is not a degraded form of the same request. Either way a fresh track-item walk follows, so a non-throwing call with no observable change fails explicitly.",
+          detail: "Delete mode runs each cut as one transaction of typed actions: items the range covers are removed with SequenceEditor.createRemoveItemsAction and items crossing one boundary are trimmed back to it, so the cut range ends up empty and nothing moves. Removal does not ripple, matching the CEP host. An item that encloses the range needs a razor the 26.3 API does not offer, and still drops to rippleDelete. Every cut is then checked against the boundaries its plan predicted, which is what tells a trim apart from a move; a mismatch stops the batch rather than editing further. Disable mode sets the track items disabled instead and never falls back, because removing media the user asked to keep is not a degraded form of the same request.",
         }
       );
     } catch (e) {
