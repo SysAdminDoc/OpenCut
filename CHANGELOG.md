@@ -5,6 +5,26 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Five features told you to install packages that would not have helped
+
+- OmniVoice TTS, ROSE inpaint, Sammie-Roto, ReEzSynth and FlashVSR were listed
+  as needing an install, with `pip install rose-inpaint` and similar shown as
+  the command to run. Those package names were placeholders, and the routes
+  return "not implemented" even with a dependency present, so no install could
+  ever have switched them on. They are now described as what they are: routes
+  that have not been built yet. The readiness check behind them reads the
+  handler rather than guessing from an install hint, so a route that answers
+  "not implemented" can no longer be advertised as one dependency away, and an
+  info or models endpoint sitting next to an unbuilt feature no longer makes it
+  look available.
+
+### Fixed - Three routes were missing from the MCP and OpenAPI catalogues
+
+- Queue coverage and the two APV encode routes shipped without the generated
+  catalogues being refreshed, so clients enumerating tools saw 1,474 instead of
+  1,477 and the OpenAPI contract described 1,593 operations against a live
+  1,596.
+
 ### Fixed - Cuts that only cover part of a clip now actually cut on Premiere 26.3
 
 - The UXP panel could only remove clips that fell entirely inside a cut range.
