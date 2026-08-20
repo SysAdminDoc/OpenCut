@@ -18,7 +18,7 @@ Total optional AI/model surfaces: **68**. Each row carries license, hardware, in
 | [ElevenLabs cloud TTS](https://github.com/elevenlabs/elevenlabs-python) | proprietary client SDK; cloud service | cpu (client) | cloud — text is sent to ElevenLabs | `pip install elevenlabs + ELEVENLABS_API_KEY` |
 | [F5-TTS (zero-shot voice clone)](https://github.com/SWivid/F5-TTS) | MIT | gpu (>= 6 GB VRAM) | local-only | `pip install f5-tts` |
 | [Kokoro TTS (82M, CPU-only)](https://github.com/hexgrad/kokoro) | Apache-2.0 | cpu | local-only | `pip install kokoro (needs espeak-ng for some languages)` |
-| [OmniVoice TTS](https://github.com/k2-fsa/OmniVoice) | Apache-2.0 | gpu | local-only | `pip install omnivoice` |
+| [OmniVoice TTS](https://github.com/k2-fsa/OmniVoice) | Apache-2.0 | gpu | local-only | `Route is not implemented; no supported install command yet.` |
 | [python-audio-separator (Mel-Band / BS-RoFormer, SCNet, MDX23C)](https://github.com/nomadkaraoke/python-audio-separator) | MIT | cpu/gpu | local-only | `pip install -e ".[audio]"  # or: pip install "audio-separator[cpu]"` |
 | [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | MIT | gpu | local-only | `pip install "opencut[enhance]" (Python 3.11; Torch 2.1 stack)` |
 | [Silero VAD](https://github.com/snakers4/silero-vad) | MIT | cpu | local-only | `pip install silero-vad` |
@@ -29,6 +29,7 @@ Total optional AI/model surfaces: **68**. Each row carries license, hardware, in
 **Advisory notes**:
 - *Edge TTS (Microsoft cloud voices)* — Sends synthesis text to Microsoft over HTTPS. Disable for offline-only deployments.
 - *ElevenLabs cloud TTS* — Requires an ElevenLabs account. Synthesised audio + reference voices may be retained per their TOS.
+- *OmniVoice TTS* — Strategic route stub; installing upstream does not make this route available.
 - *VidMuse video-to-music* — Readiness placeholder; check returns False until the implementation lands.
 
 ## Captions
@@ -114,7 +115,7 @@ Total optional AI/model surfaces: **68**. Each row carries license, hardware, in
 | [DeepFace](https://github.com/serengil/deepface) | MIT | cpu/gpu | local-only | `pip install deepface` |
 | [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2) | Apache-2.0 | gpu | local-only | `pip install transformers torch` |
 | [Face reshape / beauty filter](https://github.com/google-ai-edge/mediapipe) | MIT | cpu/gpu | local-only | `pip install mediapipe + opencv-python` |
-| [FlashVSR (streaming VSR)](https://github.com/OpenImagingLab/FlashVSR) | Apache-2.0 | gpu (>= 12 GB VRAM) | local-only | `pip install flashvsr (placeholder; see docs/MODELS.md)` |
+| [FlashVSR (streaming VSR)](https://github.com/OpenImagingLab/FlashVSR) | Apache-2.0 | gpu (>= 12 GB VRAM) | local-only | `Route is not implemented; no supported install command yet.` |
 | [HF upscale model hub](https://huggingface.co/models?other=image-super-resolution) | varies per model | gpu | local-only (model downloads only) | `pip install diffusers transformers` |
 | [HSEmotion](https://github.com/av-savchenko/face-emotion-recognition) | Apache-2.0 | cpu/gpu | local-only | `pip install hsemotion` |
 | [IC-Light v1 relight](https://github.com/lllyasviel/IC-Light) | Apache-2.0 | gpu (>= 4 GB VRAM) | local-only (model downloads only) | `pip install diffusers>=0.32 torch` |
@@ -124,12 +125,12 @@ Total optional AI/model surfaces: **68**. Each row carries license, hardware, in
 | [ProPainter](https://github.com/sczhou/ProPainter) | NTU S-Lab License 1.0 | gpu (>= 12 GB VRAM) | local-only | `pip install propainter` |
 | [PySceneDetect](https://github.com/Breakthrough/PySceneDetect) | BSD-3-Clause | cpu | local-only | `pip install scenedetect` |
 | [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) | BSD-3-Clause | gpu | local-only | `pip install realesrgan` |
-| [ReEzSynth (Ebsynth successor)](https://github.com/FuouM/ReEzSynth) | Apache-2.0 | gpu | local-only | `pip install reezsynth (placeholder; see docs/MODELS.md)` |
+| [ReEzSynth (Ebsynth successor)](https://github.com/FuouM/ReEzSynth) | Apache-2.0 | gpu | local-only | `Route is not implemented; no supported install command yet.` |
 | [rembg (U^2-Net family)](https://github.com/danielgatis/rembg) | MIT | cpu/gpu | local-only | `pip install rembg` |
 | [Robust Video Matting (RVM)](https://github.com/PeterL1n/RobustVideoMatting) | GPL-3.0 | gpu | local-only | `pip install robust-video-matting` |
-| [ROSE shadow-aware inpaint](https://rose2025-inpaint.github.io/) | Apache-2.0 | gpu | local-only | `pip install rose-inpaint (placeholder; see docs/MODELS.md)` |
+| [ROSE shadow-aware inpaint](https://rose2025-inpaint.github.io/) | Apache-2.0 | gpu | local-only | `Route is not implemented; no supported install command yet.` |
 | [SAM 3 text-prompted video segmentation](https://github.com/facebookresearch/sam3) | Custom (SAM License, commercial-permissive) | gpu | local-only (model downloads only) | `pip install sam3 torch` |
-| [Sammie-Roto-2 (VideoMaMa)](https://github.com/Zarxrax/Sammie-Roto-2) | MIT | gpu | local-only | `pip install sammie-roto (placeholder; see docs/MODELS.md)` |
+| [Sammie-Roto-2 (VideoMaMa)](https://github.com/Zarxrax/Sammie-Roto-2) | MIT | gpu | local-only | `Route is not implemented; no supported install command yet.` |
 | [SeedVR2 one-step diffusion VSR](https://huggingface.co/ByteDance-Seed/SeedVR2-3B) | Apache-2.0 | gpu (>= 8 GB VRAM) | local-only (model downloads only) | `pip install diffusers torch  # download seedvr2-3b via model manager` |
 | [Segment Anything 2 (SAM2)](https://github.com/facebookresearch/sam2) | Apache-2.0 | gpu | local-only | `pip install sam2` |
 | [Skin retouch (bilateral / GAN)](https://github.com/opencv/opencv-python) | MIT | cpu/gpu | local-only | `pip install opencv-python (optional onnx model)` |
@@ -138,14 +139,14 @@ Total optional AI/model surfaces: **68**. Each row carries license, hardware, in
 
 **Advisory notes**:
 - *AutoShot gradual-transition scene detector* — AutoShot is preferred over TransNetV2 when installed; keep it opt-in until the upstream license and weights are reviewed for release bundling.
-- *FlashVSR (streaming VSR)* — Readiness placeholder; check returns False until the implementation lands.
+- *FlashVSR (streaming VSR)* — Strategic route stub; installing upstream does not make this route available.
 - *IC-Light v1 relight* — OpenCut targets IC-Light v1 only; IC-Light v2 is not registered because the local module documents non-commercial/release concerns.
 - *ProPainter* — Custom S-Lab license — non-commercial use only. Verify before shipping in paid distributions.
-- *ReEzSynth (Ebsynth successor)* — Readiness placeholder; check returns False until the implementation lands.
-- *ROSE shadow-aware inpaint* — Readiness placeholder; check returns False until the implementation lands.
+- *ReEzSynth (Ebsynth successor)* — Strategic route stub; installing upstream does not make this route available.
+- *ROSE shadow-aware inpaint* — Strategic route stub; installing upstream does not make this route available.
 - *Robust Video Matting (RVM)* — GPL-3.0 — bundling the model with proprietary distributions requires legal review.
 - *SAM 3 text-prompted video segmentation* — SAM 3 is used for text-prompted object removal and falls back to SAM2/CLIP when absent.
-- *Sammie-Roto-2 (VideoMaMa)* — Readiness placeholder; check returns False until the implementation lands.
+- *Sammie-Roto-2 (VideoMaMa)* — Strategic route stub; installing upstream does not make this route available.
 - *HF upscale model hub* — Each Hugging Face model has its own license — check before redistributing weights.
 
 ## Vision

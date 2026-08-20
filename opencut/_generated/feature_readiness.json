@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-08-03T23:56:48Z",
+  "generated_at": "2026-08-20T06:47:21Z",
   "source": "opencut/_generated/route_manifest.json",
   "total_records": 73,
   "total_routes": 99,
@@ -47,7 +47,7 @@
       "feature_id": "auto.amphion-tts",
       "label": "Amphion Tts",
       "category": "audio",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -432,8 +432,8 @@
       "feature_id": "video.upscale.flashvsr",
       "label": "FlashVSR (streaming VSR)",
       "category": "video",
-      "state": "available",
-      "install_hint": "pip install flashvsr (placeholder; see docs/MODELS.md)",
+      "state": "stub",
+      "install_hint": "Route is not implemented; no supported install command yet.",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/upscale/flashvsr",
@@ -561,7 +561,7 @@
       "feature_id": "video.relight.iclight",
       "label": "IC-Light v1 relight",
       "category": "video",
-      "state": "available",
+      "state": "stub",
       "install_hint": "pip install diffusers>=0.32 torch",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -765,8 +765,8 @@
       "feature_id": "audio.omnivoice",
       "label": "OmniVoice TTS",
       "category": "audio",
-      "state": "missing_dependency",
-      "install_hint": "pip install omnivoice",
+      "state": "stub",
+      "install_hint": "Route is not implemented; no supported install command yet.",
       "docs": "docs/MODELS.md",
       "routes": [
         "/audio/tts/omnivoice"
@@ -855,8 +855,8 @@
       "feature_id": "video.style.reezsynth",
       "label": "ReEzSynth (Ebsynth successor)",
       "category": "video",
-      "state": "missing_dependency",
-      "install_hint": "pip install reezsynth (placeholder; see docs/MODELS.md)",
+      "state": "stub",
+      "install_hint": "Route is not implemented; no supported install command yet.",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/style/reezsynth"
@@ -891,8 +891,8 @@
       "feature_id": "video.inpaint.rose",
       "label": "ROSE shadow-aware inpaint",
       "category": "video",
-      "state": "missing_dependency",
-      "install_hint": "pip install rose-inpaint (placeholder; see docs/MODELS.md)",
+      "state": "stub",
+      "install_hint": "Route is not implemented; no supported install command yet.",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/inpaint/rose"
@@ -965,8 +965,8 @@
       "feature_id": "video.matte.sammie",
       "label": "Sammie-Roto-2 (VideoMaMa)",
       "category": "video",
-      "state": "missing_dependency",
-      "install_hint": "pip install sammie-roto (placeholder; see docs/MODELS.md)",
+      "state": "stub",
+      "install_hint": "Route is not implemented; no supported install command yet.",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/matte/sammie"

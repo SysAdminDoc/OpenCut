@@ -1,8 +1,8 @@
 {
   "version": 4,
-  "generated_at": "2026-08-12T15:31:13Z",
+  "generated_at": "2026-08-20T06:47:21Z",
   "total_routes": 1593,
-  "shipped_route_count": 1568,
+  "shipped_route_count": 1563,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 18,
@@ -12,9 +12,9 @@
     "PUT": 2
   },
   "readiness_counts": {
-    "dependency-gated": 28,
+    "dependency-gated": 23,
     "implemented": 1540,
-    "stub": 25
+    "stub": 30
   },
   "blueprints": {
     "<app>": {
@@ -8912,7 +8912,7 @@
       ],
       "endpoint": "wave_h.route_omnivoice",
       "blueprint": "wave_h",
-      "readiness": "dependency-gated",
+      "readiness": "stub",
       "surface_class": "integration-only",
       "surface_classes": [
         "integration-only"
@@ -24106,7 +24106,7 @@
       ],
       "endpoint": "wave_h.route_rose",
       "blueprint": "wave_h",
-      "readiness": "dependency-gated",
+      "readiness": "stub",
       "surface_class": "integration-only",
       "surface_classes": [
         "integration-only"
@@ -24466,7 +24466,7 @@
       ],
       "endpoint": "wave_h.route_sammie",
       "blueprint": "wave_h",
-      "readiness": "dependency-gated",
+      "readiness": "stub",
       "surface_class": "integration-only",
       "surface_classes": [
         "integration-only"
@@ -25893,7 +25893,7 @@
       ],
       "endpoint": "wave_h.route_reezsynth",
       "blueprint": "wave_h",
-      "readiness": "dependency-gated",
+      "readiness": "stub",
       "surface_class": "integration-only",
       "surface_classes": [
         "integration-only"
@@ -26245,7 +26245,7 @@
       ],
       "endpoint": "wave_h.route_flashvsr",
       "blueprint": "wave_h",
-      "readiness": "dependency-gated",
+      "readiness": "stub",
       "surface_class": "integration-only",
       "surface_classes": [
         "integration-only"
@@ -27178,6 +27178,7 @@
         "extension/com.opencut.uxp/udt-smoke.js",
         "extension/com.opencut.uxp/uxp-bootstrap.js",
         "extension/com.opencut.uxp/uxp-components.js",
+        "extension/com.opencut.uxp/uxp-cut-planner.js",
         "extension/com.opencut.uxp/uxp-gpu-selection-controller.js",
         "extension/com.opencut.uxp/uxp-host-write-verification.js",
         "extension/com.opencut.uxp/uxp-i18n.js",
@@ -27209,9 +27210,9 @@
       "integration-only"
     ],
     "summary": {
-      "shipped_routes": 1568,
+      "shipped_routes": 1563,
       "direct_surface_routes": 280,
-      "integration_only_routes": 1288,
+      "integration_only_routes": 1283,
       "coverage_percent": 17.9,
       "multi_surface_routes": 60,
       "primary_counts": {

@@ -261,6 +261,23 @@ def _derive_feature_state(
     return STATE_AVAILABLE
 
 
+def _capability_routes(routes: Iterable[str]) -> List[str]:
+    """Prefer executable feature routes over metadata-only companions.
+
+    An implemented ``/info`` or ``/models`` endpoint can describe a feature
+    whose actual operation is still a 501 stub.  It must not promote that
+    feature to available.  If a probe is only used by metadata endpoints, keep
+    those routes so infrastructure dashboards retain their existing state.
+    """
+    routes_list = list(routes)
+    executable = [
+        route
+        for route in routes_list
+        if not route.rstrip("/").endswith(("/info", "/models"))
+    ]
+    return executable or routes_list
+
+
 _IMPL_MODULES_BY_PROBE: Optional[Dict[str, List[str]]] = None
 
 
@@ -485,7 +502,10 @@ def _record_for_probe(
             f"{support['reason']}"
         )
 
-    state = _derive_feature_state(routes_sorted, route_readiness or {})
+    state = _derive_feature_state(
+        _capability_routes(routes_sorted),
+        route_readiness or {},
+    )
 
     return {
         "feature_id": feature_id,
@@ -555,7 +575,10 @@ def build_manifest(route_manifest: Optional[dict] = None) -> dict:
     ]
     return {
         "version": MANIFEST_VERSION,
-        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        # When the route generator supplies its in-memory snapshot, preserve
+        # that timestamp so both committed artifacts visibly share one clock.
+        "generated_at": route_manifest.get("generated_at")
+        or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "opencut/_generated/route_manifest.json",
         "total_records": len(records),
         "total_routes": sum(len(record["routes"]) for record in records),

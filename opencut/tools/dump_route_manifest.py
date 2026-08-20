@@ -36,6 +36,9 @@ from typing import Dict, Iterable, List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / "opencut" / "_generated" / "route_manifest.json"
+FEATURE_READINESS_MANIFEST_PATH = (
+    REPO_ROOT / "opencut" / "_generated" / "feature_readiness.json"
+)
 MANIFEST_VERSION = 4
 SURFACE_MANIFEST_VERSION = 1
 
@@ -147,6 +150,74 @@ def _delegates_to_stub_entrypoint(source: str) -> bool:
     return False
 
 
+def _return_expression_has_501_status(value: Optional[ast.expr]) -> bool:
+    """Return whether a direct handler return encodes HTTP status 501.
+
+    OpenCut handlers normally use ``error_response(..., status=501)``.  The
+    tuple and ``make_response`` forms are recognised too so the readiness gate
+    follows the HTTP contract rather than one helper's spelling.
+    """
+    if value is None:
+        return False
+    if isinstance(value, ast.Tuple):
+        return any(
+            isinstance(item, ast.Constant) and item.value == 501
+            for item in value.elts[1:]
+        )
+    if not isinstance(value, ast.Call):
+        return False
+
+    for keyword in value.keywords:
+        if (
+            keyword.arg in {"status", "status_code"}
+            and isinstance(keyword.value, ast.Constant)
+            and keyword.value.value == 501
+        ):
+            return True
+
+    func_name = ""
+    if isinstance(value.func, ast.Name):
+        func_name = value.func.id
+    elif isinstance(value.func, ast.Attribute):
+        func_name = value.func.attr
+    if func_name == "make_response":
+        return any(
+            isinstance(arg, ast.Constant) and arg.value == 501
+            for arg in value.args[1:]
+        )
+    return False
+
+
+def _has_unconditional_501_return(source: str) -> bool:
+    """Return whether the handler's reached success path terminates at 501.
+
+    Only returns directly in the function body count.  A conditional 501 is
+    not an unconditional success-path stub, while a top-level return after an
+    optional-dependency guard is.  This distinction prevents an earlier 503
+    marker from making an impossible-to-use route look dependency-gated.
+    """
+    try:
+        tree = ast.parse(textwrap.dedent(source))
+    except SyntaxError:
+        return False
+
+    function = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        ),
+        None,
+    )
+    if function is None:
+        return False
+    return any(
+        isinstance(statement, ast.Return)
+        and _return_expression_has_501_status(statement.value)
+        for statement in function.body
+    )
+
+
 def _classify_readiness(view_func) -> str:
     """Classify a Flask view function as implemented / dependency-gated / stub.
 
@@ -166,6 +237,8 @@ def _classify_readiness(view_func) -> str:
     if any(marker in source for marker in _STUB_MARKERS):
         return READINESS_STUB
     if _delegates_to_stub_entrypoint(source):
+        return READINESS_STUB
+    if _has_unconditional_501_return(source):
         return READINESS_STUB
     if any(marker in source for marker in _DEPENDENCY_MARKERS):
         return READINESS_DEPENDENCY_GATED
@@ -555,6 +628,26 @@ def diff_manifests(expected: dict, live: dict) -> List[str]:
     return diffs
 
 
+def _build_feature_readiness_manifest(route_manifest: dict) -> dict:
+    """Build the companion readiness artifact from this exact route snapshot."""
+    from opencut.tools.dump_feature_readiness import build_manifest
+
+    return build_manifest(route_manifest=route_manifest)
+
+
+def _feature_readiness_diffs(live: dict) -> List[str]:
+    """Return drift in the companion artifact checked by this same gate."""
+    from opencut.tools.dump_feature_readiness import diff_manifests, load_manifest
+
+    existing = load_manifest(FEATURE_READINESS_MANIFEST_PATH)
+    if existing is None:
+        return [
+            "no committed companion manifest at "
+            f"{FEATURE_READINESS_MANIFEST_PATH.relative_to(REPO_ROOT)}"
+        ]
+    return diff_manifests(existing, live)
+
+
 def cli(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -573,6 +666,7 @@ def cli(argv: Optional[List[str]] = None) -> int:
     logging.basicConfig(level=log_level, format="%(message)s")
 
     manifest = build_manifest()
+    feature_readiness = _build_feature_readiness_manifest(manifest)
 
     if args.check:
         existing = load_manifest()
@@ -581,8 +675,16 @@ def cli(argv: Optional[List[str]] = None) -> int:
                   f"{MANIFEST_PATH.relative_to(REPO_ROOT)} (run without --check first)")
             return 1
         diffs = diff_manifests(existing, manifest)
+        readiness_diffs = _feature_readiness_diffs(feature_readiness)
+        if readiness_diffs:
+            diffs.extend(
+                f"feature readiness: {line}" for line in readiness_diffs
+            )
         if diffs:
-            print("[route-manifest] FAIL — committed manifest is out of sync with live app:")
+            print(
+                "[route-manifest] FAIL — route/readiness manifests are out of "
+                "sync with the live app:"
+            )
             for line in diffs[:25]:
                 print(f"  - {line}")
             if len(diffs) > 25:
@@ -595,9 +697,20 @@ def cli(argv: Optional[List[str]] = None) -> int:
         return 0
 
     out = write_manifest(manifest)
+    from opencut.tools.dump_feature_readiness import write_manifest as write_readiness
+
+    readiness_out = write_readiness(
+        feature_readiness,
+        FEATURE_READINESS_MANIFEST_PATH,
+    )
     print(
         f"[route-manifest] wrote {out.relative_to(REPO_ROOT)} — "
         f"{manifest['total_routes']} routes across {manifest['blueprint_count']} blueprints"
+    )
+    print(
+        "[route-manifest] wrote companion "
+        f"{readiness_out.relative_to(REPO_ROOT)} — "
+        f"{feature_readiness['total_records']} readiness records"
     )
     return 0
 

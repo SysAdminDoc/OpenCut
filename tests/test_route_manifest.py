@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import inspect
 import json
 from pathlib import Path
 
@@ -154,8 +155,83 @@ def test_known_501_stub_routes_are_tagged_stub(committed_manifest):
     by_rule = {r["rule"]: r for r in committed_manifest["routes"]}
     for rule in ("/lipsync/gaussian", "/lipsync/fantasy2",
                  "/generate/cloud/submit", "/video/face-age",
-                 "/generate/wan-vace"):
+                 "/generate/wan-vace", "/video/upscale/flashvsr",
+                 "/video/inpaint/rose", "/video/matte/sammie",
+                 "/audio/tts/omnivoice", "/video/style/reezsynth"):
         assert by_rule[rule]["readiness"] == "stub", f"{rule} should be a stub"
+
+
+def test_no_unconditional_501_route_is_dependency_gated(live_manifest):
+    from opencut.server import create_app
+    from opencut.tools.dump_route_manifest import _has_unconditional_501_return
+
+    app = create_app(introspection=True)
+    by_endpoint = {route["endpoint"]: route for route in live_manifest["routes"]}
+    offenders = []
+    for endpoint, view_func in app.view_functions.items():
+        route = by_endpoint.get(endpoint)
+        if route is None or route["readiness"] != "dependency-gated":
+            continue
+        try:
+            source = inspect.getsource(inspect.unwrap(view_func))
+        except (OSError, TypeError, ValueError):
+            continue
+        if _has_unconditional_501_return(source):
+            offenders.append(route["rule"])
+
+    assert offenders == [], (
+        "dependency-gated routes must become usable after their dependency is "
+        f"installed; unconditional 501 routes violate that contract: {offenders}"
+    )
+
+
+def test_unconditional_501_detection_uses_top_level_success_path():
+    from opencut.tools.dump_route_manifest import _has_unconditional_501_return
+
+    terminal_stub = """
+def handler():
+    if dependency_missing():
+        return missing_dependency()
+    return error_response("NOT_IMPLEMENTED", status=501)
+"""
+    conditional_error = """
+def handler():
+    if unsupported_request():
+        return error_response("NOT_IMPLEMENTED", status=501)
+    return implemented_result()
+"""
+
+    assert _has_unconditional_501_return(terminal_stub) is True
+    assert _has_unconditional_501_return(conditional_error) is False
+
+
+def test_route_gate_checks_companion_feature_readiness(
+    committed_manifest, monkeypatch, tmp_path
+):
+    from opencut.tools import dump_feature_readiness, dump_route_manifest
+
+    route_path = tmp_path / "route_manifest.json"
+    route_path.write_text(json.dumps(committed_manifest), encoding="utf-8")
+    readiness = dump_feature_readiness.build_manifest(
+        route_manifest=committed_manifest
+    )
+    readiness["records"][0]["state"] = "drifted"
+    readiness_path = tmp_path / "feature_readiness.json"
+    readiness_path.write_text(json.dumps(readiness), encoding="utf-8")
+
+    monkeypatch.setattr(dump_route_manifest, "MANIFEST_PATH", route_path)
+    monkeypatch.setattr(
+        dump_route_manifest,
+        "FEATURE_READINESS_MANIFEST_PATH",
+        readiness_path,
+    )
+    monkeypatch.setattr(
+        dump_route_manifest,
+        "build_manifest",
+        lambda: copy.deepcopy(committed_manifest),
+    )
+
+    assert dump_route_manifest.cli(["--check", "--quiet"]) == 1
 
 
 def test_real_routes_are_not_tagged_stub(committed_manifest):
