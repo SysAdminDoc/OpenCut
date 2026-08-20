@@ -14,14 +14,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
 
 ### P3
 
-- [ ] P3 — F354 — Give the largest integration-only route families a surface or a deprecation date
-  Why: F328 landed the ratchet on 2026-08-20, so the ratio can no longer fall — but it locked in at 17.9%, with 1,313 routes reachable from nothing a user can click. The gate names where the mass sits (`wave_l` 80, `platform_infra` 55, `wave_k` 48, `wave_qrs` 42, `integration` 40), which is the data the decision needed and did not have. Holding the line is not the same as fixing it.
-  Evidence: `python -m opencut.tools.dump_surface_ratchet --check` prints the ten largest families; `opencut/_generated/surface_ratchet.json` records all 104; `opencut/_generated/route_manifest.json` → `surface_coverage.summary.coverage_percent: 17.9`
-  Touches: `opencut/cli.py`, `opencut/core/command_palette.py`, `opencut/core/mcp_tools.py`, `opencut/_generated/surface_ratchet.json`, `tests/`
-  Acceptance: Each of the largest families is either given a first-party surface (a CLI command, a palette entry, or a curated MCP tool) or recorded as deprecated with a removal target; the ratchet baseline is re-recorded upward with the commit stating which families moved and why; `primary_counts.cli` is no longer zero.
-  Note: work one family at a time and re-record the floor after each — a single sweeping pass would make the ratchet meaningless for the next change.
-  Complexity: L
-
 - [ ] P3 — F352 — Replace the hand-maintained lockfiles with a generated PEP 751 `pylock.toml`
   Why: F317 landed the PEP 639 half on 2026-08-20 (SPDX expression, `license-files`, deprecated classifier removed, verified in built wheel metadata). The lockfile half is untouched: four hand-maintained `requirements-*-lock.txt` files, one of them 126 KB, still carry a version-sync surface that has accumulated dozens of `fix:` commits, and pip 26.1+ installs a standard `pylock.toml` directly.
   Evidence: `requirements-lock.txt`, `requirements-build-lock.txt`, `requirements-release-lock.txt`, `requirements.txt`; `python -m pip lock --help` on pip 26.2.1 works but is marked EXPERIMENTAL and needs a network resolve; https://peps.python.org/pep-0751/

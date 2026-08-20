@@ -5,7 +5,7 @@ Date: 2026-08-20 — replaces all prior research (previous pass: 2026-08-11, v1.
 ## Executive Summary
 
 OpenCut v1.48.0 is a local-first Premiere Pro automation backend: a loopback Flask service (1,593 routes,
-1,563 shipped, 107 blueprints), a 19-command CLI, an 88-tool MCP server, CEP + UXP panels, a durable job
+1,563 shipped, 107 blueprints), a 19-command CLI, a 98-tool MCP server, CEP + UXP panels, a durable job
 engine, SQLite/FTS5 + federated media index, FFmpeg 8.x pipelines, optional local AI adapters, and
 OTIO/AAF/MLT interchange. Since the 2026-08-11 pass, F319 (host-write read-back verification), F320
 (feature-level panel parity gate), F321 (CEP horizon correction), and F322 (terminal-501 reclassification)
@@ -24,10 +24,12 @@ the footage index), A6 beat-synced assembly (beat-cut lane), A9 explainable vira
 (`core/script_to_roughcut.py`, `screenplay_parser.py`, `auto_rough_cut.py`), and a local review bundle
 with comment normalization (`core/review_bundle.py` F105, `routes/collab_review_routes.py`) all exist.
 Meanwhile the field charges $14–44/month for subsets of this (FireCut Max prices script-based editing at
-$44/mo; Resolve gives IntelliScript away free). The deficit is not capability. It is the three seams the
-2026-08-11 pass named: 17.9% of shipped routes reachable from any first-party surface (F328), a published
-installer 23 versions stale (blocked release item), and the one open external bug being a first-contact
-CSRF failure (issue #5). Nothing found this pass changes that ordering; most of what it found sharpens it.
+$44/mo; Resolve gives IntelliScript away free). The deficit is not capability. The 2026-08-11 pass named
+17.9% of shipped routes reachable from any first-party surface (F328), a published installer 23 versions
+stale (blocked release item), and the one open external bug being a first-contact CSRF failure (issue #5).
+F354 has since raised direct-surface coverage to 19.8% and given the ten largest route families named CLI,
+palette, and curated MCP entry points. Nothing found this pass changes the remaining ordering; most of what
+it found sharpens it.
 
 Second, **the CEP/UXP platform risk hardened.** Two independent 2026 sources report CEP panels no longer
 loading normally on Premiere 2026 (Hyper Brew's March analysis; auto-subs #571 field reports), while
@@ -288,9 +290,10 @@ built. The deficit is reach: surfaces, releases, and proof.
    headless work that shrinks the unknown; the parity gate was deliberately relaxed from route-level to
    feature-level to keep CI green — the failing route-level gate object still sits in
    `uxp_migration_dashboard.json` and reads as red to a cold reader.
-3. **Surface seam.** 280 of 1,563 shipped routes direct-reachable (17.9%), `primary_counts.cli = 0`.
+3. **Surface seam.** 310 of 1,563 shipped routes direct-reachable (19.8%), `primary_counts.cli = 10`.
    Every high-value June-gap feature that turned out to be already built is on the wrong side of this
-   ratio. F328 (ratchet) is the structural fix; F335/F339/F341 add surface value where users already are.
+   ratio. F328 (ratchet) is the structural fix; F335/F339/F341 add surface value where users already are,
+   and F354 gives the ten largest integration-only families named CLI, palette, and curated MCP entry points.
 4. **Interchange seam.** OTIO `>=0.17,<1` still admits the 0.19 C++ bundle rewrite unpinned (F331,
    unchanged; 0.18.1 remains newest, still prerelease-flagged, 9+ months quiet).
 5. **Delivery seam — still the worst.** v1.25.1 (2026-04-20) vs 1.48.0 source. Every marketing wedge this

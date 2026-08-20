@@ -15,8 +15,8 @@
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
 > sync with the live Flask app, and `GET /system/route-readiness` for the live
 > shipped count and stub list. The same manifest carries a literal first-party
-> surface map: **280 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
-> while **1,283 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
+> surface map: **310 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
+> while **1,253 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
 > Generic `opencut route` and opt-in extended MCP remain available for deliberate route-level access.
 
 > **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited, reviewable silence-cut passes direct to timeline, cross-project media search, stem separation, voice cloning, 55-style animated captions with exportable artifacts, local LLM highlights, and multi-platform social export -- with no subscriptions, no usage caps, and no API keys required for core local features. Cloud providers, Edge-TTS, downloads, telemetry, and social uploads are optional, explicit network features.
@@ -332,7 +332,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 
 ## Feature Overview
 
-OpenCut v1.48.0 includes **1,563 shipped API routes** (implemented or dependency-gated; 30 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **280** have literal first-party panel, palette, CLI, and curated MCP references; **1,283 integration-only routes** are explicitly classified rather than presented as direct user workflows.
+OpenCut v1.48.0 includes **1,563 shipped API routes** (implemented or dependency-gated; 30 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,253 integration-only routes** are explicitly classified rather than presented as direct user workflows.
 
 ### Cut & Clean
 

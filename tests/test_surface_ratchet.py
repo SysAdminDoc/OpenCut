@@ -1,8 +1,8 @@
 """F328 — the direct-surface ratio is now defended, not just measured.
 
 The manifest has reported the ratio for a while and it only ever went down:
-280 of 1,568 shipped routes reachable from a first-party surface, 1,288
-integration-only, and no route whose primary surface is the CLI. The gate
+310 of 1,563 shipped routes reachable from a first-party surface, 1,253
+integration-only, and ten routes whose primary surface is the CLI. The gate
 asserted every route was *classified*, never that the ratio held, so each wave
 could add API faster than product and nothing said so.
 
@@ -201,6 +201,30 @@ def test_the_report_names_the_largest_families(manifest):
     counts = [family["integration_only_routes"] for family in families]
     assert counts == sorted(counts, reverse=True)
     assert all(family["blueprint"] for family in families)
+
+
+def test_f354_largest_families_have_first_party_entry_points(manifest):
+    largest = {
+        "wave_l",
+        "platform_infra",
+        "wave_k",
+        "wave_qrs",
+        "integration",
+        "color_mam",
+        "system",
+        "batch_data",
+        "editing_wf",
+        "workflow_dev",
+    }
+    surfaced = {
+        route["blueprint"]
+        for route in manifest["routes"]
+        if route.get("blueprint") in largest
+        and route.get("surface_class") != "integration-only"
+    }
+
+    assert surfaced == largest
+    assert manifest["surface_coverage"]["summary"]["primary_counts"]["cli"] > 0
 
 
 def test_the_report_is_readable_without_the_json(manifest, baseline):

@@ -1,6 +1,6 @@
 """F345 — the MCP server ships a packaged agent skill.
 
-An agent meeting 88 tools for the first time otherwise rediscovers the same
+An agent meeting 98 tools for the first time otherwise rediscovers the same
 conventions from raw schemas every session. The skill is generated from the
 registry, so these tests mostly guard that it cannot drift away from the tools
 it claims to describe.

@@ -412,6 +412,26 @@ class TestMCPToolsCore(unittest.TestCase):
         self.assertIsInstance(tools, list)
         self.assertGreater(len(tools), 0)
 
+    def test_f354_route_family_mcp_tools_are_curated(self):
+        from opencut.core.mcp_tools import ROUTE_FAMILY_MCP_TOOLS
+
+        self.assertEqual(len(ROUTE_FAMILY_MCP_TOOLS), 10)
+        self.assertEqual(
+            {tool.endpoint for tool in ROUTE_FAMILY_MCP_TOOLS},
+            {
+                "/analyze/video/vl/info",
+                "/amd/detect",
+                "/audio/spectral-match/info",
+                "/audio/transcribe/canary/info",
+                "/api/adjustment-layers/presets",
+                "/video/color-scopes/all",
+                "/openapi.json",
+                "/expression/evaluate",
+                "/copilot/execute",
+                "/api/macro/load",
+            },
+        )
+
     def test_mcp_tool_has_required_fields(self):
         from opencut.core.mcp_tools import get_mcp_tools
         tools = get_mcp_tools()

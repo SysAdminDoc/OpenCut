@@ -168,3 +168,14 @@ def test_cli_local_db_diagnostics_json(monkeypatch):
     assert payload["count"] == 1
     assert payload["stores"][0]["store"] == "jobs"
     assert payload["stores"][0]["recommended_action"] == "ok"
+
+
+def test_cli_surfaces_json_lists_the_route_family_examples():
+    result = CliRunner().invoke(cli_module.cli, ["surfaces", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    by_family = {item["family"]: item for item in payload["surfaces"]}
+    assert len(by_family) == 10
+    assert by_family["wave_l"]["path"] == "/analyze/video/narrate"
+    assert by_family["workflow_dev"]["method"] == "GET"
