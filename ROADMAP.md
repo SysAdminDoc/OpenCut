@@ -12,14 +12,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
 
 ### P2
 
-- [ ] P2 — F348 — Grade the twelve remaining July 2026 FFmpeg advisories
-  Why: F332 made the gate honest about its scope — it now reports "5 graded of 17 known" and names the twelve it did not check — but those twelve are still ungraded, so the pinned snapshot's status against the VobSub, Vulkan HEVC, RTP/ASF, `vf_swaprect`, `vf_hqdn3d`, and PNG/APNG encoder paths is unknown rather than clear.
-  Evidence: `UNGRADED_ADVISORIES` in `opencut/core/ffmpeg_provenance.py` (CVE-2026-64830, -64831, -64834, -65703, -65704, -65705, -65706, -66036, -66037, -66038, -66039, -66040); `tests/test_ffmpeg_cve_matrix.py` enforces that a graded entry carries a real 40-character fix commit, which is why these cannot be moved without one
-  Touches: `opencut/core/ffmpeg_provenance.py` (move entries from `UNGRADED_ADVISORIES` into `SECURITY_ADVISORIES`), `README.md`, `tests/test_ffmpeg_cve_matrix.py`
-  Acceptance: Each advisory has its upstream fix commit, the date it landed on master, its affected component, and capability tokens that allow "component not compiled in" to be established; the pinned snapshot is graded against every one of them; `advisory_coverage()["complete"]` becomes true when the list empties and the README paragraph about ungraded advisories is removed in the same commit.
-  Note: needs upstream commit archaeology per CVE (git log over the fix window in each affected file). Do not guess a hash — the test rejects a malformed one, and a plausible-but-wrong hash would make the gate lie in the dangerous direction.
-  Complexity: M
-
 - [ ] P2 — F351 — Express a boundary-crossing cut through the typed UXP API
   Why: F349 landed the typed cut path on 2026-08-20, but `createRemoveItemsAction` removes whole track items and the typed 26.3 API exposes no razor, so the most common case — silence inside a single long clip — still falls back to `sequence.rippleDelete()`, which premiere-pro-mcp #21 measured returning success while changing nothing on 26.3. The fallback is now reported rather than silent, so the gap is visible, not fixed.
   Evidence: `extension/com.opencut.uxp/uxp-cut-planner.js` (`planCutRemoval` returns `removable: false` with a `straddling` list); `extension/com.opencut.uxp/main.js` (`_applyOneCut`, `_rippleDeleteFallback`); `tests/test_uxp_cut_planner.py::test_an_item_spanning_the_whole_range_blocks_the_typed_path`; `@adobe/premierepro` 26.3.0 typings expose `createCloneTrackItemAction`, `createSetStartAction`, `createSetEndAction`, `createSetInPointAction`, `createSetOutPointAction` but no razor/split action
