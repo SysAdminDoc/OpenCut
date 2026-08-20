@@ -5,7 +5,7 @@ Date: 2026-08-20 — replaces all prior research (previous pass: 2026-08-11, v1.
 ## Executive Summary
 
 OpenCut v1.48.0 is a local-first Premiere Pro automation backend: a loopback Flask service (1,593 routes,
-1,563 shipped, 107 blueprints), a 19-command CLI, a 98-tool MCP server, CEP + UXP panels, a durable job
+1,564 shipped, 107 blueprints), a 19-command CLI, a 98-tool MCP server, CEP + UXP panels, a durable job
 engine, SQLite/FTS5 + federated media index, FFmpeg 8.x pipelines, optional local AI adapters, and
 OTIO/AAF/MLT interchange. Since the 2026-08-11 pass, F319 (host-write read-back verification), F320
 (feature-level panel parity gate), F321 (CEP horizon correction), and F322 (terminal-501 reclassification)
@@ -28,8 +28,9 @@ $44/mo; Resolve gives IntelliScript away free). The deficit is not capability. T
 17.9% of shipped routes reachable from any first-party surface (F328), a published installer 23 versions
 stale (blocked release item), and the one open external bug being a first-contact CSRF failure (issue #5).
 F354 has since raised direct-surface coverage to 19.8% and given the ten largest route families named CLI,
-palette, and curated MCP entry points. Nothing found this pass changes the remaining ordering; most of what
-it found sharpens it.
+palette, and curated MCP entry points. F346 has now activated the Qwen3-VL lane through local Ollama vision
+requests, with transcript-first segment scoring and dependency-gated readiness. Nothing found this pass changes
+the remaining ordering; most of what it found sharpens it.
 
 Second, **the CEP/UXP platform risk hardened.** Two independent 2026 sources report CEP panels no longer
 loading normally on Premiere 2026 (Hyper Brew's March analysis; auto-subs #571 field reports), while
@@ -59,9 +60,8 @@ Top opportunities this pass, priority order (new IDs F335–F346; details in ROA
    OpenCut's mixed-track diarization path is an unmarketed differentiator.
 8. **P2 — De-reverb/denoise checkpoints via the pinned audio-separator** (F342). Registry-only addition,
    same shape as F316.
-9. **P3 — F343–F346**: naming-section refresh against the OpenCut-app relaunch (85K stars, rewrite merged
-   2026-07-14), best-take selection on repeat clusters, a packaged agent skill for the MCP server, and
-   activating the `/analyze/video/qwen3vl` stub through local Ollama vision models.
+9. **P3 — F343–F345**: naming-section refresh against the OpenCut-app relaunch (85K stars, rewrite merged
+   2026-07-14), best-take selection on repeat clusters, and a packaged agent skill for the MCP server.
 
 Market events worth recording (they change positioning, not code): CapCut Pro doubled to $19.99/mo with
 formerly-free captions/filler-removal/vocal-isolation paywalled (Feb 2026 renewal cliff); Play.ht was
@@ -293,7 +293,7 @@ of the gate.
    headless work that shrinks the unknown; the parity gate was deliberately relaxed from route-level to
    feature-level to keep CI green — the failing route-level gate object still sits in
    `uxp_migration_dashboard.json` and reads as red to a cold reader.
-3. **Surface seam.** 310 of 1,563 shipped routes direct-reachable (19.8%), `primary_counts.cli = 10`.
+3. **Surface seam.** 310 of 1,564 shipped routes direct-reachable (19.8%), `primary_counts.cli = 10`.
    Every high-value June-gap feature that turned out to be already built is on the wrong side of this
    ratio. F328 (ratchet) is the structural fix; F335/F339/F341 add surface value where users already are,
    and F354 gives the ten largest integration-only families named CLI, palette, and curated MCP entry points.

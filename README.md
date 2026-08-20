@@ -5,8 +5,8 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1563-orange)
-![Tests](https://img.shields.io/badge/Tests-14300+-brightgreen)
+![Routes](https://img.shields.io/badge/API%20Routes-1564-orange)
+![Tests](https://img.shields.io/badge/Tests-14400+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only — each route is tagged
@@ -16,7 +16,7 @@
 > sync with the live Flask app, and `GET /system/route-readiness` for the live
 > shipped count and stub list. The same manifest carries a literal first-party
 > surface map: **310 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
-> while **1,253 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
+> while **1,254 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
 > Generic `opencut route` and opt-in extended MCP remain available for deliberate route-level access.
 
 > **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited, reviewable silence-cut passes direct to timeline, cross-project media search, stem separation, voice cloning, 55-style animated captions with exportable artifacts, local LLM highlights, and multi-platform social export -- with no subscriptions, no usage caps, and no API keys required for core local features. Cloud providers, Edge-TTS, downloads, telemetry, and social uploads are optional, explicit network features.
@@ -321,7 +321,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 | Voice cloning | Chatterbox TTS (15-sec training, local) | No bundled local clone; OpenCut adds local training and exportable narration |
 | Filler word cleanup | CrisperWhisper verbatim markers, custom words, reviewable ranges, and REST/CLI access | Text-Based Editing Delete Filler Words; OpenCut adds provenance and batch scope |
 | Animated captions | 55 styles, word-level animation, native/burn-in/sidecar outputs; OTIO carries no caption schema | Captions + Single-Word Captions; OpenCut adds template breadth and export choices |
-| LLM highlights | Ollama (local, no API key), engagement scoring, and exportable highlight artifacts | Media Intelligence search; OpenCut adds local ranking and deliverables |
+| LLM highlights | Ollama (local, no API key), Qwen3-VL frame sampling, engagement scoring, and exportable highlight artifacts | Media Intelligence search; OpenCut adds local ranking and deliverables |
 | Cross-project footage search | Whole-library FTS5 search through REST/MCP/CLI | Media Intelligence search in the open project; OpenCut adds cross-project/headless scope |
 | Social export | Direct YouTube/TikTok/Instagram OAuth upload | No direct social handoff; OpenCut adds explicit upload workflows |
 | Cross-NLE export | OTIO clips, markers, and supported transitions to compatible adapters, plus MLT projects for Kdenlive and Shotcut | No bundled cross-NLE handoff; OpenCut adds interchange artifacts |
@@ -336,7 +336,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 
 ## Feature Overview
 
-OpenCut v1.48.0 includes **1,563 shipped API routes** (implemented or dependency-gated; 30 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,253 integration-only routes** are explicitly classified rather than presented as direct user workflows.
+OpenCut v1.48.0 includes **1,564 shipped API routes** (implemented or dependency-gated; 29 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,254 integration-only routes** are explicitly classified rather than presented as direct user workflows.
 
 ### Cut & Clean
 
@@ -460,7 +460,7 @@ without returning transcript text.
 
 | Feature | Description | Engine |
 |---------|-------------|--------|
-| AI Highlight Extraction | LLM analyzes transcript to find viral/engaging moments with engagement scoring | Ollama / OpenAI / Anthropic |
+| AI Highlight Extraction | LLM analyzes transcript and Qwen3-VL decision-point frames to find engaging moments with transcript-first scoring | Ollama / OpenAI / Anthropic |
 | Engagement Scoring | Multi-dimensional scoring: hook strength, emotional intensity, pacing, quotability | Text heuristics + LLM |
 | Emotion-Based Highlights | Facial emotion analysis across frames, detect emotional peaks as highlights | deepface + OpenCV |
 | Shorts Pipeline | One-click: transcribe, highlight, trim, face-reframe, caption burn-in, export | Multi-stage |
@@ -578,7 +578,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,563 shipped routes |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,564 shipped routes |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  621 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
@@ -948,7 +948,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-14,300+ estimated tests across 359 root test files covering route smoke tests,
+14,400+ estimated tests across 360 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -1017,7 +1017,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (14,300+ estimated tests, 359 root test files)
+tests/               # pytest test suite (14,400+ estimated tests, 360 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

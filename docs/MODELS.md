@@ -2,7 +2,7 @@
 
 Generated from `opencut/model_cards.py`. **Do not hand-edit** — regenerate with `python -m opencut.tools.dump_model_cards`.
 
-Total optional AI/model surfaces: **68**. Each row carries license, hardware, install hint, privacy posture, and (where relevant) an advisory note. Backends not listed here are infrastructure guards on the explicit `NON_AI_CHECKS` allowlist.
+Total optional AI/model surfaces: **69**. Each row carries license, hardware, install hint, privacy posture, and (where relevant) an advisory note. Backends not listed here are infrastructure guards on the explicit `NON_AI_CHECKS` allowlist.
 
 ## Audio
 
@@ -154,6 +154,11 @@ Total optional AI/model surfaces: **68**. Each row carries license, hardware, in
 | Backend | License | Hardware | Privacy | Install |
 |---|---|---|---|---|
 | [pytesseract / EasyOCR text extraction](https://github.com/tesseract-ocr/tesseract) | Apache-2.0 | cpu/gpu | local-only | `pip install pytesseract easyocr  # plus system Tesseract for pytesseract` |
+| [Qwen3-VL local video understanding](https://ollama.com/library/qwen3-vl) | Apache-2.0 | cpu/gpu | local-only | `Install Ollama, then run: ollama pull qwen3-vl:8b` |
+
+**Advisory notes**:
+- *Qwen3-VL local video understanding* — Ollama must be running on localhost.
+- *Qwen3-VL local video understanding* — Model weights are not bundled with OpenCut.
 
 ---
 

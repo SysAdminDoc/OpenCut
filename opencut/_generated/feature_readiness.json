@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "generated_at": "2026-08-20T19:31:51Z",
+  "generated_at": "2026-08-20T21:26:56Z",
   "source": "opencut/_generated/route_manifest.json",
-  "total_records": 73,
-  "total_routes": 99,
+  "total_records": 74,
+  "total_routes": 101,
   "records": [
     {
       "feature_id": "auto.ab-av1",
@@ -848,6 +848,25 @@
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
+      "requires_gpu": false,
+      "minimum_vram_mb": 0
+    },
+    {
+      "feature_id": "video.analysis.qwen3vl",
+      "label": "Qwen3-VL local video understanding",
+      "category": "vision",
+      "state": "missing_dependency",
+      "install_hint": "Install Ollama, then run: ollama pull qwen3-vl:8b",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/analyze/video/qwen3vl",
+        "/analyze/video/qwen3vl/info"
+      ],
+      "check_name": "check_qwen3vl_available",
+      "impl_module": "multimodal_qwen3vl",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe.",
+      "hardware": "cpu/gpu",
       "requires_gpu": false,
       "minimum_vram_mb": 0
     },
