@@ -544,6 +544,10 @@ GENERATED_DOC_CHECKS = [
         [sys.executable, "-m", "opencut.tools.dump_mcp_extended_tools", "--check"],
     ),
     (
+        "MCP agent skill",
+        [sys.executable, "-m", "opencut.tools.dump_mcp_agent_skill", "--check"],
+    ),
+    (
         "model cards",
         [sys.executable, "-m", "opencut.tools.dump_model_cards", "--check"],
     ),

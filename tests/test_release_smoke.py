@@ -159,7 +159,10 @@ def test_step_generated_docs_runs_all_doc_generators(monkeypatch):
     result = module.step_generated_docs(argparse.Namespace())
 
     assert result.status == "ok"
-    assert result.message == "6 generated-doc checks passed"
+    # Derived, not a literal: a hardcoded count breaks on every legitimate
+    # generator addition and teaches people to bump the number blindly.
+    assert result.message == f"{len(module.GENERATED_DOC_CHECKS)} generated-doc checks passed"
+    assert len(calls) == len(module.GENERATED_DOC_CHECKS)
     joined = [" ".join(cmd).replace("\\", "/") for cmd in calls]
     assert any("opencut.tools.dump_project_facts --check" in cmd for cmd in joined)
     assert any("scripts/sync_badges.py --check" in cmd for cmd in joined)
@@ -167,6 +170,7 @@ def test_step_generated_docs_runs_all_doc_generators(monkeypatch):
     assert any("opencut.tools.dump_mcp_extended_tools --check" in cmd for cmd in joined)
     assert any("opencut.tools.dump_model_cards --check" in cmd for cmd in joined)
     assert any("opencut.tools.dump_feature_readiness --check" in cmd for cmd in joined)
+    assert any("opencut.tools.dump_mcp_agent_skill --check" in cmd for cmd in joined)
 
 
 def test_step_generated_docs_reports_failed_generator(monkeypatch):

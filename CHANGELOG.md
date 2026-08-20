@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Coding agents get told how the MCP server works
+
+- The MCP server exposes 88 tools, and an agent meeting them for the first
+  time had to work out the house rules from raw schemas every session: that a
+  tool may hand back a job rather than a result, that edits are proposed and
+  reviewed before anything touches the timeline, and that configuration routes
+  are left out on purpose. Those rules, a map of the tools by what they do,
+  and a worked transcribe-review-export run now ship alongside the server and
+  regenerate from the tool list, so they cannot drift away from it.
+
+
 ### Changed - Licence metadata follows the current packaging standard
 
 - The project declared its MIT licence in the form Python packaging deprecated,

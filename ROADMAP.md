@@ -51,13 +51,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: Each repeat cluster carries a ranked keep-candidate with per-take signals (filler count, speech-rate stability, sentence completion, optional LLM verdict with recorded fallback); the review UI preselects the keep and cuts the rest; the heuristic path works with no LLM configured; existing detect-only output remains available.
   Complexity: M
 
-- [ ] P3 — F345 — Generate a packaged agent skill for the MCP server
-  Why: Remotion ships Agent Skills so coding agents drive it correctly on first contact, and OpenCut's 88-tool MCP server has no packaged skill or conventions document, so every agent session rediscovers the review-first and durable-jobs patterns from raw tool schemas.
-  Evidence: https://www.remotion.dev/blog (Agent Skills, 2026-01); `opencut/_generated/mcp_server_registry.json` (88 tools, no companion skill artifact)
-  Touches: a new generated skill document (tool map, review-first conventions, durable-jobs pattern, safety rules), its dump tool under `opencut/tools/`, `docs/MCP_SERVER.md`, drift test
-  Acceptance: A versioned skill document generates from the MCP registry, ships in-repo, and regenerates with the manifest under a drift test like other `_generated` artifacts; it teaches the review-before-mutate and task-polling conventions; a coldstart agent following only the skill can run a transcribe-review-export flow.
-  Complexity: S
-
 - [ ] P3 — F346 — Activate the /analyze/video/qwen3vl lane through local Ollama vision models
   Why: Content-aware editing ("cut the boring parts" from semantic video understanding, not just audio) is where the closest CLI competitor and the agentic wave are heading, and OpenCut already has the route stubbed (`/analyze/video/qwen3vl`, 501) plus an LLM layer that fronts Ollama — which serves Qwen-VL-class models locally — so one stub activation delivers per-segment semantic relevance scoring with no cloud key.
   Evidence: `opencut/_generated/route_manifest.json` (qwen3vl/internvl3 stubs); https://github.com/WyattBlue/auto-editor/issues/1273 (content-aware edit method, 2026-06-25); `opencut/core/llm.py` (Ollama support); the text-first economy pattern from browser-use/video-use recorded in the 2026-08-11 pass
