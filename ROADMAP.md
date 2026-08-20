@@ -4,17 +4,11 @@ Actionable work only. Historical and completed roadmap material is archived in C
 
 ## Research-Driven Additions
 
-Added 2026-08-10 and extended 2026-08-11 from the research passes recorded in `RESEARCH.md`. IDs continue
-the existing F-number scheme (highest prior allocation before 2026-08-11: F318).
+Added 2026-08-10, extended 2026-08-11 and 2026-08-20 from the research passes recorded in `RESEARCH.md`.
+IDs continue the existing F-number scheme (highest prior allocation before 2026-08-11: F318; before
+2026-08-20: F334).
 
 ### P1
-
-- [ ] P1 — F322 — Stop classifying hardcoded-501 handlers as `dependency-gated`
-  Why: Five routes return 503 when their dependency is absent and a hardcoded 501 when it is present, so installing the dependency never makes them work — yet the manifest labels them `dependency-gated` (a class its own comment defines as "fully implemented but require an optional dependency") and counts them inside the 1,568 shipped-route total the README advertises.
-  Evidence: `opencut/routes/wave_h_routes.py:491` (`/video/upscale/flashvsr`), `:522` (`/video/inpaint/rose`), `:540` (`/video/matte/sammie`), `:558` (`/audio/tts/omnivoice`), `:582` (`/video/style/reezsynth`) — each `_stub_503(...)` then `error_response("NOT_IMPLEMENTED", …, status=501)`; `opencut/tools/dump_route_manifest.py:62-65` where `_DEPENDENCY_MARKERS` matches `_stub_503(` and wins over the inline 501; the same file's comments already state that handlers delegating to a terminal `NotImplementedError` adapter are stubs
-  Touches: `opencut/tools/dump_route_manifest.py`, `opencut/_generated/route_manifest.json`, `opencut/_generated/feature_readiness.json`, `opencut/model_cards.py`, `README.md` route counts, `tests/`
-  Acceptance: A handler whose success path is an unconditional 501 classifies as `stub` regardless of any earlier dependency marker; the shipped-route count and every advertised total are regenerated from the corrected classification; a test asserts no route is simultaneously `dependency-gated` and unconditionally 501; `feature_readiness.json` regenerates in the same gate as `route_manifest.json` so the two manifests cannot drift on separate clocks.
-  Complexity: S
 
 - [ ] P1 — F323 — Bias the ASR decoder with the project glossary instead of correcting after the fact
   Why: The project glossary is applied as a post-hoc find/replace over finished transcripts, so a mis-recognised proper noun that does not match the replacement rule survives, while the transcription backend accepts decoder-level term biasing that would prevent the error — and every commercial competitor sells exactly this as "custom vocabulary".
@@ -44,6 +38,34 @@ the existing F-number scheme (highest prior allocation before 2026-08-11: F318).
   Touches: `pyproject.toml`, `requirements.txt`, `requirements-*-lock.txt`, `scripts/check_installed_versions.py`, `docs/PYTHON_ADVISORIES.md`, `tests/test_declared_floors.py`
   Acceptance: The floor is `urllib3>=2.7.0` with both CVE ids in the inline rationale following the file's existing convention; the resolved lane still installs under the declared extras and the installed-version gate passes; the advisory policy doc records both ids so the next audit does not re-derive them.
   Complexity: S
+
+- [ ] P1 — F337 — Map the high-risk CEP-only host functions onto the Premiere 26.3 UXP API surface
+  Why: The UXP migration dashboard's route-level gate fails on the high-risk CEP-only functions (`ocAddNativeCaptionTrack`, `ocQeReflect`; `ocApplySequenceCuts` partial), and Adobe's 26.2/26.3 UXP releases added Hybrid Plugins, encoder and batch-encode control, `ProjectConverter.exportAAF`, `ObjectMaskUtils`, marker `guid`s, and Transcript APIs that plausibly cover part of that gap — the typings are already pinned at 26.3, so this audit is headless work that shrinks the project's largest tracked liability (119 uxp-pending routes against a ~2026-11 CEP horizon, with conflicting 2026 field reports of earlier breakage).
+  Evidence: `opencut/_generated/uxp_migration_dashboard.json` (2 high-risk `cep_only` functions, failing route gate); https://developer.adobe.com/premiere-pro/uxp/changelog (26.2 Hybrid Plugins; 26.3 launchEncoder/startBatchEncode, exportAAF, Transcript.querySupportedLanguages/hasTranscript, ObjectMaskUtils, createSubClipAction); pinned `@adobe/premierepro` 26.3 typings (CLAUDE.md Learned 2026-08-12); https://hyperbrew.co/blog/uxp-plugins-in-premiere-2026/ and https://github.com/tmoroney/auto-subs/issues/571 (breakage reports raising urgency)
+  Touches: `opencut/tools/adobe_uxp_compatibility.py` (`API_CATALOGUE`), `opencut/_generated/adobe_uxp_compatibility.json`, the `uxp_migration_dashboard` generator, `extension/com.opencut.uxp/main.js` where a typed equivalent exists, `extension/PANEL_PARITY.json`, `tests/`
+  Acceptance: Every 26.2/26.3 UXP API relevant to the three functions is catalogued with typed evidence per the established adobe_uxp_compatibility workflow; each high-risk function carries a dated verdict (portable now / needs live validation / no UXP equivalent); functions judged portable get a UXP implementation or an explicit blocked entry with the missing piece named; the migration dashboard reclassifies from the new catalogue.
+  Complexity: M
+
+- [ ] P1 — F338 — Prove the CSRF bootstrap fix closes the issue #5 first-contact failure
+  Why: The only open external bug (issue #5, 2026-08-10) is a real user blocked at the panel's first mutation by "Invalid or missing CSRF Token"; an Unreleased CHANGELOG entry records CSRF-bootstrap work, but nothing ties it to the reported scenario, no regression test names the failure shape, and the README troubleshooting section never mentions the error string — for a 39-star project, one first-contact failure costs more than any missing feature.
+  Evidence: https://github.com/SysAdminDoc/OpenCut/issues/5; CHANGELOG.md `## Unreleased` CSRF bootstrap entry; grep for "CSRF" in README.md troubleshooting returns nothing (2026-08-20)
+  Touches: `opencut/security.py`, `opencut/routes/system.py` (`/health` bootstrap), `tests/test_integration.py`, `README.md` (troubleshooting), both panels' `ERROR_CODE_ACTIONS` hint tables
+  Acceptance: A regression test reproduces the reported failure shape (panel connects, then mutates with a missing/stale token or opaque-origin bootstrap) and passes against the fix; README troubleshooting names the exact error string with recovery steps; the panel hint for the CSRF error code is actionable; the issue can be answered with a pinned commit and a workaround for the published v1.25.1 build.
+  Complexity: S
+
+- [ ] P1 — F335 — Apply micro audio fades at silence and filler cut boundaries
+  Why: Hard razor joins at detected boundaries produce audible clicks and pops on exported media, the silence/filler export path applies no boundary fade anywhere, and the closest CLI competitor queued exactly this fix in June — it is the cheapest audible-quality win available on the headline feature.
+  Evidence: grep for afade/crossfade/fade in `opencut/core/silence.py` returns nothing (2026-08-20); https://github.com/WyattBlue/auto-editor/issues/1272 (audio fade handling across split edges, 2026-06-25)
+  Touches: `opencut/core/silence.py` (export path), `opencut/routes/audio.py`, `opencut/helpers.py` (`FFmpegCmd`), `opencut/cli.py`, `tests/`
+  Acceptance: Exported cut media applies a configurable micro-fade (default a few milliseconds) at each join, off-switchable per request; a fixture with a tone crossing a cut boundary shows bounded sample discontinuity with the fade on and a click with it off; timeline write-back docs state whether host-side audio transitions are applied or deferred to a later item.
+  Complexity: S
+
+- [ ] P1 — F336 — Route long-file transcription through faster-whisper batched inference
+  Why: Upstream's `BatchedInferencePipeline` delivers roughly 4x on long files and `captions.py` only ever calls sequential `model.transcribe(...)` — long-file speed is simultaneously the top user complaint against paid competitors (AutoCut's 15-minute multi-track runs) and the dominant wall-clock cost of every transcript-driven OpenCut workflow.
+  Evidence: grep for `BatchedInferencePipeline` in `opencut/core/captions.py` returns nothing (2026-08-20); https://github.com/SYSTRAN/faster-whisper/releases (batched inference ~4x, VAD speedups); https://www.capterra.com/p/10036511/AutoCut/ (slowness complaints)
+  Touches: `opencut/core/captions.py`, `opencut/core/asr_router.py`, ASR provenance recording, `opencut/utils/config.py`, `tests/`
+  Acceptance: Files above a documented duration threshold route through the batched pipeline when the active backend supports it, preserving word timestamps and segment shape; provenance records batched vs sequential; a long fixture shows a measurable speedup; an opt-out parameter restores sequential decoding; unsupported backends are unaffected.
+  Complexity: M
 
 ### P2
 
@@ -88,7 +110,36 @@ the existing F-number scheme (highest prior allocation before 2026-08-11: F318).
   Touches: `opencut/core/ffmpeg_provenance.py`, `scripts/verify_ffmpeg_provenance.py`, `README.md`, `Install.ps1`, `install.py`, `Dockerfile`, `docs/RELEASE_PROVENANCE.md`, `tests/`
   Acceptance: The release lane either opens on a specific 9.x version proven by F332's per-CVE ancestry checks to carry every graded fix, or is documented as deliberately closed with the reason recorded in the module rather than a comment about an unshipped 8.1.3; the 9.0 branch point (2026-06-26, before the July fix commits landed on master) is explicitly accounted for rather than assumed, since a later release date does not by itself imply the fixes were backported; installation docs name whichever lane is supported.
   Depends on: F332
+  Note (2026-08-20): upstream released 9.0.1 on 2026-08-12, so the 9.0 lane decision now has a patch release to grade against; the branch-point caveat (9.0 cut 2026-06-26, before the July fix commits) applies to 9.0.x until ancestry-checked.
   Complexity: M
+
+- [ ] P2 — F339 — Add a "disable instead of delete" mode to cut-review write-back
+  Why: Editors distrust destructive auto-cuts, and the reviewer-tested FireCut comparison specifically calls out the inability to disable or mark clips instead of removing them — while Premiere track items expose a settable disabled state and OpenCut's host layers currently have no disable path at all, so the review panel's only outcomes are delete or skip.
+  Evidence: https://cutback.video/blog/the-best-auto-silence-removal-plugin-for-premiere-pro (FireCut "can't disable instead of delete"); https://www.freevisuals.net/post/firecut-ai-review (2026-07-20, no non-destructive option); grep for `.disabled`/disable in `extension/com.opencut.panel/host/index.jsx` returns nothing (2026-08-20)
+  Touches: `extension/com.opencut.panel/host/index.jsx` (new host function or `ocApplySequenceCuts` mode), `extension/com.opencut.uxp/main.js`, both panels' cut-review UI, `client/host-write-verification.js` + `uxp-host-write-verification.js` contracts, `tests/jsx_mock.js`
+  Acceptance: The cut review panel offers apply-as-disable alongside apply-as-delete; disabled ranges pass the same read-back verification contract as deletions; re-running with delete after a disable pass works; the docs state the mode is non-destructive and reversible in Premiere.
+  Complexity: M
+
+- [ ] P2 — F340 — Guard timeline performance when applying large cut batches
+  Why: Applying thousands of razor cuts makes a Premiere sequence unusably laggy — reported verbatim on Adobe's forum against silence-cutting plugins — and OpenCut has no cut-count warning, no merge-small-gaps option at write-back time, and no consolidation alternative, so a 2-hour recording with aggressive thresholds produces exactly that failure.
+  Evidence: https://community.adobe.com/questions-729/using-a-plugin-to-cut-out-silence-and-the-sequence-becomes-unusably-laggy-1411061; grep for consolidation/nesting in `extension/com.opencut.panel/host/index.jsx` returns nothing (2026-08-20); `opencut/core/smart_render.py` already renders consolidated media that could serve as the escape hatch
+  Touches: both panels' cut-review surfaces, `opencut/core/silence.py` (merge segments separated by sub-threshold gaps), `extension/com.opencut.panel/host/index.jsx`, `docs/`
+  Acceptance: Before write-back, the review panel reports the edit count and warns above a documented threshold; the user can merge cuts separated by less than N frames (provably reducing edit count on a fixture), switch to the F325 tighten mode, or render consolidated media via smart_render instead of cutting the sequence; the warning threshold and rationale are documented.
+  Complexity: M
+
+- [ ] P2 — F341 — Add multicam cutting grammar controls and benchmark the mixed-track workflow
+  Why: `generate_multicam_cuts` exposes a single knob (min_cut_duration), while the category leader AutoPod is distrusted for its wide-shot handling, cannot work from mixed/shared audio tracks, and leaves silence padding — and OpenCut's diarization-driven path already works from one mixed track but has no cutting grammar (wide-shot cadence, cut-on-interruption, per-speaker weighting) and nothing documents or proves the mixed-track advantage.
+  Evidence: `opencut/core/multicam.py:88` (only `min_cut_duration`); https://diyai.io/ai-tools/video-generation/reviews/autopod-review/ and https://vidpros.com/autopod-review-ai-editing-for-podcasts-worth-it/ (mixed-track failure, silence padding); `docs/RESEARCH_COMPETITIVE_TEARDOWN_2026-06-10.md` multicam-v2 gap (tunable wide-shot frequency), never regraded until 2026-08-20
+  Touches: `opencut/core/multicam.py`, `opencut/routes/video_core.py` (`/video/multicam-cuts`, `/video/multicam-xml`), multicam settings in `~/.opencut/multicam_config.json` wrappers, both panels' multicam surfaces, `tests/test_new_modules.py`
+  Acceptance: Cut generation accepts wide-shot cadence (a wide angle every N cuts or T seconds), a cut-on-interruption toggle, and per-speaker track weighting, with current defaults unchanged; a fixture proves cuts generate from a single mixed-audio track and the README/docs state it; grammar settings flow through both the cut list and the multicam XML export.
+  Complexity: M
+
+- [ ] P2 — F342 — Add de-reverb and denoise separation checkpoints through the pinned audio-separator
+  Why: The pinned `audio-separator` dependency exposes UVR-family de-reverb and denoise checkpoints beyond music stems, competitors sell the equivalent as metered "studio sound", and OpenCut's separator registry lists music-stem models only — so this is a registry entry on an existing dependency, the same shape as F316.
+  Evidence: https://github.com/nomadkaraoke/python-audio-separator (de-reverb/denoise/karaoke checkpoint registry, pushed 2026-07-20); `opencut/core/engine_registry.py` separator entries (music stems only); F316 precedent
+  Touches: `opencut/core/engine_registry.py`, `opencut/routes/audio.py`, `opencut/checks.py`, `opencut/model_cards.py`, `tests/`
+  Acceptance: De-reverb and denoise checkpoints are selectable through the existing backend/engine parameter with probed availability; model identifiers and licences are recorded on cards per the existing convention; current defaults are unchanged.
+  Complexity: S
 
 ### P3
 
@@ -133,3 +184,31 @@ the existing F-number scheme (highest prior allocation before 2026-08-11: F318).
   Touches: `pyproject.toml`, `requirements*.txt`, `opencut/export/otio_compat.py`, `opencut/export/otio_export.py`, `scripts/check_dependency_matrix.py`, `tests/`
   Acceptance: The OTIO specifier bounds the tested minor line rather than an open `<1`; a contract test round-trips an OTIOZ bundle and asserts the media-reference policy and bundle layout, failing on an untested OTIO minor; `otio_compat` records the verified-against version alongside the runtime version.
   Complexity: S
+
+- [ ] P3 — F343 — Refresh the naming and positioning section against the OpenCut-app relaunch
+  Why: The README naming section still cites ~48K stars and says "when it relaunches", but the unrelated web OpenCut reached 85K stars, merged its ground-up rewrite around 2026-07-14 with a plugin store, headless rendering, and MCP direction, and carries an active name-infringement thread — the discoverability risk the section exists to manage grew while its facts went stale.
+  Evidence: `README.md` naming section ("~48K stars", "when it relaunches"); GitHub API star count 85,234 (2026-08-20); https://explainx.ai/blog/opencut-rewrite-plugins-headless-mcp-2026; https://github.com/OpenCut-app/OpenCut (issue #192, name infringement)
+  Touches: `README.md` (naming section and lede), repo description, `pyproject.toml` description
+  Acceptance: The section states the current facts with dates, keeps the `opencut-ppro` distribution decision, and the disambiguating phrase ("OpenCut for Premiere Pro") appears in the repo description and README lede; the prose follows the project's public-writing voice rules.
+  Complexity: S
+
+- [ ] P3 — F344 — Rank repeat clusters with a best-take recommendation
+  Why: `repeat_detect` finds repeated sentences but ranks nothing, so review shows "these repeat" without "keep this one" — while AutoCut Repeat and Gling sell exactly the keep-best-take selection, and a heuristic (filler count, WPM stability, completion) with an optional LLM verdict layers cleanly on the existing detection output.
+  Evidence: `opencut/core/repeat_detect.py` (detection and range merging only); https://github.com/rafcopy/auto-cut-agent (LLM-based take dedup in a UXP+local-server design, 2026-08-13); https://opentools.ai/tools/gling-ai (bad-take marking)
+  Touches: `opencut/core/repeat_detect.py`, `opencut/core/llm.py` consumers, `opencut/routes/captions.py` (`/captions/repeat-detect`), both panels' cut-review surfaces, `tests/test_new_modules.py`
+  Acceptance: Each repeat cluster carries a ranked keep-candidate with per-take signals (filler count, speech-rate stability, sentence completion, optional LLM verdict with recorded fallback); the review UI preselects the keep and cuts the rest; the heuristic path works with no LLM configured; existing detect-only output remains available.
+  Complexity: M
+
+- [ ] P3 — F345 — Generate a packaged agent skill for the MCP server
+  Why: Remotion ships Agent Skills so coding agents drive it correctly on first contact, and OpenCut's 88-tool MCP server has no packaged skill or conventions document, so every agent session rediscovers the review-first and durable-jobs patterns from raw tool schemas.
+  Evidence: https://www.remotion.dev/blog (Agent Skills, 2026-01); `opencut/_generated/mcp_server_registry.json` (88 tools, no companion skill artifact)
+  Touches: a new generated skill document (tool map, review-first conventions, durable-jobs pattern, safety rules), its dump tool under `opencut/tools/`, `docs/MCP_SERVER.md`, drift test
+  Acceptance: A versioned skill document generates from the MCP registry, ships in-repo, and regenerates with the manifest under a drift test like other `_generated` artifacts; it teaches the review-before-mutate and task-polling conventions; a coldstart agent following only the skill can run a transcribe-review-export flow.
+  Complexity: S
+
+- [ ] P3 — F346 — Activate the /analyze/video/qwen3vl lane through local Ollama vision models
+  Why: Content-aware editing ("cut the boring parts" from semantic video understanding, not just audio) is where the closest CLI competitor and the agentic wave are heading, and OpenCut already has the route stubbed (`/analyze/video/qwen3vl`, 501) plus an LLM layer that fronts Ollama — which serves Qwen-VL-class models locally — so one stub activation delivers per-segment semantic relevance scoring with no cloud key.
+  Evidence: `opencut/_generated/route_manifest.json` (qwen3vl/internvl3 stubs); https://github.com/WyattBlue/auto-editor/issues/1273 (content-aware edit method, 2026-06-25); `opencut/core/llm.py` (Ollama support); the text-first economy pattern from browser-use/video-use recorded in the 2026-08-11 pass
+  Touches: `opencut/core/multimodal_qwen3vl.py` (remove terminal NotImplementedError per readiness rules), `opencut/core/llm.py`, the wave_qrs route, highlights integration, `opencut/model_cards.py`, `tests/`
+  Acceptance: The route leaves stub state through the established readiness flow (stub_scan reclassifies it once the terminal raise is gone and `check_X_available()` gates it); frame-sampled scoring returns per-segment relevance keeping transcript as the primary signal and pixels at decision points; it runs against a local Ollama vision model with no API key; the manifest and README counts regenerate.
+  Complexity: L
