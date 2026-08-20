@@ -37,11 +37,18 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     )
     parser.add_argument("--json", action="store_true", help="Emit the report as JSON.")
     parser.add_argument("--quiet", action="store_true", help="Only print on failure.")
+    parser.add_argument(
+        "--baseline",
+        type=Path,
+        default=BASELINE_PATH,
+        help="Baseline to check against. Exists so the gate's failure paths can be "
+             "exercised where they actually run, not only in-process.",
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     manifest = load_manifest()
     if args.check:
-        report = evaluate(manifest, load_baseline())
+        report = evaluate(manifest, load_baseline(args.baseline))
         if args.json:
             print(json.dumps(report, indent=2, sort_keys=True))
         elif report["passes"]:
