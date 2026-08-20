@@ -34,13 +34,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: The release gate fails when `coverage_percent` falls below the value recorded at the time the ratchet lands; a new route must either declare a surface or carry an explicit `integration-only` justification that the gate records; the report names the largest integration-only route families so a triage or deprecation decision has data behind it.
   Complexity: M
 
-- [ ] P2 — F339 — Add a "disable instead of delete" mode to cut-review write-back
-  Why: Editors distrust destructive auto-cuts, and the reviewer-tested FireCut comparison specifically calls out the inability to disable or mark clips instead of removing them — while Premiere track items expose a settable disabled state and OpenCut's host layers currently have no disable path at all, so the review panel's only outcomes are delete or skip.
-  Evidence: https://cutback.video/blog/the-best-auto-silence-removal-plugin-for-premiere-pro (FireCut "can't disable instead of delete"); https://www.freevisuals.net/post/firecut-ai-review (2026-07-20, no non-destructive option); grep for `.disabled`/disable in `extension/com.opencut.panel/host/index.jsx` returns nothing (2026-08-20)
-  Touches: `extension/com.opencut.panel/host/index.jsx` (new host function or `ocApplySequenceCuts` mode), `extension/com.opencut.uxp/main.js`, both panels' cut-review UI, `client/host-write-verification.js` + `uxp-host-write-verification.js` contracts, `tests/jsx_mock.js`
-  Acceptance: The cut review panel offers apply-as-disable alongside apply-as-delete; disabled ranges pass the same read-back verification contract as deletions; re-running with delete after a disable pass works; the docs state the mode is non-destructive and reversible in Premiere.
-  Complexity: M
-
 ### P3
 
 - [ ] P3 — F350 — Rename the co-named per-panel assets so one filename means one file
