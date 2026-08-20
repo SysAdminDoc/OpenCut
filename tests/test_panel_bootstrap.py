@@ -128,6 +128,55 @@ class TestHealthBootstrap:
         assert allowed.status_code != 403
 
 
+class TestRejectionIsActionable:
+    """Issue #5 — a user hit "Invalid or missing CSRF Token" and had nothing to act on.
+
+    The panel selects its recovery hint from the structured ``code`` field, so a
+    bare ``{"error": ...}`` body renders as a dead-end message no matter which
+    of the two causes produced it. Pin the structured shape and pin that the two
+    causes stay distinguishable, because their fixes differ.
+    """
+
+    def test_missing_token_rejection_carries_code_and_suggestion(self, client):
+        resp = client.post("/settings/loudness-target", json={"target_lufs": -14.0})
+
+        assert resp.status_code == 403
+        body = resp.get_json()
+        assert body["error"] == "Invalid or missing CSRF token"
+        assert body["code"] == "CSRF_INVALID"
+        assert "never received" in body["suggestion"]
+
+    def test_stale_token_rejection_is_distinguishable_from_a_missing_one(self, client):
+        """A restarted server invalidates a token the panel still holds."""
+        resp = client.post(
+            "/settings/loudness-target",
+            json={"target_lufs": -14.0},
+            headers={"X-OpenCut-Token": "a" * 64},
+        )
+
+        assert resp.status_code == 403
+        body = resp.get_json()
+        assert body["code"] == "CSRF_INVALID"
+        assert "expired" in body["suggestion"]
+        assert body["suggestion"] != client.post(
+            "/settings/loudness-target", json={"target_lufs": -14.0}
+        ).get_json()["suggestion"]
+
+    def test_panel_maps_the_code_to_a_recovery_action(self):
+        """A code the panel cannot map leaves the user where issue #5 left them."""
+        main_js = (
+            os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "extension", "com.opencut.panel", "client", "main.js",
+            )
+        )
+        with open(main_js, "r", encoding="utf-8", errors="replace") as fh:
+            source = fh.read()
+
+        actions = source.split("var ERROR_CODE_ACTIONS = {", 1)[1].split("};", 1)[0]
+        assert "CSRF_INVALID" in actions
+
+
 class TestBootstrapAudit:
     def test_withheld_bootstrap_is_recorded(self, client, monkeypatch):
         recorded = []
