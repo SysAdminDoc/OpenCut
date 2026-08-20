@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Long-file transcripts flag repetition loops
+
+- Whisper-family decoders degrade on hour-plus audio by looping one phrase for
+  the rest of the file. The result reads as plausible and the cut stage then
+  deletes footage from it, so the failure was silent and destructive. The
+  decoder's anti-degeneration thresholds are now set explicitly instead of
+  inherited, and a backend-independent pass marks runs of near-identical
+  consecutive segments as needing human review, recording the count in ASR
+  provenance. Detection only flags — a looped span still holds whatever the
+  model heard, so nothing is discarded.
+
 ### Fixed - The i18n gate follows extracted controllers
 
 - The locale lint scanned a hand-listed set of panel scripts, so extracting a
