@@ -15263,19 +15263,36 @@
         });
     }
 
+    function getTimelineCutMode() {
+        var el = document.getElementById("timelineCutMode");
+        return el && el.value === "disable" ? "disable" : "delete";
+    }
+
     function applySequenceCuts(cuts) {
         if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
         var cutPlan = OpenCutTimeline.cloneCuts(cuts);
+        var cutMode = getTimelineCutMode();
         if (cutPlan.length > getInterchangeCutThreshold()) {
+            // The interchange path re-imports a razored timeline, which cannot
+            // express "leave the clip in place but disabled".
+            if (cutMode === "disable") {
+                showAlert(t(
+                    "timeline.disable_mode_interchange",
+                    "Disable mode applies cuts clip by clip, so it cannot use the interchange path. Raise the interchange threshold above {count} or switch back to delete."
+                ).replace("{count}", cutPlan.length));
+                return;
+            }
             applySequenceCutsViaInterchange(cutPlan);
             return;
         }
-        var payload = JSON.stringify(cutPlan);
+        var payload = JSON.stringify({ cuts: cutPlan, mode: cutMode });
         journalCheckpointedHostWrite({
             action: "apply_cuts",
-            label: t("journal.apply_cuts_label", "Apply reviewed timeline cuts"),
+            label: cutMode === "disable"
+                ? t("journal.disable_cuts_label", "Disable reviewed timeline cuts")
+                : t("journal.apply_cuts_label", "Apply reviewed timeline cuts"),
             clipPath: selectedPath,
-            preview: { clips: selectedName ? [selectedName] : [], settings: { cuts: cutPlan } }
+            preview: { clips: selectedName ? [selectedName] : [], settings: { cuts: cutPlan, mode: cutMode } }
         }, function (cb) {
             cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", cb);
         }, function (r) {
@@ -15283,11 +15300,18 @@
                 showAlert(replaceTemplateValue(t("timeline.apply_cuts_failed", "Error applying cuts: {error}"), "{error}", r.error));
                 return;
             }
-            showToast(t("timeline.cuts_applied", "Applied {count} cuts to sequence")
-                .replace("{count}", cutPlan.length), "success");
+            var doneMessage = cutMode === "disable"
+                ? t("timeline.cuts_disabled", "Disabled {count} cut ranges; re-enable any clip in Premiere to undo one.")
+                    .replace("{count}", cutPlan.length)
+                : t("timeline.cuts_applied", "Applied {count} cuts to sequence")
+                    .replace("{count}", cutPlan.length);
+            showToast(doneMessage, "success");
             var statusEl = document.getElementById("tlWritebackStatus");
-            if (statusEl) statusEl.textContent = t("timeline.cuts_applied_status", "Applied {count} cuts to sequence.")
-                .replace("{count}", cutPlan.length);
+            if (statusEl) statusEl.textContent = cutMode === "disable"
+                ? t("timeline.cuts_disabled_status", "Disabled {count} cut ranges in the sequence.")
+                    .replace("{count}", cutPlan.length)
+                : t("timeline.cuts_applied_status", "Applied {count} cuts to sequence.")
+                    .replace("{count}", cutPlan.length);
         });
     }
 

@@ -208,3 +208,87 @@ class TestCutPathWiring:
         body = source[start:start + 600]
         assert "_secondsToTicks(cut.start)" in body
         assert "254016000000" not in body
+
+
+class TestNonDestructiveCutMode:
+    """F339 — reviewed cuts must have a reversible outcome."""
+
+    def _source(self) -> str:
+        return MAIN_JS.read_text(encoding="utf-8", errors="replace")
+
+    def test_apply_cuts_accepts_a_mode(self):
+        source = self._source()
+        assert 'async function applyCuts(cuts, mode = "delete")' in source
+        assert 'String(mode || "delete").toLowerCase() === "disable"' in source
+
+    def test_disable_uses_the_undoable_set_disabled_action(self):
+        source = self._source()
+        assert "createSetDisabledAction(true)" in source
+        start = source.index("async function _disableItemsWithEditor")
+        body = source[start:source.index("async function _applyOneCut")]
+        assert "executeTransaction" in body
+        assert "compoundAction.addAction" in body
+
+    def test_disable_mode_never_falls_back_to_deleting(self):
+        """A fallback that removes media is not a degraded form of 'keep it'."""
+        source = self._source()
+        start = source.index("async function _applyOneCut")
+        body = source[start:source.index("async function _rippleDeleteFallback")]
+        disable_branch = body[body.index("if (disableMode) {"):body.index("if (plan.removable) {")]
+        assert "_rippleDeleteFallback" not in disable_branch
+        assert '"skipped"' in disable_branch
+
+    def test_a_boundary_crossing_range_is_skipped_not_deleted(self):
+        source = self._source()
+        start = source.index("async function _applyOneCut")
+        body = source[start:source.index("async function _rippleDeleteFallback")]
+        assert "if (!plan.removable) return { method: \"skipped\", note: plan.reason };" in body
+
+    def test_mode_reaches_the_host_dispatch(self):
+        source = self._source()
+        start = source.index('case "ocApplySequenceCuts"')
+        assert "mode" in source[start:start + 200]
+
+    def test_disabled_state_is_part_of_the_read_back_fingerprint(self):
+        """Otherwise disabling reads back as 'nothing changed' and fails closed."""
+        verifier = (UXP_DIR / "uxp-host-write-verification.js").read_text(encoding="utf-8")
+        assert "isDisabled" in verifier
+        assert "${disabled}" in verifier
+
+    def test_skipped_cuts_are_not_counted_as_written(self):
+        source = self._source()
+        assert "reported: sorted.length - methodCounts.skipped" in source
+
+
+class TestCepNonDestructiveCutMode:
+    def _source(self) -> str:
+        return (
+            REPO_ROOT / "extension" / "com.opencut.panel" / "host" / "index.jsx"
+        ).read_text(encoding="utf-8", errors="replace")
+
+    def test_host_accepts_both_the_legacy_array_and_a_mode_object(self):
+        source = self._source()
+        assert "parsedPayload.length === undefined && parsedPayload.cuts" in source
+        assert 'var disableOnly = cutMode === "disable";' in source
+
+    def test_disable_sets_the_clip_flag_instead_of_removing(self):
+        source = self._source()
+        assert "if (disableOnly) { vClip.disabled = true; } else { vClip.remove(false, true); }" in source
+        assert "if (disableOnly) { aClip.disabled = true; } else { aClip.remove(false, true); }" in source
+
+    def test_clip_fingerprint_carries_disabled_state(self):
+        source = self._source()
+        assert "disabledState" in source
+
+    def test_panel_exposes_the_mode_and_refuses_the_interchange_path(self):
+        client = (
+            REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "main.js"
+        ).read_text(encoding="utf-8", errors="replace")
+        html = (
+            REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "index.html"
+        ).read_text(encoding="utf-8", errors="replace")
+        assert 'id="timelineCutMode"' in html
+        assert "function getTimelineCutMode()" in client
+        # The interchange path re-imports a razored timeline and cannot express
+        # "leave the clip in place but disabled", so it must refuse, not delete.
+        assert "timeline.disable_mode_interchange" in client

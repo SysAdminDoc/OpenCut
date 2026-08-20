@@ -981,7 +981,13 @@ function _ocSequenceClipSnapshot(seq) {
                     var end = clip.end && clip.end.seconds != null ? Number(clip.end.seconds) : 0;
                     var nodeId = "";
                     try { nodeId = clip.projectItem && clip.projectItem.nodeId ? String(clip.projectItem.nodeId) : ""; } catch (e2) {}
-                    result.push(kinds[kindIndex] + "|" + trackIndex + "|" + nodeId + "|" + String(clip.name || "") + "|" + start.toFixed(6) + "|" + end.toFixed(6));
+                    // Disabled state is part of the fingerprint so a
+                    // non-destructive cut, which leaves every clip in place,
+                    // still produces an observable diff. Without it, disabling
+                    // would read back as "nothing changed" and fail closed.
+                    var disabledState = "";
+                    try { disabledState = clip.disabled == null ? "" : String(clip.disabled); } catch (e4) {}
+                    result.push(kinds[kindIndex] + "|" + trackIndex + "|" + nodeId + "|" + String(clip.name || "") + "|" + start.toFixed(6) + "|" + end.toFixed(6) + "|" + disabledState);
                 } catch (e3) {
                     _ocLog("clip read-back failed: " + e3.toString());
                 }
@@ -2355,11 +2361,21 @@ function ocApplySequenceCuts(cutsJSON) {
         }
 
         var cuts = [];
+        var cutMode = "delete";
         try {
-            cuts = JSON.parse(cutsJSON);
+            var parsedPayload = JSON.parse(cutsJSON);
+            // Legacy callers pass a bare array. The reviewed-cut surfaces pass
+            // { cuts: [...], mode: "delete" | "disable" }.
+            if (parsedPayload && parsedPayload.length === undefined && parsedPayload.cuts) {
+                cuts = parsedPayload.cuts;
+                if (parsedPayload.mode) cutMode = String(parsedPayload.mode).toLowerCase();
+            } else {
+                cuts = parsedPayload;
+            }
         } catch (e) {
             return JSON.stringify({ error: "Invalid JSON: " + e.toString() });
         }
+        var disableOnly = cutMode === "disable";
 
         if (!cuts || cuts.length === 0) {
             return JSON.stringify(_ocAttachHostWriteVerification(
@@ -2407,7 +2423,7 @@ function ocApplySequenceCuts(cutsJSON) {
                         // Remove clips fully contained within cut range (with 0.01s tolerance for floating-point)
                         if (clipStart >= cutStart - 0.01 && clipEnd <= cutEnd + 0.01) {
                             attemptedRemovals++;
-                            vClip.remove(false, true);
+                            if (disableOnly) { vClip.disabled = true; } else { vClip.remove(false, true); }
                             applied++;
                         }
                     } catch (e) {
@@ -2427,7 +2443,7 @@ function ocApplySequenceCuts(cutsJSON) {
                         var aClipEnd = aClip.end ? Number(aClip.end.seconds) : 0;
                         if (aClipStart >= cutStart - 0.01 && aClipEnd <= cutEnd + 0.01) {
                             attemptedRemovals++;
-                            aClip.remove(false, true);
+                            if (disableOnly) { aClip.disabled = true; } else { aClip.remove(false, true); }
                             applied++;
                         }
                     } catch (e) {
@@ -2450,10 +2466,10 @@ function ocApplySequenceCuts(cutsJSON) {
                 applied,
                 verifiedRemoved,
                 cutStatus,
-                canVerifyClips ? "videoTracks/audioTracks clip collection fingerprint diff" : "unavailable: video/audio track collection traversal",
+                canVerifyClips ? "videoTracks/audioTracks clip boundary and disabled-state fingerprint diff" : "unavailable: video/audio track collection traversal",
                 { clip_count: beforeClips === null ? null : beforeClips.length },
-                { clip_count: afterClips === null ? null : afterClips.length },
-                canVerifyClips ? "Clip.remove() reports are verified by re-walking both track collections and comparing clip boundaries." : "This host does not expose independently readable track collections."
+                { clip_count: afterClips === null ? null : afterClips.length, mode: disableOnly ? "disable" : "delete" },
+                canVerifyClips ? "Clip.remove() and Clip.disabled reports are verified by re-walking both track collections and comparing clip boundaries and disabled state; disabling leaves the clip count unchanged, so the disabled flag is part of the fingerprint." : "This host does not expose independently readable track collections."
             )
         );
         return JSON.stringify(cutResult);

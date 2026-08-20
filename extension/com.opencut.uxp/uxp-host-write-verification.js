@@ -113,7 +113,12 @@ export function createHostWriteVerifier({
           const end = timeValueToSeconds(await itemField(
             item, ["getEndTime", "getEnd", "getOutPoint"], ["end", "endTime"]
           )) ?? 0;
-          fingerprints.push(`${kind}|${entry.index}|${nodeId || ""}|${name || ""}|${start.toFixed(6)}|${end.toFixed(6)}`);
+          // Disabled state is part of the fingerprint so a non-destructive cut
+          // (which leaves every clip in place) still produces an observable
+          // diff. Without it, disabling would read back as "nothing changed".
+          let disabled = "";
+          try { disabled = String(await item.isDisabled?.() ?? ""); } catch (_) { disabled = ""; }
+          fingerprints.push(`${kind}|${entry.index}|${nodeId || ""}|${name || ""}|${start.toFixed(6)}|${end.toFixed(6)}|${disabled}`);
         }
       }
     }
