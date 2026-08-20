@@ -30,15 +30,12 @@ def _load_checker():
 checker = _load_checker()
 
 
-# Two declared security floors cannot currently be installed together with the
-# rest of the stack, so the environment stays behind them. Each is recorded
-# with its concrete blocker; anything NOT on this list is a new regression and
-# fails the test. `scripts/check_installed_versions.py` (and the release smoke
-# step that runs it) still fail on these - that is the point of the gate.
+# A declared security floor that cannot be installed alongside the rest of the
+# stack is recorded here with its concrete blocker; anything NOT on this list
+# is a new regression and fails the test. `scripts/check_installed_versions.py`
+# (and the release smoke step that runs it) still fail on these - that is the
+# point of the gate.
 KNOWN_ENVIRONMENT_GAPS = {
-    # simple-lama-inpainting (the LaMA watermark-removal backend, installed at
-    # runtime by object_removal) pins opencv-python >=4.8.0.74,<5.0.0.0.
-    "opencv-python": ">=5",
     # transformers 5.x forces huggingface_hub 1.x, which the pyannote /
     # faster-whisper / diffusers stack in this matrix does not accept yet.
     "transformers": ">=5.3",
@@ -64,7 +61,12 @@ def test_recorded_environment_gaps_do_not_outlive_their_blockers():
     """A gap that has been resolved must be removed from the record."""
     report = checker.check_installed(["all"])
     violated = {m["distribution"] for m in report["mismatches"]}
-    stale = sorted(set(KNOWN_ENVIRONMENT_GAPS) - violated)
+    # An uninstalled distribution reports neither a mismatch nor a match, so it
+    # is no evidence the blocker is gone. Only an installed-and-satisfying
+    # distribution proves the gap is stale; otherwise a machine without the
+    # optional AI extras would demand the record be deleted on absence alone.
+    unproven = set(report["absent"])
+    stale = sorted(set(KNOWN_ENVIRONMENT_GAPS) - violated - unproven)
     assert stale == [], (
         f"these distributions now satisfy their declared floors: {stale}. "
         "Drop them from KNOWN_ENVIRONMENT_GAPS so the gate is fully enforced."
