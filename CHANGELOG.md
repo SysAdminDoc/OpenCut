@@ -3,7 +3,7 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
-## Unreleased
+## 1.49.0 - Local Qwen3-VL video scoring
 
 ### Added: Local Qwen3-VL video scoring
 
