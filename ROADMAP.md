@@ -12,36 +12,41 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
 
 ### P2
 
-- [ ] P2 — F351 — Express a boundary-crossing cut through the typed UXP API
-  Why: F349 landed the typed cut path on 2026-08-20, but `createRemoveItemsAction` removes whole track items and the typed 26.3 API exposes no razor, so the most common case — silence inside a single long clip — still falls back to `sequence.rippleDelete()`, which premiere-pro-mcp #21 measured returning success while changing nothing on 26.3. The fallback is now reported rather than silent, so the gap is visible, not fixed.
-  Evidence: `extension/com.opencut.uxp/uxp-cut-planner.js` (`planCutRemoval` returns `removable: false` with a `straddling` list); `extension/com.opencut.uxp/main.js` (`_applyOneCut`, `_rippleDeleteFallback`); `tests/test_uxp_cut_planner.py::test_an_item_spanning_the_whole_range_blocks_the_typed_path`; `@adobe/premierepro` 26.3.0 typings expose `createCloneTrackItemAction`, `createSetStartAction`, `createSetEndAction`, `createSetInPointAction`, `createSetOutPointAction` but no razor/split action
-  Touches: `extension/com.opencut.uxp/uxp-cut-planner.js`, `extension/com.opencut.uxp/main.js`, `opencut/tools/adobe_uxp_compatibility.py` (new capabilities), `tests/test_uxp_cut_planner.py`
-  Acceptance: A cut whose range crosses a track-item boundary is applied by cloning the item and trimming the two halves, then ripple-removing what lies between, all inside one `executeTransaction` so a partial failure cannot leave a half-cut timeline; the ripple accounting is verified against the read-back contract; `planCutRemoval` reports the split plan rather than refusing; the `rippleDelete` fallback is removed only once the live-host lane confirms the replacement.
-  Note: the ripple arithmetic across mixed trims and removals is the risky part and cannot be proven headless — F252's live-Premiere lane gates dropping the fallback, not writing the code.
+- [ ] P2 — F357 — Clear or justify the seven npm advisories failing the release gate
+  Why: `npm-advisory` fails the gate on seven unwaived high advisories in the panel's dev toolchain, so the release cannot proceed. The checker deliberately refuses to pass them silently and asks for a recorded justification per entry, which is a judgement about accepted risk rather than something to rubber-stamp.
+  Evidence: `python scripts/release_smoke.py --only npm-advisory --json` lists `js-yaml` (GHSA-5p4m-2wfm-xmqj), `nanoid` (GHSA-2v37-7h3g-55p8), `brace-expansion` (GHSA-rgw5-rvv9-x895), plus `eslint`, `@eslint/config-array`, `@eslint/eslintrc` and `minimatch` with no GHSA id reported
+  Touches: `extension/com.opencut.panel/package.json`, `extension/com.opencut.panel/package-lock.json`, `extension/com.opencut.panel/scripts/check-advisories.mjs`, `docs/NODE_ADVISORIES.md`
+  Acceptance: Each advisory is either resolved by upgrading the dependency or recorded in the `ALLOWED` list with a written reason and a review date; `npm-advisory` passes. Prefer upgrading — these are dev dependencies, so the blast radius of a bump is the build, not the shipped panel.
+  Note: the four entries reporting no GHSA id come through a transitive path; resolve where they enter rather than waiving a bare package name, or the waiver will silently cover a future unrelated advisory in the same package.
   Complexity: M
 
-- [ ] P2 — F328 — Ratchet the direct-surface ratio so new routes cannot ship unreachable
-  Why: The repo's own manifest reports 280 of 1,568 shipped routes reachable from any first-party surface (17.9%), 1,288 integration-only, and zero routes whose primary surface is the CLI — so every wave adds API faster than it adds product, and the ratio is measured but nothing stops it falling.
-  Evidence: `opencut/_generated/route_manifest.json` → `surface_coverage.summary` (`direct_surface_routes: 280`, `integration_only_routes: 1288`, `coverage_percent: 17.9`, `primary_counts.cli: 0`); 19 CLI commands in `opencut/cli.py`; 88 MCP tools in `opencut/_generated/mcp_server_registry.json`; the gate at `surface_coverage.gate` only asserts every route is classified, never that the ratio holds
-  Touches: `opencut/tools/dump_route_manifest.py`, `scripts/release_smoke.py`, `opencut/cli.py`, `opencut/core/mcp_tools.py`, `opencut/core/command_palette.py`, `tests/`
-  Acceptance: The release gate fails when `coverage_percent` falls below the value recorded at the time the ratchet lands; a new route must either declare a surface or carry an explicit `integration-only` justification that the gate records; the report names the largest integration-only route families so a triage or deprecation decision has data behind it.
+- [ ] P2 — F358 — Diagnose the panel-rendered failure blocking the release gate
+  Why: `panel-rendered` is the fourth step failing the release gate and the only one not yet characterised. The Playwright goldens have drifted 2 to 3 percent on this machine before without any CSS change, so this may be environmental, but it has not been confirmed and a release cannot be cut until it is one or the other.
+  Evidence: `python scripts/release_gate.py verify` reports `release smoke failed: media-conformance, pip-audit, panel-rendered, npm-advisory`; media-conformance is fixed, the other two are F356 and F357
+  Touches: `extension/com.opencut.panel/tests/rendered/`, `extension/com.opencut.panel/playwright.config.mjs`
+  Acceptance: The failure is identified as either a real regression, which is fixed, or as environment-driven rendering drift, which is recorded with the measured delta and handled so the gate stops failing on it. Do not update goldens to hide a real change — inspect the expected/actual/diff artifacts first.
+  Note: the suite needs more than three minutes for its 63 single-worker cases, so budget for that.
   Complexity: M
 
 ### P3
 
-- [ ] P3 — F350 — Rename the co-named per-panel assets so one filename means one file
-  Why: `backend-client.js`, `command-center.css`, `command-center-layout.css`, and `command-center-tokens.css` each exist under the same name in both panels while being genuinely different implementations (for example `command-center.css` is 2,416 lines in CEP and 2,627 in UXP) — one name for two files at the same cascade position invites edits landing in the wrong panel, which is the failure the shared-asset drift gate cannot catch because these were never copies.
-  Evidence: `tests/test_shared_panel_assets.py` records all four in `panel_specific` with byte comparisons; RESEARCH.md 2026-08-11 named `command-center.css` shipping "as two unrelated files under one name and cascade position"
-  Touches: `extension/com.opencut.panel/client/`, `extension/com.opencut.uxp/`, both `index.html` link/script tags, `scripts/i18n_lint.py` and any build/verification file lists, `tests/test_shared_panel_assets.py`
-  Acceptance: Each per-panel asset carries a name that identifies its panel (or lives under a panel-scoped directory), every referencing tag and tool list is updated, and the entries are removed from `panel_specific` because the collision no longer exists.
-  Complexity: S
+- [ ] P3 — F354 — Give the largest integration-only route families a surface or a deprecation date
+  Why: F328 landed the ratchet on 2026-08-20, so the ratio can no longer fall — but it locked in at 17.9%, with 1,313 routes reachable from nothing a user can click. The gate names where the mass sits (`wave_l` 80, `platform_infra` 55, `wave_k` 48, `wave_qrs` 42, `integration` 40), which is the data the decision needed and did not have. Holding the line is not the same as fixing it.
+  Evidence: `python -m opencut.tools.dump_surface_ratchet --check` prints the ten largest families; `opencut/_generated/surface_ratchet.json` records all 104; `opencut/_generated/route_manifest.json` → `surface_coverage.summary.coverage_percent: 17.9`
+  Touches: `opencut/cli.py`, `opencut/core/command_palette.py`, `opencut/core/mcp_tools.py`, `opencut/_generated/surface_ratchet.json`, `tests/`
+  Acceptance: Each of the largest families is either given a first-party surface (a CLI command, a palette entry, or a curated MCP tool) or recorded as deprecated with a removal target; the ratchet baseline is re-recorded upward with the commit stating which families moved and why; `primary_counts.cli` is no longer zero.
+  Note: work one family at a time and re-record the floor after each — a single sweeping pass would make the ratchet meaningless for the next change.
+  Complexity: L
 
 - [ ] P3 — F352 — Replace the hand-maintained lockfiles with a generated PEP 751 `pylock.toml`
   Why: F317 landed the PEP 639 half on 2026-08-20 (SPDX expression, `license-files`, deprecated classifier removed, verified in built wheel metadata). The lockfile half is untouched: four hand-maintained `requirements-*-lock.txt` files, one of them 126 KB, still carry a version-sync surface that has accumulated dozens of `fix:` commits, and pip 26.1+ installs a standard `pylock.toml` directly.
   Evidence: `requirements-lock.txt`, `requirements-build-lock.txt`, `requirements-release-lock.txt`, `requirements.txt`; `python -m pip lock --help` on pip 26.2.1 works but is marked EXPERIMENTAL and needs a network resolve; https://peps.python.org/pep-0751/
   Touches: `pyproject.toml`, `requirements*.txt`, `scripts/sync_version.py`, `scripts/check_dependency_matrix.py`, `scripts/release_smoke.py`, `Dockerfile`, `docs/`
   Acceptance: A generated `pylock.toml` reproduces the release environment and is verified in release smoke; the bespoke lockfiles are either removed or generated from it; the version-sync target count is updated to match.
-  Note: `pip lock` is EXPERIMENTAL and resolves over the network, so pinning a release lane on it needs a deliberate call about reproducibility and offline builds — decide that before wiring it into the release gate. The torch/faster-whisper extras make a full resolve slow.
+  Note: `pip lock` is EXPERIMENTAL and resolves over the network, so pinning a release lane on it needs a deliberate call about reproducibility and offline builds — decide that before wiring it into the release gate. The torch/faster-whisper extras make a full resolve slow. Confirmed available 2026-08-20 on pip 26.2.1 (`python -m pip lock --help` accepts a local project path or requirement specifiers), so the tool is not the blocker; the decision and the release-lane verification are.
+  Update 2026-08-20: the release-gate blocker is cleared — the ten in-flight files landed, so `release_gate.py verify` runs again and a release-lane change can now be verified end to end.
+  Probed 2026-08-20, so the next pass starts from facts rather than guesses. `python -m pip lock .` resolves this project's base dependencies in roughly a minute and writes a valid `lock-version = "1.0"` file of about 9.4 KB. Two traps found: the output path must sit inside the project tree, because PEP 751 records package paths relative to the output's directory and pip raises `ValueError: ... is not in the subpath of ...` otherwise; and the filename must be `pylock.toml` or `pylock.<name>.toml` or pip warns it is not a valid lock file name. The extras were not probed — the torch/faster-whisper resolve is the slow one, and that is the number that decides whether this can sit in a gate at all.
+  Remaining judgement call, unchanged: `pip lock` is EXPERIMENTAL and resolves over the network. Recommended shape when this is picked up — commit the generated `pylock.toml` as an artifact and have release smoke verify it offline against the existing lockfiles, rather than having the gate itself resolve. That keeps releases reproducible and network-independent. Removing the four bespoke lockfiles is the risky half and should be a separate change from adding the artifact.
   Complexity: M
 
 - [ ] P3 — F346 — Activate the /analyze/video/qwen3vl lane through local Ollama vision models
