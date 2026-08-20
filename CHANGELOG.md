@@ -5,6 +5,54 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Face detection was broken by the OpenCV version OpenCut declares
+
+- OpenCV 5 removed the Haar cascade API and ships no bundled cascade files.
+  Two features gated on that file existing rather than on whether a detector
+  was available, so on the declared wheel `detect_face_in_image` reported a
+  face filling the whole frame for every image, including images with no face
+  at all, and screenshot framing dropped all face regions. Both now ask the
+  compatibility layer for a working backend, which prefers YuNet. The morph-cut
+  path also read a cascade flag constant that no longer exists.
+
+### Fixed - One-line edits produced whole-file diffs
+
+- The repository stores text with LF, but nothing declared that, so editors on
+  Windows quietly rewrote entire files. A single added translation string had
+  landed as a 5,745-line change, which buries real edits in noise. A line
+  ending policy now covers the source types this project edits, with Windows
+  batch files and binary assets called out, and the stored text was normalized
+  in one mechanical pass.
+
+### Security - Every known FFmpeg advisory is now graded
+
+- The bundled FFmpeg check graded 5 of the 17 advisories it knew about and said
+  so, which was honest but left twelve unanswered. Each remaining advisory now
+  carries the upstream commit that fixed it, confirmed against the FFmpeg
+  repository to exist and to touch the component the advisory names, plus the
+  date it landed. The check also reports the components a build does not
+  compile in, so a build that cannot reach the affected code is cleared on that
+  basis rather than on its version number.
+
+### Added - Apply reviewed cuts without deleting anything
+
+- Cut review offered only "remove the clips" or "do nothing", and editors are
+  right to be wary of automatic deletion. Cuts can now be applied as disabled
+  clips instead: nothing leaves the timeline, and any clip can be switched back
+  on in Premiere. The check that confirms a write actually happened was
+  extended to notice this, since disabling changes no clip count or boundary.
+  Disable mode never quietly deletes instead. A range it cannot express that
+  way is skipped and reported.
+
+### Changed - Timeline cuts use the current Premiere editing API
+
+- Applying cuts went through a call that newer Premiere builds accept and then
+  ignore. The panel now uses the documented editing action, run as a single
+  undoable step. Ranges that cut into the middle of a clip still use the older
+  path, and the result says which was used, so a cut that took the older route
+  is visible rather than silent.
+
+
 ### Fixed - Say where the panel actually appears on Premiere 2026
 
 - Premiere 2026 moved CEP panels to their own **Extensions (Legacy)** menu, so
