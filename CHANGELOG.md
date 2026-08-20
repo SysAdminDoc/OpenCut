@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Changed - The project glossary now reaches the decoder
+
+- Glossary terms were applied as find/replace over a finished transcript, so a
+  name the decoder never emitted in a recognisable form could not be repaired.
+  The glossary's target spellings are now passed to the decoder as hotwords, so
+  the term is recognised in the first place; the find/replace pass still runs
+  as the second layer. A faster-whisper without hotword support falls back to
+  `initial_prompt`, and one with neither transcribes as before. ASR provenance
+  records which layer handled the glossary.
+
 ### Added - Long files transcribe through batched inference
 
 - faster-whisper's batched pipeline now decodes audio at or above ten minutes,

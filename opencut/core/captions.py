@@ -9,7 +9,7 @@ import logging
 import math
 import os
 import tempfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..errors import OpenCutError
@@ -578,6 +578,15 @@ def _backend_provenance(
         )
         if decode_mode == "batched" and batch_size:
             provenance.deterministic_options["batch_size"] = batch_size
+    hotwords = str(getattr(config, "hotwords", "") or "")
+    if decode_mode:
+        # Say which layer handled the glossary: the decoder was biased, or only
+        # the post-hoc find/replace ran.
+        provenance.deterministic_options["glossary_layer"] = (
+            "decoder-bias+post-hoc" if hotwords else "post-hoc"
+        )
+        if hotwords:
+            provenance.deterministic_options["decoder_bias_terms"] = hotwords
     apply_language_decision(provenance, language)
     return provenance
 
@@ -735,6 +744,13 @@ def transcribe(
     """
     if config is None:
         config = CaptionConfig()
+
+    # Bias the decoder toward the glossary's target spellings so a proper noun
+    # is recognised in the first place. The post-hoc pass below still runs — it
+    # catches what biasing misses — but a term the decoder never emitted cannot
+    # be repaired by find/replace.
+    if getattr(config, "hotwords", None) is None:
+        config = replace(config, hotwords=resolve_glossary_hotwords(project_path or filepath))
 
     backend, fallback_reason = resolve_whisper_backend(
         getattr(config, "engine", None)
@@ -1061,6 +1077,47 @@ BATCH_MIN_THRESHOLD_SECONDS = 60.0
 BATCH_SIZE_MAX = 32
 
 
+def _decoder_bias_kwargs(hotwords) -> dict:
+    """Return the transcribe kwargs that bias the decoder, if supported.
+
+    `hotwords` reached faster-whisper in 1.0; on an older wrapper the argument
+    would raise TypeError, so fall back to `initial_prompt`, which every
+    Whisper generation accepts.
+    """
+    text = str(hotwords or "").strip()
+    if not text:
+        return {}
+    try:
+        import inspect
+
+        from faster_whisper import WhisperModel
+
+        params = inspect.signature(WhisperModel.transcribe).parameters
+        if "hotwords" in params:
+            return {"hotwords": text}
+        if "initial_prompt" in params:
+            return {"initial_prompt": text}
+    except Exception as exc:  # noqa: BLE001 - biasing must never fail a job
+        logger.debug("Could not determine decoder bias support: %s", exc)
+    return {}
+
+
+def resolve_glossary_hotwords(project_path: Optional[str]) -> str:
+    """Build the decoder bias string from the project glossary.
+
+    Returns "" when there is no glossary, which disables biasing.
+    """
+    try:
+        from opencut.user_data import load_transcript_glossary
+
+        from .transcript_corrections import build_hotwords, glossary_bias_terms
+
+        return build_hotwords(glossary_bias_terms(load_transcript_glossary(project_path)))
+    except Exception as exc:  # noqa: BLE001 - biasing is an enhancement, never a hard failure
+        logger.warning("Could not resolve glossary hotwords for %s: %s", project_path, exc)
+        return ""
+
+
 def plan_batched_inference(config: CaptionConfig, audio_path: str) -> dict:
     """Decide whether this file transcribes through the batched pipeline.
 
@@ -1320,6 +1377,7 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
 
     batch_plan = plan_batched_inference(config, wav_path)
     batch_size = batch_plan["batch_size"]
+    bias_kwargs = _decoder_bias_kwargs(getattr(config, "hotwords", ""))
 
     def _run_transcribe(active_model):
         """Transcribe with the batched pipeline when this file earns it.
@@ -1339,6 +1397,7 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                         word_timestamps=config.word_timestamps,
                         vad_filter=True,
                         batch_size=batch_size,
+                        **bias_kwargs,
                     )
                     return list(segs), inf, "batched"
                 except RuntimeError:
@@ -1355,6 +1414,7 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
             task=task,
             word_timestamps=config.word_timestamps,
             vad_filter=True,
+            **bias_kwargs,
         )
         return list(segs), inf, "sequential"
 

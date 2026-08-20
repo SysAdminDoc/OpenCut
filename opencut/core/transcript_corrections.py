@@ -364,6 +364,55 @@ def apply_glossary_to_result(result: Any, project_path: str | None = None) -> An
     return result
 
 
+# Decoder biasing is a prompt, not a dictionary: past a certain length it
+# stops helping and starts steering the decoder. Whisper's own prompt window
+# is 224 tokens, so keep well inside it.
+MAX_BIAS_CHARS = 400
+
+
+def glossary_bias_terms(rules: Iterable[Mapping[str, Any]]) -> list[str]:
+    """Return the terms a decoder should be biased toward, best first.
+
+    A glossary rule says "when you hear X, write Y", so Y is the spelling the
+    user actually wants and the term worth biasing toward. Rules that delete
+    text carry no target and are skipped.
+    """
+    terms: list[str] = []
+    seen: set[str] = set()
+    for rule in rules or []:
+        if not isinstance(rule, Mapping):
+            continue
+        target = str(rule.get("replace", "") or "").strip()
+        if not target:
+            continue
+        key = target.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        terms.append(target)
+    return terms
+
+
+def build_hotwords(terms: Iterable[str], max_chars: int = MAX_BIAS_CHARS) -> str:
+    """Join *terms* into a hotword string, truncated on a term boundary.
+
+    Truncating mid-term would bias the decoder toward a fragment, so the cap is
+    applied by dropping whole terms.
+    """
+    out: list[str] = []
+    used = 0
+    for term in terms:
+        cleaned = " ".join(str(term).split())
+        if not cleaned:
+            continue
+        cost = len(cleaned) + (2 if out else 0)
+        if used + cost > max_chars:
+            break
+        out.append(cleaned)
+        used += cost
+    return ", ".join(out)
+
+
 def merge_glossary_rules(
     existing: Iterable[Mapping[str, Any]],
     additions: Iterable[Mapping[str, Any]],
@@ -379,11 +428,14 @@ def merge_glossary_rules(
 
 
 __all__ = [
+    "MAX_BIAS_CHARS",
     "MAX_CORRECTION_RULES",
     "MAX_TRANSCRIPT_SEGMENTS",
     "apply_correction_rules_to_result",
     "apply_glossary_to_result",
     "apply_text_rule",
+    "build_hotwords",
+    "glossary_bias_terms",
     "merge_glossary_rules",
     "normalize_correction_rule",
     "normalize_correction_rules",

@@ -65,6 +65,10 @@ class CaptionConfig:
     batched: bool = True
     batch_size: int = 8
     batch_threshold_seconds: float = 600.0
+    # Terms to bias the decoder toward, so a proper noun is recognised rather
+    # than repaired afterwards. None resolves from the project glossary; an
+    # empty string disables biasing.
+    hotwords: Optional[str] = None
 
 
 @dataclass

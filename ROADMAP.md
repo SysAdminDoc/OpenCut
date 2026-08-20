@@ -10,13 +10,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
 
 ### P1
 
-- [ ] P1 — F323 — Bias the ASR decoder with the project glossary instead of correcting after the fact
-  Why: The project glossary is applied as a post-hoc find/replace over finished transcripts, so a mis-recognised proper noun that does not match the replacement rule survives, while the transcription backend accepts decoder-level term biasing that would prevent the error — and every commercial competitor sells exactly this as "custom vocabulary".
-  Evidence: `opencut/core/captions.py:740` (`_apply_project_glossary`) and `:745` (`apply_glossary_to_result`); `model.transcribe(...)` at `opencut/core/captions.py:930,1227,1241,1353` passes no `initial_prompt` or `hotwords`; `faster-whisper>=1.1,<2` (`pyproject.toml:69`) supports both; https://www.submagic.co/pricing (custom vocabulary, Business tier); https://news.ycombinator.com/item?id=44886647 (proper-noun and homophone complaints)
-  Touches: `opencut/core/captions.py`, `opencut/core/transcript_corrections.py`, `opencut/utils/config.py` (`CaptionConfig`), `opencut/core/asr_router.py`, caption routes, `tests/`
-  Acceptance: Glossary terms are passed to the decoder as `hotwords`/`initial_prompt` where the active backend supports it, with a documented length cap and safe truncation; the post-hoc correction pass remains as a second layer; backends without biasing degrade silently to today's behaviour and report which layer was used; a fixture proves a glossary term is recognised at the decoder rather than repaired afterwards.
-  Complexity: S
-
 - [ ] P1 — F324 — Unify the two panels' i18n key namespaces
   Why: The CEP panel's `en.json` holds 2,868 keys and the UXP panel's 1,927, of which exactly 26 are shared — so the panels maintain two independent translation namespaces for largely the same product, and the only Spanish locale belongs to the panel no installer ships, meaning any future locale must be translated twice.
   Evidence: measured key counts across `extension/com.opencut.panel/client/locales/en.json`, `extension/com.opencut.uxp/locales/en.json`, `extension/com.opencut.uxp/locales/es.json` (26-key intersection); 1,773 `data-i18n` attributes in the CEP markup vs 875 in UXP; `command-center.css` ships as two unrelated files under one name in both panels while `studio-workbench-v2.css`/`.js` are byte-identical copies with no generator
