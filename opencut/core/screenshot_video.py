@@ -195,12 +195,13 @@ def _detect_roi_faces(image_path: str) -> List[ROI]:
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Use the built-in frontal face cascade
-    cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-    if not os.path.isfile(cascade_path):
+    # Ask the compat layer for a detector instead of gating on the bundled
+    # Haar XML: opencv-python 5 ships no cascades, so the file check dropped
+    # every face ROI even when YuNet was available.
+    detector = get_shared_face_detector()
+    if getattr(detector, "backend", None) == "unavailable":
         return []
 
-    detector = get_shared_face_detector()
     faces = detector.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
     rois = []

@@ -17,7 +17,10 @@ import tempfile
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
-from opencut.core.face_detect_compat import get_shared_face_detector
+from opencut.core.face_detect_compat import (
+    cascade_scale_image_flag,
+    get_shared_face_detector,
+)
 from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
@@ -68,7 +71,7 @@ def detect_face_region(frame) -> Optional[Tuple[int, int, int, int]]:
     faces = cascade.detectMultiScale(
         gray, scaleFactor=1.1, minNeighbors=5,
         minSize=(60, 60),
-        flags=cv2.CASCADE_SCALE_IMAGE,
+        flags=cascade_scale_image_flag(),
     )
 
     if len(faces) == 0:

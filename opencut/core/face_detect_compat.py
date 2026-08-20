@@ -79,6 +79,21 @@ def _yunet_model_path(cv2mod) -> Optional[str]:
     return None
 
 
+def cascade_scale_image_flag() -> int:
+    """``cv2.CASCADE_SCALE_IMAGE`` for call sites, with a literal fallback.
+
+    OpenCV 5 dropped the ``CASCADE_*`` flag constants along with the cascade
+    API, so reading the attribute raises AttributeError on the declared wheel
+    exactly like ``cv2.CascadeClassifier`` did. The value is a stable public
+    constant, so falling back to it keeps the Haar path bit-identical on
+    opencv 4 rather than quietly switching the detector to ``flags=0``.
+    """
+    cv2mod = _cv2()
+    if cv2mod is None:
+        return 2
+    return int(getattr(cv2mod, "CASCADE_SCALE_IMAGE", 2))
+
+
 def _haar_cascade_path(cv2mod, cascade_name: str) -> Optional[str]:
     data_dir = getattr(cv2mod, "data", None)
     if data_dir is not None:
