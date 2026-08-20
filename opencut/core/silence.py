@@ -11,7 +11,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
-from opencut.helpers import get_ffmpeg_path
+from opencut.helpers import build_edge_fade_filter, get_ffmpeg_path
 
 from ..utils.config import SilenceConfig
 from ..utils.media import probe
@@ -585,6 +585,7 @@ def speed_up_silences(
     output_path: Optional[str] = None,
     output_dir: str = "",
     on_progress: Optional[Callable] = None,
+    fade_ms=None,
 ) -> dict:
     """
     Speed up silent segments instead of removing them.
@@ -691,7 +692,19 @@ def speed_up_silences(
             f"[0:a]atrim=start={start:.6f}:end={end:.6f},asetpts=PTS-STARTPTS[a{i}];"
         )
 
-        if seg_type == "silence":
+        # Every boundary between these segments is a tempo change, which
+        # splices two differently-timed waveforms and clicks without a fade.
+        # The outer edges of the file are real boundaries, not splices.
+        is_silence = seg_type == "silence"
+        seg_duration = (end - start) / speed_factor if is_silence else (end - start)
+        fade = build_edge_fade_filter(
+            seg_duration,
+            fade_ms,
+            fade_in=i > 0,
+            fade_out=i < len(all_segments) - 1,
+        )
+
+        if is_silence:
             if has_video:
                 # Speed up the video segment
                 filter_parts.append(
@@ -699,13 +712,21 @@ def speed_up_silences(
                 )
                 concat_inputs_v.append(f"[vs{i}]")
             # Speed up audio — atempo max is 2.0, so chain for higher speeds
-            atempo_chain = _build_atempo_chain(speed_factor, f"a{i}", f"as{i}")
+            # The fade must follow atempo so it is applied in output time.
+            label = f"as{i}" if not fade else f"asr{i}"
+            atempo_chain = _build_atempo_chain(speed_factor, f"a{i}", label)
             filter_parts.append(atempo_chain)
+            if fade:
+                filter_parts.append(f"[{label}]{fade}[as{i}];")
             concat_inputs_a.append(f"[as{i}]")
         else:
             if has_video:
                 concat_inputs_v.append(f"[v{i}]")
-            concat_inputs_a.append(f"[a{i}]")
+            if fade:
+                filter_parts.append(f"[a{i}]{fade}[af{i}];")
+                concat_inputs_a.append(f"[af{i}]")
+            else:
+                concat_inputs_a.append(f"[a{i}]")
 
     # Concat all segments
     n = len(all_segments)

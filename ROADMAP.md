@@ -39,13 +39,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: Every 26.2/26.3 UXP API relevant to the three functions is catalogued with typed evidence per the established adobe_uxp_compatibility workflow; each high-risk function carries a dated verdict (portable now / needs live validation / no UXP equivalent); functions judged portable get a UXP implementation or an explicit blocked entry with the missing piece named; the migration dashboard reclassifies from the new catalogue.
   Complexity: M
 
-- [ ] P1 — F335 — Apply micro audio fades at silence and filler cut boundaries
-  Why: Hard razor joins at detected boundaries produce audible clicks and pops on exported media, the silence/filler export path applies no boundary fade anywhere, and the closest CLI competitor queued exactly this fix in June — it is the cheapest audible-quality win available on the headline feature.
-  Evidence: grep for afade/crossfade/fade in `opencut/core/silence.py` returns nothing (2026-08-20); https://github.com/WyattBlue/auto-editor/issues/1272 (audio fade handling across split edges, 2026-06-25)
-  Touches: `opencut/core/silence.py` (export path), `opencut/routes/audio.py`, `opencut/helpers.py` (`FFmpegCmd`), `opencut/cli.py`, `tests/`
-  Acceptance: Exported cut media applies a configurable micro-fade (default a few milliseconds) at each join, off-switchable per request; a fixture with a tone crossing a cut boundary shows bounded sample discontinuity with the fade on and a click with it off; timeline write-back docs state whether host-side audio transitions are applied or deferred to a later item.
-  Complexity: S
-
 - [ ] P1 — F336 — Route long-file transcription through faster-whisper batched inference
   Why: Upstream's `BatchedInferencePipeline` delivers roughly 4x on long files and `captions.py` only ever calls sequential `model.transcribe(...)` — long-file speed is simultaneously the top user complaint against paid competitors (AutoCut's 15-minute multi-track runs) and the dominant wall-clock cost of every transcript-driven OpenCut workflow.
   Evidence: grep for `BatchedInferencePipeline` in `opencut/core/captions.py` returns nothing (2026-08-20); https://github.com/SYSTRAN/faster-whisper/releases (batched inference ~4x, VAD speedups); https://www.capterra.com/p/10036511/AutoCut/ (slowness complaints)

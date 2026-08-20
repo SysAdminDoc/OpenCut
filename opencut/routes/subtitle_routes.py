@@ -17,6 +17,7 @@ import re
 
 from flask import Blueprint, jsonify
 
+from opencut.helpers import EDGE_FADE_DEFAULT_MS, EDGE_FADE_MAX_MS
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
     build_destructive_plan,
@@ -326,6 +327,9 @@ def dead_time_speed_ramp(job_id, filepath, data):
 
     speed_factor = safe_float(data.get("speed_factor"), default=8.0,
                               min_val=1.5, max_val=100.0)
+    # Cut-boundary de-click; 0 disables it.
+    fade_ms = safe_float(data.get("fade_ms", EDGE_FADE_DEFAULT_MS), EDGE_FADE_DEFAULT_MS,
+                         min_val=0.0, max_val=EDGE_FADE_MAX_MS)
     output = data.get("output_path", None)
     if output:
         output = validate_output_path(output)
@@ -339,6 +343,7 @@ def dead_time_speed_ramp(job_id, filepath, data):
         speed_factor=speed_factor,
         output_path_override=output,
         on_progress=_on_progress,
+        fade_ms=fade_ms,
     )
     return result
 
