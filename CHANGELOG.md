@@ -26,6 +26,17 @@ record also lives in the git commit messages.
   leaving cuts unmade. Both panels now refuse the same case for the same
   reason, and both check the result against the clip boundaries they promised.
 
+### Added - The share of routes you can actually reach can no longer fall
+
+- Only 280 of the 1,563 shipped HTTP routes are reachable from the panels, the
+  command palette, the CLI, or the MCP catalogue. That number has been measured
+  and printed for a long time while quietly sliding, because nothing checked
+  it. The release gate now holds it: coverage can't drop below where it stands
+  today, and a route family that ships reachable from nothing has to either get
+  a surface or have someone write down why it doesn't have one. Improving the
+  number is never a failure. The check also prints the ten biggest unreachable
+  families, which is what a decision about triaging or dropping them needs.
+
 ### Added - Repeat detection now says which take to keep
 
 - Finding repeated takes told you where they were but not which one was any
