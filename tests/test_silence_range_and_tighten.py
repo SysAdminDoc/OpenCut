@@ -127,3 +127,83 @@ class TestDetectorsAcceptTheRange:
             text = fh.read()
         assert 'data.get("range_start")' in text
         assert "range_start=range_start" in text
+
+
+class TestEditLoadGuardrail:
+    """F340 — thousands of tiny clips make a Premiere sequence unusable.
+
+    Users report the resulting lag as a bug against the plugin that made the
+    cuts, so the cut list is measured before write-back and can be thinned.
+    """
+
+    def test_close_segments_merge(self):
+        from opencut.core.silence import merge_close_segments
+
+        segs = _segs((0.0, 1.0), (1.05, 2.0), (5.0, 6.0), (6.02, 7.0))
+        merged = merge_close_segments(segs, 0.1)
+        assert [(s.start, s.end) for s in merged] == [(0.0, 2.0), (5.0, 7.0)]
+
+    def test_merging_provably_reduces_the_edit_count(self):
+        from opencut.core.silence import merge_close_segments
+
+        segs = _segs(*[(i * 1.0, i * 1.0 + 0.95) for i in range(200)])
+        merged = merge_close_segments(segs, 0.1)
+        assert len(merged) < len(segs)
+        assert len(merged) == 1
+
+    def test_a_zero_gap_changes_nothing(self):
+        from opencut.core.silence import merge_close_segments
+
+        segs = _segs((0.0, 1.0), (1.05, 2.0))
+        assert len(merge_close_segments(segs, 0.0)) == 2
+
+    def test_wide_gaps_are_left_alone(self):
+        from opencut.core.silence import merge_close_segments
+
+        segs = _segs((0.0, 1.0), (30.0, 31.0))
+        assert len(merge_close_segments(segs, 0.5)) == 2
+
+    def test_merging_never_loses_the_outer_bounds(self):
+        from opencut.core.silence import merge_close_segments
+
+        segs = _segs((0.0, 1.0), (1.05, 2.0), (2.01, 9.0))
+        merged = merge_close_segments(segs, 0.1)
+        assert merged[0].start == 0.0
+        assert merged[-1].end == 9.0
+
+    def test_unsorted_input_is_handled(self):
+        from opencut.core.silence import merge_close_segments
+
+        segs = _segs((5.0, 6.0), (0.0, 1.0), (1.05, 2.0))
+        merged = merge_close_segments(segs, 0.1)
+        assert [(s.start, s.end) for s in merged] == [(0.0, 2.0), (5.0, 6.0)]
+
+    def test_a_heavy_cut_list_is_flagged_with_advice(self):
+        from opencut.core.silence import assess_edit_load
+
+        load = assess_edit_load(_segs(*[(i, i + 0.5) for i in range(900)]))
+        assert load["heavy"] is True
+        assert load["edit_count"] == 900
+        assert "slow down" in load["advice"]
+
+    def test_a_normal_cut_list_is_not_flagged(self):
+        from opencut.core.silence import assess_edit_load
+
+        load = assess_edit_load(_segs((0.0, 1.0), (2.0, 3.0)))
+        assert load["heavy"] is False
+        assert load["advice"] == ""
+
+    def test_the_threshold_is_configurable(self):
+        from opencut.core.silence import assess_edit_load
+
+        assert assess_edit_load(_segs((0.0, 1.0), (2.0, 3.0)), warn_threshold=1)["heavy"]
+
+    def test_the_route_reports_edit_load(self):
+        source = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "opencut", "routes", "audio.py",
+        )
+        with open(source, "r", encoding="utf-8") as fh:
+            text = fh.read()
+        assert '"edit_load": edit_load' in text
+        assert 'data.get("merge_gap"' in text

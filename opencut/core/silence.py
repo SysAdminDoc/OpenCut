@@ -586,6 +586,70 @@ def filter_smart_pauses(
     return kept
 
 
+#: Above this many edits a Premiere sequence starts to feel slow enough that
+#: users report it as a bug against the plugin that made the cuts. It is a
+#: warning threshold, not a limit — the user decides.
+EDIT_COUNT_WARN_THRESHOLD = 500
+
+
+def merge_close_segments(
+    segments: List[TimeSegment],
+    max_gap: float,
+) -> List[TimeSegment]:
+    """Join segments separated by less than *max_gap* seconds.
+
+    Aggressive silence settings on a long recording produce thousands of tiny
+    clips, and a sequence with that many edits becomes unusably slow to scrub —
+    a failure users report against the plugin, not against their settings.
+    Merging across sub-threshold gaps trades a little retained silence for a
+    sequence that can actually be edited.
+    """
+    gap = max(0.0, float(max_gap))
+    if gap <= 0 or not segments:
+        return list(segments)
+
+    ordered = sorted(segments, key=lambda s: s.start)
+    merged = [
+        TimeSegment(start=ordered[0].start, end=ordered[0].end,
+                    label=getattr(ordered[0], "label", ""))
+    ]
+    for seg in ordered[1:]:
+        if seg.start - merged[-1].end <= gap:
+            merged[-1].end = max(merged[-1].end, seg.end)
+        else:
+            merged.append(
+                TimeSegment(start=seg.start, end=seg.end,
+                            label=getattr(seg, "label", ""))
+            )
+    return merged
+
+
+def assess_edit_load(
+    segments: List[TimeSegment],
+    warn_threshold: int = EDIT_COUNT_WARN_THRESHOLD,
+) -> dict:
+    """Report how heavy a cut list will be on the host timeline.
+
+    Returned before write-back so the user can merge, tighten, or render
+    consolidated media instead of discovering the problem after the edit lands.
+    """
+    count = len(segments or [])
+    threshold = max(1, int(warn_threshold))
+    return {
+        "edit_count": count,
+        "warn_threshold": threshold,
+        "heavy": count > threshold,
+        "advice": (
+            f"{count} edits will be written to the sequence. Above roughly "
+            f"{threshold}, Premiere scrubbing and playback slow down noticeably. "
+            "Consider merging cuts separated by a short gap, using the tighten "
+            "mode instead of removing pauses, or rendering consolidated media."
+            if count > threshold
+            else ""
+        ),
+    }
+
+
 def _merge_overlapping(segments: List[TimeSegment]) -> List[TimeSegment]:
     """Merge overlapping or adjacent time segments."""
     if not segments:
