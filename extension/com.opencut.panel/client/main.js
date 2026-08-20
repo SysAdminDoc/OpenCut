@@ -15759,10 +15759,42 @@
         });
     }
 
+    /**
+     * Flattens ranked repeat clusters into the cut list the review panel takes,
+     * preselecting every take except the one the ranking recommends keeping.
+     * Returns null when the backend sent no clusters, so the caller falls back.
+     */
+    function buildRepeatCutsFromClusters(clusters) {
+        if (!clusters || !clusters.length) return null;
+        var cuts = [];
+        for (var ci = 0; ci < clusters.length; ci++) {
+            var cluster = clusters[ci] || {};
+            var takes = cluster.takes || [];
+            var byIndex = {};
+            for (var ti = 0; ti < takes.length; ti++) byIndex[takes[ti].index] = takes[ti];
+            var keep = byIndex[cluster.keep_index];
+            var cutIndices = cluster.cut_indices || [];
+            for (var ki = 0; ki < cutIndices.length; ki++) {
+                var take = byIndex[cutIndices[ki]];
+                if (!take) continue;
+                cuts.push({
+                    start: take.start,
+                    end: take.end,
+                    text: take.text,
+                    keep_text: keep ? keep.text : "",
+                    decision_source: cluster.decision_source || "heuristic"
+                });
+            }
+        }
+        return cuts.length ? cuts : null;
+    }
+
     addJobDoneListener(function (job) {
         if (job.type !== "repeat-detect" || job.status !== "complete" || !job.result) return;
         var r = job.result;
-        repeatCutsData = r.repeats || r.cuts || r.ranges || [];
+        // Ranked clusters name which take to keep. Without them the backend's
+        // detect-only shape still applies, which always keeps the last take.
+        repeatCutsData = buildRepeatCutsFromClusters(r.clusters) || r.repeats || r.cuts || r.ranges || [];
         lastTimelineCuts = repeatCutsData;
         var res = document.getElementById("repeatResults");
         var sum = document.getElementById("repeatSummary");
@@ -15778,6 +15810,12 @@
                     + '<div class="analysis-item-main">'
                     + '<span class="analysis-item-title">' + fmtDur(c.start || 0) + " - " + fmtDur(c.end || 0) + '</span>'
                     + (c.text ? '<span class="analysis-item-copy">' + esc(c.text.substring(0, 60)) + '</span>' : '')
+                    + (c.keep_text
+                        ? '<span class="analysis-item-copy">'
+                          + esc(t("timeline.repeat_keeping", "Keeping: {text}")
+                              .replace("{text}", c.keep_text.substring(0, 60)))
+                          + '</span>'
+                        : '')
                     + '</div>'
                     + '<span class="analysis-item-badge">' + esc(t("timeline.repeat_badge", "Repeat")) + '</span>'
                     + '</div>';

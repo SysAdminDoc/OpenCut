@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Repeat detection now says which take to keep
+
+- Finding repeated takes told you where they were but not which one was any
+  good, so review had nothing to preselect and the tool always assumed the
+  last attempt won. Each group of attempts is now ranked on hesitation words,
+  whether the sentence was finished, and how steady the delivery was, and the
+  review list preselects the best one and cuts the rest. It works with nothing
+  configured; a language model can override the pick, and when one is absent
+  or fails the reason is shown rather than hidden.
+
+
 ### Added - Coding agents get told how the MCP server works
 
 - The MCP server exposes 88 tools, and an agent meeting them for the first

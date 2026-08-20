@@ -1985,6 +1985,7 @@
   "timeline.rename_title": "Batch Rename Clips",
   "timeline.rename_validated_no_premiere": "Rename validated (no Premiere connection)",
   "timeline.renamed_items": "Renamed {count} items",
+  "timeline.repeat_keeping": "Keeping: {text}",
   "timeline.replace": "Replace",
   "timeline.replace_placeholder": "Replace with…",
   "timeline.rules_validated_no_premiere": "Rules validated (no Premiere connection)",

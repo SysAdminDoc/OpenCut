@@ -8,9 +8,30 @@ Falls back to segment-level similarity if word timestamps unavailable.
 
 import logging
 import string
-from typing import List
+from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
+
+# ---------------------------------------------------------------------------
+# Best-take ranking
+# ---------------------------------------------------------------------------
+
+#: A clean read of the same line usually ends in terminal punctuation. A take
+#: that trails off mid-sentence is the one the speaker abandoned.
+_TERMINAL_PUNCTUATION = ".!?…\"'"
+
+#: Weights for the keep-candidate score. Deliberately small and legible: the
+#: point is a defensible preselection a human can overrule, not a model.
+_SCORE_WEIGHTS = {
+    "completion": 2.0,
+    "filler_penalty": 0.6,
+    "rate_stability": 1.5,
+    "length": 0.8,
+}
+
+#: Outside this band a take is either rushed or halting relative to the
+#: cluster's median, both of which read as a worse take.
+_RATE_TOLERANCE = 0.35
 
 
 # ---------------------------------------------------------------------------
@@ -43,6 +64,8 @@ def detect_repeated_takes(
     segments: List[dict],
     threshold: float = 0.6,
     gap_tolerance: float = 2.0,
+    rank_takes: bool = True,
+    llm_verdict: Optional[Callable[[List[dict]], Optional[int]]] = None,
 ) -> dict:
     """
     Detect repeated/fumbled takes in a list of transcript segments.
@@ -59,13 +82,20 @@ def detect_repeated_takes(
                        start of segment i+1 for them to be considered
                        successive takes. Default 2.0.
 
+        rank_takes: Also group the repeats into clusters and recommend which
+                    take to keep. Additive; the existing keys are unchanged.
+        llm_verdict: Optional callable handed a cluster's takes that may return
+                     the index to keep. The heuristic runs without it.
+
     Returns:
         Dict with:
             "repeats": list of repeat entries (first take, to be removed)
             "clean_ranges": list of {"start", "end"} ranges to keep
+            "clusters": ranked takes with a keep recommendation (when
+                        rank_takes is set)
     """
     if not segments:
-        return {"repeats": [], "clean_ranges": []}
+        return {"repeats": [], "clean_ranges": [], "clusters": []}
 
     # Normalise tokens for each segment
     tokenised = []
@@ -126,7 +156,10 @@ def detect_repeated_takes(
     # Build clean ranges: all segments that are NOT marked as repeats
     clean_ranges = _build_clean_ranges(segments, repeat_indices)
 
-    return {"repeats": repeats, "clean_ranges": clean_ranges}
+    result = {"repeats": repeats, "clean_ranges": clean_ranges}
+    if rank_takes:
+        result["clusters"] = rank_repeat_clusters(segments, repeat_indices, llm_verdict)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -172,3 +205,148 @@ def merge_repeat_ranges(repeats: List[dict]) -> List[dict]:
     """
     raw = [{"start": r["start"], "end": r["end"]} for r in repeats]
     return _merge_ranges(raw)
+
+
+# ---------------------------------------------------------------------------
+# Best-take ranking (F344)
+# ---------------------------------------------------------------------------
+
+def _filler_count(text: str) -> int:
+    """Count filler tokens using the shared list, falling back to a small set."""
+    try:
+        from opencut.core.fillers import FILLER_WORDS
+
+        singles = {variant for group in FILLER_WORDS.values() for variant in group if " " not in variant}
+        phrases = [variant for group in FILLER_WORDS.values() for variant in group if " " in variant]
+    except Exception:  # pragma: no cover - fillers module is always present in-tree
+        singles, phrases = {"um", "uh", "er", "ah", "like"}, []
+
+    lowered = " ".join(_normalise(text))
+    count = sum(1 for token in lowered.split() if token in singles)
+    for phrase in phrases:
+        count += lowered.count(phrase)
+    return count
+
+
+def _take_signals(segment: dict) -> Dict[str, float]:
+    """Observable properties of one take, before any cluster comparison."""
+    text = str(segment.get("text", "") or "")
+    start = float(segment.get("start", 0.0) or 0.0)
+    end = float(segment.get("end", 0.0) or 0.0)
+    duration = max(end - start, 0.0)
+    words = len(_normalise(text))
+    stripped = text.strip()
+    return {
+        "word_count": float(words),
+        "duration": round(duration, 3),
+        "filler_count": float(_filler_count(text)),
+        "words_per_minute": round((words / duration * 60.0) if duration > 0 else 0.0, 2),
+        "completed": 1.0 if stripped and stripped[-1] in _TERMINAL_PUNCTUATION else 0.0,
+    }
+
+
+def _median(values: List[float]) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[middle]
+    return (ordered[middle - 1] + ordered[middle]) / 2.0
+
+
+def _score_take(signals: Dict[str, float], median_rate: float, max_words: float) -> float:
+    """Heuristic quality score. Higher is a better keep candidate."""
+    score = _SCORE_WEIGHTS["completion"] * signals["completed"]
+    score -= _SCORE_WEIGHTS["filler_penalty"] * signals["filler_count"]
+    if median_rate > 0 and signals["words_per_minute"] > 0:
+        deviation = abs(signals["words_per_minute"] - median_rate) / median_rate
+        score += _SCORE_WEIGHTS["rate_stability"] * max(0.0, 1.0 - deviation / _RATE_TOLERANCE)
+    if max_words > 0:
+        score += _SCORE_WEIGHTS["length"] * (signals["word_count"] / max_words)
+    return round(score, 4)
+
+
+def _cluster_indices(repeat_indices: set, total: int) -> List[List[int]]:
+    """Group each repeat and the take it was paired with into one cluster.
+
+    A run of consecutive repeats is one cluster: the speaker fumbled the same
+    line several times, and only the final attempt survives detection.
+    """
+    clusters: List[List[int]] = []
+    for index in sorted(repeat_indices):
+        if clusters and index == clusters[-1][-1] + 1:
+            clusters[-1].append(index)
+        else:
+            clusters.append([index])
+    grouped = []
+    for cluster in clusters:
+        tail = cluster[-1] + 1
+        if tail < total:
+            cluster = [*cluster, tail]
+        grouped.append(cluster)
+    return grouped
+
+
+def rank_repeat_clusters(
+    segments: List[dict],
+    repeat_indices: set,
+    llm_verdict: Optional[Callable[[List[dict]], Optional[int]]] = None,
+) -> List[dict]:
+    """Rank the takes in each repeat cluster and recommend one to keep.
+
+    The heuristic runs with nothing configured. *llm_verdict* is an optional
+    callable handed the cluster's takes that may return the index to keep; when
+    it is absent or fails, the fallback is recorded on the cluster rather than
+    silently swallowed, so a reviewer can see which judgement they are reading.
+    """
+    clusters: List[dict] = []
+    for indices in _cluster_indices(repeat_indices, len(segments)):
+        takes = []
+        for index in indices:
+            segment = segments[index]
+            takes.append({
+                "index": index,
+                "start": float(segment.get("start", 0.0) or 0.0),
+                "end": float(segment.get("end", 0.0) or 0.0),
+                "text": str(segment.get("text", "") or ""),
+                "signals": _take_signals(segment),
+            })
+
+        rates = [t["signals"]["words_per_minute"] for t in takes if t["signals"]["words_per_minute"] > 0]
+        median_rate = _median(rates)
+        max_words = max((t["signals"]["word_count"] for t in takes), default=0.0)
+        for take in takes:
+            take["score"] = _score_take(take["signals"], median_rate, max_words)
+
+        # Ties go to the later take: without evidence, the speaker's final
+        # attempt is the one they meant to keep, which is also the behaviour
+        # the detect-only output has always had.
+        best = max(takes, key=lambda t: (t["score"], t["index"]))
+        keep_index = best["index"]
+        source = "heuristic"
+        fallback_reason = ""
+
+        if llm_verdict is not None:
+            try:
+                verdict = llm_verdict(takes)
+            except Exception as exc:
+                verdict = None
+                fallback_reason = f"llm verdict failed: {type(exc).__name__}: {exc}"
+            if isinstance(verdict, int) and verdict in indices:
+                keep_index = verdict
+                source = "llm"
+            elif not fallback_reason:
+                fallback_reason = "llm verdict was unavailable or out of range"
+        else:
+            fallback_reason = "no llm configured"
+
+        clusters.append({
+            "indices": list(indices),
+            "keep_index": keep_index,
+            "cut_indices": [i for i in indices if i != keep_index],
+            "decision_source": source,
+            "fallback_reason": fallback_reason,
+            "takes": sorted(takes, key=lambda t: (-t["score"], t["index"])),
+        })
+    return clusters

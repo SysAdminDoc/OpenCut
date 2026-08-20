@@ -44,13 +44,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Note: `pip lock` is EXPERIMENTAL and resolves over the network, so pinning a release lane on it needs a deliberate call about reproducibility and offline builds — decide that before wiring it into the release gate. The torch/faster-whisper extras make a full resolve slow.
   Complexity: M
 
-- [ ] P3 — F344 — Rank repeat clusters with a best-take recommendation
-  Why: `repeat_detect` finds repeated sentences but ranks nothing, so review shows "these repeat" without "keep this one" — while AutoCut Repeat and Gling sell exactly the keep-best-take selection, and a heuristic (filler count, WPM stability, completion) with an optional LLM verdict layers cleanly on the existing detection output.
-  Evidence: `opencut/core/repeat_detect.py` (detection and range merging only); https://github.com/rafcopy/auto-cut-agent (LLM-based take dedup in a UXP+local-server design, 2026-08-13); https://opentools.ai/tools/gling-ai (bad-take marking)
-  Touches: `opencut/core/repeat_detect.py`, `opencut/core/llm.py` consumers, `opencut/routes/captions.py` (`/captions/repeat-detect`), both panels' cut-review surfaces, `tests/test_new_modules.py`
-  Acceptance: Each repeat cluster carries a ranked keep-candidate with per-take signals (filler count, speech-rate stability, sentence completion, optional LLM verdict with recorded fallback); the review UI preselects the keep and cuts the rest; the heuristic path works with no LLM configured; existing detect-only output remains available.
-  Complexity: M
-
 - [ ] P3 — F346 — Activate the /analyze/video/qwen3vl lane through local Ollama vision models
   Why: Content-aware editing ("cut the boring parts" from semantic video understanding, not just audio) is where the closest CLI competitor and the agentic wave are heading, and OpenCut already has the route stubbed (`/analyze/video/qwen3vl`, 501) plus an LLM layer that fronts Ollama — which serves Qwen-VL-class models locally — so one stub activation delivers per-segment semantic relevance scoring with no cloud key.
   Evidence: `opencut/_generated/route_manifest.json` (qwen3vl/internvl3 stubs); https://github.com/WyattBlue/auto-editor/issues/1273 (content-aware edit method, 2026-06-25); `opencut/core/llm.py` (Ollama support); the text-first economy pattern from browser-use/video-use recorded in the 2026-08-11 pass
