@@ -97,17 +97,32 @@ def burnin_from_segments(job_id, filepath, data):
     if len(segments) > 10000:
         raise ValueError("Too many segments (max 10000)")
 
+    # An earlier burn of the same source lets a caption edit re-encode only
+    # the regions it touched instead of the whole timeline.
+    previous_render = data.get("previous_render", "")
+    if previous_render:
+        previous_render = validate_path(previous_render)
+    previous_segments = data.get("previous_segments") or []
+    if not isinstance(previous_segments, list):
+        raise ValueError("previous_segments must be a list")
+    if len(previous_segments) > 10000:
+        raise ValueError("Too many previous_segments (max 10000)")
+
     from opencut.core.caption_burnin import burnin_segments
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
 
     effective_dir = _resolve_output_dir(video_path, output_dir)
+    render_report = {}
     out = burnin_segments(
         video_path, segments, output_dir=effective_dir,
         style=style, on_progress=_on_progress,
+        previous_render=previous_render,
+        previous_segments=previous_segments,
+        render_report=render_report,
     )
-    return {"output_path": out, "style": style}
+    return {"output_path": out, "style": style, "render": render_report}
 
 
 # ---------------------------------------------------------------------------

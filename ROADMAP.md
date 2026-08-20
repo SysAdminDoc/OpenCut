@@ -20,13 +20,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Note: the ripple arithmetic across mixed trims and removals is the risky part and cannot be proven headless — F252's live-Premiere lane gates dropping the fallback, not writing the code.
   Complexity: M
 
-- [ ] P2 — F314 — Make caption burn-in incremental
-  Why: The most-repeated Premiere captioning complaint is that a small caption change forces a full timeline re-render; OpenCut burns captions with a whole-file FFmpeg re-encode, so it inherits the same cost and has an unclaimed differentiator available.
-  Evidence: https://community.adobe.com/feature-requests-730/overhaul-captioning-workflow-1555697; `opencut/core/caption_burnin.py`, `opencut/core/styled_captions.py`; existing segment machinery in `opencut/core/smart_render.py`
-  Touches: `opencut/core/caption_burnin.py`, `opencut/core/smart_render.py`, `opencut/routes/captions.py`, `tests/test_smart_render_transactional.py`
-  Acceptance: Re-burning after a caption edit re-encodes only the affected segments and stream-copies the remainder, with the unchanged regions bit-identical to the prior render; a changed-caption job on a multi-segment fixture measurably beats the full re-encode; falling back to a whole-file render is automatic and reported when segment boundaries cannot be honoured.
-  Complexity: L
-
 - [ ] P2 — F328 — Ratchet the direct-surface ratio so new routes cannot ship unreachable
   Why: The repo's own manifest reports 280 of 1,568 shipped routes reachable from any first-party surface (17.9%), 1,288 integration-only, and zero routes whose primary surface is the CLI — so every wave adds API faster than it adds product, and the ratio is measured but nothing stops it falling.
   Evidence: `opencut/_generated/route_manifest.json` → `surface_coverage.summary` (`direct_surface_routes: 280`, `integration_only_routes: 1288`, `coverage_percent: 17.9`, `primary_counts.cli: 0`); 19 CLI commands in `opencut/cli.py`; 88 MCP tools in `opencut/_generated/mcp_server_registry.json`; the gate at `surface_coverage.gate` only asserts every route is classified, never that the ratio holds
