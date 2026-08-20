@@ -272,6 +272,7 @@ def main() -> int:
     print("  Next steps:")
     print("  1. Run Start-OpenCut.bat (or: python -m opencut.server)")
     print("  2. Open Premiere Pro > Window > Extensions > OpenCut")
+    print("     On Premiere 2026+ the panel is under Window > Extensions (Legacy).")
     print("  3. Select a clip and start editing!")
     print()
     return 0

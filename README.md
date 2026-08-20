@@ -37,12 +37,15 @@
 **Decision (2026-06-14):** the product keeps the name **OpenCut**, but the
 package-manager distribution token is **`opencut-ppro`**.
 
-There is an unrelated, popular browser-based editor also called *OpenCut*
+There is an unrelated, much larger browser-based editor also called *OpenCut*
 ([github.com/OpenCut-app/OpenCut](https://github.com/OpenCut-app/OpenCut),
-~48K stars). To keep search, PyPI, Homebrew, and winget unambiguous — and to
-stay distinct from it when it relaunches — this project distributes under a
-qualified token: the **`-ppro`** suffix marks the Adobe **Premiere Pro**
-integration that uniquely identifies this tool. So:
+around 85K stars as of 2026-08-20). It merged a ground-up rewrite in July 2026
+and is moving toward a plugin store, headless rendering, and an MCP server, so
+it is going to keep dominating searches for the bare word "OpenCut". To keep
+search, PyPI, Homebrew, and winget unambiguous, this project distributes under
+a qualified token: the **`-ppro`** suffix marks the Adobe **Premiere Pro**
+integration that uniquely identifies this tool. Where a name has to stand on
+its own, write **OpenCut for Premiere Pro**. So:
 
 - **Reserved distribution name:** `opencut-ppro` on PyPI, Homebrew, and winget.
   None of those package channels is published as of 2026-07-22, so this README
@@ -231,7 +234,12 @@ flag always preserves user data.
    - macOS: run `./OpenCut-Server.command` or `python -m opencut.server`
    - Linux: run `./OpenCut-Server.sh` or `python -m opencut.server`
    - You should see output like `Running on http://127.0.0.1:5679` -- **keep this terminal window open**
-2. Open Premiere Pro and go to **Window > Extensions > OpenCut**
+2. Open Premiere Pro and go to **Window > Extensions > OpenCut**.
+   On **Premiere 2026 and later** the CEP panel is listed under
+   **Window > Extensions (Legacy) > OpenCut** instead — Adobe moved CEP panels
+   to their own menu when UXP became the primary extension platform. If the
+   panel seems to be missing after a successful install, check that menu before
+   reinstalling; an empty **Extensions** menu on 2026 is expected, not a fault.
 3. The panel should show a green connection indicator. Select a clip and start editing.
 
 ### Troubleshooting
@@ -242,6 +250,14 @@ The OpenCut panel connects to a backend server running on `http://127.0.0.1:5679
 - Check the terminal for errors. Common issues: port 5679 already in use (change with `OPENCUT_PORT=5680`), missing Python packages (re-run `pip install -e ".[all]"`).
 - Check that your firewall is not blocking localhost connections on port 5679.
 - The "Live Updates Bridge" toggle in the Settings tab is an optional WebSocket feature for streaming progress updates. It is **not** required for the panel to work -- do not confuse it with the main server connection.
+
+**The OpenCut panel is not in the Extensions menu at all:**
+On Premiere 2026 and later, look under **Window > Extensions (Legacy)** — Adobe
+moved CEP panels there when UXP became the primary extension platform, so the
+plain **Extensions** menu can be empty even though the install succeeded. On
+Premiere 2025 and earlier the panel is under **Window > Extensions**. If it is
+in neither, confirm the extension folder was copied and that `PlayerDebugMode`
+is set, then restart Premiere.
 
 **"Invalid or missing CSRF token" when you click an action:**
 The panel connects and reports healthy, then every action fails with this

@@ -886,6 +886,7 @@ if ($script:ExitCode -eq 0) {
     Write-Host "  1. Double-click 'Start-OpenCut.bat' (or the desktop shortcut)" -ForegroundColor Gray
     Write-Host "  2. Open Premiere Pro" -ForegroundColor Gray
     Write-Host "  3. Go to Window > Extensions > OpenCut" -ForegroundColor Gray
+    Write-Host "     On Premiere 2026+ the panel is under Window > Extensions (Legacy)." -ForegroundColor Gray
     Write-Host "  4. Select a clip and click 'Remove Silences'" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  The generated XML imports directly into your project." -ForegroundColor Gray
