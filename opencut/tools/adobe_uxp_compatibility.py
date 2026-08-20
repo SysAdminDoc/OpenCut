@@ -439,6 +439,23 @@ API_CATALOGUE = (
         fallback="Use an empty label for the unreadable host object.",
         aliases=("Object.getName",),
     ),
+    # F339 non-destructive cut mode: mark the track items inactive rather than
+    # removing them, as an undoable Action inside the same transaction.
+    _capability(
+        "Object.createSetDisabledAction",
+        "TrackItem",
+        "createSetDisabledAction",
+        sync_async="sync",
+        fallback="Report disable mode unavailable; never silently delete instead.",
+        aliases=("Object.createSetDisabledAction", "TrackItem.createSetDisabledAction"),
+    ),
+    _capability(
+        "Object.isDisabled",
+        "TrackItem",
+        "isDisabled",
+        fallback="Omit disabled state from the read-back fingerprint.",
+        aliases=("Object.isDisabled", "TrackItem.isDisabled"),
+    ),
     _capability(
         "Object.getMediaPath",
         "ProjectItem",

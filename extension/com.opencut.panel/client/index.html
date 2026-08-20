@@ -3285,6 +3285,14 @@
                             <input type="number" id="timelineInterchangeThreshold" class="text-input" value="100" min="1" max="10000" step="1" data-i18n-aria-label="timeline.interchange_threshold_aria" aria-label="Interchange threshold in cuts">
                             <div class="hint" data-i18n="timeline.interchange_threshold_hint">Above this count, import one linked FCP XML timeline instead of razoring clips one by one.</div>
                         </div>
+                        <div class="form-group">
+                            <label for="timelineCutMode" data-i18n="timeline.cut_mode">Apply as</label>
+                            <select id="timelineCutMode" aria-label="Timeline cut mode" data-i18n-aria-label="timeline.cut_mode_aria">
+                                <option value="delete" selected data-i18n="timeline.cut_mode_delete">Delete (ripple removes the clips)</option>
+                                <option value="disable" data-i18n="timeline.cut_mode_disable">Disable (keeps clips, reversible)</option>
+                            </select>
+                            <div class="hint" data-i18n="timeline.cut_mode_hint">Disable marks the clips inactive instead of removing them, so you can re-enable any of them in Premiere.</div>
+                        </div>
                         <button type="button" class="btn-primary" id="applySeqCutsBtn" data-i18n="timeline.apply_last_cuts">Apply Last Cuts to Timeline</button>
                     </section>
                     <section class="card mt-sm">

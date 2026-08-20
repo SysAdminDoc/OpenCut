@@ -1100,22 +1100,59 @@ const PProBridge = (() => {
   }
 
   /**
+   * Marks track items disabled instead of removing them, so a reviewed cut is
+   * reversible in Premiere. Runs as one transaction like the removal path.
+   */
+  async function _disableItemsWithEditor(entries) {
+    if (!entries.every((entry) => typeof entry.item?.createSetDisabledAction === "function")) {
+      return { ok: false, reason: "TrackItem.createSetDisabledAction is unavailable in this runtime." };
+    }
+    const context = await _projectRoot();
+    if (!context?.proj?.executeTransaction) {
+      return { ok: false, reason: "Project.executeTransaction is unavailable in this runtime." };
+    }
+    const run = () => Boolean(context.proj.executeTransaction((compoundAction) => {
+      for (const entry of entries) compoundAction.addAction(entry.item.createSetDisabledAction(true));
+    }, "OpenCut disable cut ranges"));
+    let accepted = false;
+    if (typeof context.proj.lockedAccess === "function") {
+      context.proj.lockedAccess(() => { accepted = run(); });
+    } else {
+      // eslint-disable-next-line @adobe/premierepro/prefer-locked-access-wrapper -- compatibility fallback when lockedAccess is absent
+      accepted = run();
+    }
+    return { ok: accepted, reason: accepted ? "" : "executeTransaction rejected the set-disabled action." };
+  }
+
+  /**
    * Applies one cut, preferring the typed remove-items action and falling back
    * to the legacy ripple delete when the range cannot be expressed as whole
    * track items or the typed API is absent.
+   *
+   * In disable mode nothing is ever removed: a range that cannot be expressed
+   * as whole track items is reported and skipped, because falling back to
+   * ripple delete would destroy media the user explicitly asked to keep.
    */
-  async function _applyOneCut(seq, cut) {
+  async function _applyOneCut(seq, cut, disableMode = false) {
     const items = await _sequenceTrackItems(seq);
-    if (items) {
-      const plan = planCutRemoval(items, cut.start, cut.end);
-      if (plan.removable) {
-        const typed = await _removeItemsWithEditor(seq, plan.contained);
-        if (typed.ok) return { method: "remove_items_action", note: "" };
-        return await _rippleDeleteFallback(seq, cut, typed.reason);
-      }
-      return await _rippleDeleteFallback(seq, cut, plan.reason);
+    if (!items) {
+      if (disableMode) return { method: "skipped", note: "Track lists were not readable." };
+      return await _rippleDeleteFallback(seq, cut, "Track lists were not readable.");
     }
-    return await _rippleDeleteFallback(seq, cut, "Track lists were not readable.");
+    const plan = planCutRemoval(items, cut.start, cut.end);
+    if (disableMode) {
+      if (!plan.removable) return { method: "skipped", note: plan.reason };
+      const disabled = await _disableItemsWithEditor(plan.contained);
+      return disabled.ok
+        ? { method: "set_disabled_action", note: "" }
+        : { method: "skipped", note: disabled.reason };
+    }
+    if (plan.removable) {
+      const typed = await _removeItemsWithEditor(seq, plan.contained);
+      if (typed.ok) return { method: "remove_items_action", note: "" };
+      return await _rippleDeleteFallback(seq, cut, typed.reason);
+    }
+    return await _rippleDeleteFallback(seq, cut, plan.reason);
   }
 
   async function _rippleDeleteFallback(seq, cut, note) {
@@ -1131,22 +1168,23 @@ const PProBridge = (() => {
    * action and falling back to the legacy ripple delete.
    * @param {Array<{start: number, end: number}>} cuts  — times in seconds
    */
-  async function applyCuts(cuts) {
+  async function applyCuts(cuts, mode = "delete") {
     const seq = await getActiveSequence();
     if (!seq) {
       return { ok: false, reason: "No active sequence or UXP API unavailable." };
     }
+    const disableMode = String(mode || "delete").toLowerCase() === "disable";
     try {
       // Sort descending so removal doesn't shift earlier cut points
       const sorted = [...cuts].sort((a, b) => b.start - a.start);
       let beforeAll = await _sequenceTrackSnapshot(seq);
       let canVerify = beforeAll !== null;
       let verifiedCuts = 0;
-      const methodCounts = { remove_items_action: 0, ripple_delete: 0 };
+      const methodCounts = { remove_items_action: 0, ripple_delete: 0, set_disabled_action: 0, skipped: 0 };
       const fallbackReasons = [];
       for (const cut of sorted) {
         const beforeCut = canVerify ? await _sequenceTrackSnapshot(seq) : null;
-        const outcome = await _applyOneCut(seq, cut);
+        const outcome = await _applyOneCut(seq, cut, disableMode);
         methodCounts[outcome.method] += 1;
         if (outcome.note && !fallbackReasons.includes(outcome.note)) fallbackReasons.push(outcome.note);
         if (canVerify) {
@@ -1164,17 +1202,20 @@ const PProBridge = (() => {
         {
           action: "ocApplySequenceCuts",
           attempted: sorted.length,
-          reported: sorted.length,
+          reported: sorted.length - methodCounts.skipped,
           verified: canVerify ? verifiedCuts : null,
           status,
-          readBackMethod: canVerify ? "video/audio track-item boundary fingerprint diff per cut" : "unavailable: track-item traversal",
+          readBackMethod: canVerify
+            ? "video/audio track-item boundary and disabled-state fingerprint diff per cut"
+            : "unavailable: track-item traversal",
           beforeState: { track_item_count: beforeAll?.length ?? null },
           afterState: {
             track_item_count: afterAll?.length ?? null,
+            mode: disableMode ? "disable" : "delete",
             methods: methodCounts,
             fallback_reasons: fallbackReasons,
           },
-          detail: "Each cut prefers SequenceEditor.createRemoveItemsAction inside a project transaction and falls back to rippleDelete when the range crosses a track-item boundary; either way a fresh track-item walk follows, so a non-throwing call with no boundary/count change fails explicitly.",
+          detail: "Delete mode prefers SequenceEditor.createRemoveItemsAction inside a project transaction and falls back to rippleDelete when the range crosses a track-item boundary. Disable mode sets the track items disabled instead and never falls back, because removing media the user asked to keep is not a degraded form of the same request. Either way a fresh track-item walk follows, so a non-throwing call with no observable change fails explicitly.",
         }
       );
     } catch (e) {
@@ -2254,7 +2295,10 @@ const PProBridge = (() => {
       case "ocAddSequenceMarkers": return addMarkers(_arrayPayload(payload, "markers"));
       case "ocGetSequenceMarkers": return getSequenceMarkers();
       case "ocGetCaptionTrackSnapshot": return getCaptionTrackSnapshot(payload);
-      case "ocApplySequenceCuts": return applyCuts(_arrayPayload(payload, "cuts"));
+      case "ocApplySequenceCuts": return applyCuts(
+        _arrayPayload(payload, "cuts"),
+        _parseHostPayload(payload, {})?.mode
+      );
       case "ocApplyClipKeyframes": return applyClipKeyframes(payload);
       case "ocBatchRenameProjectItems": return batchRenameProjectItems(payload);
       case "ocCreateSmartBins": return createSmartBins(payload);

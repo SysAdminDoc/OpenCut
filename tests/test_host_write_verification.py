@@ -91,7 +91,9 @@ def test_uxp_mutations_use_independent_read_back_helpers():
         body = _function_source(source, action)
         assert "_attachHostWriteVerification(" in body, action
 
-    assert "video/audio track-item boundary fingerprint diff per cut" in source
+    # Disabled state joined the fingerprint in F339: a non-destructive cut
+    # leaves every clip in place, so boundaries alone read back as no change.
+    assert "video/audio track-item boundary and disabled-state fingerprint diff per cut" in source
     assert "HOST_WRITE_NOT_APPLIED" in verifier
     assert "ensureHostWriteVerification" in source
 
