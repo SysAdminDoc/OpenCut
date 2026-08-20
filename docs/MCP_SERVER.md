@@ -3,7 +3,7 @@
 > **What:** The `opencut-mcp-server` console script speaks the [Model
 > Context Protocol](https://modelcontextprotocol.io) so AI clients
 > (Claude Code, Cursor, Continue, Aider, etc.) can drive OpenCut's
-> 88 curated MCP tools and 1,474 generated route-level tools without
+> 88 curated MCP tools and 1,477 generated route-level tools without
 > writing one-off HTTP shims.
 >
 > **Status:** Shipped since v1.30.0. 88 curated tools cover the most
@@ -188,7 +188,7 @@ Fields the manifest captures:
 
 The extended manifest is separate on purpose: upstream registries and
 most users should see the 88 curated tools by default, while local
-power users can opt into the generated 1,474 route-level set.
+power users can opt into the generated 1,477 route-level set.
 
 ## 5. Registering with `modelcontextprotocol/servers`
 
