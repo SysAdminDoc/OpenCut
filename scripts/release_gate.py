@@ -13,7 +13,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RECEIPT = REPO_ROOT / "build" / "release-receipt.json"
 RECEIPT_SCHEMA_VERSION = 1
@@ -271,6 +270,52 @@ def _smoke_artifact(artifact: Path, artifact_kind: str) -> dict[str, Any]:
     }
 
 
+#: Extensions users actually download and run. A digest for a build log or a
+#: temp file is noise; a missing digest for an installer is the whole problem.
+DIGESTABLE_SUFFIXES = (".exe", ".msi", ".zip", ".7z", ".apk", ".crx", ".whl",
+                       ".tar.gz", ".dmg", ".pkg", ".appimage", ".flatpak", ".deb", ".rpm")
+
+
+def digest_artifacts(artifact_dir: Path, output: Path) -> dict[str, Any]:
+    """Write a SHA-256 for every downloadable artifact in *artifact_dir*.
+
+    Signing is not on the table, so a published digest is the only way a user
+    can tell an OpenCut installer from something that replaced it in transit.
+    Promotion hashes just the one artifact it smokes; a release ships several.
+    """
+    directory = artifact_dir.expanduser().resolve(strict=False)
+    if not directory.is_dir():
+        raise ReleaseGateError(f"artifact directory does not exist: {directory}")
+
+    entries = []
+    for path in sorted(directory.rglob("*")):
+        if not path.is_file():
+            continue
+        if not path.name.lower().endswith(DIGESTABLE_SUFFIXES):
+            continue
+        entries.append({
+            "name": path.relative_to(directory).as_posix(),
+            "sha256": _sha256(path),
+            "size_bytes": path.stat().st_size,
+        })
+    if not entries:
+        raise ReleaseGateError(f"no downloadable artifacts found under {directory}")
+
+    payload = {
+        "schema_version": RECEIPT_SCHEMA_VERSION,
+        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "algorithm": "sha256",
+        "unsigned": True,
+        "verify_hint": (
+            "Windows: Get-FileHash <file> -Algorithm SHA256. "
+            "macOS/Linux: sha256sum <file>."
+        ),
+        "artifacts": entries,
+    }
+    _write_json(output, payload)
+    return payload
+
+
 def promote_artifact(
     receipt_path: Path,
     artifact: Path,
@@ -323,12 +368,20 @@ def main(argv: list[str] | None = None) -> int:
     promote.add_argument("--promotion-receipt", type=Path, required=True)
     promote.add_argument("--tag", default="")
 
+    digests = subparsers.add_parser(
+        "digests", help="write a SHA-256 manifest for every downloadable artifact"
+    )
+    digests.add_argument("--artifact-dir", type=Path, required=True)
+    digests.add_argument("--output", type=Path, default=REPO_ROOT / "build" / "release-digests.json")
+
     args = parser.parse_args(argv)
     try:
         if args.action == "verify":
             payload = run_verification(args.receipt)
         elif args.action == "validate":
             payload = validate_receipt(args.receipt, max_age_seconds=args.max_age_seconds)
+        elif args.action == "digests":
+            payload = digest_artifacts(args.artifact_dir, args.output)
         else:
             payload = promote_artifact(
                 args.receipt,

@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "release_gate.py"
 
@@ -206,3 +205,94 @@ def test_artifact_promotion_requires_smoke_before_tag(monkeypatch, tmp_path):
     assert payload["artifact"]["smoke"] == "wpf"
     assert json.loads(promotion.read_text(encoding="utf-8"))["tag"] == "v1.44.0"
     assert calls == [("git", "tag", "-a", "v1.44.0", "-m", "OpenCut v1.44.0")]
+
+
+# ---------------------------------------------------------------------------
+# F318 — published digests for unsigned artifacts
+# ---------------------------------------------------------------------------
+
+
+def test_digests_cover_every_downloadable_artifact(tmp_path):
+    module = _module()
+    artifacts = tmp_path / "dist"
+    (artifacts / "nested").mkdir(parents=True)
+    (artifacts / "OpenCut-Setup-9.9.9.exe").write_bytes(b"installer")
+    (artifacts / "nested" / "opencut-9.9.9.whl").write_bytes(b"wheel")
+
+    payload = module.digest_artifacts(artifacts, tmp_path / "release-digests.json")
+
+    names = {entry["name"] for entry in payload["artifacts"]}
+    assert names == {"OpenCut-Setup-9.9.9.exe", "nested/opencut-9.9.9.whl"}
+    assert payload["algorithm"] == "sha256"
+    assert payload["unsigned"] is True
+    assert all(len(entry["sha256"]) == 64 for entry in payload["artifacts"])
+
+
+def test_digests_match_the_bytes_on_disk(tmp_path):
+    import hashlib
+
+    module = _module()
+    artifacts = tmp_path / "dist"
+    artifacts.mkdir()
+    body = b"exactly these bytes"
+    (artifacts / "OpenCut-Setup-9.9.9.exe").write_bytes(body)
+
+    payload = module.digest_artifacts(artifacts, tmp_path / "digests.json")
+
+    assert payload["artifacts"][0]["sha256"] == hashlib.sha256(body).hexdigest()
+    assert payload["artifacts"][0]["size_bytes"] == len(body)
+
+
+def test_build_logs_are_not_published_as_artifacts(tmp_path):
+    module = _module()
+    artifacts = tmp_path / "dist"
+    artifacts.mkdir()
+    (artifacts / "OpenCut-Setup-9.9.9.exe").write_bytes(b"installer")
+    (artifacts / "build.log").write_text("noise", encoding="utf-8")
+    (artifacts / "receipt.json").write_text("{}", encoding="utf-8")
+
+    payload = module.digest_artifacts(artifacts, tmp_path / "digests.json")
+
+    assert [entry["name"] for entry in payload["artifacts"]] == ["OpenCut-Setup-9.9.9.exe"]
+
+
+def test_an_empty_artifact_directory_fails_rather_than_publishing_nothing(tmp_path):
+    """A digest file with no entries would read as 'verified' to a user."""
+    module = _module()
+    artifacts = tmp_path / "dist"
+    artifacts.mkdir()
+    (artifacts / "build.log").write_text("noise", encoding="utf-8")
+
+    with pytest.raises(module.ReleaseGateError):
+        module.digest_artifacts(artifacts, tmp_path / "digests.json")
+
+
+def test_missing_artifact_directory_is_refused(tmp_path):
+    module = _module()
+
+    with pytest.raises(module.ReleaseGateError):
+        module.digest_artifacts(tmp_path / "absent", tmp_path / "digests.json")
+
+
+def test_digest_file_tells_the_user_how_to_check_it(tmp_path):
+    module = _module()
+    artifacts = tmp_path / "dist"
+    artifacts.mkdir()
+    (artifacts / "OpenCut-Setup-9.9.9.exe").write_bytes(b"installer")
+
+    output = tmp_path / "digests.json"
+    module.digest_artifacts(artifacts, output)
+    payload = json.loads(output.read_text(encoding="utf-8"))
+
+    assert "Get-FileHash" in payload["verify_hint"]
+    assert "sha256sum" in payload["verify_hint"]
+
+
+def test_readme_states_artifacts_are_unsigned_and_how_to_verify():
+    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
+
+    assert "OpenCut ships unsigned" in readme
+    assert "More info" in readme and "Run anyway" in readme
+    assert "Get-FileHash" in readme
+    assert "sha256sum" in readme
+    assert "release-digests.json" in readme

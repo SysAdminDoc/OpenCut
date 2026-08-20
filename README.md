@@ -83,6 +83,31 @@ the direct and transitive Python packages, packaged payloads, and bundled
 FFmpeg binary to SHA-256 hashes and document the exact FFmpeg source and build
 provenance needed to reproduce the GPL-covered component.
 
+### Installers are not code-signed
+
+OpenCut ships unsigned. Windows will show a SmartScreen warning the first time
+you run an installer, and it will show it again after every update, because an
+unsigned file builds no reputation. Microsoft's own guidance is that signing no
+longer guarantees the prompt goes away either, so this is a permanent part of
+installing OpenCut rather than something waiting on a certificate.
+
+To proceed past the warning: click **More info**, then **Run anyway**.
+
+Because nothing vouches for the file, check what you downloaded against the
+digest published on the release page before running it:
+
+```powershell
+Get-FileHash .\OpenCut-Setup-<version>.exe -Algorithm SHA256
+```
+
+```bash
+sha256sum OpenCut-Setup-<version>.exe
+```
+
+Every release publishes `release-digests.json` listing the SHA-256 of each
+artifact. If the value you compute is not in that file, do not run the
+installer.
+
 **Option B -- Install.bat (recommended for Windows source installs):**
 
 This is the easiest way to install from source on Windows. It handles FFmpeg, Python dependencies, the CEP extension, registry keys, and launcher creation in one step.

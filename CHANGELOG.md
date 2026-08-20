@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Check what you downloaded
+
+- OpenCut is not code-signed, so Windows shows a warning on every install and
+  every update, and nothing vouches for the file you fetched. The install
+  documentation now says that plainly, shows the exact clicks to get past the
+  warning, and gives the command to check the file. Releases carry a digest
+  file listing the SHA-256 of every downloadable artifact so you can compare
+  before running anything.
+
+
 ### Added - A caption fix no longer re-renders the whole video
 
 - Editing one caption and burning in again re-encoded the entire timeline,
