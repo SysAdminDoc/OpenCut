@@ -302,17 +302,18 @@ API_CATALOGUE = (
     # call — which premiere-pro-mcp #21 measured returning success while
     # mutating nothing on 26.3 — this is an undoable Action run through
     # `Project.executeTransaction`, so its effect is observable and reversible.
-    # Catalogued as migration evidence, not yet consumed by either panel: the
-    # cut path still runs through CEP until F252's live-host lane unblocks, so
-    # these are fixture_only exactly like Sequence.setSelection below.
+    # Consumed by the UXP cut path since F349: `applyCuts` prefers this action
+    # and drops to `sequence.rippleDelete()` only when a track item crosses a
+    # cut boundary, because the action removes whole items and the typed API
+    # offers no razor. The CEP path stays as fallback until the live-host lane
+    # unblocks.
     _capability(
         "SequenceEditor.getEditor",
         "SequenceEditor",
         "getEditor",
         sync_async="sync",
         fallback="Report the UXP cut path unavailable and keep the CEP fallback.",
-        aliases=("SequenceEditor.getEditor",),
-        fixture_only=True,
+        aliases=("SequenceEditor.getEditor", "module.SequenceEditor.getEditor"),
     ),
     _capability(
         "SequenceEditor.createRemoveItemsAction",
@@ -323,8 +324,23 @@ API_CATALOGUE = (
             "Fall back to the CEP ExtendScript cut path and report the UXP "
             "capability as unavailable."
         ),
-        aliases=("SequenceEditor.createRemoveItemsAction",),
-        fixture_only=True,
+        aliases=(
+            "SequenceEditor.createRemoveItemsAction",
+            "module.SequenceEditor.createRemoveItemsAction",
+        ),
+    ),
+    _capability(
+        "TrackItemSelection.createEmptySelection",
+        "TrackItemSelection",
+        "createEmptySelection",
+        sync_async="sync",
+        fallback=(
+            "Skip the typed remove-items path and use the legacy ripple delete."
+        ),
+        aliases=(
+            "TrackItemSelection.createEmptySelection",
+            "module.TrackItemSelection.createEmptySelection",
+        ),
     ),
     _capability(
         "Sequence.setSelection",

@@ -263,11 +263,18 @@ CEP_UXP_PARITY: tuple[CepUxpParityEntry, ...] = (
             "nothing on 26.3."
         ),
         replacement_plan=(
-            "Port the common ripple-delete path onto createRemoveItemsAction and "
-            "verify it with the existing host-write read-back contract; cover "
-            "advanced trim edge cases in F267 UDT before dropping the CEP fallback."
+            "Landed 2026-08-20 (F349): applyCuts builds a TrackItemSelection and "
+            "runs createRemoveItemsAction inside Project.executeTransaction, "
+            "verified by the existing host-write read-back contract. It stays "
+            "partial because the action removes whole track items and the typed "
+            "API exposes no razor, so a cut whose range crosses a track-item "
+            "boundary — silence inside one clip, the common case — still falls "
+            "back to sequence.rippleDelete() and records why. Emulating a razor "
+            "with clone plus set-start/set-end actions, and confirming the ripple "
+            "accounting, needs F252's live-host lane before the CEP fallback "
+            "can be dropped."
         ),
-        f_numbers=("F198", "F252", "F267"),
+        f_numbers=("F198", "F252", "F267", "F349"),
     ),
     CepUxpParityEntry(
         name="ocApplyClipKeyframes",
