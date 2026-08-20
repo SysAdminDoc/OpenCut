@@ -184,6 +184,16 @@ def main(argv: list[str] | None = None) -> int:
     print(f"CVEs addressed:  {', '.join(record['cves_addressed'])}")
     print(f"required fixes:  {', '.join(record['required_fix_commits'])}")
 
+    # State the scope of the check. "Passed everything we grade" and "is clean"
+    # are different claims, and only the first one is supported.
+    coverage = fp.advisory_coverage()
+    print(f"advisory scope:  {coverage['graded_count']} graded of "
+          f"{coverage['total_known']} known")
+    if coverage["ungraded"]:
+        print(f"NOT GRADED:      {', '.join(coverage['ungraded'])}")
+        print("                 (no upstream fix commit recorded yet; "
+              "these were not checked)")
+
     if release_missing:
         print("RESULT: INCOMPLETE RELEASE EVIDENCE — " + ", ".join(release_missing), file=sys.stderr)
         return 0 if args.warn_only else 3

@@ -111,6 +111,14 @@ If you prefer manual control or are on macOS/Linux, follow these steps:
    - Linux: `sudo apt install ffmpeg` (Debian/Ubuntu) or equivalent for your distro
    - Verify: `python scripts/verify_ffmpeg_provenance.py` must report `RESULT: OK`
 
+`RESULT: OK` means the build clears every advisory OpenCut grades against a
+known upstream fix commit. Twelve more advisories from the same July 2026
+disclosure batch are published against FFmpeg through 8.1.2 and are **not**
+graded yet, because grading needs a specific fix commit whose ancestry can be
+checked and those have not been recorded here. The check names them in its
+output rather than letting a pass read as a clean bill of health; the current
+list lives in `UNGRADED_ADVISORIES` in `opencut/core/ffmpeg_provenance.py`.
+
 The bundled Windows archive is pinned to SHA-256
 `8c32ed9800ff421bbcfda96beb0a66783a64a7cd98869b87ec1b494d3c855fcc`. Its
 corresponding FFmpeg source archive is pinned to SHA-256
