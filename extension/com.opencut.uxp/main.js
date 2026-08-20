@@ -35,6 +35,7 @@ import { createUxpSettingsController } from "./uxp-settings-controller.js";
 import { createSequenceIndexFilterController } from "./uxp-sequence-index-controller.js";
 import { createTranscriptCorrectionController } from "./uxp-transcript-correction-controller.js";
 import { createHostWriteVerifier } from "./uxp-host-write-verification.js";
+import { planCutRemoval } from "./uxp-cut-planner.js";
 
 function escapeHtmlForUiController(str) {
   return escapeHtmlValue(str);
@@ -1033,7 +1034,101 @@ const PProBridge = (() => {
   }
 
   /**
-   * Applies silence-removal cuts by ripple-deleting regions on V1/A1.
+   * Reads every track item in the sequence with its sequence-time boundaries.
+   * Returns null when no track list is readable, so callers can tell "empty
+   * timeline" apart from "cannot see the timeline".
+   */
+  async function _sequenceTrackItems(seq) {
+    const collected = [];
+    let readable = false;
+    for (const list of [await seq?.getVideoTrackList?.(), await seq?.getAudioTrackList?.()]) {
+      if (list == null) continue;
+      readable = true;
+      for (const entry of await _trackListEntries(list)) {
+        for (const item of await _trackItems(entry.track)) {
+          let start = null;
+          let end = null;
+          try { start = _timeValueToSeconds(await item.getStartTime?.()); } catch (_) { start = null; }
+          try { end = _timeValueToSeconds(await item.getEndTime?.()); } catch (_) { end = null; }
+          collected.push({ item, start, end });
+        }
+      }
+    }
+    return readable ? collected : null;
+  }
+
+  /**
+   * Removes whole track items through the typed 26.3 editor action, inside a
+   * project transaction so the edit lands on Premiere's undo stack.
+   */
+  async function _removeItemsWithEditor(seq, entries) {
+    const editor = ppro?.SequenceEditor?.getEditor?.(seq);
+    if (!editor?.createRemoveItemsAction) {
+      return { ok: false, reason: "SequenceEditor.createRemoveItemsAction is unavailable in this runtime." };
+    }
+    if (typeof ppro?.TrackItemSelection?.createEmptySelection !== "function") {
+      return { ok: false, reason: "TrackItemSelection.createEmptySelection is unavailable in this runtime." };
+    }
+    const context = await _projectRoot();
+    if (!context?.proj?.executeTransaction) {
+      return { ok: false, reason: "Project.executeTransaction is unavailable in this runtime." };
+    }
+    let selection = null;
+    ppro.TrackItemSelection.createEmptySelection((created) => { selection = created; });
+    if (!selection?.addItem) {
+      return { ok: false, reason: "createEmptySelection did not yield a usable selection." };
+    }
+    for (const entry of entries) {
+      // skipDuplicateCheck: the planner already emitted each item once.
+      selection.addItem(entry.item, true);
+    }
+    const mediaType = ppro?.Constants?.MediaType?.ANY ?? 0;
+    const run = () => Boolean(context.proj.executeTransaction((compoundAction) => {
+      compoundAction.addAction(editor.createRemoveItemsAction(selection, true, mediaType));
+    }, "OpenCut apply cuts"));
+    let accepted = false;
+    if (typeof context.proj.lockedAccess === "function") {
+      context.proj.lockedAccess(() => { accepted = run(); });
+    } else {
+      // eslint-disable-next-line @adobe/premierepro/prefer-locked-access-wrapper -- compatibility fallback when lockedAccess is absent
+      accepted = run();
+    }
+    return {
+      ok: accepted,
+      reason: accepted ? "" : "executeTransaction rejected the remove-items action.",
+    };
+  }
+
+  /**
+   * Applies one cut, preferring the typed remove-items action and falling back
+   * to the legacy ripple delete when the range cannot be expressed as whole
+   * track items or the typed API is absent.
+   */
+  async function _applyOneCut(seq, cut) {
+    const items = await _sequenceTrackItems(seq);
+    if (items) {
+      const plan = planCutRemoval(items, cut.start, cut.end);
+      if (plan.removable) {
+        const typed = await _removeItemsWithEditor(seq, plan.contained);
+        if (typed.ok) return { method: "remove_items_action", note: "" };
+        return await _rippleDeleteFallback(seq, cut, typed.reason);
+      }
+      return await _rippleDeleteFallback(seq, cut, plan.reason);
+    }
+    return await _rippleDeleteFallback(seq, cut, "Track lists were not readable.");
+  }
+
+  async function _rippleDeleteFallback(seq, cut, note) {
+    if (typeof seq?.rippleDelete !== "function") {
+      throw new Error(`Sequence.rippleDelete is unavailable and the typed path was refused: ${note}`);
+    }
+    await seq.rippleDelete(_secondsToTicks(cut.start), _secondsToTicks(cut.end));
+    return { method: "ripple_delete", note };
+  }
+
+  /**
+   * Applies silence-removal cuts, preferring the typed 26.3 remove-items
+   * action and falling back to the legacy ripple delete.
    * @param {Array<{start: number, end: number}>} cuts  — times in seconds
    */
   async function applyCuts(cuts) {
@@ -1047,12 +1142,13 @@ const PProBridge = (() => {
       let beforeAll = await _sequenceTrackSnapshot(seq);
       let canVerify = beforeAll !== null;
       let verifiedCuts = 0;
+      const methodCounts = { remove_items_action: 0, ripple_delete: 0 };
+      const fallbackReasons = [];
       for (const cut of sorted) {
         const beforeCut = canVerify ? await _sequenceTrackSnapshot(seq) : null;
-        // UXP uses ticks internally; 254016000000 ticks/sec in Premiere
-        const startTick = Math.round(cut.start * 254016000000);
-        const endTick   = Math.round(cut.end   * 254016000000);
-        await seq.rippleDelete(startTick, endTick);
+        const outcome = await _applyOneCut(seq, cut);
+        methodCounts[outcome.method] += 1;
+        if (outcome.note && !fallbackReasons.includes(outcome.note)) fallbackReasons.push(outcome.note);
         if (canVerify) {
           const afterCut = await _sequenceTrackSnapshot(seq);
           if (afterCut === null) canVerify = false;
@@ -1073,8 +1169,12 @@ const PProBridge = (() => {
           status,
           readBackMethod: canVerify ? "video/audio track-item boundary fingerprint diff per cut" : "unavailable: track-item traversal",
           beforeState: { track_item_count: beforeAll?.length ?? null },
-          afterState: { track_item_count: afterAll?.length ?? null },
-          detail: "Each rippleDelete() is followed by a fresh track-item walk; a non-throwing call with no boundary/count change fails explicitly.",
+          afterState: {
+            track_item_count: afterAll?.length ?? null,
+            methods: methodCounts,
+            fallback_reasons: fallbackReasons,
+          },
+          detail: "Each cut prefers SequenceEditor.createRemoveItemsAction inside a project transaction and falls back to rippleDelete when the range crosses a track-item boundary; either way a fresh track-item walk follows, so a non-throwing call with no boundary/count change fails explicitly.",
         }
       );
     } catch (e) {
