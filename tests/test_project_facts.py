@@ -20,7 +20,7 @@ from opencut.project_facts import build_project_facts, validate_project_facts
 REPO_ROOT = Path(__file__).resolve().parents[1]
 UXP_INDEX = REPO_ROOT / "extension" / "com.opencut.uxp" / "index.html"
 UXP_MAIN = REPO_ROOT / "extension" / "com.opencut.uxp" / "main.js"
-UXP_BACKEND_CLIENT = REPO_ROOT / "extension" / "com.opencut.uxp" / "backend-client.js"
+UXP_BACKEND_CLIENT = REPO_ROOT / "extension" / "com.opencut.uxp" / "uxp-backend-client.js"
 PANEL_PKG = REPO_ROOT / "extension" / "com.opencut.panel" / "package.json"
 README = REPO_ROOT / "README.md"
 NODE_ADVISORIES = REPO_ROOT / "docs" / "NODE_ADVISORIES.md"

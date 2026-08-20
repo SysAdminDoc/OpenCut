@@ -1,6 +1,6 @@
 """F217 — UXP BackendClient HTTP-shape contract tests.
 
-The UXP panel's `BackendClient` (in `extension/com.opencut.uxp/backend-client.js`)
+The UXP panel's `BackendClient` (in `extension/com.opencut.uxp/uxp-backend-client.js`)
 talks to the Python backend over HTTP. The panel's job-running flow
 depends on a specific response shape:
 
@@ -31,7 +31,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = REPO_ROOT / "extension" / "com.opencut.uxp" / "main.js"
-BACKEND_CLIENT_JS = MAIN_JS.with_name("backend-client.js")
+BACKEND_CLIENT_JS = MAIN_JS.with_name("uxp-backend-client.js")
 JOB_CONTROLLER_JS = MAIN_JS.with_name("job-controller.js")
 STATE_JS = MAIN_JS.with_name("uxp-state.js")
 
@@ -55,7 +55,7 @@ def _read_job_js() -> str:
 
 def test_backend_client_module_present():
     text = _read_main_js()
-    assert 'import { createBackendClient } from "./backend-client.js";' in text
+    assert 'import { createBackendClient } from "./uxp-backend-client.js";' in text
     assert "const BackendClient = createBackendClient({" in text
     assert "export function createBackendClient" in _read_backend_js()
 

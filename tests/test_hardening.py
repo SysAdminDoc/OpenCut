@@ -829,7 +829,7 @@ def test_uxp_fetch_wrapper_clears_backend_timeout_timers():
 
     root = Path(__file__).resolve().parents[1] / "extension/com.opencut.uxp"
     source = (root / "main.js").read_text(encoding="utf-8")
-    client_source = (root / "backend-client.js").read_text(encoding="utf-8")
+    client_source = (root / "uxp-backend-client.js").read_text(encoding="utf-8")
 
     assert "async function fetchWithTimeout" in source
     assert "clearTimeout(timer);" in source

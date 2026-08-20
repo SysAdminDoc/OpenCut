@@ -17,7 +17,7 @@ import {
   buildLoudnessMatchPayload,
 } from "./uxp-utils.js";
 import { createUxpState } from "./uxp-state.js";
-import { createBackendClient } from "./backend-client.js";
+import { createBackendClient } from "./uxp-backend-client.js";
 import { createJobController } from "./job-controller.js";
 import { createI18nRuntime } from "./uxp-i18n.js";
 import { escapeHtml as escapeHtmlValue, safeDomIdSegment } from "./uxp-components.js";

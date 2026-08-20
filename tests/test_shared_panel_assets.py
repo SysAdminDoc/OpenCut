@@ -64,18 +64,15 @@ def test_the_gate_covers_every_duplicated_panel_asset():
         "README.md",
         "CHANGELOG.md",
         ".gitignore",
-        # Co-named but genuinely separate implementations — CEP and UXP have
-        # different hosts, cascade roots, and transport constraints, so these
-        # were never copies and must not be gated as such. The shared name is a
-        # readability hazard rather than drift.
+        # Every remaining name here differs per panel for a structural reason:
+        # each panel has its own entry point, manifest, styling, and locale set.
         #
-        # The three command-center stylesheets carried the same name at the same
-        # cascade position while being different files, which is how an edit
-        # lands in the wrong panel. The UXP copies are now uxp-prefixed, matching
-        # every other file in that directory, so the collision is gone. The same
-        # rename for backend-client.js waits on the route manifest, whose
-        # surface evidence cites the path.
-        "backend-client.js",
+        # Nothing else is co-named any more. The three command-center
+        # stylesheets and backend-client.js used to share a name across both
+        # panels while being different implementations, which is how an edit
+        # lands in the wrong panel — a hazard the drift gate cannot catch,
+        # because those files were never copies. The UXP copies are now
+        # uxp-prefixed, matching every other file in that directory.
     }
     unguarded = sorted(duplicated - set(SHARED_ASSETS) - panel_specific)
 
