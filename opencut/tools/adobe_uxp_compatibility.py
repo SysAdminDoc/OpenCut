@@ -28,6 +28,7 @@ UXP_MANIFEST_PATH = REPO_ROOT / "extension" / "com.opencut.uxp" / "manifest.json
 
 SOURCE_PATHS = (
     REPO_ROOT / "extension" / "com.opencut.uxp" / "main.js",
+    REPO_ROOT / "extension" / "com.opencut.uxp" / "uxp-cut-planner.js",
     REPO_ROOT / "extension" / "com.opencut.uxp" / "uxp-theme.js",
     REPO_ROOT / "extension" / "com.opencut.uxp" / "bolt-webview" / "src" / "api" / "premierepro.ts",
 )

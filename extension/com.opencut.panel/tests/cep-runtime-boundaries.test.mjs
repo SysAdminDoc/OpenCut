@@ -214,6 +214,40 @@ describe("CEP timeline payloads", () => {
       markers: [{ time: 2, name: "Beat" }],
     });
   });
+
+  it("turns ranked repeat clusters into cut ranges that name the surviving take", () => {
+    const clusters = [{
+      keep_index: 1,
+      cut_indices: [0],
+      decision_source: "llm",
+      takes: [
+        { index: 0, start: 0, end: 3, text: "The numbers are um" },
+        { index: 1, start: 3.2, end: 6, text: "The numbers are up." },
+      ],
+    }];
+
+    expect(timeline.buildRepeatCutsFromClusters(clusters)).toEqual([
+      { start: 0, end: 3, text: "The numbers are um", keep_text: "The numbers are up.", decision_source: "llm" },
+    ]);
+  });
+
+  it("reports no repeat cuts rather than an empty list when there is nothing to cut", () => {
+    // The caller falls through to the backend's detect-only shape on null, so
+    // an empty array here would silently suppress that fallback.
+    expect(timeline.buildRepeatCutsFromClusters([])).toBe(null);
+    expect(timeline.buildRepeatCutsFromClusters(null)).toBe(null);
+    expect(timeline.buildRepeatCutsFromClusters([{ keep_index: 0, cut_indices: [], takes: [] }])).toBe(null);
+  });
+
+  it("skips a cut index with no matching take instead of emitting an empty range", () => {
+    const clusters = [{
+      keep_index: 0,
+      cut_indices: [7],
+      takes: [{ index: 0, start: 0, end: 1, text: "kept" }],
+    }];
+
+    expect(timeline.buildRepeatCutsFromClusters(clusters)).toBe(null);
+  });
 });
 
 describe("CEP onboarding state machine", () => {

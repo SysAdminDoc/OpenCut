@@ -37,8 +37,76 @@
         return merged;
     }
 
+    // Search status copy: pluralisation and template substitution over
+    // translated strings, which is i18n formatting rather than panel logic.
+    // Bind it once to the controller's `t` and the whole family comes with it.
+    function createSearchCopy(t) {
+        function plural(count) { return count === 1 ? "" : "s"; }
+
+        function filesIndexed(count) {
+            return t("search.files_indexed", "{count} file{plural} indexed")
+                .replace("{count}", count)
+                .replace("{plural}", plural(count));
+        }
+
+        function segments(count) {
+            return t("search.segments_count", "{count} segment{plural}")
+                .replace("{count}", count)
+                .replace("{plural}", plural(count));
+        }
+
+        function projectClips(count) {
+            return t("search.project_clip_count", "{count} project clip{plural}")
+                .replace("{count}", count)
+                .replace("{plural}", plural(count));
+        }
+
+        function indexCount(totalFiles, totalSegments) {
+            var countLabel = filesIndexed(totalFiles);
+            if (!totalSegments) return countLabel;
+            return t("search.files_with_segments", "{files} • {segments}")
+                .replace("{files}", countLabel)
+                .replace("{segments}", segments(totalSegments));
+        }
+
+        function indexedAcross(totalFiles, totalSegments) {
+            return t("search.indexed_across", "{files} indexed across {segments}.")
+                .replace("{files}", filesIndexed(totalFiles))
+                .replace("{segments}", segments(totalSegments));
+        }
+
+        function indexingProgress(indexed, total) {
+            return t("search.indexing_progress", "Indexed {indexed} of {total}.")
+                .replace("{indexed}", indexed)
+                .replace("{total}", projectClips(total));
+        }
+
+        function indexingToast(indexed, total, errorCount) {
+            var issues = errorCount
+                ? t("search.indexing_toast_issues", " with {count} issue{plural}")
+                    .replace("{count}", errorCount)
+                    .replace("{plural}", plural(errorCount))
+                : "";
+            return t("search.indexing_complete_toast", "Indexed {indexed} of {total}{issues}.")
+                .replace("{indexed}", indexed)
+                .replace("{total}", projectClips(total))
+                .replace("{issues}", issues);
+        }
+
+        return {
+            filesIndexed: filesIndexed,
+            segments: segments,
+            projectClips: projectClips,
+            indexCount: indexCount,
+            indexedAcross: indexedAcross,
+            indexingProgress: indexingProgress,
+            indexingToast: indexingToast
+        };
+    }
+
     return {
         translate: translate,
-        mergeLocale: mergeLocale
+        mergeLocale: mergeLocale,
+        createSearchCopy: createSearchCopy
     };
 });

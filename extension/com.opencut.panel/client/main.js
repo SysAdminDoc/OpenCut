@@ -15764,37 +15764,12 @@
      * preselecting every take except the one the ranking recommends keeping.
      * Returns null when the backend sent no clusters, so the caller falls back.
      */
-    function buildRepeatCutsFromClusters(clusters) {
-        if (!clusters || !clusters.length) return null;
-        var cuts = [];
-        for (var ci = 0; ci < clusters.length; ci++) {
-            var cluster = clusters[ci] || {};
-            var takes = cluster.takes || [];
-            var byIndex = {};
-            for (var ti = 0; ti < takes.length; ti++) byIndex[takes[ti].index] = takes[ti];
-            var keep = byIndex[cluster.keep_index];
-            var cutIndices = cluster.cut_indices || [];
-            for (var ki = 0; ki < cutIndices.length; ki++) {
-                var take = byIndex[cutIndices[ki]];
-                if (!take) continue;
-                cuts.push({
-                    start: take.start,
-                    end: take.end,
-                    text: take.text,
-                    keep_text: keep ? keep.text : "",
-                    decision_source: cluster.decision_source || "heuristic"
-                });
-            }
-        }
-        return cuts.length ? cuts : null;
-    }
-
     addJobDoneListener(function (job) {
         if (job.type !== "repeat-detect" || job.status !== "complete" || !job.result) return;
         var r = job.result;
         // Ranked clusters name which take to keep. Without them the backend's
         // detect-only shape still applies, which always keeps the last take.
-        repeatCutsData = buildRepeatCutsFromClusters(r.clusters) || r.repeats || r.cuts || r.ranges || [];
+        repeatCutsData = OpenCutTimeline.buildRepeatCutsFromClusters(r.clusters) || r.repeats || r.cuts || r.ranges || [];
         lastTimelineCuts = repeatCutsData;
         var res = document.getElementById("repeatResults");
         var sum = document.getElementById("repeatSummary");
@@ -16368,57 +16343,16 @@
     // v1.5.0 — NLP Tab Functions
     // ================================================================
 
-    function formatSearchFilesIndexed(count) {
-        return t("search.files_indexed", "{count} file{plural} indexed")
-            .replace("{count}", count)
-            .replace("{plural}", count === 1 ? "" : "s");
-    }
-
-    function formatSearchSegments(count) {
-        return t("search.segments_count", "{count} segment{plural}")
-            .replace("{count}", count)
-            .replace("{plural}", count === 1 ? "" : "s");
-    }
-
-    function formatSearchProjectClips(count) {
-        return t("search.project_clip_count", "{count} project clip{plural}")
-            .replace("{count}", count)
-            .replace("{plural}", count === 1 ? "" : "s");
-    }
-
-    function formatSearchIndexCount(totalFiles, totalSegments) {
-        var countLabel = formatSearchFilesIndexed(totalFiles);
-        if (totalSegments) {
-            countLabel = t("search.files_with_segments", "{files} • {segments}")
-                .replace("{files}", countLabel)
-                .replace("{segments}", formatSearchSegments(totalSegments));
-        }
-        return countLabel;
-    }
-
-    function formatSearchIndexedAcross(totalFiles, totalSegments) {
-        return t("search.indexed_across", "{files} indexed across {segments}.")
-            .replace("{files}", formatSearchFilesIndexed(totalFiles))
-            .replace("{segments}", formatSearchSegments(totalSegments));
-    }
-
-    function formatSearchIndexingProgress(indexed, total) {
-        return t("search.indexing_progress", "Indexed {indexed} of {total}.")
-            .replace("{indexed}", indexed)
-            .replace("{total}", formatSearchProjectClips(total));
-    }
-
-    function formatSearchIndexingToast(indexed, total, errorCount) {
-        var issues = errorCount
-            ? t("search.indexing_toast_issues", " with {count} issue{plural}")
-                .replace("{count}", errorCount)
-                .replace("{plural}", errorCount === 1 ? "" : "s")
-            : "";
-        return t("search.indexing_complete_toast", "Indexed {indexed} of {total}{issues}.")
-            .replace("{indexed}", indexed)
-            .replace("{total}", formatSearchProjectClips(total))
-            .replace("{issues}", issues);
-    }
+    // The search status copy family lives in i18n-utils.js; it is pluralisation
+    // and template substitution over translated strings, not panel logic.
+    var SearchCopy = OpenCutI18n.createSearchCopy(t);
+    var formatSearchFilesIndexed = SearchCopy.filesIndexed,
+        formatSearchSegments = SearchCopy.segments,
+        formatSearchProjectClips = SearchCopy.projectClips,
+        formatSearchIndexCount = SearchCopy.indexCount,
+        formatSearchIndexedAcross = SearchCopy.indexedAcross,
+        formatSearchIndexingProgress = SearchCopy.indexingProgress,
+        formatSearchIndexingToast = SearchCopy.indexingToast;
 
     function renderSearchIndexStats(stats) {
         var statsEl = document.getElementById("searchIndexStats");

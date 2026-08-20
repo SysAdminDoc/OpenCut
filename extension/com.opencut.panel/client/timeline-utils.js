@@ -83,11 +83,40 @@
         return payload;
     }
 
+    // Repeat detection returns clusters of attempts at the same line, each
+    // naming the take to keep. Turn them into cut ranges for everything else,
+    // carrying the kept take's text so review can show what survives.
+    function buildRepeatCutsFromClusters(clusters) {
+        if (!clusters || !clusters.length) return null;
+        var cuts = [];
+        for (var ci = 0; ci < clusters.length; ci++) {
+            var cluster = clusters[ci] || {};
+            var takes = cluster.takes || [];
+            var byIndex = {};
+            for (var ti = 0; ti < takes.length; ti++) byIndex[takes[ti].index] = takes[ti];
+            var keep = byIndex[cluster.keep_index];
+            var cutIndices = cluster.cut_indices || [];
+            for (var ki = 0; ki < cutIndices.length; ki++) {
+                var take = byIndex[cutIndices[ki]];
+                if (!take) continue;
+                cuts.push({
+                    start: take.start,
+                    end: take.end,
+                    text: take.text,
+                    keep_text: keep ? keep.text : "",
+                    decision_source: cluster.decision_source || "heuristic"
+                });
+            }
+        }
+        return cuts.length ? cuts : null;
+    }
+
     return {
         cloneCuts: cloneCuts,
         buildBeatMarkers: buildBeatMarkers,
         buildRenameOperations: buildRenameOperations,
         buildSmartBinHostRules: buildSmartBinHostRules,
-        buildOtioPayload: buildOtioPayload
+        buildOtioPayload: buildOtioPayload,
+        buildRepeatCutsFromClusters: buildRepeatCutsFromClusters
     };
 });

@@ -26,6 +26,12 @@ record also lives in the git commit messages.
   leaving cuts unmade. Both panels now refuse the same case for the same
   reason, and both check the result against the clip boundaries they promised.
 
+### Fixed - Reconnect message called the backend a server
+
+- The panel says "backend" everywhere else. One error toast said "server",
+  which is the term the docs deliberately avoid because it reads like
+  something remote.
+
 ### Added - The share of routes you can actually reach can no longer fall
 
 - Only 280 of the 1,563 shipped HTTP routes are reachable from the panels, the
