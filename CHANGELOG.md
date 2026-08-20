@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - The plugin verifier no longer pins vulnerable cryptography
+
+- OpenCut now requires `cryptography` 50.x, which fixes three certificate and
+  PKCS#7 verification advisories reported against the old 48.0.1 lock. The
+  simple and hash-pinned dependency locks are synchronized to 50.0.0.
+
 ### Fixed - Five features told you to install packages that would not have helped
 
 - OmniVoice TTS, ROSE inpaint, Sammie-Roto, ReEzSynth and FlashVSR were listed
