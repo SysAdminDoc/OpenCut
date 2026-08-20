@@ -1077,6 +1077,66 @@ BATCH_MIN_THRESHOLD_SECONDS = 60.0
 BATCH_SIZE_MAX = 32
 
 
+# Whisper-family decoders degrade on long audio by looping one phrase for the
+# rest of the file. The output looks plausible, so the next stage happily cuts
+# footage from a transcript that stopped describing the audio minutes ago.
+# These are the upstream defaults, set explicitly so the behaviour is ours.
+DECODER_COMPRESSION_RATIO_THRESHOLD = 2.4
+DECODER_NO_SPEECH_THRESHOLD = 0.6
+#: Consecutive near-identical segments before a span is called a loop. Three
+#: catches real loops while leaving deliberate repetition ("no, no, no") alone.
+REPETITION_RUN_THRESHOLD = 3
+REPETITION_REVIEW_REASON = "repetition_loop"
+
+
+def _normalise_for_repetition(text: str) -> str:
+    """Collapse a segment to what makes two of them "the same line"."""
+    return " ".join(str(text or "").lower().split()).strip(" .,!?;:-—…\"'")
+
+
+def flag_repetition_loops(
+    segments,
+    run_threshold: int = REPETITION_RUN_THRESHOLD,
+) -> dict:
+    """Mark runs of near-identical consecutive segments for human review.
+
+    Backend-independent: it inspects output, so it protects every engine. It
+    never removes or edits a segment — a loop still contains whatever the model
+    heard, and silently discarding it would be its own data-loss bug.
+    """
+    items = list(segments or [])
+    summary = {"runs": 0, "segments_flagged": 0, "longest_run": 0}
+    if run_threshold < 2 or len(items) < run_threshold:
+        return summary
+
+    start = 0
+    for index in range(1, len(items) + 1):
+        same = (
+            index < len(items)
+            and _normalise_for_repetition(getattr(items[index], "text", ""))
+            == _normalise_for_repetition(getattr(items[start], "text", ""))
+            and _normalise_for_repetition(getattr(items[start], "text", "")) != ""
+        )
+        if same:
+            continue
+        run = index - start
+        if run >= run_threshold:
+            summary["runs"] += 1
+            summary["segments_flagged"] += run
+            summary["longest_run"] = max(summary["longest_run"], run)
+            for seg in items[start:index]:
+                try:
+                    seg.human_review_recommended = True
+                    reasons = list(getattr(seg, "review_reasons", None) or [])
+                    if REPETITION_REVIEW_REASON not in reasons:
+                        reasons.append(REPETITION_REVIEW_REASON)
+                    seg.review_reasons = reasons
+                except Exception:  # noqa: BLE001 - flagging must never break a transcript
+                    logger.debug("Could not flag a repeated segment for review")
+        start = index
+    return summary
+
+
 def _decoder_bias_kwargs(hotwords) -> dict:
     """Return the transcribe kwargs that bias the decoder, if supported.
 
@@ -1378,6 +1438,12 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
     batch_plan = plan_batched_inference(config, wav_path)
     batch_size = batch_plan["batch_size"]
     bias_kwargs = _decoder_bias_kwargs(getattr(config, "hotwords", ""))
+    # Set the anti-degeneration thresholds explicitly rather than inheriting
+    # whatever the installed wrapper defaults to.
+    bias_kwargs.update(
+        compression_ratio_threshold=DECODER_COMPRESSION_RATIO_THRESHOLD,
+        no_speech_threshold=DECODER_NO_SPEECH_THRESHOLD,
+    )
 
     def _run_transcribe(active_model):
         """Transcribe with the batched pipeline when this file earns it.
@@ -1470,21 +1536,40 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 confidence=segment_confidence,
             ))
 
+        repetition = flag_repetition_loops(segments)
+        if repetition["runs"]:
+            logger.warning(
+                "Transcript contains %d repeated-phrase run(s) (longest %d segments); "
+                "the affected spans are flagged for review.",
+                repetition["runs"],
+                repetition["longest_run"],
+            )
+
+        provenance = _backend_provenance(
+            "faster-whisper",
+            config,
+            language,
+            device=device,
+            compute_type=compute_type,
+            fallback_reason=runtime_fallback_reason,
+            decode_mode=decode_mode,
+            decode_reason=batch_plan["reason"],
+            batch_size=batch_size,
+        )
+        provenance.deterministic_options.update(
+            {
+                "compression_ratio_threshold": DECODER_COMPRESSION_RATIO_THRESHOLD,
+                "no_speech_threshold": DECODER_NO_SPEECH_THRESHOLD,
+                "repetition_runs": repetition["runs"],
+                "repetition_segments_flagged": repetition["segments_flagged"],
+            }
+        )
+
         return TranscriptionResult(
             segments=segments,
             language=language,
             language_confidence=language_confidence,
-            provenance=_backend_provenance(
-                "faster-whisper",
-                config,
-                language,
-                device=device,
-                compute_type=compute_type,
-                fallback_reason=runtime_fallback_reason,
-                decode_mode=decode_mode,
-                decode_reason=batch_plan["reason"],
-                batch_size=batch_size,
-            ),
+            provenance=provenance,
         )
     finally:
         try:
