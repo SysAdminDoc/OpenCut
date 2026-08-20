@@ -43,13 +43,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: A generated `pylock.toml` reproduces the release environment and is verified in release smoke; the bespoke lockfiles are either removed or generated from it; `project.license` uses an SPDX expression with the deprecated classifier removed; the version-sync target count is updated to match.
   Complexity: M
 
-- [ ] P3 — F318 — Document the unsigned-install experience and publish artifact digests
-  Why: Standing policy forbids code signing, and Microsoft's current guidance is that unsigned files rebuild SmartScreen reputation from zero on every update and that signing no longer guarantees a bypass; users therefore need an explicit, permanent instruction plus a way to verify what they downloaded.
-  Evidence: https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation; `docs/WINDOWS_CODESIGNING.md`, `docs/RELEASE_PROVENANCE.md`; `scripts/sbom.py`
-  Touches: `README.md`, `docs/WINDOWS_CODESIGNING.md`, `docs/RELEASE_PROVENANCE.md`, `scripts/release_gate.py`
-  Acceptance: Installation documentation states plainly that artifacts are unsigned, shows the exact SmartScreen path to proceed, and gives the verification command; the release gate emits SHA-256 digests for every artifact into the release metadata so the published digests can be checked against the download.
-  Complexity: S
-
 - [ ] P3 — F344 — Rank repeat clusters with a best-take recommendation
   Why: `repeat_detect` finds repeated sentences but ranks nothing, so review shows "these repeat" without "keep this one" — while AutoCut Repeat and Gling sell exactly the keep-best-take selection, and a heuristic (filler count, WPM stability, completion) with an optional LLM verdict layers cleanly on the existing detection output.
   Evidence: `opencut/core/repeat_detect.py` (detection and range merging only); https://github.com/rafcopy/auto-cut-agent (LLM-based take dedup in a UXP+local-server design, 2026-08-13); https://opentools.ai/tools/gling-ai (bad-take marking)
