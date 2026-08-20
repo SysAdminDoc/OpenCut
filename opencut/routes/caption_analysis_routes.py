@@ -242,11 +242,15 @@ def captions_repeat_detect(job_id, filepath, data):
     repeats = detection.get("repeats", []) if isinstance(detection, dict) else []
     clean_ranges = detection.get("clean_ranges", []) if isinstance(detection, dict) else []
     total_removed = float(detection.get("total_removed_seconds", 0.0)) if isinstance(detection, dict) else 0.0
+    # Ranked clusters carry the keep recommendation the review surface
+    # preselects. Additive: the three original keys are unchanged.
+    clusters = detection.get("clusters", []) if isinstance(detection, dict) else []
 
     return {
         "repeats": repeats,
         "clean_ranges": clean_ranges,
         "total_removed_seconds": total_removed,
+        "clusters": clusters,
     }
 
 
