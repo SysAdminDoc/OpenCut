@@ -1,10 +1,13 @@
-"""F349 — the UXP cut path must prefer the typed 26.3 remove-items action.
+"""The cut path in both panels: which clips a range touches, and what it does to them.
 
 `Sequence.rippleDelete()` is absent from the 26.3 typings and is reported to
-return success while changing nothing on that host, so the cut path now routes
-through `SequenceEditor.createRemoveItemsAction`. That action removes whole
-track items, so these tests pin the boundary rule that decides when a cut range
-can be expressed that way, and the wiring that keeps ripple delete as fallback.
+return success while changing nothing on that host, so the UXP cut path routes
+through `SequenceEditor.createRemoveItemsAction` (F349). That action removes
+whole track items, so F351 added boundary trims for the clips a range only
+partly covers, and F353 carried the same rule into the CEP host, which had the
+same gap. These tests pin the boundary rule, the trim arithmetic, the check
+that a trim did not turn out to be a move, and the agreement between the two
+panels — a reviewed cut has to produce one timeline, not two.
 """
 
 from __future__ import annotations
@@ -468,11 +471,191 @@ class TestNonDestructiveCutMode:
         assert "if (plan.trims.length) {" in disable_branch
 
 
+CEP_HOST = REPO_ROOT / "extension" / "com.opencut.panel" / "host" / "index.jsx"
+
+
+def _extract_function(source: str, name: str) -> str:
+    """Lift one function out of the ExtendScript host by brace matching.
+
+    The host only runs inside Premiere, but its cut planning is pure, so the
+    shipped source can be exercised directly instead of asserted against as a
+    string.
+    """
+    start = source.index(f"function {name}(")
+    depth = 0
+    for index in range(start, len(source)):
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[start:index + 1]
+    raise AssertionError(f"unbalanced braces in {name}")
+
+
+def _run_cep(node_bin: str, functions, body: str) -> dict:
+    source = CEP_HOST.read_text(encoding="utf-8", errors="replace")
+    lifted = "\n".join(_extract_function(source, name) for name in functions)
+    program = textwrap.dedent(
+        """
+        function _ocLog() {}
+        function Time() { this.seconds = null; this.ticks = null; }
+        var OC_CUT_TOLERANCE_SECONDS = 0.01;
+        %s
+        %s
+        """
+    ) % (lifted, body)
+    result = subprocess.run(
+        [node_bin, "-e", program],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=str(REPO_ROOT),
+    )
+    if result.returncode != 0:
+        raise RuntimeError("node exited non-zero: " + (result.stderr or result.stdout))
+    return json.loads(result.stdout or "{}")
+
+
+def _cep_clip(start, end, in_point=0.0, speed=1.0, name="clip"):
+    return {
+        "name": name,
+        "start": {"seconds": start},
+        "end": {"seconds": end},
+        "inPoint": {"seconds": in_point},
+        "outPoint": {"seconds": in_point + (end - start)},
+        "speed": speed,
+    }
+
+
+class TestCepBoundaryTrims:
+    """F353 — the CEP host has to cut the same ranges the UXP path does.
+
+    It previously removed only clips whose bounds fell entirely inside the
+    range, so the same reviewed cut produced two different timelines depending
+    on which panel was open, and the older, more widely installed one left the
+    cut uncut without saying so.
+    """
+
+    def _plan(self, node_bin, clip, start, end):
+        return _run_cep(
+            node_bin,
+            ["_ocPlanClipCut"],
+            f"process.stdout.write(JSON.stringify(_ocPlanClipCut({json.dumps(clip)}, {start}, {end})));",
+        )
+
+    def test_a_covered_clip_is_removed(self, node_bin):
+        assert self._plan(node_bin, _cep_clip(2.0, 3.0), 1.0, 4.0)["action"] == "remove"
+
+    def test_a_clip_outside_the_range_is_untouched(self, node_bin):
+        assert self._plan(node_bin, _cep_clip(5.0, 6.0), 1.0, 4.0)["action"] == "none"
+
+    def test_a_clip_running_past_the_end_is_trimmed_forward(self, node_bin):
+        plan = self._plan(node_bin, _cep_clip(1.5, 9.0, in_point=5.0), 1.0, 2.0)
+
+        assert plan["action"] == "trim_tail"
+        assert plan["start"] == pytest.approx(2.0)
+        assert plan["end"] == pytest.approx(9.0)
+        assert plan["inPoint"] == pytest.approx(5.5)
+
+    def test_a_clip_starting_before_the_range_is_trimmed_back(self, node_bin):
+        plan = self._plan(node_bin, _cep_clip(0.0, 3.0, in_point=10.0), 2.0, 5.0)
+
+        assert plan["action"] == "trim_head"
+        assert plan["start"] == pytest.approx(0.0)
+        assert plan["end"] == pytest.approx(2.0)
+        assert plan["outPoint"] == pytest.approx(12.0)
+
+    def test_a_trim_preserves_duration_against_source_range(self, node_bin):
+        for clip, start, end in (
+            (_cep_clip(1.5, 9.0, in_point=5.0), 1.0, 2.0),
+            (_cep_clip(0.0, 3.0, in_point=10.0), 2.0, 5.0),
+        ):
+            plan = self._plan(node_bin, clip, start, end)
+            assert plan["outPoint"] - plan["inPoint"] == pytest.approx(plan["end"] - plan["start"])
+
+    def test_a_clip_enclosing_the_range_is_refused(self, node_bin):
+        plan = self._plan(node_bin, _cep_clip(0.0, 60.0), 10.0, 11.0)
+
+        assert plan["action"] == "blocked"
+        assert "razor" in plan["reason"]
+
+    def test_a_retimed_clip_is_refused(self, node_bin):
+        plan = self._plan(node_bin, _cep_clip(1.5, 9.0, speed=2.0), 1.0, 2.0)
+
+        assert plan["action"] == "blocked"
+        assert "retimed" in plan["reason"]
+
+    def test_unreadable_source_points_are_refused(self, node_bin):
+        clip = _cep_clip(1.5, 9.0)
+        clip["inPoint"] = None
+        plan = self._plan(node_bin, clip, 1.0, 2.0)
+
+        assert plan["action"] == "blocked"
+        assert "source in/out points" in plan["reason"]
+
+    def test_frame_rounding_keeps_a_snug_clip_on_the_removal_path(self, node_bin):
+        assert self._plan(node_bin, _cep_clip(0.995, 2.005), 1.0, 2.0)["action"] == "remove"
+
+    def test_the_two_panels_agree_on_every_case(self, node_bin):
+        """The whole point of F353: one reviewed cut, one outcome."""
+        cases = [
+            ((2.0, 3.0, 0.0, 1.0), 1.0, 4.0, "remove"),
+            ((5.0, 6.0, 0.0, 1.0), 1.0, 4.0, "none"),
+            ((1.5, 9.0, 5.0, 1.0), 1.0, 2.0, "trim_tail"),
+            ((0.0, 3.0, 10.0, 1.0), 2.0, 5.0, "trim_head"),
+            ((0.0, 60.0, 0.0, 1.0), 10.0, 11.0, "blocked"),
+            ((1.5, 9.0, 5.0, 2.0), 1.0, 2.0, "blocked"),
+        ]
+        for (c_start, c_end, in_point, speed), start, end, expected in cases:
+            cep = self._plan(
+                node_bin, _cep_clip(c_start, c_end, in_point=in_point, speed=speed), start, end
+            )["action"]
+            uxp_plan = _plan(
+                node_bin,
+                [_clip("x", c_start, c_end, in_point=in_point, speed=speed)],
+                start,
+                end,
+            )
+            if expected == "remove":
+                uxp = "remove" if uxp_plan["contained"] == ["x"] else "?"
+            elif expected == "none":
+                uxp = "none" if not uxp_plan["contained"] and not uxp_plan["straddling"] else "?"
+            elif expected == "blocked":
+                uxp = "blocked" if uxp_plan["blocked"] else "?"
+            else:
+                uxp = f"trim_{uxp_plan['trims'][0]['kind']}" if uxp_plan["trims"] else "?"
+            assert cep == expected, (c_start, c_end, start, end)
+            assert uxp == expected, (c_start, c_end, start, end)
+
+    def test_a_move_is_caught_where_a_trim_was_expected(self, node_bin):
+        """A moved clip keeps its duration, so its end gives it away."""
+        result = _run_cep(
+            node_bin,
+            ["_ocVerifyCutPlans"],
+            """
+            var trims = [{id: "video|0||clip", start: 4.0, end: 9.0}];
+            process.stdout.write(JSON.stringify({
+                landed: _ocVerifyCutPlans(trims, [], {"video|0||clip": {start: 4.0, end: 9.0}}),
+                moved: _ocVerifyCutPlans(trims, [], {"video|0||clip": {start: 4.0, end: 10.0}}),
+                vanished: _ocVerifyCutPlans(trims, [], {}),
+                survived: _ocVerifyCutPlans([], ["video|0||gone"], {"video|0||gone": {start: 0, end: 1}}),
+                unreadable_timeline: _ocVerifyCutPlans(trims, [], null)
+            }));
+            """,
+        )
+
+        assert result["landed"] == []
+        assert "read back 4.000-10.000s" in result["moved"][0]
+        assert "disappeared" in result["vanished"][0]
+        assert "still present after removal" in result["survived"][0]
+        # Nothing readable is not the same as something wrong.
+        assert result["unreadable_timeline"] == []
+
+
 class TestCepNonDestructiveCutMode:
     def _source(self) -> str:
-        return (
-            REPO_ROOT / "extension" / "com.opencut.panel" / "host" / "index.jsx"
-        ).read_text(encoding="utf-8", errors="replace")
+        return CEP_HOST.read_text(encoding="utf-8", errors="replace")
 
     def test_host_accepts_both_the_legacy_array_and_a_mode_object(self):
         source = self._source()
@@ -481,8 +664,19 @@ class TestCepNonDestructiveCutMode:
 
     def test_disable_sets_the_clip_flag_instead_of_removing(self):
         source = self._source()
-        assert "if (disableOnly) { vClip.disabled = true; } else { vClip.remove(false, true); }" in source
-        assert "if (disableOnly) { aClip.disabled = true; } else { aClip.remove(false, true); }" in source
+        assert "clip.disabled = true;" in source
+        assert "clip.remove(false, true);" in source
+
+    def test_disable_mode_refuses_a_boundary_crossing_clip(self):
+        """Trimming it would delete the media disable mode exists to keep."""
+        source = self._source()
+        start = source.index("function ocApplySequenceCuts")
+        body = source[start:source.index("var afterClips = _ocSequenceClipSnapshot(seq);", start)]
+        assert "disabling it whole would mute media outside the range" in body
+
+    def test_removal_still_does_not_ripple(self):
+        """Both panels leave the cut range empty without shifting anything."""
+        assert "clip.remove(false, true);" in self._source()
 
     def test_clip_fingerprint_carries_disabled_state(self):
         source = self._source()
