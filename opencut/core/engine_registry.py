@@ -54,6 +54,36 @@ class EngineInfo:
     # stays listed as coming-soon but never reports available / resolves as
     # active — a dependency check alone does not prove the adapter works.
     impl_module: Optional[str] = None
+    # Upstream maintenance record. An engine can be installable, importable and
+    # completely abandoned at the same time, and nothing in the product could
+    # previously say so — OpenCut pip-installed DeepFilterNet on demand years
+    # after its last release. These fields are re-verifiable from `upstream`
+    # rather than asserted: each is a date a reader can check.
+    upstream: str = ""              # canonical repository / project URL
+    last_release: str = ""          # newest published release, YYYY-MM-DD
+    last_activity: str = ""         # newest upstream repository activity, YYYY-MM-DD
+    maintenance: str = "unknown"    # "maintained" | "unmaintained" | "archived" | "unknown"
+    maintenance_checked: str = ""   # date the three fields above were verified
+
+    @property
+    def is_unmaintained(self) -> bool:
+        """True when upstream is known to be abandoned or archived."""
+        return self.maintenance in ("unmaintained", "archived")
+
+    @property
+    def maintenance_note(self) -> str:
+        """One line a user can act on, or "" when there is nothing to say."""
+        if not self.is_unmaintained:
+            return ""
+        detail = []
+        if self.last_release:
+            detail.append(f"last release {self.last_release}")
+        if self.last_activity:
+            detail.append(f"last upstream activity {self.last_activity}")
+        suffix = f" ({', '.join(detail)})" if detail else ""
+        state = "archived upstream" if self.maintenance == "archived" else "unmaintained"
+        checked = f"; checked {self.maintenance_checked}" if self.maintenance_checked else ""
+        return f"{self.display_name} is {state}{suffix}{checked}. {self.upstream}".strip()
 
     @property
     def is_stub(self) -> bool:
@@ -461,6 +491,11 @@ def _register_builtin_engines(reg: EngineRegistry):
         vram_mb=1000,
         speed_rating="medium",
         quality_rating="high",
+        upstream="https://github.com/facebookresearch/demucs",
+        last_release="2022-12-08",
+        last_activity="2024-04-24",
+        maintenance="archived",
+        maintenance_checked="2026-08-20",
     ))
     reg.register(EngineInfo(
         name="bs_roformer",

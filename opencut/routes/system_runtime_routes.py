@@ -473,6 +473,20 @@ def check_dependencies():
         ),
     }
 
+    def _apply_maintenance(entry: dict, name: str) -> None:
+        """Attach the upstream maintenance record, when one is on file.
+
+        A package can install and import perfectly while being abandoned, so
+        the dashboard reports maintenance separately from availability.
+        """
+        from opencut.dependency_support import maintenance_status
+
+        status = maintenance_status(name)
+        if status["abandoned"]:
+            entry["maintenance"] = status["state"]
+            entry["maintenance_note"] = status["warning"]
+            entry["maintenance_checked"] = status["checked"]
+
     deps = {}
     checks = {
         "faster-whisper": "faster_whisper",
@@ -514,6 +528,7 @@ def check_dependencies():
             }
             if name in _DEP_LEGACY_NOTES:
                 deps[name]["legacy_note"] = _DEP_LEGACY_NOTES[name]
+            _apply_maintenance(deps[name], name)
         except ImportError:
             deps[name] = {
                 "installed": False,
@@ -528,6 +543,7 @@ def check_dependencies():
             }
             if name in _DEP_LEGACY_NOTES:
                 deps[name]["legacy_note"] = _DEP_LEGACY_NOTES[name]
+            _apply_maintenance(deps[name], name)
 
     # Check FFmpeg
     try:

@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Dependencies report whether upstream is still alive
+
+- A package can install and import perfectly while being abandoned, and nothing
+  in the product could say so: OpenCut pip-installed DeepFilterNet on demand
+  years after its last release. Engine entries and the dependency dashboard now
+  carry an upstream URL, last release, last repository activity, and a dated
+  maintenance verdict, each re-verifiable at the recorded URL rather than
+  asserted. Installing an abandoned package still works but warns first and
+  names a maintained alternative, and a test fails if an unmaintained engine
+  ever becomes the highest-priority choice in its domain.
+
 ### Added - One canonical source for strings both panels show
 
 - The CEP and UXP panels kept independent locale namespaces sharing only 26 key

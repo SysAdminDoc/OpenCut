@@ -644,6 +644,14 @@ def ensure_package(pkg: str, pip_name: str = None, on_progress=None) -> bool:
             if on_progress:
                 on_progress(0, support["reason"])
             return False
+        # Installing abandoned software on demand is allowed, but never silent.
+        from opencut.dependency_support import maintenance_status
+
+        maintenance = maintenance_status(pip_name)
+        if maintenance["abandoned"]:
+            logger.warning("Installing unmaintained dependency: %s", maintenance["warning"])
+            if on_progress:
+                on_progress(0, maintenance["warning"])
         if on_progress:
             on_progress(5, f"Installing {pip_name}...")
         logger.info(f"Installing missing dependency: {pip_name}")
