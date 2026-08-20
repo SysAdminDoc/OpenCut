@@ -14,6 +14,14 @@ record also lives in the git commit messages.
   surface coverage rose from 17.9% to 19.8%, and the CLI now owns ten primary
   route surfaces instead of zero.
 
+### Added - The release lane now carries a PEP 751 lock
+
+- Added the generated `pylock.toml` for the current Windows Python 3.13
+  release lane, sourced from the universal hashed release lock.
+- Release smoke now validates the PEP 751 package set and artifact hashes
+  offline. The existing universal lockfiles remain the source for cross-platform
+  lanes and are checked as the authority behind the new artifact.
+
 ### Fixed - The UXP panel now reaches its rendered test surface
 
 - Moved host-write verification setup before cut-executor construction. The

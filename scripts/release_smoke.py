@@ -654,7 +654,12 @@ def step_license_gate(_args: argparse.Namespace) -> StepResult:
 def step_release_lock(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     result = _run(
-        [sys.executable, "scripts/release_composition.py", "--check-lock-only"],
+        [
+            sys.executable,
+            "scripts/release_composition.py",
+            "--check-lock-only",
+            "--check-pylock",
+        ],
         cwd=REPO_ROOT,
     )
     duration = int((time.time() - start) * 1000)
@@ -664,7 +669,11 @@ def step_release_lock(_args: argparse.Namespace) -> StepResult:
         status,
         exit_code=result.returncode,
         duration_ms=duration,
-        message="release inputs are exactly pinned and SHA-256 locked" if status == "ok" else "release lock failed",
+        message=(
+            "release inputs and the offline PEP 751 lock are exactly pinned"
+            if status == "ok"
+            else "release lock failed"
+        ),
         stdout_tail=_tail(result.stdout),
         stderr_tail=_tail(result.stderr),
     )

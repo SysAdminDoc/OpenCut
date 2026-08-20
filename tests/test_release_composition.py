@@ -84,6 +84,29 @@ def test_committed_release_lock_is_exact_and_hash_locked():
     assert any(entry.marker for entry in entries.values())
 
 
+def test_committed_pylock_matches_the_release_lane_without_network():
+    module = _load_script("release_composition")
+
+    summary = module.validate_pylock()
+
+    assert summary["package_count"] == summary["active_release_count"]
+    assert summary["versioned_count"] == summary["active_release_count"]
+    assert summary["direct_count"] >= 10
+
+
+def test_pylock_rejects_an_unauthorized_artifact_hash(tmp_path):
+    module = _load_script("release_composition")
+    content = (REPO_ROOT / "pylock.toml").read_text(encoding="utf-8")
+    original = 'sha256 = "'
+    start = content.index(original) + len(original)
+    end = start + 64
+    tampered = tmp_path / "pylock.toml"
+    tampered.write_text(content[:start] + ("0" * 64) + content[end:], encoding="utf-8")
+
+    with pytest.raises(module.CompositionError, match="artifact hash is not authorized"):
+        module.validate_pylock(tampered)
+
+
 def test_release_lock_markers_select_only_the_target_lane():
     module = _load_script("release_composition")
     entries = {

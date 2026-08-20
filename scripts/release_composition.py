@@ -16,6 +16,7 @@ import importlib.metadata as metadata
 import json
 import re
 import sys
+import tomllib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,6 +27,7 @@ DEFAULT_LOCK = REPO_ROOT / "requirements-release-lock.txt"
 DEFAULT_REQUIREMENTS = REPO_ROOT / "requirements.txt"
 DEFAULT_BUILD_LOCK = REPO_ROOT / "requirements-build-lock.txt"
 DEFAULT_LICENSE_EVIDENCE = REPO_ROOT / "release-license-evidence.json"
+DEFAULT_PYLOCK = REPO_ROOT / "pylock.toml"
 SCHEMA = "https://opencut.dev/schemas/release-composition/v1"
 _REQ_RE = re.compile(
     r"^([A-Za-z0-9_.-]+)==([^\s;]+)(?:\s*;\s*(.*?))?\s+--hash=sha256:"
@@ -195,6 +197,112 @@ def direct_requirement_names(path: Path) -> set[str]:
     if not names:
         raise CompositionError("release requirements contain no packages")
     return names
+
+
+def validate_pylock(
+    path: Path = DEFAULT_PYLOCK,
+    *,
+    requirements_path: Path = DEFAULT_REQUIREMENTS,
+    lock_path: Path = DEFAULT_LOCK,
+) -> dict[str, int]:
+    """Validate the committed PEP 751 lock without contacting a package index.
+
+    ``pip lock`` is intentionally kept out of the release gate because it is
+    experimental and resolves over the network. The committed artifact is
+    checked against the universal release lock instead. That proves the
+    current-platform package set, versions, and download hashes came from the
+    already authorized release inputs.
+    """
+    if not path.is_file():
+        raise CompositionError(f"PEP 751 lock is missing: {path}")
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        raise CompositionError(f"PEP 751 lock is unreadable: {path}") from exc
+
+    if payload.get("lock-version") != "1.0":
+        raise CompositionError("PEP 751 lock-version must be \"1.0\"")
+    packages = payload.get("packages")
+    if not isinstance(packages, list) or not packages:
+        raise CompositionError("PEP 751 lock contains no packages")
+
+    universal_entries = parse_hashed_lock(lock_path)
+    universal_versions: dict[str, set[str]] = {}
+    universal_hashes: dict[str, set[str]] = {}
+    for entry in universal_entries.values():
+        key = normalise_name(entry.name)
+        universal_versions.setdefault(key, set()).add(entry.version)
+        universal_hashes.setdefault(key, set()).update(entry.hashes)
+    active_entries = active_lock_entries(universal_entries)
+    direct_names = direct_requirement_names(requirements_path)
+    seen: dict[str, str] = {}
+    versioned_count = 0
+
+    for package in packages:
+        if not isinstance(package, dict):
+            raise CompositionError("PEP 751 lock contains a non-table package entry")
+        name = package.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise CompositionError("PEP 751 package is missing a name")
+        key = normalise_name(name)
+        if key in seen:
+            raise CompositionError(f"PEP 751 lock contains duplicate package: {name}")
+
+        directory = package.get("directory")
+        if directory is not None:
+            if not isinstance(directory, dict) or directory.get("path") != ".":
+                raise CompositionError(f"PEP 751 directory package is not the project root: {name}")
+            seen[key] = "directory"
+            continue
+
+        version = package.get("version")
+        if not isinstance(version, str) or not version:
+            raise CompositionError(f"PEP 751 package is missing a version: {name}")
+        artifacts = [
+            artifact
+            for field in ("wheels", "sdists")
+            for artifact in package.get(field, [])
+        ]
+        if not artifacts:
+            raise CompositionError(f"PEP 751 package has no downloadable artifacts: {name}=={version}")
+        for artifact in artifacts:
+            if not isinstance(artifact, dict) or not artifact.get("url"):
+                raise CompositionError(f"PEP 751 artifact is missing a URL: {name}=={version}")
+            hashes = artifact.get("hashes")
+            digest = hashes.get("sha256") if isinstance(hashes, dict) else None
+            if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", digest):
+                raise CompositionError(f"PEP 751 artifact is missing a SHA-256 hash: {name}=={version}")
+            if digest.lower() not in universal_hashes.get(key, set()):
+                raise CompositionError(
+                    f"PEP 751 artifact hash is not authorized by {lock_path.name}: {name}=={version}"
+                )
+
+        allowed_versions = universal_versions.get(key)
+        if not allowed_versions or version not in allowed_versions:
+            raise CompositionError(
+                f"PEP 751 package is not pinned by {lock_path.name}: {name}=={version}"
+            )
+        seen[key] = version
+        versioned_count += 1
+
+    missing_direct = sorted(direct_names - set(seen))
+    if missing_direct:
+        raise CompositionError("PEP 751 lock omits direct requirements: " + ", ".join(missing_direct))
+
+    missing_active = sorted(set(active_entries) - set(seen))
+    if missing_active:
+        raise CompositionError("PEP 751 lock omits active release packages: " + ", ".join(missing_active))
+
+    unexpected = sorted(set(seen) - set(active_entries) - {"opencut-ppro"})
+    if unexpected:
+        raise CompositionError("PEP 751 lock contains packages outside the active release lane: " + ", ".join(unexpected))
+
+    return {
+        "package_count": len(packages),
+        "versioned_count": versioned_count,
+        "direct_count": len(direct_names),
+        "active_release_count": len(active_entries),
+    }
 
 
 def _metadata_urls(dist: metadata.Distribution) -> dict[str, str]:
@@ -586,6 +694,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--lane", choices=("windows", "linux", "macos"))
     parser.add_argument("--check-lock-only", action="store_true")
+    parser.add_argument("--pylock", type=Path, default=DEFAULT_PYLOCK)
+    parser.add_argument("--check-pylock", action="store_true")
     args = parser.parse_args(list(argv) if argv is not None else None)
     try:
         if args.check_lock_only:
@@ -601,9 +711,24 @@ def main(argv: Iterable[str] | None = None) -> int:
                 f"release locks complete: {len(locked_entries)} universal / {len(entries)} active runtime packages; "
                 f"{len(build_entries)} build packages; {len(direct)} direct requirements"
             )
+        if args.check_pylock:
+            pylock = validate_pylock(
+                args.pylock,
+                requirements_path=args.requirements,
+                lock_path=args.lock or DEFAULT_LOCK,
+            )
+            print(
+                f"PEP 751 lock complete: {pylock['package_count']} packages, "
+                f"{pylock['versioned_count']} hashed artifacts, "
+                f"{pylock['direct_count']} direct requirements"
+            )
+        if args.check_lock_only or args.check_pylock:
             return 0
         if not args.artifact or args.output_dir is None or args.lane is None:
-            parser.error("--artifact, --output-dir, and --lane are required unless --check-lock-only is used")
+            parser.error(
+                "--artifact, --output-dir, and --lane are required unless "
+                "--check-lock-only or --check-pylock is used"
+            )
         composition = build_composition(
             lock_path=args.lock or DEFAULT_LOCK,
             requirements_path=args.requirements,
