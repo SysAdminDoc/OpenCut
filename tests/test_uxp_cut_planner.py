@@ -31,21 +31,12 @@ def node_bin() -> str:
     return found
 
 
-def _plan(node_bin: str, items, start, end, tolerance=None) -> dict:
-    args = json.dumps([items, start, end] + ([tolerance] if tolerance is not None else []))
+def _run_node(node_bin: str, body: str) -> dict:
     program = textwrap.dedent(
         f"""
         const url = require('url').pathToFileURL({json.dumps(str(PLANNER))}).href;
         import(url).then((mod) => {{
-            const plan = mod.planCutRemoval(...{args});
-            process.stdout.write(JSON.stringify({{
-                contained: plan.contained.map((i) => i.id),
-                straddling: plan.straddling.map((i) => i.id),
-                unreadable: plan.unreadable.map((i) => i.id),
-                removable: plan.removable,
-                reason: plan.reason,
-                tolerance: mod.CUT_BOUNDARY_TOLERANCE_SECONDS,
-            }}));
+            {body}
         }}).catch((e) => {{ console.error(e); process.exit(1); }});
         """
     )
@@ -61,8 +52,55 @@ def _plan(node_bin: str, items, start, end, tolerance=None) -> dict:
     return json.loads(result.stdout or "{}")
 
 
+def _plan(node_bin: str, items, start, end, tolerance=None) -> dict:
+    args = json.dumps([items, start, end] + ([tolerance] if tolerance is not None else []))
+    return _run_node(
+        node_bin,
+        f"""
+        const plan = mod.planCutRemoval(...{args});
+        process.stdout.write(JSON.stringify({{
+            contained: plan.contained.map((i) => i.id),
+            straddling: plan.straddling.map((i) => i.id),
+            unreadable: plan.unreadable.map((i) => i.id),
+            trims: plan.trims.map((t) => ({{
+                id: t.item.id, kind: t.kind, to: t.to, source: t.source,
+            }})),
+            blocked: plan.blocked.map((b) => ({{id: b.item.id, reason: b.reason}})),
+            removable: plan.removable,
+            reason: plan.reason,
+            expected: mod.expectedPostState(plan),
+            tolerance: mod.CUT_BOUNDARY_TOLERANCE_SECONDS,
+        }}));
+        """,
+    )
+
+
+def _verify(node_bin: str, expected, observed) -> list:
+    args = json.dumps([expected, observed])
+    return _run_node(
+        node_bin,
+        f"""
+        process.stdout.write(JSON.stringify({{
+            mismatches: mod.verifyPostState(...{args}),
+        }}));
+        """,
+    )["mismatches"]
+
+
 def _item(id_, start, end):
     return {"id": id_, "start": start, "end": end}
+
+
+def _clip(id_, start, end, in_point=0.0, speed=1.0):
+    """A track item whose source points are readable, so a trim can be planned."""
+    return {
+        "id": id_,
+        "start": start,
+        "end": end,
+        "inPoint": in_point,
+        "outPoint": in_point + (end - start),
+        "speed": speed,
+    }
 
 
 def test_fully_contained_items_are_removable(node_bin):
@@ -82,31 +120,35 @@ def test_items_outside_the_range_are_ignored(node_bin):
     assert plan["removable"] is True
 
 
-def test_an_item_crossing_the_start_blocks_the_typed_path(node_bin):
-    """Removing it whole would delete media before the cut."""
-    plan = _plan(node_bin, [_item("long", 0.0, 3.0)], 1.0, 2.0)
+def test_an_item_enclosing_the_range_blocks_the_typed_path(node_bin):
+    """Cutting a hole in the middle of one item needs a razor 26.3 lacks."""
+    plan = _plan(node_bin, [_clip("long", 0.0, 3.0)], 1.0, 2.0)
 
     assert plan["removable"] is False
     assert plan["straddling"] == ["long"]
     assert "cross a cut boundary" in plan["reason"]
-
-
-def test_an_item_crossing_the_end_blocks_the_typed_path(node_bin):
-    plan = _plan(node_bin, [_item("tail", 1.5, 9.0)], 1.0, 2.0)
-
-    assert plan["removable"] is False
-    assert plan["straddling"] == ["tail"]
+    assert "razor" in plan["blocked"][0]["reason"]
 
 
 def test_an_item_spanning_the_whole_range_blocks_the_typed_path(node_bin):
     """The silence-inside-one-clip case, which needs a razor the API lacks."""
-    plan = _plan(node_bin, [_item("clip", 0.0, 60.0)], 10.0, 11.0)
+    plan = _plan(node_bin, [_clip("clip", 0.0, 60.0)], 10.0, 11.0)
 
     assert plan["removable"] is False
     assert plan["straddling"] == ["clip"]
 
 
-def test_one_straddling_item_blocks_the_whole_cut(node_bin):
+def test_a_straddling_item_without_source_points_blocks_the_cut(node_bin):
+    """A trim whose new in/out cannot be stated cannot be verified either."""
+    plan = _plan(node_bin, [_item("tail", 1.5, 9.0)], 1.0, 2.0)
+
+    assert plan["removable"] is False
+    assert plan["straddling"] == ["tail"]
+    assert plan["trims"] == []
+    assert "source in/out points" in plan["blocked"][0]["reason"]
+
+
+def test_one_untrimmable_item_blocks_the_whole_cut(node_bin):
     items = [_item("ok", 2.0, 3.0), _item("bad", 2.5, 9.0)]
     plan = _plan(node_bin, items, 1.0, 4.0)
 
@@ -162,6 +204,124 @@ def test_tolerance_is_a_millisecond_by_default(node_bin):
     assert plan["tolerance"] == pytest.approx(0.001)
 
 
+class TestBoundaryTrims:
+    """F351 — an item crossing one boundary is trimmed, not left uncut.
+
+    `createRemoveItemsAction` takes whole items, so before F351 any range that
+    touched part of a clip fell through to `rippleDelete`, which the 26.3 host
+    reports applying while changing nothing. Trimming the item back to the
+    boundary and pulling its source point in by the same amount expresses the
+    cut through typed actions without touching the media the user kept.
+    """
+
+    def test_an_item_running_past_the_end_is_trimmed_forward(self, node_bin):
+        plan = _plan(node_bin, [_clip("tail", 1.5, 9.0, in_point=5.0)], 1.0, 2.0)
+
+        assert plan["removable"] is True
+        assert plan["blocked"] == []
+        trim = plan["trims"][0]
+        assert trim["kind"] == "tail"
+        assert trim["to"] == {"start": 2.0, "end": 9.0}
+        # The clip loses its first half-second, so playback resumes half a
+        # second later in the source.
+        assert trim["source"]["inPoint"] == pytest.approx(5.5)
+        assert trim["source"]["outPoint"] == pytest.approx(12.5)
+
+    def test_an_item_starting_before_the_range_is_trimmed_back(self, node_bin):
+        plan = _plan(node_bin, [_clip("head", 0.0, 3.0, in_point=10.0)], 2.0, 5.0)
+
+        assert plan["removable"] is True
+        trim = plan["trims"][0]
+        assert trim["kind"] == "head"
+        assert trim["to"] == {"start": 0.0, "end": 2.0}
+        assert trim["source"]["inPoint"] == pytest.approx(10.0)
+        assert trim["source"]["outPoint"] == pytest.approx(12.0)
+
+    def test_a_trim_preserves_duration_against_source_range(self, node_bin):
+        """Off-by-one here plays the wrong frames rather than failing loudly."""
+        for clip, start, end in (
+            (_clip("tail", 1.5, 9.0, in_point=5.0), 1.0, 2.0),
+            (_clip("head", 0.0, 3.0, in_point=10.0), 2.0, 5.0),
+        ):
+            trim = _plan(node_bin, [clip], start, end)["trims"][0]
+            sequence_span = trim["to"]["end"] - trim["to"]["start"]
+            source_span = trim["source"]["outPoint"] - trim["source"]["inPoint"]
+            assert source_span == pytest.approx(sequence_span)
+
+    def test_trims_and_removals_can_share_one_cut(self, node_bin):
+        items = [_clip("whole", 2.0, 3.0), _clip("tail", 3.0, 9.0, in_point=0.0)]
+        plan = _plan(node_bin, items, 1.0, 4.0)
+
+        assert plan["removable"] is True
+        assert plan["contained"] == ["whole"]
+        assert [t["id"] for t in plan["trims"]] == ["tail"]
+
+    def test_a_retimed_clip_is_refused(self, node_bin):
+        """Source points do not advance a second per second on a speed ramp."""
+        plan = _plan(node_bin, [_clip("fast", 1.5, 9.0, in_point=5.0, speed=2.0)], 1.0, 2.0)
+
+        assert plan["removable"] is False
+        assert "retimed" in plan["blocked"][0]["reason"]
+
+    def test_an_unidentifiable_item_is_not_trimmed(self, node_bin):
+        """A trim leaves the item behind, so the read-back has to find it again."""
+        anonymous = _clip("", 1.5, 9.0, in_point=5.0)
+        plan = _plan(node_bin, [anonymous], 1.0, 2.0)
+
+        assert plan["removable"] is False
+        assert "cannot be identified" in plan["blocked"][0]["reason"]
+
+    def test_the_expected_post_state_names_removals_and_trim_boundaries(self, node_bin):
+        items = [_clip("whole", 2.0, 3.0), _clip("tail", 3.0, 9.0)]
+        expected = _plan(node_bin, items, 1.0, 4.0)["expected"]
+
+        assert expected["removed"] == ["whole"]
+        assert expected["trimmed"] == [
+            {"id": "tail", "kind": "tail", "start": 4.0, "end": 9.0}
+        ]
+
+    def test_a_plan_that_landed_exactly_reports_no_mismatch(self, node_bin):
+        expected = {"removed": ["whole"], "trimmed": [{"id": "tail", "start": 4.0, "end": 9.0}]}
+        observed = [{"id": "tail", "start": 4.0, "end": 9.0}, {"id": "elsewhere", "start": 20.0, "end": 21.0}]
+
+        assert _verify(node_bin, expected, observed) == []
+
+    def test_a_move_is_caught_where_a_trim_was_expected(self, node_bin):
+        """The failure this check exists for: setStart shifting instead of trimming.
+
+        A moved item keeps its duration, so its end lands where a trim never
+        would. Without the end in the comparison the two are indistinguishable.
+        """
+        expected = {"removed": [], "trimmed": [{"id": "tail", "start": 4.0, "end": 9.0}]}
+        moved = [{"id": "tail", "start": 4.0, "end": 10.0}]
+
+        mismatches = _verify(node_bin, expected, moved)
+
+        assert [m["kind"] for m in mismatches] == ["trim_landed_elsewhere"]
+        assert mismatches[0]["observed"] == {"start": 4.0, "end": 10.0}
+
+    def test_an_item_that_survived_removal_is_reported(self, node_bin):
+        expected = {"removed": ["whole"], "trimmed": []}
+
+        mismatches = _verify(node_bin, expected, [{"id": "whole", "start": 2.0, "end": 3.0}])
+
+        assert [m["kind"] for m in mismatches] == ["not_removed"]
+
+    def test_a_trimmed_item_that_disappeared_is_reported(self, node_bin):
+        """Trimming must never remove the item; that is the media being kept."""
+        expected = {"removed": [], "trimmed": [{"id": "tail", "start": 4.0, "end": 9.0}]}
+
+        mismatches = _verify(node_bin, expected, [])
+
+        assert [m["kind"] for m in mismatches] == ["trimmed_item_vanished"]
+
+    def test_frame_rounding_does_not_read_as_a_failed_trim(self, node_bin):
+        expected = {"removed": [], "trimmed": [{"id": "tail", "start": 4.0, "end": 9.0}]}
+        rounded = [{"id": "tail", "start": 4.0005, "end": 8.9995}]
+
+        assert _verify(node_bin, expected, rounded) == []
+
+
 class TestCutPathWiring:
     """The typed action has to be reached the way Premiere requires."""
 
@@ -178,12 +338,51 @@ class TestCutPathWiring:
 
     def test_removal_runs_inside_a_project_transaction(self):
         """Outside executeTransaction the edit would not be undoable."""
-        source = self._source()
-        start = source.index("async function _removeItemsWithEditor")
-        body = source[start:source.index("async function _applyOneCut")]
+        body = self._write_body()
         assert "executeTransaction" in body
         assert "compoundAction.addAction" in body
         assert "lockedAccess" in body
+
+    def _write_body(self) -> str:
+        source = self._source()
+        start = source.index("async function _writeCutWithEditor")
+        return source[start:source.index("function _describeMismatches")]
+
+    def test_trims_and_removals_share_one_transaction(self):
+        """Two transactions could leave the timeline trimmed but not cut."""
+        body = self._write_body()
+        transaction = body[body.index("const run = () =>"):body.index("let accepted = false;")]
+        assert "createSetEndAction" in transaction
+        assert "createSetStartAction" in transaction
+        assert "createRemoveItemsAction" in transaction
+
+    def test_a_trim_writes_both_the_boundary_and_the_source_point(self):
+        body = self._write_body()
+        assert "createSetOutPointAction" in body
+        assert "createSetInPointAction" in body
+
+    def test_removal_does_not_ripple(self):
+        """A rippling removal would shift the very items the read-back checks,
+        and the CEP host's Clip.remove(false, true) does not ripple either."""
+        body = self._write_body()
+        assert "createRemoveItemsAction(selection, false, mediaType)" in body
+
+    def test_the_write_is_checked_against_the_plan_it_promised(self):
+        body = self._write_body()
+        assert "verifyPostState(expectedPostState(plan)" in body
+        assert "verified: false" in body
+
+    def test_a_disproved_plan_does_not_retry_through_ripple_delete(self):
+        """The timeline has already been edited; repeating the range compounds it."""
+        source = self._source()
+        start = source.index("async function _applyOneCut")
+        body = source[start:source.index("async function _rippleDeleteFallback")]
+        assert 'if (typed.verified === false) return { method: "failed", note: typed.reason };' in body
+
+    def test_a_failed_cut_stops_the_batch(self):
+        source = self._source()
+        start = source.index("async function applyCuts")
+        assert 'if (outcome.method === "failed") break;' in source[start:start + 3000]
 
     def test_selection_is_built_through_the_documented_factory(self):
         source = self._source()
@@ -255,9 +454,18 @@ class TestNonDestructiveCutMode:
         assert "isDisabled" in verifier
         assert "${disabled}" in verifier
 
-    def test_skipped_cuts_are_not_counted_as_written(self):
+    def test_skipped_and_failed_cuts_are_not_counted_as_written(self):
         source = self._source()
-        assert "reported: sorted.length - methodCounts.skipped" in source
+        assert "const written = sorted.length - methodCounts.skipped - methodCounts.failed;" in source
+        assert "{ ok: status !== \"failed\", applied: written }" in source
+
+    def test_a_boundary_crossing_item_is_not_disabled_whole(self):
+        """Disabling it would mute media outside the range; trimming would delete it."""
+        source = self._source()
+        start = source.index("async function _applyOneCut")
+        body = source[start:source.index("async function _rippleDeleteFallback")]
+        disable_branch = body[body.index("if (disableMode) {"):body.index("if (plan.removable) {")]
+        assert "if (plan.trims.length) {" in disable_branch
 
 
 class TestCepNonDestructiveCutMode:
