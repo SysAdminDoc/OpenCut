@@ -75,6 +75,51 @@ UNSUPPORTED_DEPENDENCIES: Mapping[str, str] = {
     ),
 }
 
+# Packages that still install and import cleanly but whose upstream has stopped.
+# These are not blocked — they work, and a user may deliberately want one — but
+# installing abandoned software on demand without saying so is how a project
+# quietly inherits someone else's unmaintained attack surface. Each entry
+# carries dates a reader can re-verify at the recorded URL rather than trust.
+ABANDONED_DEPENDENCIES: Mapping[str, Mapping[str, str]] = {
+    "deepfilternet": {
+        "state": "unmaintained",
+        "last_release": "2023-08-31",
+        "last_activity": "2024-10-17",
+        "upstream": "https://github.com/Rikorose/DeepFilterNet",
+        "alternative": "noisereduce, or the UVR denoise separator checkpoint",
+        "checked": "2026-08-20",
+    },
+    "demucs": {
+        "state": "archived",
+        "last_release": "2022-12-08",
+        "last_activity": "2024-04-24",
+        "upstream": "https://github.com/facebookresearch/demucs",
+        "alternative": "audio-separator (the route default)",
+        "checked": "2026-08-20",
+    },
+}
+
+
+def maintenance_status(name: str) -> dict:
+    """Return the upstream maintenance record for a pip package name.
+
+    ``{"abandoned": False}`` when nothing is recorded — absence of evidence is
+    reported as unknown, never as healthy.
+    """
+    key = re.split(r"[\[>=<!~]", str(name).strip().lower(), maxsplit=1)[0].strip()
+    for dependency, record in ABANDONED_DEPENDENCIES.items():
+        if dependency in key:
+            detail = (
+                f"{dependency} is {record['state']} upstream "
+                f"(last release {record['last_release']}, last activity "
+                f"{record['last_activity']}, checked {record['checked']}). "
+                f"See {record['upstream']}."
+            )
+            if record.get("alternative"):
+                detail += f" Maintained alternative: {record['alternative']}."
+            return {"abandoned": True, "warning": detail, **record}
+    return {"abandoned": False, "warning": ""}
+
 DEPENDENCY_EXTRAS: Mapping[str, str] = {
     "faster-whisper": "captions",
     "audio_separator": "audio",

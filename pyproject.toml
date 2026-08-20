@@ -235,8 +235,10 @@ all = [
     # RA-23 — floor the transitive web stack in the release-audited [all] lane
     # so a clean resolver (no requirements-lock.txt) cannot select vulnerable
     # urllib3/requests releases. Werkzeug/Jinja2 floors come from core deps.
+    # urllib3 2.7.0 is the fix for CVE-2026-44431 and CVE-2026-44432 as well as
+    # the earlier CVE-2026-21441.
     "requests>=2.33.0",
-    "urllib3>=2.6.3",
+    "urllib3>=2.7.0",
 ]
 dev = [
     "pytest>=7.0,<10",

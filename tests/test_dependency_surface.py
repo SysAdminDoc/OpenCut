@@ -200,7 +200,11 @@ def test_transitive_web_dep_floors_match_lockfile():
     for extra in ("standard", "all"):
         deps = _dep_names(extras[extra])
         assert deps["requests"] == "requests>=2.33.0"  # CVE-2026-25645
-        assert deps["urllib3"] == "urllib3>=2.6.3"  # CVE-2026-21441
+        # CVE-2026-21441, plus CVE-2026-44431 (sensitive headers forwarded
+        # across origins on proxied low-level redirects) and CVE-2026-44432
+        # (decompression-bomb bypass in parts of the streaming API), both
+        # fixed only in 2.7.0 — so the earlier 2.6.3 floor was itself vulnerable.
+        assert deps["urllib3"] == "urllib3>=2.7.0"
 
 
 def test_os_credential_vault_dependency_is_core_and_locked():
