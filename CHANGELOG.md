@@ -5,6 +5,23 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Security - urllib3 floor raised above the 2026-05 advisories
+
+- The declared `urllib3` floor moves from `>=2.6.3` to `>=2.7.0`. The previous
+  floor, chosen for CVE-2026-21441, still admitted CVE-2026-44431 (sensitive
+  headers forwarded across origins on proxied low-level redirects) and
+  CVE-2026-44432 (decompression-bomb safeguards bypassed in parts of the
+  streaming API), both fixed only in 2.7.0. The lockfiles already pinned
+  2.7.0; the advisory policy now records both ids.
+
+### Fixed - Terminal 501 routes no longer count as shipped
+
+- Route readiness now recognizes a top-level 501 success path before any
+  optional-dependency marker. FlashVSR, ROSE, Sammie-Roto-2, OmniVoice, and
+  ReEzSynth are correctly reported as strategic stubs, reducing the shipped
+  total to 1,563. Route-manifest generation and drift checks now update and
+  validate feature readiness from the same in-memory route snapshot.
+
 ### Changed - Sourced CEP support horizon
 
 - The migration policy now cites Adobe's November 2025 Premiere Pro 25.6

@@ -80,10 +80,13 @@ standard = [
     "scenedetect>=0.7.1,<1",
     # RA-23 — requests/urllib3 enter transitively via faster-whisper's
     # huggingface-hub fetch path. Floor them to the lockfile security level so
-    # this lane cannot resolve urllib3<2.6.3 (CVE-2026-21441 decompression-bomb
-    # DoS) or requests<2.33.0 (CVE-2026-25645).
+    # this lane cannot resolve urllib3<2.7.0 (CVE-2026-21441 decompression-bomb
+    # DoS; CVE-2026-44431 sensitive headers forwarded across origins on proxied
+    # low-level redirects; CVE-2026-44432 decompression-bomb safeguards bypassed
+    # in parts of the streaming API — the latter two fixed only in 2.7.0) or
+    # requests<2.33.0 (CVE-2026-25645).
     "requests>=2.33.0",
-    "urllib3>=2.6.3",
+    "urllib3>=2.7.0",
 ]
 captions = [
     "faster-whisper>=1.1,<2",

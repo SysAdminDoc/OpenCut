@@ -30,9 +30,10 @@ librosa>=0.10,<1
 # audioop-lts compatibility shim for downstream plugins that install pydub.
 scenedetect>=0.7.1,<1
 # RA-23 — requests/urllib3 enter via faster-whisper's huggingface-hub; floor
-# them (urllib3 CVE-2026-21441 fixed 2.6.3, requests CVE-2026-25645 fixed 2.33.0).
+# them (urllib3 CVE-2026-21441 fixed 2.6.3, CVE-2026-44431 and CVE-2026-44432
+# fixed 2.7.0; requests CVE-2026-25645 fixed 2.33.0).
 requests>=2.33.0
-urllib3>=2.6.3
+urllib3>=2.7.0
 
 # === AUDIO (optional) ===
 # demucs>=4.0              # Stem separation (~1.5GB with models)
