@@ -117,7 +117,17 @@ def test_readme_runtime_route_ffmpeg_and_distribution_claims_match_manifest():
     assert platform_badge in readme
     assert f"**{routes['shipped']:,} shipped API routes**" in readme
     assert f"{routes['stubs']} strategic 501 stubs" in readme
-    assert f"FFmpeg {ffmpeg['release_floor']} or newer" in readme
+    # The README may only advertise the release lane while it is actually open.
+    # No published release currently clears the advisory matrix (8.1.3 was never
+    # published and the 9.0 series branched before the July fixes landed), so
+    # "FFmpeg X or newer" would send users after a build that does not exist.
+    from opencut.core.ffmpeg_provenance import RELEASE_LANE_OPEN
+
+    if RELEASE_LANE_OPEN:
+        assert f"FFmpeg {ffmpeg['release_floor']} or newer" in readme
+    else:
+        assert "git-master snapshot" in readme
+        assert "9.0 series branched" in readme
 
     source_command = channels["source_checkout"]["install_command"]
     assert channels["source_checkout"]["available"] is True

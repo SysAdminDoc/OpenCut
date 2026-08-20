@@ -105,7 +105,7 @@ After the installer finishes, you are ready to use OpenCut -- see **Launch** bel
 
 If you prefer manual control or are on macOS/Linux, follow these steps:
 
-1. **Install FFmpeg 8.1.3 or newer, or a dated post-fix git-master snapshot** and make sure it is on your system PATH. OpenCut blocks older and unparseable builds before media processing because 8.1.2 is affected by CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, and CVE-2026-66041:
+1. **Install a dated post-fix git-master snapshot** of FFmpeg and make sure it is on your system PATH. OpenCut blocks older and unparseable builds before media processing because 8.1.2 is affected by CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, and CVE-2026-66041. No tagged release currently clears those: 8.1.2 closed the 8.1 line, 8.1.3 was never published, and the 9.0 series branched on 2026-06-26 — before those fixes landed on master — so a 9.0.x build is refused until someone shows the fixes were backported onto that branch. A higher version number on its own is not evidence:
    - Windows: download the `ffmpeg-git-full` snapshot from https://www.gyan.dev/ffmpeg/builds/ (the bundled build is `2026-08-03-git-01a25f74cc-full_build-www.gyan.dev`, source commit `01a25f74cc446a683318bab13dfd98a467082ef7`) and add its `bin` folder to your PATH
    - macOS: `brew install ffmpeg`
    - Linux: `sudo apt install ffmpeg` (Debian/Ubuntu) or equivalent for your distro
