@@ -104,9 +104,14 @@ def detect_face_in_image(image_path: str) -> Dict:
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     h, w = gray.shape[:2]
 
-    # Try Haar cascade face detection
-    cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-    if not os.path.isfile(cascade_path):
+    # Resolve the detector before deciding anything. Gating on the presence of
+    # the bundled Haar XML sent every image down the fallback below on the
+    # declared opencv-python 5 wheel, which ships no cascades — reporting a
+    # full-frame face for all input, including images with no face at all.
+    # The compat layer prefers YuNet and only reports "unavailable" when no
+    # backend works at all, which is the real condition for the fallback.
+    cascade = get_shared_face_detector()
+    if getattr(cascade, "backend", None) == "unavailable":
         # Fallback: assume face present if image is reasonable
         return {
             "detected": True,
@@ -117,7 +122,6 @@ def detect_face_in_image(image_path: str) -> Dict:
             "method": "fallback",
         }
 
-    cascade = get_shared_face_detector()
     faces = cascade.detectMultiScale(
         gray,
         scaleFactor=1.1,

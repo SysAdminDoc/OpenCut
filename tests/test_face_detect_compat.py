@@ -10,6 +10,7 @@ simulated OpenCV 5 environment.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import pathlib
 import re
@@ -25,6 +26,30 @@ from opencut.core import face_detect_compat as fc  # noqa: E402
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 CORE_DIR = REPO_ROOT / "opencut" / "core"
+
+
+_MISSING = object()
+
+
+@contextlib.contextmanager
+def _without_cascade_classifier():
+    """Run the body with ``cv2.CascadeClassifier`` absent, then restore it.
+
+    Once opencv-python 5 is actually installed the symbol is already gone, so
+    an unconditional ``saved = cv2.CascadeClassifier`` raises the very
+    AttributeError these tests exist to prove is handled. Treat absence as the
+    starting state and restore only what was really there.
+    """
+    import cv2
+
+    saved = getattr(cv2, "CascadeClassifier", _MISSING)
+    if saved is not _MISSING:
+        del cv2.CascadeClassifier
+    try:
+        yield
+    finally:
+        if saved is not _MISSING:
+            cv2.CascadeClassifier = saved
 
 
 @pytest.fixture(autouse=True)
@@ -51,6 +76,42 @@ class TestNoDirectCascadeUse:
             "these modules still construct cv2.CascadeClassifier directly and "
             f"will raise AttributeError on opencv-python 5: {offenders}"
         )
+
+    def test_no_module_reads_a_cascade_flag_constant_directly(self):
+        """OpenCV 5 dropped the CASCADE_* flags too, not just the classifier."""
+        offenders = []
+        for path in CORE_DIR.rglob("*.py"):
+            if path.name == "face_detect_compat.py":
+                continue  # owns the guarded lookup
+            text = path.read_text(encoding="utf-8", errors="replace")
+            if re.search(r"\bcv2\w*\.CASCADE_[A-Z_]+", text):
+                offenders.append(path.relative_to(REPO_ROOT).as_posix())
+        assert offenders == [], (
+            "these modules read a cv2.CASCADE_* constant directly and will "
+            f"raise AttributeError on opencv-python 5: {offenders}"
+        )
+
+    def test_cascade_flag_helper_survives_the_constant_being_gone(self):
+        import cv2
+
+        saved = getattr(cv2, "CASCADE_SCALE_IMAGE", _MISSING)
+        if saved is not _MISSING:
+            del cv2.CASCADE_SCALE_IMAGE
+        try:
+            assert fc.cascade_scale_image_flag() == 2
+        finally:
+            if saved is not _MISSING:
+                cv2.CASCADE_SCALE_IMAGE = saved
+
+    def test_cascade_flag_helper_prefers_the_real_constant(self):
+        stub = MagicMock()
+        stub.CASCADE_SCALE_IMAGE = 7
+        with patch.object(fc, "_cv2", lambda: stub):
+            assert fc.cascade_scale_image_flag() == 7
+
+    def test_cascade_flag_helper_without_cv2_at_all(self):
+        with patch.object(fc, "_cv2", lambda: None):
+            assert fc.cascade_scale_image_flag() == 2
 
     def test_compat_module_never_calls_the_symbol_unguarded(self):
         text = (CORE_DIR / "face_detect_compat.py").read_text(encoding="utf-8")
@@ -81,25 +142,19 @@ class TestOpenCv5Simulation:
     """The scenario the declared dependency actually produces."""
 
     def test_missing_cascade_classifier_degrades_instead_of_raising(self):
-        import cv2
-
-        saved = cv2.CascadeClassifier
         try:
-            del cv2.CascadeClassifier
-            fc.clear_detector_cache()
-            detector = fc.create_face_detector()
-            gray = np.zeros((120, 160), dtype=np.uint8)
-            # The old code raised AttributeError here.
-            assert list(detector.detectMultiScale(gray, 1.1, 5)) == []
-            assert detector.empty() is True
+            with _without_cascade_classifier():
+                fc.clear_detector_cache()
+                detector = fc.create_face_detector()
+                gray = np.zeros((120, 160), dtype=np.uint8)
+                # The old code raised AttributeError here.
+                assert list(detector.detectMultiScale(gray, 1.1, 5)) == []
+                assert detector.empty() is True
         finally:
-            cv2.CascadeClassifier = saved
             fc.clear_detector_cache()
 
     def test_every_migrated_module_imports_without_cascade_classifier(self):
         import importlib
-
-        import cv2
 
         modules = [
             "ai_reframe_multi", "auto_zoom", "deepfake_detect", "face_tagging",
@@ -107,14 +162,10 @@ class TestOpenCv5Simulation:
             "screenshot_video", "skin_retouch", "smart_reframe", "talking_head",
             "thumbnail",
         ]
-        saved = cv2.CascadeClassifier
-        try:
-            del cv2.CascadeClassifier
+        with _without_cascade_classifier():
             for name in modules:
                 module = importlib.import_module(f"opencut.core.{name}")
                 importlib.reload(module)
-        finally:
-            cv2.CascadeClassifier = saved
 
     def test_missing_cv2_entirely_is_survivable(self):
         with patch.object(fc, "_cv2", lambda: None):
