@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - The UXP panel now reaches its rendered test surface
+
+- Moved host-write verification setup before cut-executor construction. The
+  previous order raised a temporal-dead-zone error during module startup, so
+  UXP never wired its tabs, readiness controls, or live fixtures.
+- Refreshed the 37 Chromium visual baselines after inspecting the stable 2 to 4
+  percent machine rendering drift. The normal rendered gate now passes 62 cases
+  with one intentional skip at the existing 1 percent comparison threshold.
+
 ### Fixed - The panel's npm dependency audit is clean
 
 - Raised the panel overrides for `brace-expansion`, `js-yaml`, and `nanoid` to
