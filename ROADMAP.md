@@ -39,13 +39,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: Every 26.2/26.3 UXP API relevant to the three functions is catalogued with typed evidence per the established adobe_uxp_compatibility workflow; each high-risk function carries a dated verdict (portable now / needs live validation / no UXP equivalent); functions judged portable get a UXP implementation or an explicit blocked entry with the missing piece named; the migration dashboard reclassifies from the new catalogue.
   Complexity: M
 
-- [ ] P1 — F338 — Prove the CSRF bootstrap fix closes the issue #5 first-contact failure
-  Why: The only open external bug (issue #5, 2026-08-10) is a real user blocked at the panel's first mutation by "Invalid or missing CSRF Token"; an Unreleased CHANGELOG entry records CSRF-bootstrap work, but nothing ties it to the reported scenario, no regression test names the failure shape, and the README troubleshooting section never mentions the error string — for a 39-star project, one first-contact failure costs more than any missing feature.
-  Evidence: https://github.com/SysAdminDoc/OpenCut/issues/5; CHANGELOG.md `## Unreleased` CSRF bootstrap entry; grep for "CSRF" in README.md troubleshooting returns nothing (2026-08-20)
-  Touches: `opencut/security.py`, `opencut/routes/system.py` (`/health` bootstrap), `tests/test_integration.py`, `README.md` (troubleshooting), both panels' `ERROR_CODE_ACTIONS` hint tables
-  Acceptance: A regression test reproduces the reported failure shape (panel connects, then mutates with a missing/stale token or opaque-origin bootstrap) and passes against the fix; README troubleshooting names the exact error string with recovery steps; the panel hint for the CSRF error code is actionable; the issue can be answered with a pinned commit and a workaround for the published v1.25.1 build.
-  Complexity: S
-
 - [ ] P1 — F335 — Apply micro audio fades at silence and filler cut boundaries
   Why: Hard razor joins at detected boundaries produce audible clicks and pops on exported media, the silence/filler export path applies no boundary fade anywhere, and the closest CLI competitor queued exactly this fix in June — it is the cheapest audible-quality win available on the headline feature.
   Evidence: grep for afade/crossfade/fade in `opencut/core/silence.py` returns nothing (2026-08-20); https://github.com/WyattBlue/auto-editor/issues/1272 (audio fade handling across split edges, 2026-06-25)

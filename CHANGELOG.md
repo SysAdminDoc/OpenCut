@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - CSRF rejections are actionable instead of a dead end
+
+- A refused mutation returned a bare `{"error": "Invalid or missing CSRF
+  token"}`. The panel picks its recovery hint from the structured `code`
+  field, so the message rendered with no way forward — the shape reported in
+  issue #5. Rejections now carry `CSRF_INVALID` plus a suggestion that
+  distinguishes a token that was never issued from one that went stale, the
+  panel maps that code to a reconnect hint, and README troubleshooting names
+  the error string with recovery steps.
+
 ### Security - urllib3 floor raised above the 2026-05 advisories
 
 - The declared `urllib3` floor moves from `>=2.6.3` to `>=2.7.0`. The previous

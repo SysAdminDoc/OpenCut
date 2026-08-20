@@ -23,6 +23,7 @@ from typing import Iterable, Optional, Tuple
 from flask import Request, jsonify, request
 from werkzeug.exceptions import BadRequest
 
+from opencut.errors import error_response
 from opencut.security_audit import (
     record_csrf_rejection,
     record_path_validation_rejection,
@@ -124,8 +125,29 @@ def validate_csrf_request():
     header_token = request.headers.get("X-OpenCut-Token", "")
     if is_csrf_token_valid(header_token):
         return None
-    record_csrf_rejection(token_present=bool(header_token))
-    return jsonify({"error": "Invalid or missing CSRF token"}), 403
+    token_present = bool(header_token)
+    record_csrf_rejection(token_present=token_present)
+    # The panel picks its recovery hint from `code`, so a bare {"error": ...}
+    # leaves the user with an unactionable message — the shape reported in
+    # issue #5. Distinguish "never bootstrapped" from "token went stale":
+    # they have different fixes.
+    if token_present:
+        suggestion = (
+            "The panel's security token expired or the server restarted. "
+            "Reconnect the panel (it refetches the token from /health) and retry."
+        )
+    else:
+        suggestion = (
+            "The panel never received a security token. Reconnect it; if the "
+            "panel is host-embedded it must complete the /health bootstrap "
+            "before any action."
+        )
+    return error_response(
+        "CSRF_INVALID",
+        "Invalid or missing CSRF token",
+        status=403,
+        suggestion=suggestion,
+    )
 
 
 def require_csrf(f):

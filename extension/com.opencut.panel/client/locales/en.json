@@ -643,6 +643,7 @@
   "export.transcript_format_vtt": "WebVTT Subtitles",
   "error.backend_problem": "OpenCut hit a local backend problem while handling that request. Try again or review the logs in Settings.",
   "error.backend_unreachable": "OpenCut couldn't reach the local backend. Restart it from Settings, then try again.",
+  "error.csrf_invalid": "Lost the secure connection to the server. Reconnecting.",
   "error.file_moved": "The file may have been moved or deleted.",
   "error.file_permission": "OpenCut doesn't have permission to read or write that file. Check folder access, then try again.",
   "error.file_not_found_reselect": "File not found. Re-select your clip.",

@@ -4451,6 +4451,11 @@
             }
         },
         "MISSING_DEPENDENCY": { tab: "settings", focusId: "depsStatusLine", msg: null },
+        "CSRF_INVALID": {
+            msg: function () {
+                return t("error.csrf_invalid", "Lost the secure connection to the server. Reconnecting.");
+            }
+        },
         "FILE_NOT_FOUND": {
             msg: function () {
                 return t("error.file_not_found_reselect", "File not found. Re-select your clip.");
