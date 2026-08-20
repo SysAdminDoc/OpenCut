@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - The panel's npm dependency audit is clean
+
+- Raised the panel overrides for `brace-expansion`, `js-yaml`, and `nanoid` to
+  their fixed releases. The committed npm lockfile now installs without any
+  reported advisories.
+
 ### Fixed - The plugin verifier no longer pins vulnerable cryptography
 
 - OpenCut now requires `cryptography` 50.x, which fixes three certificate and

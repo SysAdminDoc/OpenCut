@@ -22,10 +22,17 @@ a concrete, versioned justification.
   Closes [GHSA-67mh-4wv8-2f99](https://github.com/advisories/GHSA-67mh-4wv8-2f99)
   (esbuild dev server reading arbitrary cross-origin responses). The override
   applies regardless of what Vite's transitive dependency declares.
-- **js-yaml >= 4.2** -- pinned via the `overrides` field in `package.json`.
-  Closes [GHSA-h67p-54hq-rp68](https://github.com/advisories/GHSA-h67p-54hq-rp68)
-  (quadratic-complexity YAML merge-key parsing through repeated aliases). The
-  dependency is pulled through ESLint tooling, not panel runtime code.
+- **brace-expansion >= 5.0.9** is pinned via the `overrides` field in
+  `package.json`. It closes [GHSA-rgw5-rvv9-x895](https://github.com/advisories/GHSA-rgw5-rvv9-x895)
+  (unbounded intermediate arrays during brace expansion).
+- **js-yaml >= 4.3.1** is pinned via the `overrides` field in `package.json`.
+  It closes [GHSA-5p4m-2wfm-xmqj](https://github.com/advisories/GHSA-5p4m-2wfm-xmqj)
+  (quadratic CPU use during `!!omap` resolution). The dependency is pulled
+  through ESLint tooling, not panel runtime code.
+- **nanoid >= 3.3.18** is pinned via the `overrides` field in `package.json`.
+  It closes [GHSA-2v37-7h3g-55p8](https://github.com/advisories/GHSA-2v37-7h3g-55p8)
+  (custom generators looping indefinitely at zero size). The dependency is
+  pulled through PostCSS, not panel runtime code.
 - **terser 5.47+** -- current minifier; no open advisories.
 
 ## Operational commands
