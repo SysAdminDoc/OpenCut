@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - A guardrail against cut lists that make the timeline unusable
+
+- Aggressive silence settings on a long recording produce thousands of tiny
+  clips, and a sequence with that many edits becomes too slow to scrub — which
+  users report as a bug against the plugin that made the cuts. The silence
+  response now reports the edit count and, above roughly 500, says plainly what
+  that costs and what to do instead. An optional `merge_gap` joins cuts
+  separated by less than a given interval before write-back, trading a little
+  retained silence for a sequence that can actually be edited.
+
 ### Added - Multicam cutting grammar
 
 - Multicam switching exposed a single minimum-duration knob, which cannot

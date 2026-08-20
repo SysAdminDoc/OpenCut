@@ -49,13 +49,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: The cut review panel offers apply-as-disable alongside apply-as-delete; disabled ranges pass the same read-back verification contract as deletions; re-running with delete after a disable pass works; the docs state the mode is non-destructive and reversible in Premiere.
   Complexity: M
 
-- [ ] P2 — F340 — Guard timeline performance when applying large cut batches
-  Why: Applying thousands of razor cuts makes a Premiere sequence unusably laggy — reported verbatim on Adobe's forum against silence-cutting plugins — and OpenCut has no cut-count warning, no merge-small-gaps option at write-back time, and no consolidation alternative, so a 2-hour recording with aggressive thresholds produces exactly that failure.
-  Evidence: https://community.adobe.com/questions-729/using-a-plugin-to-cut-out-silence-and-the-sequence-becomes-unusably-laggy-1411061; grep for consolidation/nesting in `extension/com.opencut.panel/host/index.jsx` returns nothing (2026-08-20); `opencut/core/smart_render.py` already renders consolidated media that could serve as the escape hatch
-  Touches: both panels' cut-review surfaces, `opencut/core/silence.py` (merge segments separated by sub-threshold gaps), `extension/com.opencut.panel/host/index.jsx`, `docs/`
-  Acceptance: Before write-back, the review panel reports the edit count and warns above a documented threshold; the user can merge cuts separated by less than N frames (provably reducing edit count on a fixture), switch to the shipped tighten mode (`tighten_silences`), or render consolidated media via smart_render instead of cutting the sequence; the warning threshold and rationale are documented.
-  Complexity: M
-
 ### P3
 
 - [ ] P3 — F350 — Rename the co-named per-panel assets so one filename means one file

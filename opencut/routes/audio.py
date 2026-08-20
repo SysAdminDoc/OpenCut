@@ -140,6 +140,26 @@ def silence_remove(job_id, filepath, data):
     if _is_cancelled(job_id):
         return
 
+    # Thousands of tiny clips make a sequence unusable to scrub, so optionally
+    # merge across short gaps before write-back and always report the load.
+    merge_gap = safe_float(data.get("merge_gap", 0.0), 0.0, min_val=0.0, max_val=10.0)
+    if merge_gap > 0:
+        from opencut.core.silence import merge_close_segments
+
+        before = len(segments)
+        segments = merge_close_segments(segments, merge_gap)
+        _update_job(
+            job_id,
+            progress=68,
+            message=f"Merged cuts closer than {merge_gap:.2f}s: {before} -> {len(segments)} edits",
+        )
+
+    from opencut.core.silence import assess_edit_load
+
+    edit_load = assess_edit_load(segments)
+    if edit_load["heavy"]:
+        logger.warning("Heavy cut list for %s: %s", filepath, edit_load["advice"])
+
     _update_job(job_id, progress=70, message="Building edit summary...")
     summary = get_edit_summary(filepath, segments, file_duration=_file_dur)
 
@@ -154,6 +174,7 @@ def silence_remove(job_id, filepath, data):
         "xml_path": xml_path,
         "summary": summary,
         "segments": len(segments),
+        "edit_load": edit_load,
         "segments_data": [
             {"start": round(s.start, 4), "end": round(s.end, 4)}
             for s in segments
