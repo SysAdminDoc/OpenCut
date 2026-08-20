@@ -252,10 +252,20 @@ CEP_UXP_PARITY: tuple[CepUxpParityEntry, ...] = (
         role="Remove or trim timeline ranges and ripple-delete where requested.",
         status="partial_uxp",
         risk="medium",
-        uxp_path="SequenceEditor.createRemoveItemsAction(items, ripple=true) for the common path.",
+        uxp_path=(
+            "SequenceEditor.getEditor(sequence).createRemoveItemsAction("
+            "trackItemSelection, ripple, mediaType, shiftOverLapping?) -> Action "
+            "(confirmed 2026-08-20 in @adobe/premierepro 26.3.0 typings, "
+            "src/premierepro.d.ts:3203-3232). Run through "
+            "Project.executeTransaction so the edit is undoable and its effect "
+            "is observable — preferred over sequence.rippleDelete(), which "
+            "premiere-pro-mcp #21 measured returning success while changing "
+            "nothing on 26.3."
+        ),
         replacement_plan=(
-            "Use documented UXP removal APIs first; cover advanced trim edge "
-            "cases in F267 UDT before retaining any CEP fallback."
+            "Port the common ripple-delete path onto createRemoveItemsAction and "
+            "verify it with the existing host-write read-back contract; cover "
+            "advanced trim edge cases in F267 UDT before dropping the CEP fallback."
         ),
         f_numbers=("F198", "F252", "F267"),
     ),
@@ -291,10 +301,19 @@ CEP_UXP_PARITY: tuple[CepUxpParityEntry, ...] = (
         role="Create a native Premiere caption track from SRT-style segments.",
         status="cep_only",
         risk="high",
-        uxp_path="No UXP createCaptionTrack/addCaptionTrack write API in the pinned beta typings.",
+        uxp_path=(
+            "No UXP caption-track write API as of 26.3 (audited 2026-08-20 against "
+            "@adobe/premierepro 26.3.0 typings). CaptionTrack exposes only "
+            "getCaptionTrackCount, getCaptionTrack(index), createSetNameAction, and "
+            "setMute — read, rename, and mute. Transcript.createImportTextSegmentsAction "
+            "targets a ClipProjectItem transcript, which is a different object from a "
+            "sequence caption track and is not a substitute."
+        ),
         replacement_plan=(
             "Keep CEP fallback while available; prioritize F253 Hybrid Plugin "
-            "caption-track creation or adopt an Adobe UXP API if it ships."
+            "caption-track creation or adopt an Adobe UXP API if it ships. Until "
+            "then the supported UXP-era path is exporting the SRT sidecar for "
+            "manual import."
         ),
         cep_only=True,
         f_numbers=("F186", "F198", "F253", "F266"),
@@ -367,10 +386,16 @@ CEP_UXP_PARITY: tuple[CepUxpParityEntry, ...] = (
         role="Reflect undocumented QE DOM methods for diagnostics.",
         status="cep_only",
         risk="high",
-        uxp_path="No supported UXP QE DOM equivalent.",
+        uxp_path=(
+            "No supported UXP QE DOM equivalent (audited 2026-08-20 against "
+            "@adobe/premierepro 26.3.0 typings: no qe, reflect, executeScript, or "
+            "evalScript surface exists). QE reflection is a CEP/ExtendScript "
+            "debug facility, not a user feature, so it retires rather than ports."
+        ),
         replacement_plan=(
-            "Retire QE reflection after CEP EOL; replace real workflows "
-            "one by one with documented UXP APIs and F267 UDT evidence."
+            "Retire QE reflection after CEP EOL rather than seeking a successor; "
+            "replace any real workflow that depends on it one by one with "
+            "documented UXP APIs and F267 UDT evidence."
         ),
         cep_only=True,
         f_numbers=("F187", "F198", "F266", "F267"),

@@ -26,7 +26,10 @@ def test_f260_dashboard_manifest_derives_from_f198_catalogue():
 
     assert manifest["dashboard_version"] == 2
     assert manifest["source_catalogue_version"] == 1
-    assert manifest["summary"]["function_count"] == 18
+    # 19 since ocReadPanelBootstrapToken (the F303 CSRF bootstrap reader) was
+    # added to the host script; the generated manifest had not been regenerated
+    # since, so this count and the panel copy had drifted apart.
+    assert manifest["summary"]["function_count"] == 19
     assert manifest["summary"]["direct_uxp"] == 14
     assert manifest["summary"]["partial_uxp"] == 1
     assert manifest["summary"]["cep_only"] == 2

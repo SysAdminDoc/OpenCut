@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Changed - The CEP-only host functions carry a dated 26.3 verdict
+
+- The three functions holding up the UXP migration were audited against the
+  pinned Premiere 26.3 typings. Cut application has a typed successor —
+  `SequenceEditor.createRemoveItemsAction`, an undoable Action rather than the
+  bare `rippleDelete()` call measured no-op'ing on 26.3 — now catalogued with
+  its signature. Native caption-track creation has no 26.3 equivalent:
+  `CaptionTrack` only reads, renames, and mutes, and the Transcript import
+  action targets a project item rather than a sequence caption track. QE
+  reflection has no UXP surface at all and is reclassified as retiring rather
+  than porting. Regenerating the manifests also picked up a host function that
+  had been missing from the dashboard since the CSRF bootstrap work.
+
 ### Security - The FFmpeg advisory gate states what it did not check
 
 - The per-CVE matrix graded five advisories and reported a clean verdict, while

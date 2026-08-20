@@ -856,6 +856,48 @@
     },
     {
       "api_version": 2,
+      "fallback": "Report the UXP cut path unavailable and keep the CEP fallback.",
+      "fixture_only": true,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "SequenceEditor.getEditor",
+      "member": "getEditor",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "SequenceEditor",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Fall back to the CEP ExtendScript cut path and report the UXP capability as unavailable.",
+      "fixture_only": true,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "SequenceEditor.createRemoveItemsAction",
+      "member": "createRemoveItemsAction",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "SequenceEditor",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
       "fallback": "Do not mutate selection when the host behavior is unknown.",
       "fixture_only": true,
       "host_behavior": [
@@ -2965,12 +3007,12 @@
       "used": false
     }
   ],
-  "capability_count": 98,
+  "capability_count": 100,
   "diagnostics": {
     "live_host_checks": "blocked_separate",
     "undeclared_capabilities": []
   },
-  "generated_at": "2026-08-12T15:32:37Z",
+  "generated_at": "2026-08-20T05:20:24Z",
   "host_bands": [
     {
       "api_version": 2,
