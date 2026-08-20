@@ -1,0 +1,2112 @@
+{
+  "shared.alert.needs_attention": {
+    "cep": [
+      "alert.needs_attention",
+      "engines.state_needs_attention",
+      "history.status_needs_attention",
+      "notification.heading_needs_attention"
+    ],
+    "uxp": [
+      "uxp.settings.needs_attention",
+      "uxp.toast.heading_needs_attention"
+    ]
+  },
+  "shared.audio.enhance": {
+    "cep": [
+      "audio.enhance"
+    ],
+    "uxp": [
+      "uxp.audio.run_enhancement"
+    ]
+  },
+  "shared.audio.enhance_speech": {
+    "cep": [
+      "audio.enhance_speech"
+    ],
+    "uxp": [
+      "uxp.audio.enhance_speech"
+    ]
+  },
+  "shared.audio.normalize": {
+    "cep": [
+      "audio.normalize",
+      "context.normalize_audio",
+      "shortcuts.normalize",
+      "workflow.step_normalize_audio"
+    ],
+    "uxp": [
+      "uxp.settings.normalize_audio"
+    ]
+  },
+  "shared.audio.stem_separation_title": {
+    "cep": [
+      "audio.stem_separation_title"
+    ],
+    "uxp": [
+      "uxp.audio.ai_stem_separation"
+    ]
+  },
+  "shared.batch.unknown_error": {
+    "cep": [
+      "batch.unknown_error",
+      "progress.unknown_error",
+      "toast.unknown_error",
+      "workflow.unknown_error"
+    ],
+    "uxp": [
+      "uxp.status.unknown_error"
+    ]
+  },
+  "shared.captions.action_failed": {
+    "cep": [
+      "captions.action_failed",
+      "nlp.route_error",
+      "timeline.action_failed",
+      "timeline.otio_error",
+      "toast.engine_preference_error"
+    ],
+    "uxp": [
+      "uxp.agent.runtime.error",
+      "uxp.runtime.error_prefix",
+      "uxp.video.runtime.broll_analysis_start_error",
+      "uxp.video.runtime.depth_effect_start_error",
+      "uxp.video.runtime.emotion_analysis_start_error"
+    ]
+  },
+  "shared.captions.animation_highlight_box": {
+    "cep": [
+      "captions.animation_highlight_box"
+    ],
+    "uxp": [
+      "uxp.captions.animation_highlight_box"
+    ]
+  },
+  "shared.captions.burnin_style_cinematic_serif": {
+    "cep": [
+      "captions.burnin_style_cinematic_serif",
+      "export.shorts_style_cinematic_serif"
+    ],
+    "uxp": [
+      "uxp.video.caption_style_cinematic_serif"
+    ]
+  },
+  "shared.captions.chapters_generate": {
+    "cep": [
+      "captions.chapters_generate"
+    ],
+    "uxp": [
+      "uxp.captions.generate_chapters"
+    ]
+  },
+  "shared.captions.display_background_color": {
+    "cep": [
+      "captions.display_background_color"
+    ],
+    "uxp": [
+      "uxp.fcc.background_color"
+    ]
+  },
+  "shared.captions.display_background_opacity": {
+    "cep": [
+      "captions.display_background_opacity"
+    ],
+    "uxp": [
+      "uxp.fcc.background_opacity"
+    ]
+  },
+  "shared.captions.display_defaults_loaded": {
+    "cep": [
+      "captions.display_defaults_loaded"
+    ],
+    "uxp": [
+      "uxp.fcc.defaults_loaded"
+    ]
+  },
+  "shared.captions.display_loading_tokens": {
+    "cep": [
+      "captions.display_loading_tokens"
+    ],
+    "uxp": [
+      "uxp.fcc.loading_tokens"
+    ]
+  },
+  "shared.captions.display_preview_failed": {
+    "cep": [
+      "captions.display_preview_failed",
+      "toast.preview_failed"
+    ],
+    "uxp": [
+      "uxp.fcc.preview_failed"
+    ]
+  },
+  "shared.captions.display_preview_label": {
+    "cep": [
+      "captions.display_preview_label"
+    ],
+    "uxp": [
+      "uxp.fcc.live_preview"
+    ]
+  },
+  "shared.captions.display_preview_placeholder": {
+    "cep": [
+      "captions.display_preview_placeholder"
+    ],
+    "uxp": [
+      "uxp.fcc.caption_preview_sample"
+    ]
+  },
+  "shared.captions.display_rendering_preview": {
+    "cep": [
+      "captions.display_rendering_preview"
+    ],
+    "uxp": [
+      "uxp.fcc.rendering_preview"
+    ]
+  },
+  "shared.captions.display_reset_action": {
+    "cep": [
+      "captions.display_reset_action"
+    ],
+    "uxp": [
+      "uxp.fcc.reset_defaults"
+    ]
+  },
+  "shared.captions.display_reset_defaults": {
+    "cep": [
+      "captions.display_reset_defaults"
+    ],
+    "uxp": [
+      "uxp.fcc.reset_defaults_status"
+    ]
+  },
+  "shared.captions.display_sample_text": {
+    "cep": [
+      "captions.display_sample_text"
+    ],
+    "uxp": [
+      "uxp.fcc.preview_sample_text"
+    ]
+  },
+  "shared.captions.display_settings_title": {
+    "cep": [
+      "captions.display_settings_title"
+    ],
+    "uxp": [
+      "uxp.fcc.caption_display_settings"
+    ]
+  },
+  "shared.captions.display_text_opacity": {
+    "cep": [
+      "captions.display_text_opacity"
+    ],
+    "uxp": [
+      "uxp.fcc.text_opacity"
+    ]
+  },
+  "shared.captions.import_failed": {
+    "cep": [
+      "captions.import_failed"
+    ],
+    "uxp": [
+      "uxp.agent.runtime.failed"
+    ]
+  },
+  "shared.captions.render_animated": {
+    "cep": [
+      "captions.render_animated"
+    ],
+    "uxp": [
+      "uxp.captions.render_animated"
+    ]
+  },
+  "shared.captions.repeat_apply": {
+    "cep": [
+      "captions.repeat_apply",
+      "timeline.apply_cuts"
+    ],
+    "uxp": [
+      "uxp.cut.apply_cuts_to_timeline"
+    ]
+  },
+  "shared.captions.repeat_detect": {
+    "cep": [
+      "captions.repeat_detect"
+    ],
+    "uxp": [
+      "uxp.captions.detect_repeats"
+    ]
+  },
+  "shared.captions.repeat_similarity_threshold": {
+    "cep": [
+      "captions.repeat_similarity_threshold"
+    ],
+    "uxp": [
+      "uxp.captions.similarity_threshold"
+    ]
+  },
+  "shared.captions.srt_resync_applied": {
+    "cep": [
+      "captions.srt_resync_applied"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.resync_applied"
+    ]
+  },
+  "shared.captions.srt_resync_apply": {
+    "cep": [
+      "captions.srt_resync_apply"
+    ],
+    "uxp": [
+      "uxp.timeline.srt_resync_apply"
+    ]
+  },
+  "shared.captions.srt_resync_failed": {
+    "cep": [
+      "captions.srt_resync_failed"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.resync_failed"
+    ]
+  },
+  "shared.captions.srt_resync_idle": {
+    "cep": [
+      "captions.srt_resync_idle"
+    ],
+    "uxp": [
+      "uxp.timeline.srt_resync_idle"
+    ]
+  },
+  "shared.captions.srt_resync_overwrite": {
+    "cep": [
+      "captions.srt_resync_overwrite"
+    ],
+    "uxp": [
+      "uxp.timeline.srt_resync_overwrite"
+    ]
+  },
+  "shared.captions.srt_resync_preview": {
+    "cep": [
+      "captions.srt_resync_preview"
+    ],
+    "uxp": [
+      "uxp.timeline.srt_resync_preview"
+    ]
+  },
+  "shared.captions.srt_resync_preview_first": {
+    "cep": [
+      "captions.srt_resync_preview_first"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.resync_preview_first"
+    ]
+  },
+  "shared.captions.srt_resync_ready": {
+    "cep": [
+      "captions.srt_resync_ready"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.resync_ready"
+    ]
+  },
+  "shared.captions.srt_resync_title": {
+    "cep": [
+      "captions.srt_resync_title"
+    ],
+    "uxp": [
+      "uxp.timeline.srt_resync_title"
+    ]
+  },
+  "shared.cleanup_chain.applied_summary": {
+    "cep": [
+      "cleanup_chain.applied_summary"
+    ],
+    "uxp": [
+      "cleanup_chain.applied_summary"
+    ]
+  },
+  "shared.cleanup_chain.apply": {
+    "cep": [
+      "cleanup_chain.apply"
+    ],
+    "uxp": [
+      "cleanup_chain.apply"
+    ]
+  },
+  "shared.cleanup_chain.artifacts_ready": {
+    "cep": [
+      "cleanup_chain.artifacts_ready"
+    ],
+    "uxp": [
+      "cleanup_chain.artifacts_ready"
+    ]
+  },
+  "shared.cleanup_chain.import_failed": {
+    "cep": [
+      "cleanup_chain.import_failed"
+    ],
+    "uxp": [
+      "cleanup_chain.import_failed"
+    ]
+  },
+  "shared.cleanup_chain.imported": {
+    "cep": [
+      "cleanup_chain.imported"
+    ],
+    "uxp": [
+      "cleanup_chain.imported"
+    ]
+  },
+  "shared.cleanup_chain.journal_label": {
+    "cep": [
+      "cleanup_chain.journal_label"
+    ],
+    "uxp": [
+      "cleanup_chain.journal_label"
+    ]
+  },
+  "shared.cleanup_chain.preview": {
+    "cep": [
+      "cleanup_chain.preview"
+    ],
+    "uxp": [
+      "cleanup_chain.preview"
+    ]
+  },
+  "shared.cleanup_chain.preview_ready": {
+    "cep": [
+      "cleanup_chain.preview_ready"
+    ],
+    "uxp": [
+      "cleanup_chain.preview_ready"
+    ]
+  },
+  "shared.cleanup_chain.preview_required": {
+    "cep": [
+      "cleanup_chain.preview_required"
+    ],
+    "uxp": [
+      "cleanup_chain.preview_required"
+    ]
+  },
+  "shared.cleanup_chain.review_hint": {
+    "cep": [
+      "cleanup_chain.review_hint"
+    ],
+    "uxp": [
+      "cleanup_chain.review_hint"
+    ]
+  },
+  "shared.cleanup_chain.review_summary": {
+    "cep": [
+      "cleanup_chain.review_summary"
+    ],
+    "uxp": [
+      "cleanup_chain.review_summary"
+    ]
+  },
+  "shared.cleanup_chain.review_title": {
+    "cep": [
+      "cleanup_chain.review_title"
+    ],
+    "uxp": [
+      "cleanup_chain.review_title"
+    ]
+  },
+  "shared.cleanup_chain.step": {
+    "cep": [
+      "cleanup_chain.step"
+    ],
+    "uxp": [
+      "cleanup_chain.step"
+    ]
+  },
+  "shared.context.export_preset": {
+    "cep": [
+      "context.export_preset",
+      "favorites.op_export",
+      "settings.export_preset_file",
+      "workflow.step_export_preset"
+    ],
+    "uxp": [
+      "uxp.timeline.export_preset"
+    ]
+  },
+  "shared.context.remove_silences": {
+    "cep": [
+      "context.remove_silences",
+      "favorites.op_silence",
+      "shortcuts.silence",
+      "silence.remove",
+      "workflow.step_remove_silences"
+    ],
+    "uxp": [
+      "uxp.cut.remove_silences"
+    ]
+  },
+  "shared.cut.captions_srt": {
+    "cep": [
+      "cut.captions_srt"
+    ],
+    "uxp": [
+      "uxp.cut.captions_srt"
+    ]
+  },
+  "shared.cut.filler_backend_aria": {
+    "cep": [
+      "cut.filler_backend_aria"
+    ],
+    "uxp": [
+      "uxp.cut.filler_detection_backend"
+    ]
+  },
+  "shared.cut.full_preset_conservative": {
+    "cep": [
+      "cut.full_preset_conservative"
+    ],
+    "uxp": [
+      "uxp.cut.full_preset_conservative"
+    ]
+  },
+  "shared.cut.full_run": {
+    "cep": [
+      "cut.full_run"
+    ],
+    "uxp": [
+      "uxp.cut.full_run"
+    ]
+  },
+  "shared.deliverables.active_sequence": {
+    "cep": [
+      "deliverables.active_sequence"
+    ],
+    "uxp": [
+      "uxp.deliverables.runtime.active_sequence"
+    ]
+  },
+  "shared.deliverables.last_export_summary": {
+    "cep": [
+      "deliverables.last_export_summary"
+    ],
+    "uxp": [
+      "uxp.deliverables.runtime.activity_at_time"
+    ]
+  },
+  "shared.deliverables.music_cue_sheet_label": {
+    "cep": [
+      "deliverables.music_cue_sheet_label"
+    ],
+    "uxp": [
+      "uxp.deliverables.music_cue_sheet"
+    ]
+  },
+  "shared.deliverables.no_exports_yet": {
+    "cep": [
+      "deliverables.no_exports_yet"
+    ],
+    "uxp": [
+      "uxp.deliverables.no_exports_yet"
+    ]
+  },
+  "shared.deliverables.readiness_aria": {
+    "cep": [
+      "deliverables.readiness_aria"
+    ],
+    "uxp": [
+      "uxp.deliverables.deliverables_readiness"
+    ]
+  },
+  "shared.deliverables.seq_ready_title": {
+    "cep": [
+      "deliverables.seq_ready_title"
+    ],
+    "uxp": [
+      "uxp.deliverables.runtime.sequence_info_ready"
+    ]
+  },
+  "shared.deliverables.sequence_required_status": {
+    "cep": [
+      "deliverables.sequence_required_status"
+    ],
+    "uxp": [
+      "uxp.deliverables.load_sequence_info_before_docs"
+    ]
+  },
+  "shared.destructive.affected_count": {
+    "cep": [
+      "destructive.affected_count",
+      "journal.affected_items"
+    ],
+    "uxp": [
+      "uxp.journal.affected_items"
+    ]
+  },
+  "shared.engines.auto_best_available": {
+    "cep": [
+      "engines.auto_best_available",
+      "video.broll_backend_auto"
+    ],
+    "uxp": [
+      "uxp.settings.auto_best_available"
+    ]
+  },
+  "shared.engines.option_unavailable_suffix": {
+    "cep": [
+      "engines.option_unavailable_suffix"
+    ],
+    "uxp": [
+      "uxp.settings.option_unavailable_suffix"
+    ]
+  },
+  "shared.engines.pinned_label": {
+    "cep": [
+      "engines.pinned_label"
+    ],
+    "uxp": [
+      "uxp.settings.pinned_count"
+    ]
+  },
+  "shared.engines.preference_aria": {
+    "cep": [
+      "engines.preference_aria"
+    ],
+    "uxp": [
+      "uxp.settings.engine_preference_label"
+    ]
+  },
+  "shared.engines.summary_active_auto": {
+    "cep": [
+      "engines.summary_active_auto"
+    ],
+    "uxp": [
+      "uxp.settings.engine_auto_active_summary"
+    ]
+  },
+  "shared.engines.summary_also_active": {
+    "cep": [
+      "engines.summary_also_active"
+    ],
+    "uxp": [
+      "uxp.settings.engine_also_active_summary"
+    ]
+  },
+  "shared.engines.summary_current_active": {
+    "cep": [
+      "engines.summary_current_active"
+    ],
+    "uxp": [
+      "uxp.settings.engine_current_active_summary"
+    ]
+  },
+  "shared.engines.summary_none_available": {
+    "cep": [
+      "engines.summary_none_available"
+    ],
+    "uxp": [
+      "uxp.settings.no_engines_available_summary"
+    ]
+  },
+  "shared.engines.summary_preferred": {
+    "cep": [
+      "engines.summary_preferred"
+    ],
+    "uxp": [
+      "uxp.settings.engine_preferred_summary"
+    ]
+  },
+  "shared.engines.warning_label": {
+    "cep": [
+      "engines.warning_label",
+      "settings.plugin_failed_one"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_failed_one"
+    ]
+  },
+  "shared.error.http_status": {
+    "cep": [
+      "error.http_status"
+    ],
+    "uxp": [
+      "uxp.settings.migration_fetch_failed"
+    ]
+  },
+  "shared.export.generate_shorts": {
+    "cep": [
+      "export.generate_shorts"
+    ],
+    "uxp": [
+      "uxp.video.generate_shorts"
+    ]
+  },
+  "shared.export.load_seq_info": {
+    "cep": [
+      "export.load_seq_info"
+    ],
+    "uxp": [
+      "uxp.deliverables.load_sequence_info",
+      "uxp.guide.load_sequence_info"
+    ]
+  },
+  "shared.export.shorts_caption_style": {
+    "cep": [
+      "export.shorts_caption_style"
+    ],
+    "uxp": [
+      "uxp.captions.caption_style",
+      "uxp.video.caption_style"
+    ]
+  },
+  "shared.export.shorts_caption_style_meta": {
+    "cep": [
+      "export.shorts_caption_style_meta"
+    ],
+    "uxp": [
+      "uxp.video.runtime.shorts_caption_style"
+    ]
+  },
+  "shared.export.shorts_max_duration_aria": {
+    "cep": [
+      "export.shorts_max_duration_aria"
+    ],
+    "uxp": [
+      "uxp.video.maximum_short_duration"
+    ]
+  },
+  "shared.export.shorts_min_duration_aria": {
+    "cep": [
+      "export.shorts_min_duration_aria"
+    ],
+    "uxp": [
+      "uxp.video.minimum_short_duration"
+    ]
+  },
+  "shared.export.shorts_no_candidates": {
+    "cep": [
+      "export.shorts_no_candidates"
+    ],
+    "uxp": [
+      "uxp.video.runtime.shorts_no_candidate_windows"
+    ]
+  },
+  "shared.export.shorts_platform_instagram_feed": {
+    "cep": [
+      "export.shorts_platform_instagram_feed"
+    ],
+    "uxp": [
+      "uxp.video.square_feed_1080x1080"
+    ]
+  },
+  "shared.export.shorts_platform_instagram_reels": {
+    "cep": [
+      "export.shorts_platform_instagram_reels"
+    ],
+    "uxp": [
+      "uxp.video.instagram_reels_1080x1920"
+    ]
+  },
+  "shared.export.shorts_platform_tiktok": {
+    "cep": [
+      "export.shorts_platform_tiktok"
+    ],
+    "uxp": [
+      "uxp.video.tiktok_1080x1920"
+    ]
+  },
+  "shared.export.shorts_platform_youtube": {
+    "cep": [
+      "export.shorts_platform_youtube"
+    ],
+    "uxp": [
+      "uxp.video.youtube_shorts_1080x1920"
+    ]
+  },
+  "shared.export.shorts_preview_plan": {
+    "cep": [
+      "export.shorts_preview_plan"
+    ],
+    "uxp": [
+      "uxp.agent.preview_plan",
+      "uxp.video.preview_plan"
+    ]
+  },
+  "shared.export.shorts_render_approved": {
+    "cep": [
+      "export.shorts_render_approved"
+    ],
+    "uxp": [
+      "uxp.video.render_approved"
+    ]
+  },
+  "shared.export.shorts_review_analyze_state": {
+    "cep": [
+      "export.shorts_review_analyze_state"
+    ],
+    "uxp": [
+      "uxp.video.runtime.shorts_analyze_state_requires_data"
+    ]
+  },
+  "shared.export.shorts_review_approve_prompt": {
+    "cep": [
+      "export.shorts_review_approve_prompt"
+    ],
+    "uxp": [
+      "uxp.video.runtime.shorts_plan_state_approve_one"
+    ]
+  },
+  "shared.export.shorts_review_building": {
+    "cep": [
+      "export.shorts_review_building"
+    ],
+    "uxp": [
+      "uxp.video.runtime.shorts_plan_building_board"
+    ]
+  },
+  "shared.export.shorts_score_meta": {
+    "cep": [
+      "export.shorts_score_meta"
+    ],
+    "uxp": [
+      "uxp.video.runtime.shorts_score_range"
+    ]
+  },
+  "shared.export.shorts_targets_meta": {
+    "cep": [
+      "export.shorts_targets_meta"
+    ],
+    "uxp": [
+      "uxp.video.runtime.shorts_targets"
+    ]
+  },
+  "shared.export.shorts_thumbnail_meta": {
+    "cep": [
+      "export.shorts_thumbnail_meta"
+    ],
+    "uxp": [
+      "uxp.video.runtime.shorts_thumbnail_first_frame"
+    ]
+  },
+  "shared.forms.llm_provider": {
+    "cep": [
+      "forms.llm_provider"
+    ],
+    "uxp": [
+      "uxp.captions.llm_provider"
+    ]
+  },
+  "shared.headers.timeline": {
+    "cep": [
+      "headers.timeline"
+    ],
+    "uxp": [
+      "uxp.workspace.timeline_tools"
+    ]
+  },
+  "shared.hint.tone_needs_review": {
+    "cep": [
+      "hint.tone_needs_review"
+    ],
+    "uxp": [
+      "uxp.captions.runtime.needs_review"
+    ]
+  },
+  "shared.history.resume_proxies": {
+    "cep": [
+      "history.resume_proxies"
+    ],
+    "uxp": [
+      "processing.resume_proxy_batch"
+    ]
+  },
+  "shared.interview.step_remove_fillers": {
+    "cep": [
+      "interview.step_remove_fillers"
+    ],
+    "uxp": [
+      "uxp.cut.remove_fillers"
+    ]
+  },
+  "shared.journal.action_batch_rename": {
+    "cep": [
+      "journal.action_batch_rename"
+    ],
+    "uxp": [
+      "uxp.journal.action_batch_rename"
+    ]
+  },
+  "shared.journal.action_import_captions": {
+    "cep": [
+      "journal.action_import_captions"
+    ],
+    "uxp": [
+      "uxp.journal.action_import_captions"
+    ]
+  },
+  "shared.journal.action_import_media": {
+    "cep": [
+      "journal.action_import_media"
+    ],
+    "uxp": [
+      "uxp.journal.action_import_media"
+    ]
+  },
+  "shared.journal.action_import_overlay": {
+    "cep": [
+      "journal.action_import_overlay"
+    ],
+    "uxp": [
+      "uxp.journal.action_import_overlay"
+    ]
+  },
+  "shared.journal.action_import_sequence": {
+    "cep": [
+      "journal.action_import_sequence"
+    ],
+    "uxp": [
+      "uxp.journal.action_import_sequence"
+    ]
+  },
+  "shared.journal.affected_clips": {
+    "cep": [
+      "journal.affected_clips"
+    ],
+    "uxp": [
+      "uxp.journal.affected_clips"
+    ]
+  },
+  "shared.journal.apply_cuts_label": {
+    "cep": [
+      "journal.apply_cuts_label"
+    ],
+    "uxp": [
+      "uxp.journal.apply_cuts_label"
+    ]
+  },
+  "shared.journal.checkpoint_completion_failed": {
+    "cep": [
+      "journal.checkpoint_completion_failed"
+    ],
+    "uxp": [
+      "uxp.journal.completion_failed"
+    ]
+  },
+  "shared.journal.checkpoint_failed": {
+    "cep": [
+      "journal.checkpoint_failed"
+    ],
+    "uxp": [
+      "uxp.journal.checkpoint_failed"
+    ]
+  },
+  "shared.journal.checkpoint_unknown_error": {
+    "cep": [
+      "journal.checkpoint_unknown_error"
+    ],
+    "uxp": [
+      "uxp.journal.checkpoint_unknown_error"
+    ]
+  },
+  "shared.journal.recovery_failed": {
+    "cep": [
+      "journal.recovery_failed"
+    ],
+    "uxp": [
+      "uxp.journal.recovery_failed"
+    ]
+  },
+  "shared.journal.saved_settings": {
+    "cep": [
+      "journal.saved_settings"
+    ],
+    "uxp": [
+      "uxp.journal.saved_plan"
+    ]
+  },
+  "shared.media.select_clip_placeholder": {
+    "cep": [
+      "media.select_clip_placeholder"
+    ],
+    "uxp": [
+      "uxp.common.select_clip"
+    ]
+  },
+  "shared.notification.heading_action_needed": {
+    "cep": [
+      "notification.heading_action_needed"
+    ],
+    "uxp": [
+      "uxp.toast.heading_action_needed"
+    ]
+  },
+  "shared.notification.heading_status_update": {
+    "cep": [
+      "notification.heading_status_update"
+    ],
+    "uxp": [
+      "uxp.toast.heading_status_update"
+    ]
+  },
+  "shared.onboarding.step_count": {
+    "cep": [
+      "onboarding.step_count"
+    ],
+    "uxp": [
+      "uxp.onboarding.step_count"
+    ]
+  },
+  "shared.palette.tool_chapter_generation": {
+    "cep": [
+      "palette.tool_chapter_generation"
+    ],
+    "uxp": [
+      "uxp.captions.chapter_generation"
+    ]
+  },
+  "shared.palette.tool_deliverables": {
+    "cep": [
+      "palette.tool_deliverables",
+      "subtabs.deliverables"
+    ],
+    "uxp": [
+      "uxp.tabs.deliverables"
+    ]
+  },
+  "shared.palette.tool_filler_words": {
+    "cep": [
+      "palette.tool_filler_words"
+    ],
+    "uxp": [
+      "uxp.cut.filler_words"
+    ]
+  },
+  "shared.palette.tool_keyboard_shortcuts": {
+    "cep": [
+      "palette.tool_keyboard_shortcuts",
+      "settings.keyboard_shortcuts"
+    ],
+    "uxp": [
+      "uxp.settings.keyboard"
+    ]
+  },
+  "shared.palette.tool_loudness_match": {
+    "cep": [
+      "palette.tool_loudness_match"
+    ],
+    "uxp": [
+      "uxp.audio.loudness_match"
+    ]
+  },
+  "shared.palette.tool_repeat_detection": {
+    "cep": [
+      "palette.tool_repeat_detection"
+    ],
+    "uxp": [
+      "uxp.captions.repeat_detection"
+    ]
+  },
+  "shared.palette.tool_silence_removal": {
+    "cep": [
+      "palette.tool_silence_removal"
+    ],
+    "uxp": [
+      "uxp.cut.silence_removal"
+    ]
+  },
+  "shared.palette.tool_stem_separation": {
+    "cep": [
+      "palette.tool_stem_separation"
+    ],
+    "uxp": [
+      "uxp.audio.stem_separation"
+    ]
+  },
+  "shared.processing.cancel_active_run": {
+    "cep": [
+      "processing.cancel_active_run"
+    ],
+    "uxp": [
+      "processing.cancel_active_run"
+    ]
+  },
+  "shared.processing.progress": {
+    "cep": [
+      "processing.progress"
+    ],
+    "uxp": [
+      "processing.progress"
+    ]
+  },
+  "shared.search.no_matches_title": {
+    "cep": [
+      "search.no_matches_title"
+    ],
+    "uxp": [
+      "uxp.search.runtime.no_matches_yet"
+    ]
+  },
+  "shared.search.zero_files_indexed": {
+    "cep": [
+      "search.zero_files_indexed"
+    ],
+    "uxp": [
+      "uxp.search.zero_files_indexed"
+    ]
+  },
+  "shared.settings.gpu_adapter_auto": {
+    "cep": [
+      "settings.gpu_adapter_auto"
+    ],
+    "uxp": [
+      "uxp.settings.gpu_adapter_auto"
+    ]
+  },
+  "shared.settings.gpu_adapter_invalid": {
+    "cep": [
+      "settings.gpu_adapter_invalid"
+    ],
+    "uxp": [
+      "uxp.settings.gpu_adapter_invalid"
+    ]
+  },
+  "shared.settings.gpu_adapter_none": {
+    "cep": [
+      "settings.gpu_adapter_none"
+    ],
+    "uxp": [
+      "uxp.settings.gpu_adapter_none"
+    ]
+  },
+  "shared.settings.gpu_adapter_saved": {
+    "cep": [
+      "settings.gpu_adapter_saved"
+    ],
+    "uxp": [
+      "uxp.settings.gpu_adapter_saved"
+    ]
+  },
+  "shared.settings.gpu_adapter_status": {
+    "cep": [
+      "settings.gpu_adapter_status"
+    ],
+    "uxp": [
+      "uxp.settings.gpu_adapter_status"
+    ]
+  },
+  "shared.settings.import_local_failed": {
+    "cep": [
+      "settings.import_local_failed"
+    ],
+    "uxp": [
+      "uxp.settings.settings_import_local_failed"
+    ]
+  },
+  "shared.settings.import_settings": {
+    "cep": [
+      "settings.import_settings"
+    ],
+    "uxp": [
+      "uxp.settings.import_settings"
+    ]
+  },
+  "shared.settings.import_skipped": {
+    "cep": [
+      "settings.import_skipped"
+    ],
+    "uxp": [
+      "uxp.settings.settings_import_skipped"
+    ]
+  },
+  "shared.settings.plugin_capabilities": {
+    "cep": [
+      "settings.plugin_capabilities"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_capabilities"
+    ]
+  },
+  "shared.settings.plugin_failed_label": {
+    "cep": [
+      "settings.plugin_failed_label"
+    ],
+    "uxp": [
+      "uxp.settings.failed_unsigned"
+    ]
+  },
+  "shared.settings.plugin_failed_many": {
+    "cep": [
+      "settings.plugin_failed_many"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_failed_many"
+    ]
+  },
+  "shared.settings.plugin_failed_title": {
+    "cep": [
+      "settings.plugin_failed_title"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_failed_title"
+    ]
+  },
+  "shared.settings.plugin_install_approval": {
+    "cep": [
+      "settings.plugin_install_approval"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_install_approval"
+    ]
+  },
+  "shared.settings.plugin_install_auth_required": {
+    "cep": [
+      "settings.plugin_install_auth_required"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_install_auth_required"
+    ]
+  },
+  "shared.settings.plugin_install_failed": {
+    "cep": [
+      "settings.plugin_install_failed"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_install_failed"
+    ]
+  },
+  "shared.settings.plugin_install_queued": {
+    "cep": [
+      "settings.plugin_install_queued"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_install_queued"
+    ]
+  },
+  "shared.settings.plugin_install_queued_generic": {
+    "cep": [
+      "settings.plugin_install_queued_generic"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_install_queued_generic"
+    ]
+  },
+  "shared.settings.plugin_install_signed": {
+    "cep": [
+      "settings.plugin_install_signed"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_install_signed"
+    ]
+  },
+  "shared.settings.plugin_install_starting": {
+    "cep": [
+      "settings.plugin_install_starting"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_install_starting"
+    ]
+  },
+  "shared.settings.plugin_loaded_many": {
+    "cep": [
+      "settings.plugin_loaded_many",
+      "settings.plugin_loaded_one"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_loaded_many",
+      "uxp.settings.plugin_loaded_one"
+    ]
+  },
+  "shared.settings.plugin_loaded_title": {
+    "cep": [
+      "settings.plugin_loaded_title"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_loaded_title"
+    ]
+  },
+  "shared.settings.plugin_marketplace_cached": {
+    "cep": [
+      "settings.plugin_marketplace_cached"
+    ],
+    "uxp": [
+      "uxp.settings.cached_marketplace"
+    ]
+  },
+  "shared.settings.plugin_marketplace_many": {
+    "cep": [
+      "settings.plugin_marketplace_many",
+      "settings.plugin_marketplace_one"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_marketplace_many",
+      "uxp.settings.plugin_marketplace_one"
+    ]
+  },
+  "shared.settings.plugin_marketplace_title": {
+    "cep": [
+      "settings.plugin_marketplace_title"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_marketplace_title"
+    ]
+  },
+  "shared.settings.plugin_no_capabilities": {
+    "cep": [
+      "settings.plugin_no_capabilities"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_no_capabilities"
+    ]
+  },
+  "shared.settings.plugin_no_description": {
+    "cep": [
+      "settings.plugin_no_description"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_no_description"
+    ]
+  },
+  "shared.settings.plugin_publisher_identity": {
+    "cep": [
+      "settings.plugin_publisher_identity"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_publisher_identity"
+    ]
+  },
+  "shared.settings.plugin_publisher_missing": {
+    "cep": [
+      "settings.plugin_publisher_missing"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_publisher_missing"
+    ]
+  },
+  "shared.settings.plugin_quarantine_contract": {
+    "cep": [
+      "settings.plugin_quarantine_contract"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_quarantine_contract"
+    ]
+  },
+  "shared.settings.plugin_quarantine_many": {
+    "cep": [
+      "settings.plugin_quarantine_many",
+      "settings.plugin_quarantine_one"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_quarantine_many",
+      "uxp.settings.plugin_quarantine_one"
+    ]
+  },
+  "shared.settings.plugin_quarantine_title": {
+    "cep": [
+      "settings.plugin_quarantine_title"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_quarantine_title"
+    ]
+  },
+  "shared.settings.plugin_trust_empty_status": {
+    "cep": [
+      "settings.plugin_trust_empty_status"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_trust_empty"
+    ]
+  },
+  "shared.settings.plugin_trust_failed_validation": {
+    "cep": [
+      "settings.plugin_trust_failed_validation"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_trust_failed_validation"
+    ]
+  },
+  "shared.settings.plugin_trust_invalid_manifest": {
+    "cep": [
+      "settings.plugin_trust_invalid_manifest"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_trust_invalid_manifest"
+    ]
+  },
+  "shared.settings.plugin_trust_loading_hint": {
+    "cep": [
+      "settings.plugin_trust_loading_hint"
+    ],
+    "uxp": [
+      "uxp.settings.loading_plugin_trust"
+    ]
+  },
+  "shared.settings.plugin_trust_lock_missing": {
+    "cep": [
+      "settings.plugin_trust_lock_missing"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_trust_lock_missing"
+    ]
+  },
+  "shared.settings.plugin_trust_needs_review_status": {
+    "cep": [
+      "settings.plugin_trust_needs_review_status"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_trust_needs_review"
+    ]
+  },
+  "shared.settings.plugin_trust_ready_status": {
+    "cep": [
+      "settings.plugin_trust_ready_status"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_trust_ready"
+    ]
+  },
+  "shared.settings.plugin_trust_summary_aria": {
+    "cep": [
+      "settings.plugin_trust_summary_aria"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_trust_summary"
+    ]
+  },
+  "shared.settings.plugin_trust_unavailable_title": {
+    "cep": [
+      "settings.plugin_trust_unavailable_title"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_trust_unavailable_title"
+    ]
+  },
+  "shared.settings.plugin_trust_unsigned_allowed": {
+    "cep": [
+      "settings.plugin_trust_unsigned_allowed"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_trust_unsigned_allowed"
+    ]
+  },
+  "shared.settings.plugin_uninstall_contract": {
+    "cep": [
+      "settings.plugin_uninstall_contract"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_uninstall_contract"
+    ]
+  },
+  "shared.settings.plugin_unknown_name": {
+    "cep": [
+      "settings.plugin_unknown_name"
+    ],
+    "uxp": [
+      "uxp.settings.unknown_plugin"
+    ]
+  },
+  "shared.settings.plugin_worker_isolation": {
+    "cep": [
+      "settings.plugin_worker_isolation"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_worker_isolation"
+    ]
+  },
+  "shared.settings.plugin_worker_restart": {
+    "cep": [
+      "settings.plugin_worker_restart"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_worker_restart"
+    ]
+  },
+  "shared.settings.plugin_worker_restart_failed": {
+    "cep": [
+      "settings.plugin_worker_restart_failed"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_worker_restart_failed"
+    ]
+  },
+  "shared.settings.plugin_worker_restarted": {
+    "cep": [
+      "settings.plugin_worker_restarted"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_worker_restarted"
+    ]
+  },
+  "shared.settings.plugin_worker_restarting": {
+    "cep": [
+      "settings.plugin_worker_restarting"
+    ],
+    "uxp": [
+      "uxp.settings.plugin_worker_restarting"
+    ]
+  },
+  "shared.settings.update_available_status": {
+    "cep": [
+      "settings.update_available_status"
+    ],
+    "uxp": [
+      "uxp.settings.update_available_status"
+    ]
+  },
+  "shared.settings.update_available_summary": {
+    "cep": [
+      "settings.update_available_summary"
+    ],
+    "uxp": [
+      "uxp.settings.update_available_summary"
+    ]
+  },
+  "shared.settings.update_checking_summary": {
+    "cep": [
+      "settings.update_checking_summary"
+    ],
+    "uxp": [
+      "uxp.settings.update_checking_summary"
+    ]
+  },
+  "shared.settings.update_dismissed": {
+    "cep": [
+      "settings.update_dismissed"
+    ],
+    "uxp": [
+      "uxp.settings.update_dismissed"
+    ]
+  },
+  "shared.settings.update_dismissed_toast": {
+    "cep": [
+      "settings.update_dismissed_toast"
+    ],
+    "uxp": [
+      "uxp.settings.update_dismissed_toast"
+    ]
+  },
+  "shared.settings.update_invalid_release": {
+    "cep": [
+      "settings.update_invalid_release"
+    ],
+    "uxp": [
+      "uxp.settings.update_invalid_release"
+    ]
+  },
+  "shared.settings.update_no_release_notes": {
+    "cep": [
+      "settings.update_no_release_notes"
+    ],
+    "uxp": [
+      "uxp.settings.update_no_release_notes"
+    ]
+  },
+  "shared.settings.update_opened": {
+    "cep": [
+      "settings.update_opened"
+    ],
+    "uxp": [
+      "uxp.settings.update_opened"
+    ]
+  },
+  "shared.settings.update_published_at": {
+    "cep": [
+      "settings.update_published_at"
+    ],
+    "uxp": [
+      "uxp.settings.update_published_at"
+    ]
+  },
+  "shared.settings.update_release_notes": {
+    "cep": [
+      "settings.update_release_notes"
+    ],
+    "uxp": [
+      "uxp.settings.update_release_notes"
+    ]
+  },
+  "shared.settings.update_up_to_date": {
+    "cep": [
+      "settings.update_up_to_date"
+    ],
+    "uxp": [
+      "uxp.settings.update_up_to_date"
+    ]
+  },
+  "shared.settings.update_view_release": {
+    "cep": [
+      "settings.update_view_release"
+    ],
+    "uxp": [
+      "uxp.settings.update_view_release"
+    ]
+  },
+  "shared.shortcuts.captions": {
+    "cep": [
+      "shortcuts.captions"
+    ],
+    "uxp": [
+      "uxp.settings.generate_captions"
+    ]
+  },
+  "shared.silence.detect": {
+    "cep": [
+      "silence.detect"
+    ],
+    "uxp": [
+      "uxp.settings.detect_silence"
+    ]
+  },
+  "shared.silence.detect_method_aria": {
+    "cep": [
+      "silence.detect_method_aria"
+    ],
+    "uxp": [
+      "uxp.cut.silence_detection_method"
+    ]
+  },
+  "shared.subtabs.beat_markers": {
+    "cep": [
+      "subtabs.beat_markers"
+    ],
+    "uxp": [
+      "uxp.audio.beat_markers"
+    ]
+  },
+  "shared.tabs.audio_desc": {
+    "cep": [
+      "tabs.audio_desc"
+    ],
+    "uxp": [
+      "uxp.workspace.audio_subtitle"
+    ]
+  },
+  "shared.tabs.search_desc": {
+    "cep": [
+      "tabs.search_desc"
+    ],
+    "uxp": [
+      "uxp.workspace.search_subtitle"
+    ]
+  },
+  "shared.tabs.settings_desc": {
+    "cep": [
+      "tabs.settings_desc"
+    ],
+    "uxp": [
+      "uxp.workspace.settings_subtitle"
+    ]
+  },
+  "shared.tabs.timeline_desc": {
+    "cep": [
+      "tabs.timeline_desc"
+    ],
+    "uxp": [
+      "uxp.workspace.timeline_subtitle"
+    ]
+  },
+  "shared.tabs.video_desc": {
+    "cep": [
+      "tabs.video_desc"
+    ],
+    "uxp": [
+      "uxp.workspace.video_subtitle"
+    ]
+  },
+  "shared.timeline.apply_cuts_to_sequence": {
+    "cep": [
+      "timeline.apply_cuts_to_sequence"
+    ],
+    "uxp": [
+      "uxp.timeline.apply_cuts_to_sequence"
+    ]
+  },
+  "shared.timeline.export_otio": {
+    "cep": [
+      "timeline.export_otio"
+    ],
+    "uxp": [
+      "uxp.timeline.export_otio_universal"
+    ]
+  },
+  "shared.timeline.export_otio_file": {
+    "cep": [
+      "timeline.export_otio_file"
+    ],
+    "uxp": [
+      "uxp.timeline.export_otio_file"
+    ]
+  },
+  "shared.timeline.export_otio_file_aria": {
+    "cep": [
+      "timeline.export_otio_file_aria"
+    ],
+    "uxp": [
+      "uxp.timeline.export_opentimelineio_file"
+    ]
+  },
+  "shared.timeline.interchange_export_failed": {
+    "cep": [
+      "timeline.interchange_export_failed"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.interchange_export_failed"
+    ]
+  },
+  "shared.timeline.interchange_import_failed": {
+    "cep": [
+      "timeline.interchange_import_failed"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.interchange_import_failed"
+    ]
+  },
+  "shared.timeline.interchange_import_label": {
+    "cep": [
+      "timeline.interchange_import_label"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.interchange_import_label"
+    ]
+  },
+  "shared.timeline.interchange_imported": {
+    "cep": [
+      "timeline.interchange_imported"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.interchange_imported",
+      "uxp.timeline.runtime.interchange_imported_detail"
+    ]
+  },
+  "shared.timeline.interchange_imported_status": {
+    "cep": [
+      "timeline.interchange_imported_status"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.interchange_imported_status"
+    ]
+  },
+  "shared.timeline.interchange_sequence_name": {
+    "cep": [
+      "timeline.interchange_sequence_name"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.interchange_sequence_name"
+    ]
+  },
+  "shared.timeline.interchange_source_required": {
+    "cep": [
+      "timeline.interchange_source_required"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.interchange_source_required"
+    ]
+  },
+  "shared.timeline.interchange_threshold": {
+    "cep": [
+      "timeline.interchange_threshold"
+    ],
+    "uxp": [
+      "uxp.timeline.interchange_threshold"
+    ]
+  },
+  "shared.timeline.interchange_threshold_aria": {
+    "cep": [
+      "timeline.interchange_threshold_aria"
+    ],
+    "uxp": [
+      "uxp.timeline.interchange_threshold_aria"
+    ]
+  },
+  "shared.timeline.multicam_boundary_exclusive": {
+    "cep": [
+      "timeline.multicam_boundary_exclusive"
+    ],
+    "uxp": [
+      "uxp.video.runtime.multicam_boundary_exclusive"
+    ]
+  },
+  "shared.timeline.multicam_boundary_fallback": {
+    "cep": [
+      "timeline.multicam_boundary_fallback"
+    ],
+    "uxp": [
+      "uxp.video.runtime.multicam_boundary_fallback"
+    ]
+  },
+  "shared.timeline.multicam_boundary_other": {
+    "cep": [
+      "timeline.multicam_boundary_other"
+    ],
+    "uxp": [
+      "uxp.video.runtime.multicam_boundary_other"
+    ]
+  },
+  "shared.timeline.otio_adapter_aria": {
+    "cep": [
+      "timeline.otio_adapter_aria"
+    ],
+    "uxp": [
+      "uxp.timeline.otio_adapter_aria"
+    ]
+  },
+  "shared.timeline.otio_adapter_native": {
+    "cep": [
+      "timeline.otio_adapter_native"
+    ],
+    "uxp": [
+      "uxp.timeline.otio_adapter_native"
+    ]
+  },
+  "shared.timeline.otio_capabilities_failed": {
+    "cep": [
+      "timeline.otio_capabilities_failed"
+    ],
+    "uxp": [
+      "uxp.timeline.otio_capabilities_failed"
+    ]
+  },
+  "shared.timeline.otio_export_failed": {
+    "cep": [
+      "timeline.otio_export_failed"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.otio_export_failed"
+    ]
+  },
+  "shared.timeline.otio_mode_cuts": {
+    "cep": [
+      "timeline.otio_mode_cuts"
+    ],
+    "uxp": [
+      "uxp.timeline.mode_cuts"
+    ]
+  },
+  "shared.timeline.otio_preflight_failed": {
+    "cep": [
+      "timeline.otio_preflight_failed"
+    ],
+    "uxp": [
+      "uxp.timeline.otio_preflight_failed"
+    ]
+  },
+  "shared.timeline.otio_schema_current": {
+    "cep": [
+      "timeline.otio_schema_current"
+    ],
+    "uxp": [
+      "uxp.timeline.otio_schema_current"
+    ]
+  },
+  "shared.timeline.otio_schema_target_aria": {
+    "cep": [
+      "timeline.otio_schema_target_aria"
+    ],
+    "uxp": [
+      "uxp.timeline.otio_schema_target_aria"
+    ]
+  },
+  "shared.timeline.replace_placeholder": {
+    "cep": [
+      "timeline.replace_placeholder",
+      "transcript.bulk_replace_placeholder"
+    ],
+    "uxp": [
+      "uxp.captions.bulk_replace_placeholder"
+    ]
+  },
+  "shared.toast.engine_preference_auto": {
+    "cep": [
+      "toast.engine_preference_auto"
+    ],
+    "uxp": [
+      "uxp.settings.engine_auto_saved_toast"
+    ]
+  },
+  "shared.toast.engine_preference_saved": {
+    "cep": [
+      "toast.engine_preference_saved"
+    ],
+    "uxp": [
+      "uxp.settings.engine_preference_saved_toast"
+    ]
+  },
+  "shared.toast.live_updates_connected": {
+    "cep": [
+      "toast.live_updates_connected",
+      "ws.status_connected"
+    ],
+    "uxp": [
+      "uxp.settings.live_updates_connected"
+    ]
+  },
+  "shared.toast.select_clip_first": {
+    "cep": [
+      "toast.select_clip_first"
+    ],
+    "uxp": [
+      "uxp.runtime.select_clip_first"
+    ]
+  },
+  "shared.toast.shorts_approve_candidate_first": {
+    "cep": [
+      "toast.shorts_approve_candidate_first"
+    ],
+    "uxp": [
+      "uxp.video.runtime.shorts_approve_candidate_first"
+    ]
+  },
+  "shared.transcript.bulk_apply": {
+    "cep": [
+      "transcript.bulk_apply"
+    ],
+    "uxp": [
+      "uxp.captions.bulk_apply"
+    ]
+  },
+  "shared.transcript.bulk_apply_failed": {
+    "cep": [
+      "transcript.bulk_apply_failed"
+    ],
+    "uxp": [
+      "uxp.captions.bulk_apply_failed"
+    ]
+  },
+  "shared.transcript.bulk_apply_working": {
+    "cep": [
+      "transcript.bulk_apply_working"
+    ],
+    "uxp": [
+      "uxp.captions.bulk_apply_working"
+    ]
+  },
+  "shared.transcript.bulk_preview": {
+    "cep": [
+      "transcript.bulk_preview"
+    ],
+    "uxp": [
+      "uxp.captions.bulk_preview"
+    ]
+  },
+  "shared.transcript.bulk_preview_failed": {
+    "cep": [
+      "transcript.bulk_preview_failed"
+    ],
+    "uxp": [
+      "uxp.captions.bulk_preview_failed"
+    ]
+  },
+  "shared.transcript.bulk_preview_ready": {
+    "cep": [
+      "transcript.bulk_preview_ready"
+    ],
+    "uxp": [
+      "uxp.captions.bulk_preview_ready"
+    ]
+  },
+  "shared.transcript.bulk_preview_summary": {
+    "cep": [
+      "transcript.bulk_preview_summary"
+    ],
+    "uxp": [
+      "uxp.captions.bulk_preview_summary"
+    ]
+  },
+  "shared.transcript.bulk_preview_working": {
+    "cep": [
+      "transcript.bulk_preview_working"
+    ],
+    "uxp": [
+      "uxp.captions.bulk_preview_working"
+    ]
+  },
+  "shared.transcript.bulk_save_glossary": {
+    "cep": [
+      "transcript.bulk_save_glossary"
+    ],
+    "uxp": [
+      "uxp.captions.bulk_save_glossary"
+    ]
+  },
+  "shared.video.broll_description_aria": {
+    "cep": [
+      "video.broll_description_aria"
+    ],
+    "uxp": [
+      "uxp.video.broll_description"
+    ]
+  },
+  "shared.video.broll_generate": {
+    "cep": [
+      "video.broll_generate"
+    ],
+    "uxp": [
+      "uxp.video.generate_broll"
+    ]
+  },
+  "shared.video.depth_apply": {
+    "cep": [
+      "video.depth_apply"
+    ],
+    "uxp": [
+      "uxp.video.apply_depth_effect"
+    ]
+  },
+  "shared.video.depth_model_small": {
+    "cep": [
+      "video.depth_model_small"
+    ],
+    "uxp": [
+      "uxp.video.model_small_fast"
+    ]
+  },
+  "shared.video.depth_not_installed": {
+    "cep": [
+      "video.depth_not_installed"
+    ],
+    "uxp": [
+      "uxp.video.depth_not_installed"
+    ]
+  },
+  "shared.video.diarize_number_of_speakers": {
+    "cep": [
+      "video.diarize_number_of_speakers"
+    ],
+    "uxp": [
+      "uxp.video.number_of_speakers"
+    ]
+  },
+  "shared.video.scenes_detect": {
+    "cep": [
+      "video.scenes_detect"
+    ],
+    "uxp": [
+      "uxp.video.detect_scenes"
+    ]
+  },
+  "shared.video.social_connect": {
+    "cep": [
+      "video.social_connect"
+    ],
+    "uxp": [
+      "uxp.video.connect_account"
+    ]
+  },
+  "shared.video.social_platform_aria": {
+    "cep": [
+      "video.social_platform_aria"
+    ],
+    "uxp": [
+      "uxp.video.social_media_platform"
+    ]
+  },
+  "shared.video.social_platform_instagram": {
+    "cep": [
+      "video.social_platform_instagram"
+    ],
+    "uxp": [
+      "uxp.video.instagram_reels"
+    ]
+  },
+  "shared.video.social_privacy_aria": {
+    "cep": [
+      "video.social_privacy_aria"
+    ],
+    "uxp": [
+      "uxp.video.privacy_level"
+    ]
+  },
+  "shared.video.style_transfer": {
+    "cep": [
+      "video.style_transfer"
+    ],
+    "uxp": [
+      "uxp.video.style_transfer"
+    ]
+  },
+  "shared.video.upscale_run": {
+    "cep": [
+      "video.upscale_run"
+    ],
+    "uxp": [
+      "uxp.video.upscale_video"
+    ]
+  },
+  "shared.workspace.status_backend_offline": {
+    "cep": [
+      "workspace.status_backend_offline"
+    ],
+    "uxp": [
+      "conn.dot_disconnected",
+      "uxp.guide.backend_offline_kicker"
+    ]
+  },
+  "shared.ws.button_connect": {
+    "cep": [
+      "ws.button_connect"
+    ],
+    "uxp": [
+      "uxp.settings.connect_live_updates"
+    ]
+  },
+  "shared.ws.button_connected": {
+    "cep": [
+      "ws.button_connected"
+    ],
+    "uxp": [
+      "uxp.settings.live_updates_connected_button"
+    ]
+  },
+  "shared.ws.button_start_bridge": {
+    "cep": [
+      "ws.button_start_bridge"
+    ],
+    "uxp": [
+      "uxp.settings.start_bridge"
+    ]
+  },
+  "shared.ws.hint_stop_failed": {
+    "cep": [
+      "ws.hint_stop_failed"
+    ],
+    "uxp": [
+      "uxp.settings.stop_live_updates_bridge_failed"
+    ]
+  },
+  "shared.ws.hint_stopping": {
+    "cep": [
+      "ws.hint_stopping"
+    ],
+    "uxp": [
+      "uxp.settings.stopping_live_updates_bridge"
+    ]
+  },
+  "shared.ws.status_bridge_ready": {
+    "cep": [
+      "ws.status_bridge_ready"
+    ],
+    "uxp": [
+      "uxp.settings.bridge_ready"
+    ]
+  },
+  "shared.ws.status_bridge_stopped": {
+    "cep": [
+      "ws.status_bridge_stopped"
+    ],
+    "uxp": [
+      "uxp.settings.bridge_stopped"
+    ]
+  },
+  "shared.ws.status_panel_connected": {
+    "cep": [
+      "ws.status_panel_connected"
+    ],
+    "uxp": [
+      "uxp.settings.panel_connected"
+    ]
+  },
+  "shared.ws.status_unavailable": {
+    "cep": [
+      "ws.status_unavailable"
+    ],
+    "uxp": [
+      "uxp.settings.bridge_unavailable"
+    ]
+  }
+}
