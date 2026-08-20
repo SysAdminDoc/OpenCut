@@ -121,12 +121,39 @@ JULY_2026_CVES: tuple[str, ...] = (
     "CVE-2026-64833",  # S/PDIF DTS out-of-bounds read
     "CVE-2026-64835",  # ADX out-of-bounds access
     "CVE-2026-66041",  # vf_quirc heap out-of-bounds write
+    # Graded 2026-08-20 (F348). Kept in the same order as SECURITY_ADVISORIES;
+    # test_every_graded_advisory_is_reported_in_the_public_constants fails if
+    # this list and the matrix drift apart.
+    "CVE-2026-64830",  # VobSub demuxer heap overflow
+    "CVE-2026-64831",  # Vulkan HEVC hwaccel stack overflow
+    "CVE-2026-64834",  # RTP/ASF depacketizer
+    "CVE-2026-65703",  # TDSC decoder
+    "CVE-2026-65704",  # TY demuxer
+    "CVE-2026-65705",  # vf_floodfill
+    "CVE-2026-65706",  # vf_swaprect out-of-bounds write
+    "CVE-2026-66036",  # vf_hqdn3d out-of-bounds write
+    "CVE-2026-66037",  # IAMF demuxer resource consumption
+    "CVE-2026-66038",  # LCL/ZLIB decoder heap disclosure
+    "CVE-2026-66039",  # MACE6 decoder
+    "CVE-2026-66040",  # native PNG/APNG encoder heap OOB write
 )
 JULY_2026_FIX_COMMITS: tuple[str, ...] = (
     "4c6217477fc64305055b37d9d1d0d76d30e37f97",
     "6f80e2765492700622596af720534cef33dd31b4",
     "1836ef96846937a6cc2443698a693104f5c0b21e",
     "4da9812e25894fb51d62a8875cfa8eb39b5e20f5",
+    "dbd495f066a85ba96b17433f4306582aa37c3951",
+    "92737390dc133daadce47dd7d2ec8ef3d9ebcbed",
+    "11d5f475be95d22d5f0692220cc772b116abc632",
+    "fd3ee52fab34d98a95b787d0b5ff45685766200c",
+    "de771bd52774a52d45b0e2c82e56995a1ef40df7",
+    "f186c50cf53aec20e9a29059cb22ca3f2d59201c",
+    "a7e38b617b32f996beaa371bbf04b39907d7a527",
+    "5d7112c60e6f0f0742ce47d448e6da0718a70f4c",
+    "86708357d126af84c16f80d9c57335d1e8c845c5",
+    "e7cbfd1c507b57a806a5825b87d609963e862c8c",
+    "aafb5c655edc76a753275c383ebb139feb032718",
+    "b506fafec9a19fcbc2be5271875fd4a63d6615bc",
 )
 
 
@@ -201,6 +228,108 @@ SECURITY_ADVISORIES: tuple[CveAdvisory, ...] = (
         affected_max_release=(8, 1, 1),
         capability_tokens=("!--disable-decoder=magicyuv",),
     ),
+    # Graded 2026-08-20 (F348). Each fix commit below is the one NVD
+    # references for that CVE, confirmed against the upstream repository to
+    # exist and to touch the source file the advisory names; `fix_landed` is
+    # that commit's committer date on master.
+    CveAdvisory(
+        cve="CVE-2026-64830",
+        component="VobSub subtitle demuxer (libavformat/mpeg.c)",
+        fix_commit="dbd495f066a85ba96b17433f4306582aa37c3951",
+        fix_landed="2026-07-02",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("!--disable-demuxer=vobsub",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-64831",
+        component="Vulkan HEVC hardware decoder (libavcodec/vulkan_hevc.c)",
+        fix_commit="92737390dc133daadce47dd7d2ec8ef3d9ebcbed",
+        fix_landed="2026-07-05",
+        affected_max_release=(8, 1, 2),
+        # Vulkan hwaccel is opt-in, so its absence from the configure line is
+        # itself proof the vulnerable path is not compiled in.
+        capability_tokens=("--enable-vulkan",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-64834",
+        component="RTP/ASF depacketizer (libavformat/rtpdec_asf.c)",
+        fix_commit="11d5f475be95d22d5f0692220cc772b116abc632",
+        fix_landed="2026-07-02",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("!--disable-demuxer=rtsp",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-65703",
+        component="TDSC video decoder (libavcodec/tdsc.c)",
+        fix_commit="fd3ee52fab34d98a95b787d0b5ff45685766200c",
+        fix_landed="2026-07-13",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("!--disable-decoder=tdsc",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-65704",
+        component="TY demuxer (libavformat/ty.c)",
+        fix_commit="de771bd52774a52d45b0e2c82e56995a1ef40df7",
+        fix_landed="2026-07-13",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("!--disable-demuxer=ty",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-65705",
+        component="floodfill video filter (libavfilter/vf_floodfill.c)",
+        fix_commit="f186c50cf53aec20e9a29059cb22ca3f2d59201c",
+        fix_landed="2026-07-13",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("!--disable-filter=floodfill",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-65706",
+        component="swaprect video filter (libavfilter/vf_swaprect.c)",
+        fix_commit="a7e38b617b32f996beaa371bbf04b39907d7a527",
+        fix_landed="2026-07-13",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("!--disable-filter=swaprect",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-66036",
+        component="hqdn3d video filter (libavfilter/vf_hqdn3d.c)",
+        fix_commit="5d7112c60e6f0f0742ce47d448e6da0718a70f4c",
+        fix_landed="2026-07-22",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("!--disable-filter=hqdn3d",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-66037",
+        component="IAMF demuxer (libavformat/iamf_parse.c)",
+        fix_commit="86708357d126af84c16f80d9c57335d1e8c845c5",
+        fix_landed="2026-06-28",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("!--disable-demuxer=iamf",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-66038",
+        component="LCL/ZLIB video decoder (libavcodec/lcldec.c)",
+        fix_commit="e7cbfd1c507b57a806a5825b87d609963e862c8c",
+        fix_landed="2026-07-05",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("!--disable-decoder=zlib",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-66039",
+        component="MACE6 audio decoder (libavcodec/mace.c)",
+        fix_commit="aafb5c655edc76a753275c383ebb139feb032718",
+        fix_landed="2026-07-03",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("!--disable-decoder=mace6",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-66040",
+        component="native PNG/APNG encoders (libavcodec/pngenc.c)",
+        fix_commit="b506fafec9a19fcbc2be5271875fd4a63d6615bc",
+        fix_landed="2026-07-21",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("!--disable-encoder=png",),
+    ),
 )
 
 #: Advisories from the same 2026-07-22..24 disclosure batch that are published
@@ -215,20 +344,12 @@ SECURITY_ADVISORIES: tuple[CveAdvisory, ...] = (
 #: master, move it into SECURITY_ADVISORIES with its component and capability
 #: tokens, and delete it here. `tests/test_ffmpeg_cve_matrix.py` enforces that
 #: the two sets stay disjoint and that every graded entry carries a commit.
-UNGRADED_ADVISORIES: tuple[str, ...] = (
-    "CVE-2026-64830",  # VobSub demuxer heap overflow
-    "CVE-2026-64831",  # Vulkan HEVC hwaccel stack overflow
-    "CVE-2026-64834",  # RTP/ASF infinite loop
-    "CVE-2026-65703",
-    "CVE-2026-65704",
-    "CVE-2026-65705",
-    "CVE-2026-65706",  # vf_swaprect out-of-bounds write
-    "CVE-2026-66036",  # vf_hqdn3d out-of-bounds write
-    "CVE-2026-66037",
-    "CVE-2026-66038",
-    "CVE-2026-66039",
-    "CVE-2026-66040",  # native PNG/APNG encoder heap OOB write
-)
+#: July 2026 advisories known to exist but not yet graded against a fix commit.
+#: Emptied 2026-08-20 (F348) once every entry had an upstream fix commit
+#: verified to exist and to touch the component its CVE names. Anything added
+#: here must carry the same evidence before it moves into SECURITY_ADVISORIES —
+#: a plausible-but-wrong hash makes the gate lie in the dangerous direction.
+UNGRADED_ADVISORIES: tuple[str, ...] = ()
 
 
 def advisory_coverage() -> dict:

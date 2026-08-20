@@ -231,11 +231,42 @@ def test_snapshot_is_graded_per_cve_not_by_one_global_date():
     assert "CVE-2026-66041" in res["unresolved_cves"]
 
 
+def _disable_every_default_built_component() -> str:
+    """A configure line that explicitly disables each default-built component.
+
+    Derived from the matrix rather than hand-listed so grading a new advisory
+    cannot silently turn the waiver test into a date test.
+    """
+    flags = [
+        token[1:]
+        for advisory in fp.SECURITY_ADVISORIES
+        for token in advisory.capability_tokens
+        if token.startswith("!")
+    ]
+    return " ".join(["--enable-libx264", "--enable-gpl", *sorted(set(flags))])
+
+
 def test_absent_component_waives_its_advisory():
-    """'Prove the component absent' is the acceptance path a date cannot give."""
-    res = fp.check_security_floor(BANNER_SNAPSHOT_PARTIAL, configure_line=CONF_MINIMAL)
+    """'Prove the component absent' is the acceptance path a date cannot give.
+
+    The snapshot pre-dates the NVDEC and quirc fixes, so nothing about the date
+    could clear them; only their absence from the configure line does.
+    """
+    res = fp.check_security_floor(
+        BANNER_SNAPSHOT_PARTIAL,
+        configure_line=_disable_every_default_built_component(),
+    )
     assert res["ok"] is True
     assert {"CVE-2026-64832", "CVE-2026-66041"} <= set(res["not_applicable_cves"])
+
+
+def test_the_waiver_test_is_not_secretly_passing_on_the_snapshot_date():
+    """Both waived advisories must still be unfixed at the fixture's date."""
+    snapshot_date = "2026-07-01"
+    for cve in ("CVE-2026-64832", "CVE-2026-66041"):
+        advisory = next(a for a in fp.SECURITY_ADVISORIES if a.cve == cve)
+        assert advisory.fix_landed > snapshot_date
+        assert all(not t.startswith("!") for t in advisory.capability_tokens)
 
 
 def test_default_built_component_needs_an_explicit_disable_to_be_waived():

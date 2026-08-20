@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -75,4 +76,11 @@ def test_pinned_installer_version_matches_provenance_module():
     assert fp.RELEASE_FLOOR == (8, 1, 3)
     assert "CVE-2026-8461" in fp.JUNE_2026_CVES
     assert set(("CVE-2026-64832", "CVE-2026-64833", "CVE-2026-64835", "CVE-2026-66041")) <= set(fp.SECURITY_CVES)
-    assert len(fp.SECURITY_FIX_COMMITS) == 6
+    # A literal count here failed on every legitimate grading pass. What the
+    # pins actually need is that the list is exactly its two parts with no
+    # duplicates, and that each entry is a real full-length commit hash.
+    assert len(fp.SECURITY_FIX_COMMITS) == (
+        len(fp.MAGICYUV_FIX_COMMITS) + len(fp.JULY_2026_FIX_COMMITS)
+    )
+    assert len(set(fp.SECURITY_FIX_COMMITS)) == len(fp.SECURITY_FIX_COMMITS)
+    assert all(re.fullmatch(r"[0-9a-f]{40}", c) for c in fp.SECURITY_FIX_COMMITS)
