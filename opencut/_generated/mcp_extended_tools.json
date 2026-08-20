@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 17,
-    "GET": 384,
+    "GET": 386,
     "PATCH": 1,
-    "POST": 1070,
+    "POST": 1071,
     "PUT": 2
   },
   "response_schema_count": 90,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1474,
+  "tool_count": 1477,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -8200,6 +8200,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /queue/coverage"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /queue/coverage.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "jobs",
+        "endpoint": "jobs.queue_coverage_route",
+        "generated": true,
+        "method": "GET",
+        "path": "/queue/coverage",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_queue_coverage"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /queue/list"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /queue/list.",
@@ -10882,6 +10912,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_video_depth_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /video/encode/apv/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/encode/apv/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_d",
+        "endpoint": "wave_d.route_apv_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/video/encode/apv/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_video_encode_apv_info"
     },
     {
       "annotations": {
@@ -39980,6 +40040,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_video_emotion_install"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /video/encode/apv"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/encode/apv.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_d",
+        "endpoint": "wave_d.route_apv_encode",
+        "generated": true,
+        "method": "POST",
+        "path": "/video/encode/apv",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_video_encode_apv"
     },
     {
       "annotations": {
