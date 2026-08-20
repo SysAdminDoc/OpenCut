@@ -1,4 +1,39 @@
+# Git stores text with LF and checks it out unchanged. Without this,
+# core.autocrlf=false let each editor push a file whichever way it liked, so a
+# one-key edit to a locale file landed as a 5,745-line diff and real changes
+# hid inside mechanical churn.
+* text=auto eol=lf
+
 *.command text eol=lf
 *.sh text eol=lf
 packaging/linux/appimage/AppRun text eol=lf
 packaging/linux/flatpak/opencut-server text eol=lf
+
+# Windows-only scripts that some shells and installers expect with CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Never touched: byte-for-byte content where a line-ending rewrite corrupts.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.webp binary
+*.pdf binary
+*.zip binary
+*.crx binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.onnx binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.mp4 binary
+*.mov binary
+*.wav binary
+*.mp3 binary
