@@ -300,6 +300,13 @@ OpenCut v1.48.0 includes **1,563 shipped API routes** (implemented or dependency
 | Auto-Edit | Motion-based and audio-based automated rough cuts | auto-editor |
 | Cut Review Panel | Review and approve/reject individual cuts before applying to timeline | Built-in |
 
+Splicing two non-adjacent pieces of audio together can leave a click at the
+join. When OpenCut renders cut media itself it applies a short fade (5 ms by
+default) to each interior cut boundary, which removes the discontinuity without
+being audible as a fade. Send `fade_ms` to change the length or `0` to turn it
+off. Cuts written back to a Premiere sequence are a different path: Premiere
+owns the edit, so add its own audio transitions there if you want them.
+
 ### Captions & Transcription
 
 | Feature | Description | Engine |

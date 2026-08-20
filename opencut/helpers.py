@@ -555,6 +555,77 @@ def write_concat_list(paths, file_path: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Cut-boundary audio fades
+# ---------------------------------------------------------------------------
+# Every module that removes or compresses material rebuilds the timeline by
+# trimming segments and concatenating them. A concat splices two unrelated
+# waveforms sample-to-sample, and unless both happen to sit at a zero crossing
+# the step discontinuity is audible as a click or pop on every edit. A fade
+# shorter than a syllable removes it without being heard as a fade.
+EDGE_FADE_DEFAULT_MS = 5.0
+EDGE_FADE_MAX_MS = 100.0
+# Below this a segment is short enough that fading both edges would shape most
+# of its content, so it is left alone.
+_EDGE_FADE_MIN_SEGMENT_RATIO = 4.0
+
+
+def edge_fade_ms(requested=None) -> float:
+    """Clamp a requested cut-boundary fade to the supported range.
+
+    ``None`` selects the default. Zero (or anything that does not parse as a
+    number) disables the fade, which is how callers opt out per request.
+    """
+    if requested is None:
+        return EDGE_FADE_DEFAULT_MS
+    try:
+        value = float(requested)
+    except (TypeError, ValueError):
+        return 0.0
+    if value != value or value in (float("inf"), float("-inf")):
+        return 0.0
+    if value <= 0:
+        return 0.0
+    return min(value, EDGE_FADE_MAX_MS)
+
+
+def build_edge_fade_filter(
+    segment_duration: float,
+    fade_ms=None,
+    *,
+    fade_in: bool = True,
+    fade_out: bool = True,
+) -> str:
+    """Return ``afade`` filters that de-click one segment's cut boundaries.
+
+    Returns an empty string when the fade is disabled, when the segment is too
+    short to carry one, or when neither edge was requested — callers append the
+    result to an existing audio chain, so an empty string is a safe no-op.
+    """
+    ms = edge_fade_ms(fade_ms)
+    if ms <= 0 or not (fade_in or fade_out):
+        return ""
+    try:
+        duration = float(segment_duration)
+    except (TypeError, ValueError):
+        return ""
+    if duration != duration or duration <= 0:
+        return ""
+
+    seconds = ms / 1000.0
+    edges = int(fade_in) + int(fade_out)
+    # Keep the faded portion a small fraction of the segment.
+    if duration < seconds * edges * _EDGE_FADE_MIN_SEGMENT_RATIO:
+        return ""
+
+    parts = []
+    if fade_in:
+        parts.append(f"afade=t=in:st=0:d={seconds:.6f}")
+    if fade_out:
+        parts.append(f"afade=t=out:st={duration - seconds:.6f}:d={seconds:.6f}")
+    return ",".join(parts)
+
+
+# ---------------------------------------------------------------------------
 # Shared Package Installer
 # ---------------------------------------------------------------------------
 def ensure_package(pkg: str, pip_name: str = None, on_progress=None) -> bool:

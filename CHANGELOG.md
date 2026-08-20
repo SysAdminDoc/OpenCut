@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Cut boundaries no longer click
+
+- Rendering a cut splices two non-adjacent waveforms sample-to-sample, and
+  unless both sides sit at a zero crossing the step is audible as a click on
+  every edit. Interior cut boundaries now get a 5 ms fade, measured on a tone
+  fixture to cut the sample discontinuity by roughly 94%. It applies to
+  transcript-driven cut renders, silence speed-up, and dead-time speed ramps;
+  the outer edges of a file are left alone because they are not splices. Send
+  `fade_ms` to change the length or `0` to opt out. Cuts written back to a
+  Premiere sequence are unaffected — Premiere owns those transitions.
+
 ### Fixed - CSRF rejections are actionable instead of a dead end
 
 - A refused mutation returned a bare `{"error": "Invalid or missing CSRF

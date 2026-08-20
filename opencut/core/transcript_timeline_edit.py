@@ -16,7 +16,13 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import FFmpegCmd, get_video_info, output_path, run_ffmpeg
+from opencut.helpers import (
+    FFmpegCmd,
+    build_edge_fade_filter,
+    get_video_info,
+    output_path,
+    run_ffmpeg,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -1034,6 +1040,7 @@ def _concat_segments(
     cuts: List[CutEntry],
     out_path: str,
     on_progress: Optional[Callable] = None,
+    fade_ms=None,
 ):
     """Concatenate multiple segments using FFmpeg filter_complex."""
     # Build filter_complex string
@@ -1044,9 +1051,18 @@ def _concat_segments(
             f"[0:v]trim=start={cut.source_start:.4f}:end={cut.source_end:.4f},"
             f"setpts=PTS-STARTPTS[v{i}];"
         )
+        # De-click the splice: every boundary here joins two non-adjacent
+        # regions of the source. The first segment's head and the last
+        # segment's tail are real media boundaries, not splices.
+        fade = build_edge_fade_filter(
+            cut.source_end - cut.source_start,
+            fade_ms,
+            fade_in=i > 0,
+            fade_out=i < n - 1,
+        )
         filter_parts.append(
             f"[0:a]atrim=start={cut.source_start:.4f}:end={cut.source_end:.4f},"
-            f"asetpts=PTS-STARTPTS[a{i}];"
+            f"asetpts=PTS-STARTPTS{',' + fade if fade else ''}[a{i}];"
         )
 
     v_streams = "".join(f"[v{i}]" for i in range(n))

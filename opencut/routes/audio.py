@@ -19,6 +19,8 @@ from opencut.checks import check_audio_separator_available, check_demucs_availab
 from opencut.core.workflow import workflow_step
 from opencut.errors import error_response, safe_error
 from opencut.helpers import (
+    EDGE_FADE_DEFAULT_MS,
+    EDGE_FADE_MAX_MS,
     _make_sequence_name,
     _resolve_output_dir,
     get_ffmpeg_path,
@@ -1597,6 +1599,9 @@ def silence_speed_up(job_id, filepath, data):
     speed_factor = safe_float(data.get("speed_factor", 4.0), 4.0, min_val=1.5, max_val=8.0)
     threshold_db = safe_float(data.get("threshold_db", -30.0), -30.0, min_val=-60.0, max_val=-10.0)
     min_duration = safe_float(data.get("min_duration", 0.5), 0.5, min_val=0.1, max_val=5.0)
+    # Cut-boundary de-click; 0 disables it.
+    fade_ms = safe_float(data.get("fade_ms", EDGE_FADE_DEFAULT_MS), EDGE_FADE_DEFAULT_MS,
+                         min_val=0.0, max_val=EDGE_FADE_MAX_MS)
     output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
 
     def _on_progress(pct, msg=""):
@@ -1609,6 +1614,7 @@ def silence_speed_up(job_id, filepath, data):
         min_duration=min_duration,
         output_dir=output_dir,
         on_progress=_on_progress,
+        fade_ms=fade_ms,
     )
 
     return result

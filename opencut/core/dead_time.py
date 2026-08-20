@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
 from opencut.helpers import (
+    build_edge_fade_filter,
     get_ffmpeg_path,
     get_video_info,
     run_ffmpeg,
@@ -222,6 +223,7 @@ def speed_ramp_dead_time(
     speed_factor: float = 8.0,
     output_path_override: Optional[str] = None,
     on_progress: Optional[Callable] = None,
+    fade_ms=None,
 ) -> dict:
     """
     Speed up dead-time segments while keeping normal segments at 1x.
@@ -298,6 +300,7 @@ def speed_ramp_dead_time(
     concat_inputs_v = []
     concat_inputs_a = []
 
+    last_idx = parts[-1]["idx"]
     for p in parts:
         i = p["idx"]
         s = p["speed"]
@@ -308,9 +311,18 @@ def speed_ramp_dead_time(
         # Audio: atempo only supports 0.5-100.0
         # For speeds > 2.0, chain multiple atempo filters
         atempo_chain = _build_atempo_chain(s)
+        # Each speed change is a splice between two differently-timed
+        # waveforms; fade the boundaries so the transition is inaudible.
+        # Duration is post-atempo, so divide the source span by the speed.
+        fade = build_edge_fade_filter(
+            (p["end"] - p["start"]) / s if s else 0.0,
+            fade_ms,
+            fade_in=i > 0,
+            fade_out=i < last_idx,
+        )
         fc_parts.append(
             f"[0:a]atrim=start={p['start']}:end={p['end']},"
-            f"asetpts=PTS-STARTPTS,{atempo_chain}[a{i}]"
+            f"asetpts=PTS-STARTPTS,{atempo_chain}{',' + fade if fade else ''}[a{i}]"
         )
         concat_inputs_v.append(f"[v{i}]")
         concat_inputs_a.append(f"[a{i}]")
