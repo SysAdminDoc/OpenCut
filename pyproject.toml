@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+# PEP 639 SPDX license expressions need setuptools 77.0+.
+requires = ["setuptools>=77.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -13,7 +14,11 @@ name = "opencut-ppro"
 version = "1.48.0"
 description = "OpenCut for Premiere Pro - local AI video editing automation (captions, audio, VFX) for Adobe Premiere Pro via CEP/UXP, CLI, REST, and MCP"
 readme = "README.md"
-license = {text = "MIT"}
+# PEP 639: an SPDX expression, not the deprecated table form. The
+# "License :: OSI Approved" classifier is deprecated alongside it and
+# setuptools rejects declaring both.
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11,<3.15"
 authors = [
     {name = "OpenCut Contributors"},
@@ -28,7 +33,6 @@ classifiers = [
     "Intended Audience :: End Users/Desktop",
     "Topic :: Multimedia :: Video",
     "Topic :: Multimedia :: Sound/Audio",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",

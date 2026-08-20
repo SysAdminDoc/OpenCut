@@ -36,11 +36,12 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: Each per-panel asset carries a name that identifies its panel (or lives under a panel-scoped directory), every referencing tag and tool list is updated, and the entries are removed from `panel_specific` because the collision no longer exists.
   Complexity: S
 
-- [ ] P3 — F317 — Adopt PEP 751 `pylock.toml` and PEP 639 SPDX licence metadata
-  Why: Four hand-maintained `requirements-*-lock.txt` files (one of them 126 KB) now have a standard replacement that pip installs directly, and the current `license` plus classifier form is the deprecated pre-PEP-639 spelling; consolidating removes a recurring version-sync surface that already carries dozens of `fix:` commits.
-  Evidence: https://peps.python.org/pep-0751/ (pip 26.1 installs from `pylock.toml`); `requirements-lock.txt`, `requirements-build-lock.txt`, `requirements-release-lock.txt`; `pyproject.toml` licence block
-  Touches: `pyproject.toml`, `requirements*.txt`, `scripts/sync_version.py`, `scripts/check_dependency_matrix.py`, `Dockerfile`, `docs/`
-  Acceptance: A generated `pylock.toml` reproduces the release environment and is verified in release smoke; the bespoke lockfiles are either removed or generated from it; `project.license` uses an SPDX expression with the deprecated classifier removed; the version-sync target count is updated to match.
+- [ ] P3 — F352 — Replace the hand-maintained lockfiles with a generated PEP 751 `pylock.toml`
+  Why: F317 landed the PEP 639 half on 2026-08-20 (SPDX expression, `license-files`, deprecated classifier removed, verified in built wheel metadata). The lockfile half is untouched: four hand-maintained `requirements-*-lock.txt` files, one of them 126 KB, still carry a version-sync surface that has accumulated dozens of `fix:` commits, and pip 26.1+ installs a standard `pylock.toml` directly.
+  Evidence: `requirements-lock.txt`, `requirements-build-lock.txt`, `requirements-release-lock.txt`, `requirements.txt`; `python -m pip lock --help` on pip 26.2.1 works but is marked EXPERIMENTAL and needs a network resolve; https://peps.python.org/pep-0751/
+  Touches: `pyproject.toml`, `requirements*.txt`, `scripts/sync_version.py`, `scripts/check_dependency_matrix.py`, `scripts/release_smoke.py`, `Dockerfile`, `docs/`
+  Acceptance: A generated `pylock.toml` reproduces the release environment and is verified in release smoke; the bespoke lockfiles are either removed or generated from it; the version-sync target count is updated to match.
+  Note: `pip lock` is EXPERIMENTAL and resolves over the network, so pinning a release lane on it needs a deliberate call about reproducibility and offline builds — decide that before wiring it into the release gate. The torch/faster-whisper extras make a full resolve slow.
   Complexity: M
 
 - [ ] P3 — F344 — Rank repeat clusters with a best-take recommendation
