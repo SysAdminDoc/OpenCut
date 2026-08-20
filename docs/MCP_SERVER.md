@@ -3,10 +3,10 @@
 > **What:** The `opencut-mcp-server` console script speaks the [Model
 > Context Protocol](https://modelcontextprotocol.io) so AI clients
 > (Claude Code, Cursor, Continue, Aider, etc.) can drive OpenCut's
-> 88 curated MCP tools and 1,477 generated route-level tools without
+> 98 curated MCP tools and 1,467 generated route-level tools without
 > writing one-off HTTP shims.
 >
-> **Status:** Shipped since v1.30.0. 88 curated tools cover the most
+> **Status:** Shipped since v1.30.0. 98 curated tools cover the most
 > common silence/filler/captions/highlights/export pipelines plus
 > the Pass-2 expansion (Brand Kit, semantic search, marker import,
 > review bundles, C2PA provenance, ElevenLabs TTS, caption QC,
@@ -85,7 +85,7 @@ the stdio and HTTP transports cannot drift apart.
 - The `mcp` SDK is not imported by OpenCut — the server speaks JSON-RPC
   directly — so both the 1.x and 2.x SDK lines work as client-side tooling.
 
-## 3. Tool catalogue (88 tools)
+## 3. Tool catalogue (98 tools)
 
 The full schema for each tool lives in
 [`opencut/mcp_server.py`](../opencut/mcp_server.py)
@@ -187,8 +187,8 @@ Fields the manifest captures:
 | `license` | `MIT` from `pyproject.toml`. |
 
 The extended manifest is separate on purpose: upstream registries and
-most users should see the 88 curated tools by default, while local
-power users can opt into the generated 1,477 route-level set.
+most users should see the 98 curated tools by default, while local
+power users can opt into the generated 1,467 route-level set.
 
 ## 5. Registering with `modelcontextprotocol/servers`
 
@@ -269,7 +269,7 @@ tracked as the only remaining external action for F147.
 
 ## 8. References
 
-- `opencut/mcp_server.py` — full implementation, 1,160+ lines, 88
+- `opencut/mcp_server.py` — full implementation, 1,160+ lines, 98
   curated tools, JSON-RPC 2.0 over stdio + HTTP.
 - `opencut/_generated/mcp_server_registry.json` — registry manifest
   this doc points at.
@@ -287,7 +287,7 @@ tracked as the only remaining external action for F147.
 
 <!-- agent-skill:start -->
 
-Generated from `opencut/_generated/mcp_server_registry.json` (88 tools). Regenerate with `python -m opencut.tools.dump_mcp_agent_skill`.
+Generated from `opencut/_generated/mcp_server_registry.json` (98 tools). Regenerate with `python -m opencut.tools.dump_mcp_agent_skill`.
 
 ### Conventions
 
@@ -324,6 +324,8 @@ Ignoring it: A path that only exists on the client produces a job that fails min
 5. `opencut_export_video` — Renders the result. Returns a job; poll it to completion.
 
 ### Tool families
+
+**Route-family entry points** (10): `opencut_surface_batch_expression_evaluate`, `opencut_surface_color_mam_scopes`, `opencut_surface_editing_copilot_execute`, `opencut_surface_integration_adjustment_presets`, `opencut_surface_platform_amd_detect`, `opencut_surface_system_openapi`, `opencut_surface_wave_k_spectral_match_info`, `opencut_surface_wave_l_vl_info`, `opencut_surface_wave_qrs_canary_info`, `opencut_surface_workflow_macro_load`
 
 **Cut and clean** (9): `opencut_auto_zoom`, `opencut_filler_remove`, `opencut_repeat_detect`, `opencut_scene_detect`, `opencut_silence_remove`, `opencut_speed_change`, `opencut_speed_ramp`, `opencut_timeline_beat_cut`, `opencut_trim_video`
 

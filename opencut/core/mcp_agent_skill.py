@@ -1,6 +1,6 @@
 """Generate a packaged agent skill from the MCP tool registry.
 
-An agent meeting OpenCut's 88-tool MCP server for the first time has to
+An agent meeting OpenCut's 98-tool MCP server for the first time has to
 rediscover the same conventions from raw schemas every session: that a tool may
 return a job rather than a result, that destructive timeline writes go through a
 review pass, and that the curated catalogue deliberately omits configuration
@@ -25,6 +25,11 @@ SKILL_NAME = "opencut-ppro"
 #: they appear in the rendered skill. ``other`` is the deliberate catch-all so a
 #: newly added tool is listed rather than silently dropped.
 TOOL_FAMILIES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    (
+        "surfaces",
+        "Route-family entry points",
+        ("surface",),
+    ),
     (
         "cut",
         "Cut and clean",

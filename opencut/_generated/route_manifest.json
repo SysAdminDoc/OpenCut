@@ -1,6 +1,6 @@
 {
   "version": 4,
-  "generated_at": "2026-08-20T16:58:20Z",
+  "generated_at": "2026-08-20T19:31:51Z",
   "total_routes": 1593,
   "shipped_route_count": 1563,
   "blueprint_count": 107,
@@ -2382,12 +2382,12 @@
       "endpoint": "platform_infra.amd_capabilities",
       "blueprint": "platform_infra",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "palette",
       "surface_classes": [
-        "integration-only"
+        "palette"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/core/command_palette.py"
       ]
     },
     {
@@ -2398,12 +2398,12 @@
       "endpoint": "platform_infra.amd_detect",
       "blueprint": "platform_infra",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "mcp",
       "surface_classes": [
-        "integration-only"
+        "mcp"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/mcp_server.py"
       ]
     },
     {
@@ -2558,12 +2558,12 @@
       "endpoint": "wave_qrs.route_internvl3_info",
       "blueprint": "wave_qrs",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "palette",
       "surface_classes": [
-        "integration-only"
+        "palette"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/core/command_palette.py"
       ]
     },
     {
@@ -2574,12 +2574,12 @@
       "endpoint": "wave_l.route_omni_narrate",
       "blueprint": "wave_l",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "cli",
       "surface_classes": [
-        "integration-only"
+        "cli"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/cli.py"
       ]
     },
     {
@@ -2590,12 +2590,12 @@
       "endpoint": "wave_l.route_omni_info",
       "blueprint": "wave_l",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "palette",
       "surface_classes": [
-        "integration-only"
+        "palette"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/core/command_palette.py"
       ]
     },
     {
@@ -2638,12 +2638,12 @@
       "endpoint": "wave_qrs.route_qwen3vl_info",
       "blueprint": "wave_qrs",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "cli",
       "surface_classes": [
-        "integration-only"
+        "cli"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/cli.py"
       ]
     },
     {
@@ -2670,12 +2670,12 @@
       "endpoint": "wave_l.route_vl_info",
       "blueprint": "wave_l",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "mcp",
       "surface_classes": [
-        "integration-only"
+        "mcp"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/mcp_server.py"
       ]
     },
     {
@@ -2814,12 +2814,14 @@
       "endpoint": "integration.list_presets_route",
       "blueprint": "integration",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "palette",
       "surface_classes": [
-        "integration-only"
+        "palette",
+        "mcp"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/core/command_palette.py",
+        "opencut/mcp_server.py"
       ]
     },
     {
@@ -2830,12 +2832,14 @@
       "endpoint": "integration.save_preset_route",
       "blueprint": "integration",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "palette",
       "surface_classes": [
-        "integration-only"
+        "palette",
+        "mcp"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/core/command_palette.py",
+        "opencut/mcp_server.py"
       ]
     },
     {
@@ -3262,12 +3266,12 @@
       "endpoint": "integration.flight_map_route",
       "blueprint": "integration",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "cli",
       "surface_classes": [
-        "integration-only"
+        "cli"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/cli.py"
       ]
     },
     {
@@ -3358,12 +3362,12 @@
       "endpoint": "workflow_dev.edl_export",
       "blueprint": "workflow_dev",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "palette",
       "surface_classes": [
-        "integration-only"
+        "palette"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/core/command_palette.py"
       ]
     },
     {
@@ -4206,12 +4210,12 @@
       "endpoint": "workflow_dev.macro_load",
       "blueprint": "workflow_dev",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "mcp",
       "surface_classes": [
-        "integration-only"
+        "mcp"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/mcp_server.py"
       ]
     },
     {
@@ -5374,12 +5378,12 @@
       "endpoint": "workflow_dev.scripting_modules",
       "blueprint": "workflow_dev",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "cli",
       "surface_classes": [
-        "integration-only"
+        "cli"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/cli.py"
       ]
     },
     {
@@ -6945,12 +6949,12 @@
       "endpoint": "wave_k.route_profanity_wordlists",
       "blueprint": "wave_k",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "palette",
       "surface_classes": [
-        "integration-only"
+        "palette"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/core/command_palette.py"
       ]
     },
     {
@@ -8204,12 +8208,12 @@
       "endpoint": "wave_k.route_sfx_audiogen",
       "blueprint": "wave_k",
       "readiness": "dependency-gated",
-      "surface_class": "integration-only",
+      "surface_class": "cli",
       "surface_classes": [
-        "integration-only"
+        "cli"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/cli.py"
       ]
     },
     {
@@ -8268,12 +8272,12 @@
       "endpoint": "wave_k.route_spectral_match_info",
       "blueprint": "wave_k",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "mcp",
       "surface_classes": [
-        "integration-only"
+        "mcp"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/mcp_server.py"
       ]
     },
     {
@@ -8572,12 +8576,12 @@
       "endpoint": "wave_qrs.route_canary_info",
       "blueprint": "wave_qrs",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "mcp",
       "surface_classes": [
-        "integration-only"
+        "mcp"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/mcp_server.py"
       ]
     },
     {
@@ -9137,12 +9141,12 @@
       "endpoint": "system.auth_info",
       "blueprint": "system",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "palette",
       "surface_classes": [
-        "integration-only"
+        "palette"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/core/command_palette.py"
       ]
     },
     {
@@ -9233,12 +9237,12 @@
       "endpoint": "batch_data.metadata_template",
       "blueprint": "batch_data",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "cli",
       "surface_classes": [
-        "integration-only"
+        "cli"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/cli.py"
       ]
     },
     {
@@ -9473,12 +9477,12 @@
       "endpoint": "platform_infra.branch_list",
       "blueprint": "platform_infra",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "cli",
       "surface_classes": [
-        "integration-only"
+        "cli"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/cli.py"
       ]
     },
     {
@@ -11071,12 +11075,12 @@
       "endpoint": "editing_wf.copilot_execute",
       "blueprint": "editing_wf",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "mcp",
       "surface_classes": [
-        "integration-only"
+        "mcp"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/mcp_server.py"
       ]
     },
     {
@@ -11087,12 +11091,12 @@
       "endpoint": "editing_wf.copilot_query",
       "blueprint": "editing_wf",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "cli",
       "surface_classes": [
-        "integration-only"
+        "cli"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/cli.py"
       ]
     },
     {
@@ -12235,12 +12239,12 @@
       "endpoint": "batch_data.expression_evaluate",
       "blueprint": "batch_data",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "mcp",
       "surface_classes": [
-        "integration-only"
+        "mcp"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/mcp_server.py"
       ]
     },
     {
@@ -12267,12 +12271,12 @@
       "endpoint": "batch_data.expression_validate",
       "blueprint": "batch_data",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "palette",
       "surface_classes": [
-        "integration-only"
+        "palette"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/core/command_palette.py"
       ]
     },
     {
@@ -14571,12 +14575,12 @@
       "endpoint": "system.llm_status",
       "blueprint": "system",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "cli",
       "surface_classes": [
-        "integration-only"
+        "cli"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/cli.py"
       ]
     },
     {
@@ -15115,12 +15119,12 @@
       "endpoint": "editing_wf.multilang_sync",
       "blueprint": "editing_wf",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "palette",
       "surface_classes": [
-        "integration-only"
+        "palette"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/core/command_palette.py"
       ]
     },
     {
@@ -15406,12 +15410,12 @@
       "endpoint": "system.openapi_spec",
       "blueprint": "system",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "mcp",
       "surface_classes": [
-        "integration-only"
+        "mcp"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/mcp_server.py"
       ]
     },
     {
@@ -21825,12 +21829,12 @@
       "endpoint": "color_mam.aces_list_idts",
       "blueprint": "color_mam",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "cli",
       "surface_classes": [
-        "integration-only"
+        "cli"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/cli.py"
       ]
     },
     {
@@ -21841,12 +21845,12 @@
       "endpoint": "color_mam.aces_list_odts",
       "blueprint": "color_mam",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "palette",
       "surface_classes": [
-        "integration-only"
+        "palette"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/core/command_palette.py"
       ]
     },
     {
@@ -22477,12 +22481,12 @@
       "endpoint": "color_mam.color_scopes_all",
       "blueprint": "color_mam",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "mcp",
       "surface_classes": [
-        "integration-only"
+        "mcp"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/mcp_server.py"
       ]
     },
     {
@@ -27211,23 +27215,23 @@
     ],
     "summary": {
       "shipped_routes": 1563,
-      "direct_surface_routes": 280,
-      "integration_only_routes": 1283,
-      "coverage_percent": 17.9,
-      "multi_surface_routes": 60,
+      "direct_surface_routes": 310,
+      "integration_only_routes": 1253,
+      "coverage_percent": 19.8,
+      "multi_surface_routes": 62,
       "primary_counts": {
         "panel": 218,
-        "palette": 22,
-        "cli": 0,
-        "mcp": 40,
-        "integration-only": 1313
+        "palette": 33,
+        "cli": 10,
+        "mcp": 49,
+        "integration-only": 1283
       },
       "assigned_counts": {
         "panel": 218,
-        "palette": 33,
-        "cli": 1,
-        "mcp": 99,
-        "integration-only": 1313
+        "palette": 44,
+        "cli": 11,
+        "mcp": 110,
+        "integration-only": 1283
       }
     },
     "gate": {

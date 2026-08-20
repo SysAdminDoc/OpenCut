@@ -212,6 +212,88 @@ _MCP_TOOLS: List[MCPTool] = [
 ]
 
 
+# F354: keep the legacy MCP registry aligned with the concrete route-family
+# entry points exposed by opencut.mcp_server.
+ROUTE_FAMILY_MCP_TOOLS: List[MCPTool] = [
+    MCPTool(
+        name="opencut_surface_wave_l_vl_info",
+        description="Inspect the Wave L video-language analysis lane.",
+        category="route-family",
+        endpoint="/analyze/video/vl/info",
+        method="GET",
+    ),
+    MCPTool(
+        name="opencut_surface_platform_amd_detect",
+        description="Detect available AMD runtime support.",
+        category="route-family",
+        endpoint="/amd/detect",
+        method="GET",
+    ),
+    MCPTool(
+        name="opencut_surface_wave_k_spectral_match_info",
+        description="Inspect the Wave K spectral matching lane.",
+        category="route-family",
+        endpoint="/audio/spectral-match/info",
+        method="GET",
+    ),
+    MCPTool(
+        name="opencut_surface_wave_qrs_canary_info",
+        description="Inspect the Wave QRS Canary transcription lane.",
+        category="route-family",
+        endpoint="/audio/transcribe/canary/info",
+        method="GET",
+    ),
+    MCPTool(
+        name="opencut_surface_integration_adjustment_presets",
+        description="Save an adjustment-layer preset.",
+        category="route-family",
+        parameters=[MCPToolParameter("body", "object", "JSON request body")],
+        endpoint="/api/adjustment-layers/presets",
+        method="POST",
+    ),
+    MCPTool(
+        name="opencut_surface_color_mam_scopes",
+        description="Compute all color scopes for a media input.",
+        category="route-family",
+        parameters=[MCPToolParameter("body", "object", "JSON request body")],
+        endpoint="/video/color-scopes/all",
+        method="POST",
+    ),
+    MCPTool(
+        name="opencut_surface_system_openapi",
+        description="Read the local OpenCut OpenAPI description.",
+        category="route-family",
+        endpoint="/openapi.json",
+        method="GET",
+    ),
+    MCPTool(
+        name="opencut_surface_batch_expression_evaluate",
+        description="Evaluate an expression in the batch data lane.",
+        category="route-family",
+        parameters=[MCPToolParameter("body", "object", "JSON request body")],
+        endpoint="/expression/evaluate",
+        method="POST",
+    ),
+    MCPTool(
+        name="opencut_surface_editing_copilot_execute",
+        description="Execute a reviewed editing workflow command.",
+        category="route-family",
+        parameters=[MCPToolParameter("body", "object", "JSON request body")],
+        endpoint="/copilot/execute",
+        method="POST",
+    ),
+    MCPTool(
+        name="opencut_surface_workflow_macro_load",
+        description="Load a saved workflow macro.",
+        category="route-family",
+        parameters=[MCPToolParameter("body", "object", "JSON request body")],
+        endpoint="/api/macro/load",
+        method="POST",
+    ),
+]
+_MCP_TOOLS.extend(ROUTE_FAMILY_MCP_TOOLS)
+
+
 # ---------------------------------------------------------------------------
 # Compound tool definitions
 # ---------------------------------------------------------------------------

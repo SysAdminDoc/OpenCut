@@ -33,6 +33,71 @@ ROUTE_MANIFEST_PATH = Path(__file__).resolve().parent / "_generated" / "route_ma
 _CLI_ROUTE_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 _CLI_MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
+# F354: concrete examples keep the generic route command discoverable. Each
+# entry is checked against route_manifest.json before the request is sent.
+CLI_SURFACE_EXAMPLES = (
+    {
+        "family": "wave_l",
+        "method": "POST",
+        "path": "/analyze/video/narrate",
+        "description": "Generate a narrated analysis for a video.",
+    },
+    {
+        "family": "platform_infra",
+        "method": "GET",
+        "path": "/branches/list",
+        "description": "List local project branches.",
+    },
+    {
+        "family": "wave_k",
+        "method": "POST",
+        "path": "/audio/sfx/generate",
+        "description": "Generate a sound effect from a prompt.",
+    },
+    {
+        "family": "wave_qrs",
+        "method": "GET",
+        "path": "/analyze/video/qwen3vl/info",
+        "description": "Inspect the Qwen3-VL analysis lane.",
+    },
+    {
+        "family": "integration",
+        "method": "POST",
+        "path": "/api/drone/flight-map",
+        "description": "Build a flight map from drone metadata.",
+    },
+    {
+        "family": "color_mam",
+        "method": "GET",
+        "path": "/video/aces/idts",
+        "description": "List available ACES input transforms.",
+    },
+    {
+        "family": "system",
+        "method": "GET",
+        "path": "/llm/status",
+        "description": "Read local language-model service status.",
+    },
+    {
+        "family": "batch_data",
+        "method": "POST",
+        "path": "/batch-metadata/template",
+        "description": "Create a batch metadata template.",
+    },
+    {
+        "family": "editing_wf",
+        "method": "POST",
+        "path": "/copilot/query",
+        "description": "Query the editing workflow assistant.",
+    },
+    {
+        "family": "workflow_dev",
+        "method": "GET",
+        "path": "/api/scripting/modules",
+        "description": "List available scripting modules.",
+    },
+)
+
 BANNER = r"""
   ___                    ____      _
  / _ \ _ __   ___ _ __  / ___|   _| |_
@@ -845,6 +910,25 @@ def route(method, path, host, port, query, data, data_file, field, timeout, raw)
         raise click.ClickException(
             f"{method} {matched.get('rule', path)} returned HTTP {status}"
         )
+
+
+@cli.command("surfaces")
+@click.option("--json", "json_output", is_flag=True, help="Print machine-readable JSON.")
+def surfaces(json_output):
+    """List curated route-family entry points for the route command."""
+    payload = {"surfaces": list(CLI_SURFACE_EXAMPLES)}
+    if json_output:
+        click.echo(json.dumps(payload, indent=2, sort_keys=True))
+        return
+
+    table = Table(title="Curated Route Surfaces", box=box.ROUNDED)
+    table.add_column("Family", style="cyan")
+    table.add_column("Method", style="magenta")
+    table.add_column("Path", style="green")
+    table.add_column("Description")
+    for item in CLI_SURFACE_EXAMPLES:
+        table.add_row(item["family"], item["method"], item["path"], item["description"])
+    console.print(table)
 
 
 def _local_db_diagnostics_payload() -> dict[str, Any]:

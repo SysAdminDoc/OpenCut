@@ -1386,6 +1386,72 @@ MCP_TOOLS = [
             "required": ["filepath", "platform", "credentials"],
         },
     },
+    # F354: curated entry points for the largest integration-only families.
+    {
+        "name": "opencut_surface_wave_l_vl_info",
+        "description": "Inspect the Wave L video-language analysis lane.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "opencut_surface_platform_amd_detect",
+        "description": "Detect available AMD runtime support.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "opencut_surface_wave_k_spectral_match_info",
+        "description": "Inspect the Wave K spectral matching lane.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "opencut_surface_wave_qrs_canary_info",
+        "description": "Inspect the Wave QRS Canary transcription lane.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "opencut_surface_integration_adjustment_presets",
+        "description": "Save an adjustment-layer preset.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"body": {"type": "object", "description": "JSON request body"}},
+        },
+    },
+    {
+        "name": "opencut_surface_color_mam_scopes",
+        "description": "Compute all color scopes for a media input.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"body": {"type": "object", "description": "JSON request body"}},
+        },
+    },
+    {
+        "name": "opencut_surface_system_openapi",
+        "description": "Read the local OpenCut OpenAPI description.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "opencut_surface_batch_expression_evaluate",
+        "description": "Evaluate an expression in the batch data lane.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"body": {"type": "object", "description": "JSON request body"}},
+        },
+    },
+    {
+        "name": "opencut_surface_editing_copilot_execute",
+        "description": "Execute a reviewed editing workflow command.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"body": {"type": "object", "description": "JSON request body"}},
+        },
+    },
+    {
+        "name": "opencut_surface_workflow_macro_load",
+        "description": "Load a saved workflow macro.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"body": {"type": "object", "description": "JSON request body"}},
+        },
+    },
 ]
 
 # Route mapping for tool execution
@@ -1490,6 +1556,16 @@ _TOOL_ROUTES = {
     "opencut_dependencies": ("GET", "/system/dependencies"),
     "opencut_feature_state": ("GET", "/system/feature-state"),
     "opencut_social_upload": ("POST", "/social/upload"),
+    "opencut_surface_wave_l_vl_info": ("GET", "/analyze/video/vl/info"),
+    "opencut_surface_platform_amd_detect": ("GET", "/amd/detect"),
+    "opencut_surface_wave_k_spectral_match_info": ("GET", "/audio/spectral-match/info"),
+    "opencut_surface_wave_qrs_canary_info": ("GET", "/audio/transcribe/canary/info"),
+    "opencut_surface_integration_adjustment_presets": ("POST", "/api/adjustment-layers/presets"),
+    "opencut_surface_color_mam_scopes": ("POST", "/video/color-scopes/all"),
+    "opencut_surface_system_openapi": ("GET", "/openapi.json"),
+    "opencut_surface_batch_expression_evaluate": ("POST", "/expression/evaluate"),
+    "opencut_surface_editing_copilot_execute": ("POST", "/copilot/execute"),
+    "opencut_surface_workflow_macro_load": ("POST", "/api/macro/load"),
 }
 
 

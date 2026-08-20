@@ -18,7 +18,7 @@
       }
     }
   },
-  "generated_at": "2026-08-04T21:59:36Z",
+  "generated_at": "2026-08-20T19:34:36Z",
   "homepage": "https://github.com/SysAdminDoc/OpenCut",
   "install": {
     "command": "pip install \"opencut[mcp]\"",
@@ -45,7 +45,7 @@
     "captions",
     "ai"
   ],
-  "tool_count": 88,
+  "tool_count": 98,
   "tools": [
     {
       "description": "Generate an ADR (Automated Dialogue Replacement) cue list from sequence data.",
@@ -346,6 +346,46 @@
     {
       "description": "Apply style transfer to video (preset styles or arbitrary reference image)",
       "name": "opencut_style_transfer"
+    },
+    {
+      "description": "Evaluate an expression in the batch data lane.",
+      "name": "opencut_surface_batch_expression_evaluate"
+    },
+    {
+      "description": "Compute all color scopes for a media input.",
+      "name": "opencut_surface_color_mam_scopes"
+    },
+    {
+      "description": "Execute a reviewed editing workflow command.",
+      "name": "opencut_surface_editing_copilot_execute"
+    },
+    {
+      "description": "Save an adjustment-layer preset.",
+      "name": "opencut_surface_integration_adjustment_presets"
+    },
+    {
+      "description": "Detect available AMD runtime support.",
+      "name": "opencut_surface_platform_amd_detect"
+    },
+    {
+      "description": "Read the local OpenCut OpenAPI description.",
+      "name": "opencut_surface_system_openapi"
+    },
+    {
+      "description": "Inspect the Wave K spectral matching lane.",
+      "name": "opencut_surface_wave_k_spectral_match_info"
+    },
+    {
+      "description": "Inspect the Wave L video-language analysis lane.",
+      "name": "opencut_surface_wave_l_vl_info"
+    },
+    {
+      "description": "Inspect the Wave QRS Canary transcription lane.",
+      "name": "opencut_surface_wave_qrs_canary_info"
+    },
+    {
+      "description": "Load a saved workflow macro.",
+      "name": "opencut_surface_workflow_macro_load"
     },
     {
       "description": "Return system information including OS, CPU, RAM, and disk stats.",

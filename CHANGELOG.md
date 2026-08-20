@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - The largest route families now have named entry points
+
+- Added an `opencut surfaces` catalog for the CLI route command, ten command
+  palette entries, and ten curated MCP tools covering the ten largest
+  integration-only families measured at the start of F354.
+- Regenerated the route, MCP, agent-skill, and extended-tool manifests. Direct
+  surface coverage rose from 17.9% to 19.8%, and the CLI now owns ten primary
+  route surfaces instead of zero.
+
 ### Fixed - The UXP panel now reaches its rendered test surface
 
 - Moved host-write verification setup before cut-executor construction. The
