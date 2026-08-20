@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - The i18n gate follows extracted controllers
+
+- The locale lint scanned a hand-listed set of panel scripts, so extracting a
+  controller out of main.js silently removed its keys from the scan and the
+  gate then reported 35 live keys as dead — the results and update controllers
+  had been invisible to it. The lint and the migration test now read every
+  panel runtime script, which also surfaced nine workflow preflight/approval
+  keys that were consumed but never added to `en.json`. Dead keys and missing
+  keys are both back to zero.
+
 ### Changed - The CEP-only host functions carry a dated 26.3 verdict
 
 - The three functions holding up the UXP migration were audited against the

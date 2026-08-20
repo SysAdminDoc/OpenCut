@@ -9049,7 +9049,20 @@ class TestI18nHardcodedMigration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.en = json.loads(EN_JSON.read_text(encoding="utf-8"))
+        # "Does the panel route this key through t()?" is asked of every runtime
+        # script, because controllers keep being extracted out of main.js and
+        # naming a fixed pair made an extraction look like a reverted migration.
+        client_dir = MAIN_JS.parent
         cls.js = "\n".join(
+            path.read_text(encoding="utf-8", errors="replace")
+            for path in sorted(client_dir.glob("*.js"))
+            if path.name != "CSInterface.js"
+        )
+        # "Is the bare English still used as a toast argument?" stays on the
+        # call-site modules it was written for. Shared utilities legitimately
+        # declare English default-label tables that callers override with
+        # translated values, and those are not reverted call sites.
+        cls.call_site_js = "\n".join(
             (
                 MAIN_JS.read_text(encoding="utf-8"),
                 BACKEND_CLIENT_JS.read_text(encoding="utf-8"),
@@ -9070,13 +9083,14 @@ class TestI18nHardcodedMigration(unittest.TestCase):
             with self.subTest(key=key):
                 self.assertRegex(
                     self.js, present_re,
-                    f"main.js does not invoke t({key!r}, …) — migration may have reverted",
+                    f"no panel runtime script invokes t({key!r}, …) — "
+                    "migration may have reverted",
                 )
                 if banned_re is None:
                     continue
                 # Bare-English form must not appear as a showToast argument.
                 self.assertNotRegex(
-                    self.js, banned_re,
+                    self.call_site_js, banned_re,
                     f"main.js still contains bare-English showToast for {key!r}",
                 )
 

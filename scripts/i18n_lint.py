@@ -44,13 +44,31 @@ BACKEND_CLIENT_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "backe
 TRANSCRIPT_CORRECTION_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "transcript-correction-controller.js"
 GPU_SELECTION_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "gpu-selection-controller.js"
 HOST_WRITE_VERIFICATION_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "host-write-verification.js"
-RUNTIME_JS_SOURCES = (
-    MAIN_JS,
-    BACKEND_CLIENT_JS,
-    TRANSCRIPT_CORRECTION_JS,
-    GPU_SELECTION_JS,
-    HOST_WRITE_VERIFICATION_JS,
-)
+CLIENT_DIR = ROOT / "extension" / "com.opencut.panel" / "client"
+
+# Vendored or non-runtime scripts that never consume locale keys.
+_NON_RUNTIME_JS = frozenset({"CSInterface.js"})
+
+
+def _runtime_js_sources() -> tuple[Path, ...]:
+    """Every panel runtime script, discovered rather than enumerated.
+
+    This list used to be hand-maintained, so extracting a controller out of
+    main.js silently removed its keys from the scan and the gate then reported
+    them as dead — which is exactly how `results-controller.js` and
+    `update-controller.js` put 35 live keys on the dead list. Globbing keeps a
+    new extraction covered on the commit that creates it.
+    """
+    return tuple(
+        sorted(
+            path
+            for path in CLIENT_DIR.glob("*.js")
+            if path.name not in _NON_RUNTIME_JS
+        )
+    )
+
+
+RUNTIME_JS_SOURCES = _runtime_js_sources()
 
 # The historic dead-key cleanup is complete. Keep the floor at zero so new
 # unused locale keys fail the gate immediately.
