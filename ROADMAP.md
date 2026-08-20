@@ -124,13 +124,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: Installation documentation states where the panel appears on Premiere 2026+ versus earlier versions; the installer reports the detected Premiere major version and the expected menu path in its completion output; the same sentence appears in the panel's own connection-failure guidance.
   Complexity: S
 
-- [ ] P3 — F330 — Make the release-gate lint and test configuration the one the editor applies
-  Why: `[tool.ruff]` declares only `line-length` and `target-version` with no `lint` section, so an editor-integrated ruff applies its default rule set while the gate applies a different, narrower one defined in two other files — and `[tool.pytest.ini_options]` sets no `testpaths` and no `--strict-markers` across 10,751 tests in 346 modules, so a mistyped marker silently selects nothing.
-  Evidence: `pyproject.toml:267-269`; `.pre-commit-config.yaml` (ruff `--select E,F,I --ignore E501,E402`); `scripts/release_smoke.py` repeats the same selection independently; `[tool.pytest.ini_options]` sets only `addopts` and two markers
-  Touches: `pyproject.toml`, `.pre-commit-config.yaml`, `scripts/release_smoke.py`, `DEVELOPMENT.md`, `CONTRIBUTING.md`
-  Acceptance: The ruff rule selection lives in `pyproject.toml` and both the pre-commit hook and the release smoke read it rather than restating it; pytest declares `testpaths` and `--strict-markers`; running the editor's ruff and the gate's ruff on the same tree produces the same findings.
-  Complexity: S
-
 - [ ] P3 — F331 — Pin OpenTimelineIO against the 0.19 bundle rewrite and contract-test the export path
   Why: The declared ceiling `opentimelineio>=0.17,<1` will silently admit 0.19, which moves `otioz`/`otiod` bundle handling out of Python into the C++ core — a behaviour change to a shipped export path — and the project has already been bitten once by an OTIO minor bump renaming `MediaReferencePolicy` enum members between 0.15 and 0.17.
   Evidence: `pyproject.toml:170,230`; `opencut/export/otio_export.py:547,566-567` (the enum-naming workaround); `opencut/export/otio_compat.py` reports the runtime version but pins and asserts nothing; https://github.com/AcademySoftwareFoundation/OpenTimelineIO/releases (0.18.1, 2025-11-09, still flagged prerelease, no release in 9 months)

@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - One lint configuration for the editor, the hook, and the gate
+
+- `[tool.ruff]` declared only line length and target version, so an
+  editor-integrated ruff applied its default rules while the pre-commit hook
+  and the release gate each restated a different selection — the gate's set was
+  strictly larger. The union now lives in `[tool.ruff.lint]` and all three read
+  it. pytest gained `testpaths` and `--strict-markers` so a bare run collects
+  the suite and a mistyped marker fails instead of silently selecting nothing.
+
 ### Added - Restoration and Mel-Band separators in the engine registry
 
 - The separator registry listed music-stem models only, while the route's own

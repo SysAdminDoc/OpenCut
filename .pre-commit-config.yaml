@@ -3,7 +3,9 @@ repos:
     rev: v0.8.6
     hooks:
       - id: ruff
-        args: [--fix, --select, "E,F,I", --ignore, "E501,E402"]
+        # Rule selection comes from [tool.ruff.lint] in pyproject.toml so the
+        # hook, the release gate, and an editor all apply the same rules.
+        args: [--fix]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
