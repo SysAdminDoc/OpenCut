@@ -236,6 +236,75 @@ class TestFallbackDrift(unittest.TestCase):
         self.assertIn("fallback_drift_count", e)
         self.assertEqual(e["fallback_drift_count"], len(e["fallback_drifts"]))
 
+class TestSpacedHyphenCopy(unittest.TestCase):
+    """F382 — " - " is a separator here, never sentence punctuation.
+
+    The house style bans a spaced hyphen standing in for a dash in anything a
+    user reads. A handful of compact status lines legitimately use it to join
+    fields, so those are listed by key: a new one has to be added here on
+    purpose rather than by habit.
+    """
+
+    #: Keys whose " - " joins two fields rather than two clauses.
+    SEPARATORS = frozenset({
+        # Publisher identity: name then fingerprint.
+        "settings.plugin_publisher_identity",
+        "uxp.settings.plugin_publisher_identity",
+        # Cut summaries: counts joined into one line.
+        "uxp.cut.runtime.cut_windows_summary",
+        "uxp.cut.runtime.longest_cut_suffix",
+        # Engine picker option: name then its quality/speed grades.
+        "uxp.settings.engine_option_label",
+        "uxp.settings.option_active_suffix",
+        "uxp.settings.option_unavailable_suffix",
+        # Chapter list and result metadata: timecode/source/provider fields.
+        "uxp.captions.runtime.chapter_line",
+        "uxp.captions.runtime.chapter_result_meta",
+        "uxp.captions.runtime.repeat_result_meta",
+        "uxp.captions.runtime.transcript_result_meta",
+        # Timeline results: count then the source clip path.
+        "uxp.timeline.runtime.cuts_ready_source_one",
+        "uxp.timeline.runtime.cuts_ready_source_many",
+        "uxp.timeline.runtime.markers_ready_source_one",
+        "uxp.timeline.runtime.markers_ready_source_many",
+        "uxp.timeline.runtime.source_path_suffix",
+        # Sequence report: name then its measurements.
+        "uxp.agent.runtime.sequence_index_summary",
+    })
+
+    LOCALES = (
+        REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "locales" / "en.json",
+        REPO_ROOT / "extension" / "com.opencut.uxp" / "locales" / "en.json",
+        REPO_ROOT / "extension" / "com.opencut.uxp" / "locales" / "es.json",
+    )
+
+    def test_spaced_hyphens_are_only_field_separators(self):
+        offenders = []
+        for path in self.LOCALES:
+            locale = json.loads(path.read_text(encoding="utf-8"))
+            for key, value in locale.items():
+                if not isinstance(value, str) or " - " not in value:
+                    continue
+                if key in self.SEPARATORS:
+                    continue
+                offenders.append(f"{path.parent.parent.name}/{path.name} {key}: {value}")
+        self.assertEqual(
+            offenders, [],
+            "Use a period or a rewrite instead of ' - ' in sentence copy, or "
+            "add the key to SEPARATORS with a reason:\n" + "\n".join(offenders),
+        )
+
+    def test_every_listed_separator_still_exists(self):
+        seen = set()
+        for path in self.LOCALES:
+            locale = json.loads(path.read_text(encoding="utf-8"))
+            seen.update(
+                key for key, value in locale.items()
+                if isinstance(value, str) and " - " in value
+            )
+        stale = sorted(self.SEPARATORS - seen)
+        self.assertEqual(stale, [], f"SEPARATORS lists keys that no longer use ' - ': {stale}")
+
 
 if __name__ == "__main__":
     unittest.main()

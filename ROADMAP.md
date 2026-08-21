@@ -34,16 +34,6 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
 
 ### P3
 
-- [ ] P3 — F382 — Spaced hyphens stand in for dashes across 52 locale strings
-  Category: ux
-  Where: 9 CEP keys (`settings.whisper_model_*`, `settings.plugin_publisher_identity`) and 43 UXP keys (`uxp.cut.runtime.filler_done_status`, `uxp.agent.runtime.job_queued`, `uxp.search.runtime.search_ready_*`, `uxp.deliverables.runtime.*`, `uxp.captions.runtime.chapter_line`, …)
-  Problem: The house rule bans " - " as a dash substitute in anything a user reads, and these are user-visible status lines and option labels. Some are genuinely prose ("Job queued - watch the progress bar above.", "No steps matched - try a more specific intent."); others are compact separators inside a status line ("{time} - {title}") where a period would read worse.
-  Evidence: Enumerated 2026-08-21 while closing F374; the two classes need different treatment, which is why F374 did not sweep them.
-  Fix: Split the list into prose and separator uses. Rewrite the prose ones as two sentences; leave or re-punctuate the separators deliberately (a middot is already used elsewhere: `search.files_with_segments` = "{files} • {segments}").
-  Acceptance: No user-visible locale string uses " - " as sentence punctuation in either panel; separator uses are a short, documented list.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — F381 — Areas this audit did not exercise
   Category: quality
   Where: live Premiere CEP/UXP host, WPF installer, Bolt WebView scaffold, MCP extended tool catalogue, `npm run test:rendered` screenshot goldens, CEP disabled Timeline/Deliverables/Rename `title` why-disabled copy
