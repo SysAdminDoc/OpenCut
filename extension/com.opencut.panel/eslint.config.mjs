@@ -20,6 +20,7 @@ export default [
       "client/results-controller.js",
       "client/settings-diagnostics-controller.js",
       "client/navigation-controller.js",
+      "client/collapsible-cards.js",
     ],
     languageOptions: {
       ecmaVersion: 2021,
@@ -32,6 +33,7 @@ export default [
         OpenCutResultsController: "readonly",
         OpenCutSettingsDiagnosticsController: "readonly",
         OpenCutNavigationController: "readonly",
+        OpenCutCollapsibleCards: "readonly",
         OpenCutHostWriteVerification: "readonly",
         OpenCutPanelBootstrapToken: "readonly",
         SystemPath: "readonly",

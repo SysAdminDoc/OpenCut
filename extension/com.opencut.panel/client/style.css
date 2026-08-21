@@ -3697,6 +3697,12 @@ input[type="checkbox"]:disabled {
     cursor: pointer;
     user-select: none;
 }
+/* The header is a real button for keyboard users, so it needs a real ring. */
+[data-collapsible]:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+    border-radius: var(--r-sm, 4px);
+}
 [data-collapsible]::after {
     content: '';
     display: inline-block;

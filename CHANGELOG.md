@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - CEP collapsible card headers work from the keyboard
+
+- Section headers on the CEP panel toggled on click only. They had no button
+  role, no tab stop, no announced expanded state, and no Enter or Space
+  handling, so keyboard and screen-reader users could not open the Settings
+  subsections UXP already exposed. The toggle moved into
+  `client/collapsible-cards.js` with the semantics UXP uses, and the header
+  now shows a focus ring.
+
 ### Fixed - First-paint panel text matches what the locale says
 
 - Both panels ship English text inline next to every `data-i18n` key. That

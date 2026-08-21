@@ -32,15 +32,6 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
 
 ### P2
 
-- [ ] P2 — F378 — CEP collapsible headers are mouse-only
-  Category: a11y
-  Where: `extension/com.opencut.panel/client/main.js` around the collapsible-header click wiring (~13378). UXP already does this in `uxp-ui-controller.js:363-386`.
-  Problem: CEP section headers toggle on click only. They have no `role="button"`, `tabindex`, `aria-expanded`, or Enter/Space handling, so keyboard and screen-reader users cannot open Settings subsections the UXP panel already exposes.
-  Why this pass skipped it: CEP `main.js` sits on a 18815-line budget (18800 after this audit). The UXP controller already owns the correct pattern; copying it inline would blow the budget. Extract a shared helper or delete dead CEP lines first.
-  Acceptance: Every collapsible header is reachable by Tab, announces expanded/collapsed, and toggles on Enter and Space, matching UXP.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P2 — F379 — Restart Backend and Clear Whisper cache have no confirm
   Category: ux
   Where: `restartBackend()` in `extension/com.opencut.panel/client/main.js:8855`; Whisper cache clear in the same settings card. UXP already uses panel-local confirm for Clear Index.

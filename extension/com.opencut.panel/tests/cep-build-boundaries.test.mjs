@@ -38,6 +38,7 @@ const CLASSIC_SCRIPT_FILES = [
   "results-controller.js",
   "settings-diagnostics-controller.js",
   "navigation-controller.js",
+  "collapsible-cards.js",
   "bootstrap.js",
   "main.js",
 ];

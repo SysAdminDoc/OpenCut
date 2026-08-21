@@ -1477,6 +1477,42 @@ test("CEP keyboard tabs, focus trap, Escape, and destructive confirmation", asyn
   expect(pageErrors).toEqual([]);
 });
 
+test("CEP collapsible card headers work from the keyboard", async ({ page }) => {
+  const { pageErrors } = await openSurface(page, "cep", "dark", 900);
+  await page.locator(".nav-tab[data-nav='settings']").click();
+  const header = page.locator("[data-collapsible]").last();
+  await header.scrollIntoViewIfNeeded();
+
+  // Every header announces itself as a button and starts expanded.
+  const headers = page.locator("[data-collapsible]");
+  await expect(headers).not.toHaveCount(0);
+  for (const candidate of await headers.all()) {
+    await expect(candidate).toHaveAttribute("role", "button");
+    await expect(candidate).toHaveAttribute("tabindex", "0");
+    await expect(candidate).toHaveAttribute("aria-expanded", "true");
+  }
+
+  const body = header.locator("xpath=following-sibling::*[1]");
+  await expect(body).toBeVisible();
+
+  await header.focus();
+  await expect(header).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(header).toHaveAttribute("aria-expanded", "false");
+  await expect(body).toBeHidden();
+
+  await page.keyboard.press(" ");
+  await expect(header).toHaveAttribute("aria-expanded", "true");
+  await expect(body).toBeVisible();
+
+  // The mouse path still works and keeps the announced state honest.
+  await header.click();
+  await expect(header).toHaveAttribute("aria-expanded", "false");
+  await header.click();
+  await expect(header).toHaveAttribute("aria-expanded", "true");
+  expect(pageErrors).toEqual([]);
+});
+
 test("UXP keyboard tabs retain focus and selection", async ({ page }) => {
   const { surface, pageErrors } = await openSurface(page, "uxp", "dark", 520);
   const tabs = page.locator(surface.tabSelector);
