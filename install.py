@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import sys
 
-VERS = "1.50.0"
+VERS = "1.51.0"
 MIN_PYTHON = (3, 11)
 MAX_PYTHON = (3, 14)
 CEP_EXT = "com.opencut.panel"
