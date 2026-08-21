@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - The MCP route catalogue is checked against the app, not just itself
+
+- `dump_mcp_extended_tools --check` compares the committed catalogue to a
+  freshly generated one, so deleting a route handler updated both sides and
+  stayed green. Every one of the 1,467 generated tools is now checked against
+  the app's own view functions and URL rules, and one GET per route family is
+  dispatched through the real backend instead of a stub.
+
 ### Fixed - Greyed-out controls say what they are waiting for
 
 - The Timeline, Deliverables and Rename actions ship disabled and, until now,

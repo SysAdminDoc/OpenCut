@@ -217,3 +217,95 @@ def test_cli_check_passes_in_sync():
         f"stderr={result.stderr!r}"
     )
     assert "in sync" in result.stdout
+
+
+def _representative_get_tools() -> list[dict]:
+    """One parameter-free GET tool per top-level path family.
+
+    The catalogue is 1,467 tools; calling all of them here would be a
+    different kind of suite. One per family keeps every area of the API in
+    the blast radius while staying deterministic.
+    """
+    chosen: dict[str, dict] = {}
+    for mcp_tool in sorted(
+        mcp_extended_tools.get_extended_tools(), key=lambda entry: entry["name"]
+    ):
+        metadata = mcp_tool["metadata"]
+        if metadata["method"] != "GET" or metadata.get("path_params"):
+            continue
+        family = metadata["path"].strip("/").split("/")[0]
+        chosen.setdefault(family, mcp_tool)
+    return [chosen[name] for name in sorted(chosen)]
+
+
+def _tools_without_a_handler(tools, view_functions, rules) -> list[str]:
+    """Catalogue entries whose endpoint or rule the app does not serve."""
+    unbacked = []
+    for mcp_tool in tools:
+        metadata = mcp_tool["metadata"]
+        endpoint = metadata["endpoint"]
+        if endpoint not in view_functions:
+            unbacked.append(f"{mcp_tool['name']}: no view function `{endpoint}`")
+        elif (metadata["path"], metadata["method"]) not in rules:
+            unbacked.append(
+                f"{mcp_tool['name']}: {endpoint} no longer answers "
+                f"{metadata['method']} {metadata['path']}"
+            )
+    return unbacked
+
+
+def _app_rules(app) -> set[tuple[str, str]]:
+    return {
+        (rule.rule, method)
+        for rule in app.url_map.iter_rules()
+        for method in (rule.methods or ())
+    }
+
+
+def test_every_extended_tool_points_at_a_live_handler(app):
+    """The manifest gate diffs names; nothing checked the handlers existed.
+
+    `dump_mcp_extended_tools --check` compares the committed catalogue to a
+    regenerated one, so deleting a route handler updates both sides and stays
+    green. The dispatch tests in this file all pass a fake `api_call` that
+    never reaches Flask.
+    """
+    unbacked = _tools_without_a_handler(
+        mcp_extended_tools.get_extended_tools(), app.view_functions, _app_rules(app)
+    )
+    assert unbacked == [], "extended tools advertise routes the app does not serve:\n" + "\n".join(unbacked[:20])
+
+
+def test_the_handler_check_notices_a_deleted_route(app):
+    """Worth running only if removing a handler actually fails it."""
+    tools = mcp_extended_tools.get_extended_tools()
+    victim = tools[0]["metadata"]["endpoint"]
+    view_functions = {
+        name: view for name, view in app.view_functions.items() if name != victim
+    }
+    unbacked = _tools_without_a_handler(tools, view_functions, _app_rules(app))
+    assert unbacked, "deleting a view function must be visible to the check"
+    assert any(victim in entry for entry in unbacked)
+
+
+def test_representative_extended_tools_run_their_handler(client, monkeypatch):
+    """One GET per family, dispatched through the real app rather than a stub."""
+    monkeypatch.setenv(mcp_extended_tools.EXTENDED_MCP_ENV, "1")
+    tools = _representative_get_tools()
+    assert len(tools) >= 20, "expected the catalogue to span many route families"
+
+    def api_call(method, path, data=None):
+        response = client.open(path, method=method, json=data)
+        return {"status": response.status_code}
+
+    for mcp_tool in tools:
+        result = mcp_extended_tools.invoke_extended_tool(mcp_tool["name"], {}, api_call)
+        assert isinstance(result, dict), mcp_tool["name"]
+        # A refusal from the dispatcher means the generated tool cannot be
+        # called at all, which no manifest diff would show.
+        assert "error" not in result, f"{mcp_tool['name']}: {result.get('error')}"
+        # 405 means the rule exists but not for this method, which is the
+        # generator disagreeing with the app.
+        assert result["status"] != 405, (
+            f"{mcp_tool['name']} -> GET {mcp_tool['metadata']['path']} is not a GET route"
+        )
