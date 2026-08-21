@@ -777,8 +777,7 @@ body {
 }
 
 @media (forced-colors: active) {
-  .nav-tab.active::before,
-  .oc-tab.active::before {
+  .nav-tab.active::before {
     background: Highlight !important;
   }
 
