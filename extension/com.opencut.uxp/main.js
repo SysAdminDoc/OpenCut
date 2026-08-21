@@ -2719,7 +2719,7 @@ function updateCaptionsWorkspaceSummary() {
     setCaptionsSessionState(
       t("uxp.captions.runtime.choose_media", "Choose media"),
       "empty",
-      t("uxp.captions.choose_clip_status", "Choose a clip, then transcribe to unlock chapters, repeat review, and subtitle export."),
+      t("uxp.captions.choose_clip_status", "Choose a clip, then transcribe to unlock editable, exportable chapters, repeat review, and subtitles."),
       "idle"
     );
     if (!_lastCaptionsResult) {
@@ -3041,7 +3041,7 @@ function updateTimelineReadiness() {
         "{count} cuts from {source}{path}",
         { source: _lastCutsInfo.source, path: cutsPath }
       )
-    : t("uxp.timeline.runtime.stage_cuts_title", "Run silence, filler, or multicam cleanup to stage cuts for timeline write-back.");
+    : t("uxp.timeline.runtime.stage_cuts_title", "Stage reviewable silence, filler, or multicam cuts for timeline write-back.");
   setTextAndTitle("timelineCutsValue", cutsLabel, cutsTitle);
   setTextAndTitle("timelineCutsSourceValue", _lastCutsInfo ? cutsLabel : t("uxp.timeline.run_cut_pass_first", "Run a cut pass first"), cutsTitle);
 
@@ -3739,10 +3739,10 @@ function requireClearIndexConfirmation() {
   const clearBtn = document.getElementById("clearIndexBtn");
   if (clearBtn && !clearBtn.classList.contains("loading")) {
     clearBtn.textContent = t("uxp.search.runtime.confirm_clear", "Confirm Clear");
-    clearBtn.title = t("uxp.search.runtime.confirm_clear_title", "Click again within 8 seconds to clear the current search index.");
+    clearBtn.title = t("uxp.search.runtime.confirm_clear_title", "Click again within 8 seconds to clear the footage index.");
   }
-  setIndexStatus(t("uxp.search.runtime.confirm_clear_status", "Click Confirm Clear again to remove the current search index."), "warning");
-  UIController.showToast(t("uxp.search.runtime.confirm_clear_status", "Click Confirm Clear again to remove the current search index."), "warning");
+  setIndexStatus(t("uxp.search.runtime.confirm_clear_status", "Click Confirm Clear again to clear the footage index."), "warning");
+  UIController.showToast(t("uxp.search.runtime.confirm_clear_status", "Click Confirm Clear again to clear the footage index."), "warning");
   return false;
 }
 
@@ -3772,14 +3772,14 @@ function syncSearchPanelState() {
     clearBtn.disabled = !backendOnline || !hasIndex;
     if (_clearIndexConfirmUntil > Date.now() && backendOnline && hasIndex) {
       clearBtn.textContent = t("uxp.search.runtime.confirm_clear", "Confirm Clear");
-      clearBtn.title = t("uxp.search.runtime.confirm_clear_title", "Click again within 8 seconds to clear the current search index.");
+      clearBtn.title = t("uxp.search.runtime.confirm_clear_title", "Click again within 8 seconds to clear the footage index.");
     } else {
       clearBtn.textContent = t("uxp.search.clear_index", "Clear Index");
       clearBtn.title = !backendOnline
-        ? t("uxp.search.runtime.reconnect_before_clearing_index", "Reconnect the backend before clearing the search index.")
+        ? t("uxp.search.runtime.reconnect_before_clearing_index", "Reconnect the backend before clearing the footage index.")
         : (hasIndex
-            ? t("uxp.search.runtime.clear_current_index_title", "Clear the current search index. You can rebuild it any time.")
-            : t("uxp.search.runtime.build_index_before_clearing", "Build an index before clearing it."));
+            ? t("uxp.search.runtime.clear_current_index_title", "Clear the footage index. You can rebuild it any time.")
+            : t("uxp.search.runtime.build_index_before_clearing", "Build the footage index before clearing it."));
     }
   }
 
@@ -3825,14 +3825,14 @@ async function refreshFootageIndexStats(options = {}) {
         "indexStatePill",
         t("uxp.search.runtime.unavailable", "Unavailable"),
         "warning",
-        t("uxp.search.runtime.index_status_unavailable_title", "The panel could not read the search index status.")
+        t("uxp.search.runtime.index_status_unavailable_title", "The panel could not read the footage index status.")
       );
       setTextAndTitle(
         "indexStatsValue",
         t("uxp.search.runtime.index_status_unavailable", "Index status unavailable"),
-        t("uxp.search.runtime.index_status_unavailable_title", "The panel could not read the search index status.")
+        t("uxp.search.runtime.index_status_unavailable_title", "The panel could not read the footage index status.")
       );
-      setIndexStatus(t("uxp.search.runtime.index_status_read_failed", "Could not read the current library index. Reconnect the backend, then refresh or re-index the folder."), "warning");
+      setIndexStatus(t("uxp.search.runtime.index_status_read_failed", "Could not read the footage index. Reconnect the backend, then refresh or re-index the folder."), "warning");
     }
     syncSearchPanelState();
     return null;
@@ -3891,8 +3891,8 @@ async function refreshFootageIndexStats(options = {}) {
 async function clearFootageIndex() {
   if (!(Number(_lastIndexStats?.total_files || 0) > 0)) {
     resetClearIndexConfirmation();
-    setIndexStatus(t("uxp.search.runtime.build_index_before_clearing", "Build an index before clearing it."), "warning");
-    UIController.showToast(t("uxp.search.runtime.build_index_before_clearing", "Build an index before clearing it."), "warning");
+    setIndexStatus(t("uxp.search.runtime.build_index_before_clearing", "Build the footage index before clearing it."), "warning");
+    UIController.showToast(t("uxp.search.runtime.build_index_before_clearing", "Build the footage index before clearing it."), "warning");
     syncSearchPanelState();
     return;
   }
@@ -3906,16 +3906,16 @@ async function clearFootageIndex() {
     "indexStatePill",
     t("uxp.search.runtime.clearing", "Clearing"),
     "working",
-    t("uxp.search.runtime.clearing_index_title", "Clearing the current search index.")
+    t("uxp.search.runtime.clearing_index_title", "Clearing the footage index.")
   );
-  setIndexStatus(t("uxp.search.runtime.clearing_index", "Clearing the current search index…"), "working");
+  setIndexStatus(t("uxp.search.runtime.clearing_index", "Clearing the footage index…"), "working");
 
   const r = await BackendClient.del("/search/index");
 
   UIController.setButtonLoading("clearIndexBtn", false);
 
   if (!r.ok) {
-    const error = r.error || t("uxp.search.runtime.clear_index_failed", "Failed to clear the search index.");
+    const error = r.error || t("uxp.search.runtime.clear_index_failed", "Failed to clear the footage index.");
     setStatusPill("indexStatePill", t("uxp.search.runtime.error", "Error"), "error", error);
     setIndexStatus(error, "error");
     UIController.showToast(error, "error");
@@ -3928,14 +3928,14 @@ async function clearFootageIndex() {
   );
   setTextAndTitle(
     "searchStatus",
-    t("uxp.search.runtime.index_cleared_status", "The search index has been cleared. Re-index a folder to search footage again."),
-    t("uxp.search.runtime.index_cleared_status", "The search index has been cleared. Re-index a folder to search footage again.")
+    t("uxp.search.runtime.index_cleared_status", "The footage index has been cleared. Re-index a folder to search footage again."),
+    t("uxp.search.runtime.index_cleared_status", "The footage index has been cleared. Re-index a folder to search footage again.")
   );
   await refreshFootageIndexStats({ preserveMessage: true, silent: true });
-  setStatusPill("indexStatePill", t("uxp.search.runtime.empty", "Empty"), "empty", t("uxp.search.runtime.index_empty_until_reindex", "The search index is empty until you index a folder again."));
-  setTextAndTitle("indexStatsValue", t("uxp.search.zero_files_indexed", "0 files indexed"), t("uxp.search.runtime.index_empty_until_reindex", "The search index is empty until you index a folder again."));
-  setIndexStatus(t("uxp.search.runtime.search_index_cleared", "Search index cleared. Re-index a folder to make library results available again."), "success");
-  UIController.showToast(t("uxp.search.runtime.search_index_cleared_toast", "Search index cleared."), "success");
+  setStatusPill("indexStatePill", t("uxp.search.runtime.empty", "Empty"), "empty", t("uxp.search.runtime.index_empty_until_reindex", "The footage index is empty until you index a folder again."));
+  setTextAndTitle("indexStatsValue", t("uxp.search.zero_files_indexed", "0 files indexed"), t("uxp.search.runtime.index_empty_until_reindex", "The footage index is empty until you index a folder again."));
+  setIndexStatus(t("uxp.search.runtime.search_index_cleared", "Footage index cleared. Re-index a folder to make library results available again."), "success");
+  UIController.showToast(t("uxp.search.runtime.search_index_cleared_toast", "Footage index cleared."), "success");
   resetClearIndexConfirmation();
   syncSearchPanelState();
 }
@@ -4265,7 +4265,7 @@ function renderCleanupPreviewUxp(plan) {
     const detail = document.createElement("span");
     detail.textContent = step.reason || (
       step.id === "silence_trim"
-        ? formatI18n("cleanup_chain.review_summary", "{ranges} silence range{plural} proposed ({seconds}s removed).", {
+        ? formatI18n("cleanup_chain.review_summary", "{ranges} silence range{plural} proposed ({seconds}s removed). Review the full chain before applying it.", {
             ranges: Number(step.proposed_changes?.length || 0),
             plural: Number(step.proposed_changes?.length || 0) === 1 ? "" : "s",
             seconds: Number(step.removed_seconds || 0).toFixed(1),
@@ -4273,8 +4273,8 @@ function renderCleanupPreviewUxp(plan) {
         : step.id === "loudness"
           ? formatI18n("cleanup_chain.loudness_target", "Target {target} LUFS", { target: step.target_lufs ?? "preset" })
           : step.id === "captions"
-            ? (step.backend || t("cleanup_chain.optional", "Optional caption backend"))
-            : (step.method || t("cleanup_chain.optional", "Optional FFmpeg pass"))
+            ? (step.backend || t("cleanup_chain.optional", "Optional pass"))
+            : (step.method || t("cleanup_chain.optional", "Optional pass"))
     );
     copy.appendChild(title);
     copy.appendChild(detail);
@@ -4668,7 +4668,7 @@ async function runCaptionTranslation() {
 async function installTranslationBackendUxp() {
   const restrictedOptIn = document.getElementById("translateRestrictedOptIn")?.checked ?? false;
   if (!restrictedOptIn) {
-    UIController.showToast(t("uxp.captions.runtime.translate_license_required", "Confirm the non-commercial translation model license before installing."), "warning");
+    UIController.showToast(t("uxp.captions.runtime.translate_license_required", "Confirm the non-commercial translation model license before translating."), "warning");
     return;
   }
   UIController.setButtonLoading("installTranslationBtn", true);
@@ -4963,7 +4963,7 @@ async function runStemSeparation() {
   if (!clipPath) { showSelectClipWarning(); return; }
   const stems = ["vocals", "drums", "bass", "other"].filter((stem) => document.getElementById(`stem${stem[0].toUpperCase()}${stem.slice(1)}`)?.checked);
   if (!stems.length) {
-    UIController.showToast(t("uxp.audio.runtime.choose_stem_types", "Choose at least one stem type."), "warning");
+    UIController.showToast(t("uxp.audio.runtime.choose_stem_types", "Select at least one stem type."), "warning");
     return;
   }
   const model = document.getElementById("stemModel")?.value || "mel_band_roformer";
@@ -4997,13 +4997,13 @@ async function runAudioEnhance() {
   const denoise = document.getElementById("enhanceDenoiseUxp")?.checked ?? true;
   const enhance = document.getElementById("enhanceUpscaleUxp")?.checked ?? true;
   if (!denoise && !enhance) {
-    UIController.showToast(t("uxp.audio.runtime.choose_enhance_step", "Choose denoise or speech enhancement."), "warning");
+    UIController.showToast(t("uxp.audio.runtime.choose_enhance_step", "Choose at least one enhancement step."), "warning");
     return;
   }
   const backend = document.getElementById("enhanceBackendUxp")?.value || "clearvoice";
   const model = document.getElementById("enhanceModelUxp")?.value || "MossFormer2_SE_48K";
   UIController.setButtonLoading("runAudioEnhanceBtn", true);
-  UIController.showProcessing(t("uxp.audio.runtime.enhancing_speech", "Enhancing speech audio..."));
+  UIController.showProcessing(t("uxp.audio.runtime.enhancing_speech", "Enhancing speech…"));
   await JobPoller.start(
     "/audio/enhance",
     { filepath: clipPath, backend, model, denoise, enhance },
@@ -5012,8 +5012,8 @@ async function runAudioEnhance() {
       UIController.hideProcessing();
       UIController.setButtonLoading("runAudioEnhanceBtn", false);
       const output = result?.output_path || t("uxp.runtime.saved", "saved");
-      UIController.showToast(formatI18n("uxp.audio.runtime.enhance_complete", "Speech enhancement complete: {output}", { output }), "success");
-      UIController.setStatus(t("uxp.audio.runtime.enhance_complete_status", "Enhanced speech audio is ready."), "success");
+      UIController.showToast(formatI18n("uxp.audio.runtime.enhance_complete", "Enhanced audio is ready: {output}", { output }), "success");
+      UIController.setStatus(t("uxp.audio.runtime.enhance_complete_status", "Enhanced audio is ready."), "success");
     },
     (err) => {
       UIController.hideProcessing();
@@ -5936,9 +5936,9 @@ async function runIndexLibrary() {
       "indexStatePill",
       t("uxp.search.runtime.needs_folder", "Needs Folder"),
       "warning",
-      t("uxp.search.runtime.choose_folder_before_building", "Choose a media folder before building the search index.")
+      t("uxp.search.runtime.choose_folder_before_building", "Choose a media folder before building the footage index.")
     );
-    setIndexStatus(t("uxp.search.runtime.choose_folder_before_building", "Choose a media folder before building the search index."), "warning");
+    setIndexStatus(t("uxp.search.runtime.choose_folder_before_building", "Choose a media folder before building the footage index."), "warning");
     UIController.showToast(t("uxp.search.runtime.select_folder_to_index", "Please select a media folder to index."), "warning");
     syncSearchPanelState();
     return;
@@ -6065,8 +6065,8 @@ async function runFootageSearch() {
   UIController.setStatus(t("uxp.search.runtime.searching_footage", "Searching footage…"), "working");
   setTextAndTitle(
     "searchStatus",
-    formatI18n("uxp.search.runtime.searching_for_query", "Searching for \"{query}\"...", { query }),
-    formatI18n("uxp.search.runtime.searching_for_query", "Searching for \"{query}\"...", { query })
+    formatI18n("uxp.search.runtime.searching_for_query", "Searching for \"{query}\"…", { query }),
+    formatI18n("uxp.search.runtime.searching_for_query", "Searching for \"{query}\"…", { query })
   );
 
   const r = await BackendClient.post("/search/footage", { query, top_k: limit });
@@ -8271,7 +8271,7 @@ async function uxpLoadMigrationRisk() {
   setSettingsStatus("settingsMigrationStatus", t("uxp.settings.loading_migration_risk_data", "Loading UXP migration risk data…"), "working");
   grid.innerHTML = `
     <div class="oc-empty-state oc-empty-state-inline">
-      <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.migration_risk", "Migration risk"))}</div>
+      <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.migration_risk", "Migration"))}</div>
       <p>${UIController.escapeHtml(t("uxp.settings.loading_host_action_coverage", "Loading CEP and UXP host-action coverage…"))}</p>
     </div>`;
 
@@ -8345,7 +8345,7 @@ async function uxpLoadMigrationRisk() {
       `<div class="oc-engine-row">
         <div class="oc-engine-copy">
           <div class="oc-engine-title-row">
-            <span class="oc-engine-domain">${UIController.escapeHtml(t("uxp.settings.route_coverage", "Route coverage"))}</span>
+            <span class="oc-engine-domain">${UIController.escapeHtml(t("uxp.settings.route_coverage", "Route Coverage"))}</span>
             <span class="oc-engine-state is-${routeGate.passes ? "auto" : "warning"}">${UIController.escapeHtml(routeGate.passes ? t("uxp.settings.covered", "Covered") : t("uxp.settings.needs_attention", "Needs attention"))}</span>
           </div>
           <p class="oc-engine-meta">${UIController.escapeHtml(routeStatus)}</p>
@@ -8655,7 +8655,7 @@ function renderPluginTrustDashboard(data) {
 
   if (!plugins.length && !quarantine.length && !Number(summary.marketplace || 0)) {
     grid.innerHTML = `<div class="oc-empty-state oc-empty-state-inline">
-      <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.plugin_trust", "Plugin trust"))}</div>
+      <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.plugin_trust", "Plugins"))}</div>
       <p>${UIController.escapeHtml(t("uxp.settings.plugin_trust_empty", "No installed, cached marketplace, or quarantined plugins were found."))}</p>
     </div>`;
     setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.plugin_trust_empty_status", "No plugins need review right now."), "idle");
@@ -8688,7 +8688,7 @@ async function uxpLoadPluginTrust() {
   setTextAndTitle("settingsPluginMarketplaceValue", t("uxp.settings.loading", "Loading…"), t("uxp.settings.loading_plugin_marketplace", "Loading cached marketplace count."));
   setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.loading_plugin_trust", "Loading plugin trust dashboard…"), "working");
   grid.innerHTML = `<div class="oc-empty-state oc-empty-state-inline">
-    <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.plugin_trust", "Plugin trust"))}</div>
+    <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.plugin_trust", "Plugins"))}</div>
     <p>${UIController.escapeHtml(t("uxp.settings.loading_plugin_trust_hint", "Checking installed plugins, locks, quarantine, and cached marketplace entries…"))}</p>
   </div>`;
 

@@ -286,6 +286,81 @@ def evaluate_fallbacks() -> list[dict]:
             out.append({"panel": panel, **drift})
     return out
 
+# ----------------------------------------------------------------------
+# t(key, fallback) drift
+# ----------------------------------------------------------------------
+# Same argument as the HTML fallbacks: the second argument to every translate
+# helper is what the user reads when the locale has not loaded, so it has to
+# say what the locale says. 35 of them had drifted, including a whole family
+# still calling the local service "the server".
+
+#: Panels whose JS carries `t(key, fallback)` pairs. (label, dir, en.json)
+JS_FALLBACK_PANELS = (
+    ("cep", CLIENT_DIR, LOCALES / "en.json"),
+    ("uxp", UXP_DIR, UXP_DIR / "locales" / "en.json"),
+)
+
+#: Directories inside a panel that hold builds, deps or the locales themselves.
+_JS_SKIP_DIRS = frozenset({"node_modules", "dist", "test-results", "locales"})
+
+# "some.key" , "fallback" — the shape every translate helper in both panels
+# takes, including t(), formatI18n(), setStatus() and pluginCountLabel().
+JS_FALLBACK_RE = re.compile(
+    r"(?P<kq>['\"])(?P<key>[a-z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)+)(?P=kq)"
+    r"\s*,\s*"
+    r"(?P<fq>['\"])(?P<fallback>(?:\\.|(?!(?P=fq)).)*)(?P=fq)"
+)
+
+
+def _decode_js_string(quote: str, body: str) -> str:
+    """Read a JS string literal body. JSON covers the escapes both panels use."""
+    if quote == "'":
+        body = body.replace("\\'", "'").replace('"', '\\"')
+    return json.loads('"' + body + '"')
+
+
+def js_fallback_drifts(source: str, locale: dict) -> list[dict]:
+    """Every `t(key, fallback)` whose fallback disagrees with the locale."""
+    drifts = []
+    for match in JS_FALLBACK_RE.finditer(source):
+        key = match.group("key")
+        expected = locale.get(key)
+        if not isinstance(expected, str):
+            continue
+        try:
+            actual = _decode_js_string(match.group("fq"), match.group("fallback"))
+        except ValueError:
+            continue
+        if actual == expected:
+            continue
+        drifts.append({
+            "key": key,
+            "line": source[: match.start()].count("\n") + 1,
+            "js": actual,
+            "locale": expected,
+        })
+    return drifts
+
+
+def evaluate_js_fallbacks() -> list[dict]:
+    out = []
+    for panel, directory, locale_path in JS_FALLBACK_PANELS:
+        if not directory.is_dir() or not locale_path.is_file():
+            continue
+        locale = json.loads(locale_path.read_text(encoding="utf-8"))
+        for path in sorted(directory.rglob("*.js")):
+            if any(part in _JS_SKIP_DIRS for part in path.parts):
+                continue
+            if path.name in _NON_RUNTIME_JS:
+                continue
+            for drift in js_fallback_drifts(path.read_text(encoding="utf-8"), locale):
+                out.append({
+                    "panel": panel,
+                    "file": path.relative_to(ROOT).as_posix(),
+                    **drift,
+                })
+    return out
+
 def evaluate() -> dict:
     keys = _load_en_keys()
     html_consumers = _scan_html_consumers()
@@ -297,6 +372,7 @@ def evaluate() -> dict:
     dead = sorted(keys - consumers)
     missing = sorted(consumers - keys)
     fallbacks = evaluate_fallbacks()
+    js_fallbacks = evaluate_js_fallbacks()
     return {
         "total_keys": len(keys),
         "html_consumers": len(html_consumers),
@@ -312,6 +388,8 @@ def evaluate() -> dict:
         "dead_over_baseline": max(0, len(dead) - DEAD_KEY_BASELINE),
         "fallback_drift_count": len(fallbacks),
         "fallback_drifts": fallbacks,
+        "js_fallback_drift_count": len(js_fallbacks),
+        "js_fallback_drifts": js_fallbacks,
     }
 
 
@@ -325,7 +403,7 @@ def cmd_report(check: bool) -> int:
     )
     print(f"  dead keys: {e['dead_count']} (baseline allowed: {e['baseline']})")
     print(f"  missing keys: {e['missing_count']}")
-    print(f"  fallback drift: {e['fallback_drift_count']}")
+    print(f"  fallback drift: {e['fallback_drift_count']} HTML, {e['js_fallback_drift_count']} JS")
     if e["fallback_drifts"]:
         print("\n  Fallback text that disagrees with en.json:")
         for drift in e["fallback_drifts"][:20]:
@@ -359,6 +437,17 @@ def cmd_report(check: bool) -> int:
                 file=sys.stderr,
             )
             fail = True
+        if e["js_fallback_drift_count"] > 0:
+            print(
+                f"\nFAIL: {e['js_fallback_drift_count']} t(key, fallback) literal(s) "
+                "no longer match en.json:",
+                file=sys.stderr,
+            )
+            for drift in e["js_fallback_drifts"][:20]:
+                print(f"    {drift['file']}:{drift['line']} {drift['key']}", file=sys.stderr)
+                print(f"      js     : {drift['js']}", file=sys.stderr)
+                print(f"      locale : {drift['locale']}", file=sys.stderr)
+            fail = True
         if e["dead_over_baseline"] > 0:
             print(
                 f"\nFAIL: {e['dead_count']} dead keys exceeds baseline "
@@ -377,7 +466,8 @@ def cmd_json() -> int:
     e = evaluate()
     json.dump(e, sys.stdout, indent=2)
     sys.stdout.write("\n")
-    if e["missing_count"] > 0 or e["dead_over_baseline"] > 0 or e["fallback_drift_count"] > 0:
+    if (e["missing_count"] > 0 or e["dead_over_baseline"] > 0
+            or e["fallback_drift_count"] > 0 or e["js_fallback_drift_count"] > 0):
         return 1
     return 0
 

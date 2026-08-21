@@ -2267,8 +2267,8 @@
             el.connDot.setAttribute(
                 "aria-label",
                 state === "online"
-                    ? t("conn.dot_connected", "Server connected")
-                    : t("conn.dot_disconnected", "Server disconnected")
+                    ? t("conn.dot_connected", "Backend connected")
+                    : t("conn.dot_disconnected", "Backend disconnected")
             );
         }
         updateShellState();
@@ -2438,7 +2438,7 @@
         onBoundaryReview: renderFillerBoundaryReview,
         onAnnounce: announceJobResult
     });
-    var GpuSelectionController = OpenCutGpuSelectionController.createGpuSelectionController({documentRef: document, selectElement: el.gpuDeviceSelect, statusElement: el.gpuSelectionStatus, request: function (method, path, body, callback) { api(method, path, body, callback); }, translate: t, notify: function (message, level) { showToast(typeof message === "string" ? message : formatInstallError(message, t("settings.gpu_adapter_invalid", "GPU adapter selection failed.")), level || "error"); }}); GpuSelectionController.bind();
+    var GpuSelectionController = OpenCutGpuSelectionController.createGpuSelectionController({documentRef: document, selectElement: el.gpuDeviceSelect, statusElement: el.gpuSelectionStatus, request: function (method, path, body, callback) { api(method, path, body, callback); }, translate: t, notify: function (message, level) { showToast(typeof message === "string" ? message : formatInstallError(message, t("settings.gpu_adapter_invalid", "The configured GPU is unavailable. Choose another adapter.")), level || "error"); }}); GpuSelectionController.bind();
     var SettingsDiagnosticsController = OpenCutSettingsDiagnosticsController.createSettingsDiagnosticsController({
         request: function (method, path, body, callback) {
             api(method, path, body, callback);
@@ -2568,7 +2568,7 @@
                 }
                 if (!connected && el.serverStatusBanner) {
                     el.serverStatusBanner.classList.add("hidden");
-                    showToast(t("toast.server_reconnected", "Server reconnected"), "success");
+                    showToast(t("toast.server_reconnected", "Backend reconnected"), "success");
                 }
                 setConnected(true);
                 if (wasDisconnected) notifyBackendReconnectHooks();
@@ -2604,7 +2604,7 @@
             if (connected && el.serverStatusBanner) {
                 el.serverStatusBanner.classList.remove("hidden");
                 if (el.serverStatusMsg) {
-                    el.serverStatusMsg.textContent = t("conn.reconnecting", "Server disconnected. Reconnecting…");
+                    el.serverStatusMsg.textContent = t("conn.reconnecting", "Backend disconnected. Reconnecting…");
                 }
             }
             setConnected(false);
@@ -3770,7 +3770,7 @@
         // Interview polish hint — reflect the same state the button shows
         if (el.interviewPolishHint) {
             if (!connected) {
-                el.interviewPolishHint.textContent = t("interview.server_disconnected", "Server disconnected.");
+                el.interviewPolishHint.textContent = t("interview.server_disconnected", "Backend disconnected.");
             } else if (!selectedPath) {
                 el.interviewPolishHint.textContent = t("interview.select_clip_to_run", "Select a clip to run.");
             } else {
@@ -4471,7 +4471,7 @@
         "MISSING_DEPENDENCY": { tab: "settings", focusId: "depsStatusLine", msg: null },
         "CSRF_INVALID": {
             msg: function () {
-                return t("error.csrf_invalid", "Lost the secure connection to the server. Reconnecting.");
+                return t("error.csrf_invalid", "Lost the secure connection to the backend. Reconnecting.");
             }
         },
         "FILE_NOT_FOUND": {
@@ -4541,7 +4541,7 @@
             );
         }
         if (/connection|ECONNREFUSED|network/i.test(normalizedMsg)) {
-            return normalizedMsg + " \u2014 " + t("error.server_running", "Make sure the OpenCut server is running.");
+            return normalizedMsg + " \u2014 " + t("error.server_running", "Make sure the OpenCut backend is running.");
         }
         return normalizedMsg;
     }
@@ -5481,7 +5481,7 @@
             if (r && r.auth_url) {
                 var authUrl = normalizeOAuthUrl(r.auth_url);
                 if (!authUrl) {
-                    showAlert(t("toast.oauth_invalid_url", "Invalid authorization URL received from server."));
+                    showAlert(t("toast.oauth_invalid_url", "Invalid authorization URL received from backend."));
                     return;
                 }
                 try {
@@ -5493,7 +5493,7 @@
                         throw new Error("No browser launch API is available.");
                     }
                 } catch (openError) {
-                    showAlert(t("toast.oauth_invalid_url", "Invalid authorization URL received from server."));
+                    showAlert(t("toast.oauth_invalid_url", "Invalid authorization URL received from backend."));
                     return;
                 }
                 var _oauthOpeningTemplate = t("toast.oauth_opening_auth_page", "Opening {platform} authorization page…");
@@ -7288,7 +7288,7 @@
     function workflowPreflightDetails(plan, name) {
         var preflight = plan && plan.preflight ? plan.preflight : {};
         var lines = [
-            t("workflow.preflight_title", "OpenCut preflighted {name}.").replace("{name}", name || t("workflow.custom_default", "this workflow")),
+            t("workflow.preflight_title", "OpenCut preflighted {name}.").replace("{name}", name || t("workflow.custom_default", "Custom workflow")),
             t("workflow.preflight_steps", "Steps: {count}").replace("{count}", (plan && plan.steps || []).length),
         ];
         var reasons = preflight.approval_reasons || [];
@@ -8906,7 +8906,7 @@
     function openLogs() {
         api("POST", "/system/open-path", { target: "server_log", mode: "open" }, function (err, r) {
             if (!err && r && r.ok) {
-                showToast(t("toast.log_opened", "Opened the server log"), "success");
+                showToast(t("toast.log_opened", "Opened the backend log"), "success");
                 return;
             }
             // The log may not exist yet, or the OS handler may have refused.
@@ -9302,7 +9302,7 @@
             warn.setAttribute("role", "status");
             var msg = document.createElement("span");
             msg.className = "session-context-interrupted-msg";
-            msg.textContent = t("history.interrupted_jobs", "{count} job{plural} interrupted when the server restarted.")
+            msg.textContent = t("history.interrupted_jobs", "{count} job{plural} interrupted when the backend restarted.")
                 .replace("{count}", interrupted.length)
                 .replace("{plural}", interrupted.length === 1 ? "" : "s");
             var openHistory = document.createElement("button");
@@ -13924,7 +13924,7 @@
         { name: "Auto Shorts", displayName: function () { return t("palette.tool_auto_shorts", "Magic Clips"); }, tab: "export",   sub: "exp-shorts",       keywords: "shorts tiktok reels auto highlight clip vertical" },
         { name: "Workflow Presets", displayName: function () { return t("palette.tool_workflow_presets", "Workflow Presets"); }, tab: "export",   focusId: "workflowPreset", keywords: "workflow preset pipeline chain steps auto" },
         { name: "Project Templates", displayName: function () { return t("palette.tool_project_templates", "Project Templates"); }, tab: "settings", focusId: "templateSelect", keywords: "template project youtube podcast broadcast cinema preset" },
-        { name: "Keyboard Shortcuts", displayName: function () { return t("palette.tool_keyboard_shortcuts", "Keyboard Shortcuts"); }, tab: "settings", focusId: "shortcutReference", keywords: "keyboard shortcut hotkey keybind" },
+        { name: "Keyboard Shortcuts", displayName: function () { return t("palette.tool_keyboard_shortcuts", "Fast Actions"); }, tab: "settings", focusId: "shortcutReference", keywords: "keyboard shortcut hotkey keybind" },
         { name: "Job History", displayName: function () { return t("palette.tool_job_history", "Job History"); }, tab: "settings", focusId: "jobHistory", keywords: "job history log past completed failed" },
     ];
 
@@ -14360,7 +14360,7 @@
             var activeTab = getActivePaletteTabName();
             var activeLabel = activeTab ? getPaletteTabLabel(activeTab) : t("palette.all_tools", "All Tools");
             el.commandPaletteStatus.textContent = _paletteResults.length ?
-                t("palette.status_ready", "{label} tools, recent runs, and pinned shortcuts are ready.").replace("{label}", activeLabel) :
+                t("palette.status_ready", "{label} tools, recent runs, and pinned actions are ready.").replace("{label}", activeLabel) :
                 t("palette.status_empty", "Run tools or pin favorites to shape this launcher around your workflow.");
             return;
         }
@@ -16437,7 +16437,7 @@
         var totalFiles = Number((_lastSearchIndexStats && _lastSearchIndexStats.total_files) || 0);
         var btn = document.getElementById("clearSearchIndexBtn");
         if (!totalFiles) {
-            setStatusLine("searchStatus", t("search.already_empty_status", "The footage library is already empty."), "idle");
+            setStatusLine("searchStatus", t("search.already_empty_status", "The footage index is already empty."), "idle");
             return;
         }
         showPanelConfirm({
@@ -16529,7 +16529,7 @@
                     }
                     setStatusLine("searchStatus", t("search.indexing_partial_status", "Indexing finished with a few issues. Search is available, but some clips need attention."), "warning");
                 } else {
-                    setStatusLine("searchStatus", t("search.indexing_complete_status", "Library index updated. Search is ready to use."), "success");
+                    setStatusLine("searchStatus", t("search.indexing_complete_status", "Footage index updated. Search is ready to use."), "success");
                 }
                 showToast(formatSearchIndexingToast(indexed, total, errors.length), errors.length ? "warning" : "success");
             },
@@ -18068,7 +18068,7 @@
                     if (!data.exists || !data.path) {
                         showAlert(t(
                             "alert.no_demo_footage",
-                            "No demo footage found on this server.\n\nRun `opencut-server --download-demo` or use the installer build."
+                            "No demo footage found on this backend.\n\nRun `opencut-server --download-demo` or use the installer build."
                         ));
                         return;
                     }
@@ -18144,7 +18144,7 @@
                     title: t("gist.pull_title", "Pull settings from gist"),
                     message: t("gist.pull_message", "Paste a gist URL or ID. OpenCut will download the files into your local settings area for review."),
                     inputLabel: t("gist.pull_label", "Gist URL or ID"),
-                    placeholder: t("gist.pull_prompt", "Paste gist URL or ID"),
+                    placeholder: t("gist.pull_prompt", "Paste gist URL or ID:"),
                     required: true,
                     requiredMessage: t("gist.pull_required", "Paste a gist URL or ID before continuing."),
                     confirmLabel: t("gist.pull_confirm", "Pull Gist"),
