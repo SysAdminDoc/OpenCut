@@ -32,16 +32,6 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
 
 ### P2
 
-- [ ] P2 — F371 — Shipped HTML fallback strings have drifted from the locales
-  Category: ux
-  Where: `extension/com.opencut.panel/client/index.html` (57 fallback strings no longer matching `client/locales/en.json`), `extension/com.opencut.uxp/index.html` (32 vs `locales/en.json`)
-  Problem: The inline `data-i18n` fallback text is what users see on first paint and whenever i18n init fails, and it has drifted — some are full rewrites, not near-misses: index.html:152 shows "Studio Workspace" where `workspace.cut_kicker` = "Cut Pass" (verified); index.html:1112/1176/1202/1214 show "Whisper Model" where `forms.model` = "Model"; index.html:3920 "Refresh Availability" vs locale "Refresh availability"; index.html:146 "Server disconnected…" vs locale "Backend disconnected…"; index.html:3932 "Live Updates Bridge" vs `settings.ws_bridge` = "WebSocket Bridge". Related: four different strings describe the one update-check retry (`en.json:1392` "…Click Check again to retry.", `en.json:2168` "…Click Refresh to try again.", `uxp:144`, `uxp:1150`) and only a "Check Again" button exists (`en.json:1397`) — two of the four name a button that isn't there.
-  Evidence: Sweep enumerated the drifts; the load-bearing example (`workspace.cut_kicker` = "Cut Pass" vs HTML "Studio Workspace" at index.html:152) re-verified directly this pass. The existing i18n gates (`scripts/i18n_lint.py`, `tests/test_i18n_hardcoded_migration.py`) check key usage and hardcoded-string migration but nothing compares inline fallbacks to locale values, which is exactly the gap.
-  Fix: Sync every drifted fallback to its locale value (the locale is the source of truth — several drifts are stale pre-rename text), collapse the four retry strings onto the real button name, then extend `scripts/i18n_lint.py` (or a new check in the same gate) to assert `data-i18n` fallback text equals the en.json value so the drift cannot reopen.
-  Acceptance: The new lint check passes and fails when a fallback is edited without the locale; first-paint text matches post-i18n text on both panels.
-  Confidence: Verified
-  Effort: M
-
 - [ ] P2 — F378 — CEP collapsible headers are mouse-only
   Category: a11y
   Where: `extension/com.opencut.panel/client/main.js` around the collapsible-header click wiring (~13378). UXP already does this in `uxp-ui-controller.js:363-386`.

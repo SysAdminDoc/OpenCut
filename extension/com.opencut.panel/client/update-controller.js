@@ -117,7 +117,7 @@
                 card.setAttribute("data-state", "error");
                 status.setAttribute("data-state", "error");
                 status.textContent = t("settings.update_unavailable_status", "Unavailable");
-                summary.textContent = t("settings.update_check_failed", "Couldn't check for updates. Click Check again to retry.");
+                summary.textContent = t("settings.update_check_failed", "Couldn't check for updates. Click Check Again to retry.");
                 if (available) available.textContent = "—";
                 setElementHidden("updateReleaseDetails", true);
                 return;
@@ -203,7 +203,7 @@
                     updateCheckDone = false;
                     updateCheckFailed = true;
                     render(data || { error: "offline" }, false);
-                    showToast(t("toast.update_check_failed", "Couldn't check for updates. Click Refresh to try again."), "warning");
+                    showToast(t("toast.update_check_failed", "Couldn't check for updates. Click Check Again to retry."), "warning");
                     return;
                 }
                 updateCheckDone = true;

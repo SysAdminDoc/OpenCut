@@ -189,6 +189,7 @@
   "shared.settings.plugin_worker_restarting": "Restarting plugin worker…",
   "shared.settings.update_available_status": "Update available",
   "shared.settings.update_available_summary": "OpenCut v{version} is available. Review the release notes before opening GitHub.",
+  "shared.settings.update_check_failed": "Couldn't check for updates. Click Check Again to retry.",
   "shared.settings.update_checking_summary": "Checking GitHub for the latest OpenCut release.",
   "shared.settings.update_dismissed": "Update v{version} is dismissed for this panel. A newer release will appear here.",
   "shared.settings.update_dismissed_toast": "Update v{version} dismissed until a newer release is available.",

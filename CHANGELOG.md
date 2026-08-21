@@ -5,6 +5,23 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - First-paint panel text matches what the locale says
+
+- Both panels ship English text inline next to every `data-i18n` key. That
+  copy is what users see before i18n finishes loading and whenever a key is
+  missing, and 123 of those strings had drifted away from the locale value,
+  some far enough to rename a feature: the Cut workspace heading read "Studio
+  Workspace" where the locale said "Cut Pass", four caption dropdowns were
+  labelled "Whisper Model" against a locale that says "Model", and the
+  connection dot said "Server disconnected" while the locale said "Backend".
+- `scripts/i18n_lint.py` now compares every inline fallback (and every
+  translated `title`, `alt`, `placeholder`, `label`, `aria-label`) against
+  en.json for both panels and fails on any disagreement, so the two cannot
+  drift apart again.
+- The four different sentences describing one update-check retry now all name
+  the button that actually exists, "Check Again". Two of them told people to
+  click Refresh, which is not on that card.
+
 ### Changed - One name per thing across both panels
 
 - The shorts feature is called Magic Clips wherever it appears. It used to be
