@@ -2672,3 +2672,14 @@ html.theme-light body .oc-workspace-meta-value {
 html.theme-light body .oc-settings-nav-item.active {
   color: #315dbd;
 }
+
+/* The progress track is a white wash on a dark panel; on a light one it
+   disappears into the card, and the accent gradient below it is tuned for
+   dark. CEP already carries both counterparts in its own light section. */
+html.theme-light .oc-progress-track {
+  background: rgba(23, 32, 45, 0.10);
+}
+
+html.theme-light .oc-progress-fill {
+  background: linear-gradient(90deg, #466fd3, #047857);
+}

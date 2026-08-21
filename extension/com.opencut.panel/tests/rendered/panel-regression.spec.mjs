@@ -1084,6 +1084,129 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
   });
 }
 
+// F383 — the committed goldens are dark-theme captures, so three light-theme
+// regressions shipped in one day without turning the suite red. These probe
+// the resolved colours instead: an unprefixed dark rule winning in light
+// theme shows up as a contrast collapse or a colour that never flipped.
+const LIGHT_THEME_PROBES = {
+  cep: {
+    // Icon ink that F369 found at ~1.6:1 on white.
+    graphics: [".quick-action-icon", ".workspace-stage-card-icon"],
+    // Text that has to stay readable on whatever paints behind it.
+    text: [".studio-clip", ".studio-source-state", ".card-desc"],
+    // Surfaces that must repaint, not stay dark under a light parent.
+    surfaces: [".studio-timeline", ".studio-clip", ".progress-track"],
+  },
+  uxp: {
+    graphics: [".oc-logo-mark path"],
+    text: [".studio-clip", ".studio-source-state", ".oc-hint"],
+    surfaces: [".studio-timeline", ".studio-clip", ".oc-progress-track"],
+  },
+};
+
+async function probeThemeColours(page, probes) {
+  return page.evaluate((selectors) => {
+    const linearize = (channel) => {
+      const normalized = channel / 255;
+      return normalized <= 0.04045
+        ? normalized / 12.92
+        : ((normalized + 0.055) / 1.055) ** 2.4;
+    };
+    const parse = (value) => (value.match(/[\d.]+/g) || []).map(Number);
+    const luminance = (rgba) => (
+      0.2126 * linearize(rgba[0]) +
+      0.7152 * linearize(rgba[1]) +
+      0.0722 * linearize(rgba[2])
+    );
+    const opaque = (value) => {
+      const parts = parse(value);
+      return parts.length >= 3 && (parts.length < 4 || parts[3] > 0.9);
+    };
+    const behind = (node) => {
+      let current = node;
+      while (current) {
+        const value = getComputedStyle(current).backgroundColor;
+        if (opaque(value)) return value;
+        current = current.parentElement;
+      }
+      return "rgb(255, 255, 255)";
+    };
+    const contrast = (foreground, background) => {
+      const a = luminance(parse(foreground));
+      const b = luminance(parse(background));
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    };
+    const read = (selector) => {
+      const node = document.querySelector(selector);
+      if (!node) return null;
+      const style = getComputedStyle(node);
+      return {
+        color: style.color,
+        background: style.backgroundColor,
+        behind: behind(node),
+        contrast: contrast(style.color, behind(node)),
+      };
+    };
+    const out = {};
+    for (const group of Object.keys(selectors)) {
+      out[group] = {};
+      for (const selector of selectors[group]) out[group][selector] = read(selector);
+    }
+    return out;
+  }, probes);
+}
+
+for (const surfaceName of Object.keys(LIGHT_THEME_PROBES)) {
+  test(`${surfaceName} light theme repaints the surfaces its goldens never capture`, async ({
+    page,
+  }) => {
+    const probes = LIGHT_THEME_PROBES[surfaceName];
+    const width = surfaceName === "cep" ? 900 : 520;
+    const { pageErrors } = await openSurface(page, surfaceName, "dark", width);
+    const dark = await probeThemeColours(page, probes);
+
+    if (surfaceName === "cep") {
+      // openSurface picks the theme explicitly, so data-theme-source is
+      // "user" and a host skin change is outranked. Drive the same change
+      // event the settings dropdown dispatches.
+      await page.evaluate(() => {
+        const select = document.getElementById("settingsTheme");
+        select.value = "light";
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    } else {
+      await page.evaluate(() => window.__opencutThemeHarness.emit("light"));
+    }
+    await expect(page.locator("html")).toHaveClass(/theme-light/);
+    const light = await probeThemeColours(page, probes);
+
+    for (const selector of probes.graphics) {
+      expect(light.graphics[selector], `${selector} is missing`).not.toBeNull();
+      expect(
+        light.graphics[selector].contrast,
+        `${selector} ink ${light.graphics[selector].color} on ${light.graphics[selector].behind}`,
+      ).toBeGreaterThanOrEqual(3);
+    }
+    for (const selector of probes.text) {
+      expect(light.text[selector], `${selector} is missing`).not.toBeNull();
+      expect(
+        light.text[selector].contrast,
+        `${selector} text ${light.text[selector].color} on ${light.text[selector].behind}`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const selector of probes.surfaces) {
+      const before = dark.surfaces[selector];
+      const after = light.surfaces[selector];
+      expect(after, `${selector} is missing`).not.toBeNull();
+      expect(
+        after.background,
+        `${selector} kept its dark fill when the theme flipped`,
+      ).not.toBe(before.background);
+    }
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 test("UXP follows live Premiere theme updates with legible tokens and cleanup", async ({
   page,
 }) => {
