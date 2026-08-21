@@ -159,6 +159,83 @@ class TestI18nDrift(unittest.TestCase):
             "shortcuts.command_palette",
         })
 
+class TestFallbackDrift(unittest.TestCase):
+    """F371 — the inline English next to a key has to match the locale.
+
+    Key usage was already gated; the fallback text next to it was not, and it
+    had drifted far enough to rename features on first paint.
+    """
+
+    def setUp(self):
+        self.mod = _load_module()
+        self.locale = {
+            "cut.kicker": "Cut Pass",
+            "media.browse": "Browse File…",
+            "status.backend": "Backend status",
+        }
+
+    def _drifts(self, markup):
+        return self.mod.fallback_drifts(markup, self.locale)
+
+    def test_live_panels_have_no_fallback_drift(self):
+        drifts = self.mod.evaluate_fallbacks()
+        self.assertEqual(
+            drifts, [],
+            "data-i18n fallback text must match en.json: "
+            + ", ".join(f"{d['panel']}:{d['line']} {d['key']}" for d in drifts[:10]),
+        )
+
+    def test_matching_fallback_passes(self):
+        self.assertEqual(self._drifts('<div data-i18n="cut.kicker">Cut Pass</div>'), [])
+
+    def test_edited_fallback_fails(self):
+        drifts = self._drifts('<div data-i18n="cut.kicker">Studio Workspace</div>')
+        self.assertEqual(len(drifts), 1)
+        self.assertEqual(drifts[0]["key"], "cut.kicker")
+        self.assertEqual(drifts[0]["html"], "Studio Workspace")
+        self.assertEqual(drifts[0]["locale"], "Cut Pass")
+
+    def test_indentation_is_not_drift(self):
+        self.assertEqual(
+            self._drifts('<div data-i18n="cut.kicker">\n    Cut Pass\n  </div>'), []
+        )
+
+    def test_empty_element_is_filled_from_the_locale(self):
+        self.assertEqual(self._drifts('<span data-i18n="cut.kicker"></span>'), [])
+
+    def test_nested_label_span_carries_the_fallback(self):
+        button = (
+            '<button data-i18n="media.browse">'
+            '<span class="btn-icon">icon</span>'
+            '<span class="btn-label">Browse File…</span>'
+            "</button>"
+        )
+        self.assertEqual(self._drifts(button), [])
+        stale = button.replace("Browse File…", "Browse")
+        self.assertEqual(len(self._drifts(stale)), 1)
+
+    def test_translated_attributes_are_checked(self):
+        good = '<span aria-label="Backend status" data-i18n-aria-label="status.backend"></span>'
+        self.assertEqual(self._drifts(good), [])
+        stale = good.replace("Backend status", "Server status")
+        drifts = self._drifts(stale)
+        self.assertEqual(len(drifts), 1)
+        self.assertEqual(drifts[0]["attr"], "aria-label")
+
+    def test_key_attribute_is_not_mistaken_for_its_target(self):
+        # `aria-label="` is a substring of `data-i18n-aria-label="`; a naive
+        # search finds the key attribute and reports the key as the fallback.
+        markup = '<span data-i18n-aria-label="status.backend" aria-label="Backend status"></span>'
+        self.assertEqual(self._drifts(markup), [])
+
+    def test_unknown_keys_are_left_to_the_missing_key_check(self):
+        self.assertEqual(self._drifts('<div data-i18n="nope.nope">Anything</div>'), [])
+
+    def test_evaluate_reports_the_fallback_count(self):
+        e = self.mod.evaluate()
+        self.assertIn("fallback_drift_count", e)
+        self.assertEqual(e["fallback_drift_count"], len(e["fallback_drifts"]))
+
 
 if __name__ == "__main__":
     unittest.main()

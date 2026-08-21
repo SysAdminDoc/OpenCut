@@ -109,7 +109,7 @@ export function createUxpUpdateController({
       }
       summary.textContent = translate(
         "uxp.settings.update_check_failed",
-        "Couldn't check for updates. Use Check again to retry.",
+        "Couldn't check for updates. Click Check Again to retry.",
       );
       if (available) available.textContent = "—";
       setUpdateHidden("uxpUpdateReleaseDetails", true);
@@ -224,7 +224,7 @@ export function createUxpUpdateController({
         checkFailed = true;
         const message = translate(
           "uxp.status.update_check_failed",
-          "Couldn't check for updates. Use Refresh to try again.",
+          "Couldn't check for updates. Click Check Again to retry.",
         );
         setStatus(message, "error");
         showToast({

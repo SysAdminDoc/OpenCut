@@ -62,7 +62,7 @@
                 </button>
             </nav>
             <div class="sidebar-footer">
-                <span class="conn-dot" id="connDot" role="status" aria-label="Server disconnected" data-i18n-aria-label="conn.dot_disconnected"></span>
+                <span class="conn-dot" id="connDot" role="status" aria-label="Backend disconnected" data-i18n-aria-label="conn.dot_disconnected"></span>
             </div>
         </aside>
 
@@ -143,15 +143,15 @@
 
         <main class="main" id="mainContent" tabindex="-1" role="main">
             <div class="server-status-banner hidden" id="serverStatusBanner">
-                <span id="serverStatusMsg" data-i18n="conn.reconnecting">Server disconnected. Reconnecting…</span>
+                <span id="serverStatusMsg" data-i18n="conn.reconnecting">Backend disconnected. Reconnecting…</span>
                 <span class="server-status-hint" id="serverStatusHint" data-i18n="conn.start_hint">Start the backend with Start-OpenCut.bat, or run: python -m opencut.server</span>
             </div>
 
             <section class="workspace-stage" id="workspaceStage" aria-labelledby="workspaceStageTitle">
                 <div class="workspace-stage-primary">
-                    <div class="workspace-stage-kicker" id="workspaceStageKicker" data-i18n="workspace.cut_kicker">Studio Workspace</div>
+                    <div class="workspace-stage-kicker" id="workspaceStageKicker" data-i18n="workspace.cut_kicker">Cut Pass</div>
                     <h2 class="workspace-stage-title" id="workspaceStageTitle" data-i18n="workspace.cut_idle_title">Select media to start the cut pass.</h2>
-                    <p class="workspace-stage-copy" id="workspaceStageCopy" data-i18n="workspace.cut_idle_copy">Choose a source, then remove dead air, clean fillers, and review pacing from the same workspace.</p>
+                    <p class="workspace-stage-copy" id="workspaceStageCopy" data-i18n="workspace.cut_idle_copy">Choose a source, then stage reviewable dead-air and filler cuts while keeping pacing decisions in one workspace.</p>
                     <div class="workspace-stage-session" role="list" aria-label="Current workspace session" data-i18n-aria-label="workspace.session_region">
                         <article class="workspace-stage-session-item" role="listitem">
                             <span class="workspace-stage-session-label" data-i18n="workspace.label_source">Source</span>
@@ -183,7 +183,7 @@
                             <span class="stage-action-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 6.25A2.25 2.25 0 0 1 6.5 4h2.75l1.5 1.5h2.75a2.25 2.25 0 0 1 2.25 2.25v5.75A2.25 2.25 0 0 1 14.5 15.75h-8A2.25 2.25 0 0 1 4.25 13.5z"/><path d="m10 8.5 2 2-2 2"/><path d="M7 10.5h5"/></svg>
                             </span>
-                            <span class="stage-action-label" data-i18n="media.browse">Browse File</span>
+                            <span class="stage-action-label" data-i18n="media.browse">Browse File…</span>
                         </button>
                         <button type="button" class="stage-action" id="stageCommandPaletteBtn">
                             <span class="stage-action-icon" aria-hidden="true">
@@ -277,7 +277,7 @@
                                 <span class="btn-icon" aria-hidden="true">
                                     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.75 6.25a2 2 0 0 1 2-2H8l1.5 1.5h5.75a2 2 0 0 1 2 2v5.5a2 2 0 0 1-2 2H4.75a2 2 0 0 1-2-2z"/><path d="M6.5 10h7"/></svg>
                                 </span>
-                                <span class="btn-label" data-i18n="media.browse">Browse File</span>
+                                <span class="btn-label" data-i18n="media.browse">Browse File…</span>
                             </button>
                         </div>
                     </div>
@@ -321,7 +321,7 @@
             <!-- ======== TAB: CUT ======== -->
             <div class="nav-panel active" id="panel-cut" role="tabpanel" aria-label="Cut & Clean" data-i18n-aria-label="headers.cut">
                 <div class="quick-actions" id="quickActionsCut">
-                    <button type="button" class="quick-action-btn" id="quickCleanInterview" disabled title="Preview silence trim, denoise, loudness, and captions as one reversible pass" data-i18n="cut.clean_up" data-i18n-title="quick_actions.clean_up_title">
+                    <button type="button" class="quick-action-btn" id="quickCleanInterview" disabled title="Preview one reversible cleanup pass" data-i18n="cut.clean_up" data-i18n-title="quick_actions.clean_up_title">
                         <span class="quick-action-head">
                             <span class="quick-action-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.25h3l1.7-4.25 2.1 8.5 1.45-4.25h2.75"/></svg>
@@ -540,7 +540,7 @@
                             <input type="text" id="fillerCustom" placeholder="e.g. whatever, totally, honestly" class="text-input" data-i18n-placeholder="cut.custom_fillers_placeholder">
                         </div>
                         <label class="checkbox-row"><input type="checkbox" id="fillerSilence" checked> <span data-i18n="cut.filler_also_silence">Also remove silences</span></label>
-                        <button type="button" class="btn-primary" id="runFillersBtn" disabled data-i18n="cut.clean_fillers">Clean Filler Words</button>
+                        <button type="button" class="btn-primary" id="runFillersBtn" disabled data-i18n="cut.clean_fillers">Remove Filler Words</button>
                         <div class="boundary-review hidden" id="fillerBoundaryReview" role="region" aria-labelledby="fillerBoundaryReviewTitle">
                             <div class="card-title" id="fillerBoundaryReviewTitle" data-i18n="cut.boundary_review_title">Review uncertain edit boundaries</div>
                             <p class="card-desc" id="fillerBoundaryReviewSummary" data-i18n="cut.boundary_review_desc">Audition each flagged range before allowing timeline changes.</p>
@@ -627,7 +627,7 @@
                 </div>
                 <div class="sub-panel" id="sub-auto-edit">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.auto_edit">Auto-Edit (Motion Detection)</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.auto_edit">Auto-Edit</div></div>
                         <p class="card-desc" data-i18n="cut.auto_edit_desc">Detect and remove static/boring segments using visual motion analysis.</p>
                         <div class="form-group">
                             <label for="autoEditMethod" data-i18n="cut.detection_method">Detection Method</label>
@@ -654,7 +654,7 @@
                         <div class="form-group">
                             <label for="autoEditMinClip" data-i18n="auto_edit.min_clip_length">Min Clip Length</label>
                             <div class="slider-row">
-                                <input type="range" id="autoEditMinClip" min="0.2" max="5" value="0.5" step="0.1" title="Minimum segment duration to keep (seconds)" data-i18n-title="auto_edit.min_clip_length_title">
+                                <input type="range" id="autoEditMinClip" min="0.2" max="5" value="0.5" step="0.1" title="Minimum clip duration to keep (seconds)" data-i18n-title="auto_edit.min_clip_length_title">
                                 <span class="slider-val" id="autoEditMinClipVal">0.5s</span>
                             </div>
                         </div>
@@ -667,7 +667,7 @@
 
                 <div class="sub-panel" id="sub-highlights">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.highlights">AI Highlight Extraction</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.highlights">Highlights</div></div>
                         <p class="card-desc" data-i18n="cut.highlights_desc">Use AI to find the most interesting/viral moments in your video.</p>
                         <div class="form-group">
                             <label for="highlightMax" data-i18n="forms.max_highlights">Max Highlights</label>
@@ -785,7 +785,7 @@
                     <button type="button" class="sub-tab" data-sub="cap-transcript" data-i18n="subtabs.transcript">Transcript</button>
                     <button type="button" class="sub-tab" data-sub="cap-translate" data-i18n="subtabs.translate">Translate</button>
                     <button type="button" class="sub-tab" data-sub="cap-karaoke" data-i18n="subtabs.karaoke">Karaoke</button>
-                    <button type="button" class="sub-tab" data-sub="cap-burnin" data-i18n="subtabs.burnin">Burn-in</button>
+                    <button type="button" class="sub-tab" data-sub="cap-burnin" data-i18n="subtabs.burnin">Burn-In</button>
                     <button type="button" class="sub-tab" data-sub="cap-animated" data-i18n="subtabs.animated">Animated</button>
                     <button type="button" class="sub-tab" data-sub="cap-repeat" data-i18n="subtabs.repeats">Repeats</button>
                     <button type="button" class="sub-tab" data-sub="cap-chapters" data-i18n="subtabs.chapters">Chapters</button>
@@ -1017,7 +1017,7 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
-                                <span data-i18n="captions.translate">Caption Translation</span>
+                                <span data-i18n="captions.translate">Translate</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="captions.translate_desc">Translate captions with optional local engines. NLLB and SeamlessM4T use non-commercial model terms and require explicit opt-in before download or use.</p>
@@ -1103,13 +1103,13 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-                                <span data-i18n="subtabs.karaoke">Karaoke Captions</span>
+                                <span data-i18n="subtabs.karaoke">Karaoke</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="captions.karaoke_desc">Word-by-word karaoke-style captions with smooth fill animation. Perfect for lyric videos and music content.</p>
 
                         <div class="form-group">
-                            <label for="karaokeModel" data-i18n="forms.model">Whisper Model</label>
+                            <label for="karaokeModel" data-i18n="forms.model">Model</label>
                             <select id="karaokeModel">
                                 <option value="tiny" data-i18n="captions.model_tiny">Tiny (fastest)</option>
                                 <option value="base" selected data-i18n="captions.model_base">Base (balanced)</option>
@@ -1155,13 +1155,13 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="15" x2="17" y2="15"/><line x1="7" y1="18" x2="14" y2="18"/></svg>
-                                <span data-i18n="captions.burn_in">Caption Burn-in</span>
+                                <span data-i18n="captions.burn_in">Burn-In Captions</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="captions.burnin_desc">Permanently burn captions into the video. Use when your platform doesn't support subtitle files.</p>
 
                         <div class="form-group">
-                            <label for="burninStyle" data-i18n="forms.burnin_style">Burn-in Style</label>
+                            <label for="burninStyle" data-i18n="forms.burnin_style">Burn-In Style</label>
                             <select id="burninStyle">
                                 <option value="default" data-i18n="captions.burnin_style_default_white">Default White</option>
                                 <option value="bold_yellow" data-i18n="captions.burnin_style_bold_yellow">Bold Yellow</option>
@@ -1173,7 +1173,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="burninModel" data-i18n="forms.model">Whisper Model</label>
+                            <label for="burninModel" data-i18n="forms.model">Model</label>
                             <select id="burninModel">
                                 <option value="tiny" data-i18n="captions.model_tiny">Tiny (fastest)</option>
                                 <option value="base" selected data-i18n="captions.model_base">Base (balanced)</option>
@@ -1193,13 +1193,13 @@
                 <!-- ANIMATED CAPTIONS -->
                 <div class="sub-panel" id="sub-cap-animated">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.animated">Animated Captions</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.animated">Animated</div></div>
                         <p class="card-desc" data-i18n="captions.animated_desc">CapCut-style animated word-by-word captions with pop, fade, bounce, and glow effects.</p>
                         <div class="form-group"><label for="animCapPreset" data-i18n="forms.animation">Animation</label>
                             <select id="animCapPreset"><option value="pop" data-i18n="captions.animation_pop_capcut">Pop (CapCut style)</option><option value="fade" data-i18n="captions.animation_fade">Fade</option><option value="slide_up" data-i18n="captions.animation_slide_up">Slide Up</option><option value="typewriter" data-i18n="captions.animation_typewriter">Typewriter</option><option value="bounce" data-i18n="captions.animation_bounce">Bounce</option><option value="glow" data-i18n="captions.animation_glow">Glow</option><option value="highlight_box" data-i18n="captions.animation_highlight_box">Highlight Box</option></select></div>
                         <div class="form-group"><label for="animCapFontSize" data-i18n="forms.font_size">Font Size</label><div class="slider-row"><input type="range" id="animCapFontSize" min="28" max="96" value="56" step="2"><span class="slider-val" id="animCapFontSizeVal">56</span></div></div>
                         <div class="form-group"><label for="animCapWpl" data-i18n="forms.words_per_line">Words Per Line</label><div class="slider-row"><input type="range" id="animCapWpl" min="2" max="10" value="6" step="1"><span class="slider-val" id="animCapWplVal">6</span></div></div>
-                        <div class="form-group"><label for="animCapModel" data-i18n="forms.model">Whisper Model</label>
+                        <div class="form-group"><label for="animCapModel" data-i18n="forms.model">Model</label>
                             <select id="animCapModel"><option value="tiny" data-i18n="captions.model_tiny">Tiny (fastest)</option><option value="base" selected data-i18n="captions.model_base">Base (balanced)</option><option value="small" data-i18n="captions.model_small_accurate">Small (accurate)</option></select></div>
                         <button type="button" class="btn-primary" id="runAnimCapBtn" disabled data-i18n="captions.render_animated">Render Animated Captions</button>
                     </section>
@@ -1211,7 +1211,7 @@
                         <div class="card-header"><div class="card-title" data-i18n="captions.remove_repeated_takes">Remove Repeated Takes</div></div>
                         <p class="card-desc" data-i18n="captions.repeat_desc">Detect and cut duplicate or repeated spoken takes using transcript similarity.</p>
                         <div class="form-group">
-                            <label for="repeatModel" data-i18n="forms.model">Whisper Model</label>
+                            <label for="repeatModel" data-i18n="forms.model">Model</label>
                             <select id="repeatModel">
                                 <option value="tiny" data-i18n="captions.model_tiny">Tiny (fastest)</option>
                                 <option value="base" selected data-i18n="captions.model_base">Base (balanced)</option>
@@ -1250,7 +1250,7 @@
                         </div>
                         <div class="form-group">
                             <label for="chaptersLlmModel" data-i18n="forms.model">Model</label>
-                            <input type="text" id="chaptersLlmModel" class="text-input" value="llama3" placeholder="llama3" autocomplete="off" spellcheck="false" data-i18n-placeholder="llm.model_placeholder">
+                            <input type="text" id="chaptersLlmModel" class="text-input" value="llama3" placeholder="llama3.1" autocomplete="off" spellcheck="false" data-i18n-placeholder="llm.model_placeholder">
                         </div>
                         <div class="form-group hidden" id="chaptersApiKeyGroup">
                             <label for="chaptersApiKey" data-i18n="forms.api_key">API Key</label>
@@ -1278,7 +1278,7 @@
                 <!-- SRT TO NATIVE CAPTIONS (moved to captions tab) -->
                 <div class="sub-panel" id="sub-cap-srt-import">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.srt_import">Import SRT as Native Captions</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.srt_import">SRT Import</div></div>
                         <p class="card-desc" data-i18n="captions.srt_import_desc">Parse an SRT file and inject caption segments into the active Premiere sequence as native captions.</p>
                         <div class="form-group">
                             <label for="srtImportPath" data-i18n="captions.srt_file">SRT File</label>
@@ -1523,7 +1523,7 @@
                         </div>
                         <div class="btn-row-split">
                             <button type="button" class="btn-outline btn-half" id="measureLoudnessBtn" disabled data-i18n="audio.measure">Measure</button>
-                            <button type="button" class="btn-primary btn-half" id="runNormalizeBtn" disabled title="Select media to enable normalization" data-i18n="audio.normalize">Normalize</button>
+                            <button type="button" class="btn-primary btn-half" id="runNormalizeBtn" disabled title="Select media to enable normalization" data-i18n="audio.normalize">Normalize Audio</button>
                         </div>
                         <!-- v1.10.2 (M): live 10s preview at target LUFS -->
                         <div class="audio-preview-row">
@@ -1583,7 +1583,7 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
-                                <span data-i18n="subtabs.voice_gen">Voice Generation (TTS)</span>
+                                <span data-i18n="subtabs.voice_gen">Voice Gen</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="audio.tts_desc">Generate voiceovers and narration from text. 400+ natural voices in 75+ languages.</p>
@@ -1729,7 +1729,7 @@
 
                         <div class="form-group">
                             <label for="duckMusicPath" data-i18n="audio.music_file_path">Music File Path</label>
-                            <div class="path-input-row"><input type="text" id="duckMusicPath" class="text-input" placeholder="/path/to/background_music.mp3" autocomplete="off" spellcheck="false" data-i18n-placeholder="audio.duck_music_path_placeholder"><button type="button" class="btn-browse" data-target="duckMusicPath" data-i18n="common.browse">Browse</button></div>
+                            <div class="path-input-row"><input type="text" id="duckMusicPath" class="text-input" placeholder="/path/to/background_music.mp3" autocomplete="off" spellcheck="false" data-i18n-placeholder="audio.duck_music_path_placeholder"><button type="button" class="btn-browse" data-target="duckMusicPath" data-i18n="common.browse">Browse File…</button></div>
                         </div>
 
                         <div class="form-group">
@@ -1760,7 +1760,7 @@
                 <!-- MUSIC AI (MusicGen) -->
                 <div class="sub-panel" id="sub-aud-musicai">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.music_ai">AI Music Generation</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.music_ai">Music AI</div></div>
                         <p class="card-desc" data-i18n="audio.music_ai_desc">Generate original music from a text description. Describe a mood, genre, or style and get a unique track. GPU recommended.</p>
                         <div class="form-group"><label for="musicAiPrompt" data-i18n="forms.prompt">Prompt</label>
                             <textarea id="musicAiPrompt" rows="3" placeholder="upbeat electronic dance music with driving bassline and synth arpeggios" data-i18n-placeholder="audio.music_prompt_placeholder"></textarea></div>
@@ -1775,7 +1775,7 @@
 
                 <div class="sub-panel" id="sub-aud-enhance">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="audio.enhance">Speech Enhancement</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="audio.enhance">Enhance Audio</div></div>
                         <p class="card-desc" data-i18n="audio.enhance_desc">Upgrade low-quality speech to studio quality using AI super-resolution.</p>
                         <label class="checkbox-row"><input type="checkbox" id="enhanceDenoise" checked><span data-i18n="audio.enhance_denoise">Denoise</span></label>
                         <label class="checkbox-row"><input type="checkbox" id="enhanceUpscale" checked><span data-i18n="audio.enhance_upscale">Super-Resolution</span></label>
@@ -1786,7 +1786,7 @@
                 <!-- LOUDNESS MATCH -->
                 <div class="sub-panel" id="sub-aud-loudmatch">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.loudness">Loudness Match</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.loudness">Loudness</div></div>
                         <p class="card-desc" data-i18n="audio.loudmatch_desc">Normalize multiple clips to a common integrated LUFS target.</p>
                         <div class="form-group">
                             <label for="loudMatchTarget" data-i18n="audio.loudmatch_target">Target LUFS</label>
@@ -1869,7 +1869,7 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 000 20 14.5 14.5 0 000-20"/><path d="M2 12h20"/></svg>
-                                <span data-i18n="video.effects">Video Effects</span>
+                                <span data-i18n="video.effects">Effects</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="video.effects_desc">Stabilization, vignette, film grain, letterbox, chromakey, LUT, and color correction. No extra installs needed.</p>
@@ -1971,7 +1971,7 @@
                         <div class="vfx-params hidden" id="vfxParams-lut">
                             <div class="form-group">
                                 <label for="vfxLutPath" data-i18n="forms.lut_file_path">LUT File Path</label>
-                            <div class="path-input-row"><input type="text" id="vfxLutPath" class="text-input" placeholder="/path/to/look.cube" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.lut_file_path_placeholder"><button type="button" class="btn-browse" data-target="vfxLutPath" data-i18n="common.browse">Browse</button></div>
+                            <div class="path-input-row"><input type="text" id="vfxLutPath" class="text-input" placeholder="/path/to/look.cube" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.lut_file_path_placeholder"><button type="button" class="btn-browse" data-target="vfxLutPath" data-i18n="common.browse">Browse File…</button></div>
                             </div>
                             <div class="form-group">
                                 <label for="vfxLutIntensity" data-i18n="forms.intensity">Intensity</label>
@@ -1985,7 +1985,7 @@
                         <!-- Color match params (none needed) -->
                         <div class="vfx-params hidden" id="vfxParams-color_match"></div>
 
-                        <button type="button" class="btn-outline btn-sm mb-xs" id="previewVfxBtn" disabled data-i18n="video.preview_effect">Preview Effect</button>
+                        <button type="button" class="btn-outline btn-sm mb-xs" id="previewVfxBtn" disabled data-i18n="video.preview_effect">Inspect Frame</button>
                         <label class="checkbox-row">
                             <input type="checkbox" id="vfxAutoImport" checked>
                             <span data-i18n="common.auto_import_result">Auto-import result to project</span>
@@ -2001,7 +2001,7 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                                <span data-i18n="subtabs.ai_tools">AI Video Tools</span>
+                                <span data-i18n="subtabs.ai_tools">AI Tools</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="video.ai_desc">AI upscaling, background removal, frame interpolation, and video denoising.</p>
@@ -2120,7 +2120,7 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M3 21v-2a7 7 0 0114 0v2"/></svg>
-                                <span data-i18n="video.face_blur">Face Blur / Auto-Censor</span>
+                                <span data-i18n="video.face_blur">Face Blur</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="video.face_blur_desc">Automatically detect and blur all faces in your video for privacy. Choose between blur, pixelate, or black box.</p>
@@ -2171,7 +2171,7 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                <span data-i18n="subtabs.style">AI Style Transfer</span>
+                                <span data-i18n="subtabs.style">Style</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="video.style_desc">Transform your video into a painting — Van Gogh, Munch, stained glass, and more. Models download automatically on first use.</p>
@@ -2213,7 +2213,7 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="4" y1="4" x2="20" y2="20"/></svg>
-                                <span data-i18n="subtabs.watermark">AI Watermark Removal</span>
+                                <span data-i18n="subtabs.watermark">Watermark</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="video.watermark_desc">Automatically detect and remove watermarks from videos and images. Works with AI-generated content and stock footage.</p>
@@ -2482,7 +2482,7 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                <span data-i18n="subtabs.speed">Speed &amp; Ramp</span>
+                                <span data-i18n="subtabs.speed">Speed</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="video.speed_desc">Constant speed change, reverse playback, or keyframe-based speed ramps with easing presets.</p>
@@ -2540,7 +2540,7 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg>
-                                <span data-i18n="subtabs.luts">Color LUTs</span>
+                                <span data-i18n="subtabs.luts">LUTs</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="video.lut_desc">Apply cinematic color grading via mathematically-generated .cube LUTs. 10 built-in looks + support for custom .cube files.</p>
@@ -2598,7 +2598,7 @@
                                 <label for="lutRefPath" data-i18n="video.reference_image">Reference Image</label>
                                 <div class="path-input-row">
                                     <input type="text" id="lutRefPath" class="text-input" placeholder="Path to reference image…" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.reference_image_placeholder">
-                                    <button type="button" class="btn-sm btn-browse" data-target="lutRefPath" data-i18n="common.browse">Browse</button>
+                                    <button type="button" class="btn-sm btn-browse" data-target="lutRefPath" data-i18n="common.browse">Browse File…</button>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -2620,7 +2620,7 @@
                 <!-- CHROMAKEY -->
                 <div class="sub-panel" id="sub-vid-chroma">
                     <section class="card">
-                        <div class="card-header" data-collapsible="true"><div class="card-title" data-i18n="subtabs.composite">Compositing &amp; Keying</div></div>
+                        <div class="card-header" data-collapsible="true"><div class="card-title" data-i18n="subtabs.composite">Composite</div></div>
                         <p class="card-desc" data-i18n="video.composite_desc">Green/blue screen removal, PiP overlay, and blend modes. Select a foreground clip above.</p>
                         <div class="form-group"><label for="chromaMode" data-i18n="forms.mode">Mode</label>
                             <select id="chromaMode"><option value="chromakey" data-i18n="video.composite_mode_chromakey">Green / Blue Screen Removal</option><option value="pip" data-i18n="video.composite_mode_pip">Picture-in-Picture Overlay</option><option value="blend" data-i18n="video.composite_mode_blend">Blend Two Clips</option></select></div>
@@ -2628,19 +2628,19 @@
                             <div class="form-group"><label for="chromaColor" data-i18n="forms.key_color">Key Color</label>
                                 <select id="chromaColor"><option value="green" data-i18n="video.key_color_green">Green</option><option value="blue" data-i18n="video.key_color_blue">Blue</option><option value="red" data-i18n="video.key_color_red">Red</option></select></div>
                             <div class="form-group"><label for="chromaBgPath" data-i18n="video.background_path">Background Path</label>
-                                <div class="path-input-row"><input type="text" id="chromaBgPath" name="chroma_bg_path" class="text-input" placeholder="/path/to/background.mp4" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.background_path_placeholder"><button type="button" class="btn-browse" data-target="chromaBgPath" data-i18n="common.browse">Browse</button></div></div>
+                                <div class="path-input-row"><input type="text" id="chromaBgPath" name="chroma_bg_path" class="text-input" placeholder="/path/to/background.mp4" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.background_path_placeholder"><button type="button" class="btn-browse" data-target="chromaBgPath" data-i18n="common.browse">Browse File…</button></div></div>
                             <div class="form-group"><label for="chromaTol" data-i18n="forms.tolerance">Tolerance</label><div class="slider-row"><input type="range" id="chromaTol" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="chromaTolVal">0.5</span></div></div>
                         </div>
                         <div id="pipParams" class="hidden">
                             <div class="form-group"><label for="pipPath" data-i18n="video.pip_video_path">PiP Video Path</label>
-                                <div class="path-input-row"><input type="text" id="pipPath" name="pip_path" class="text-input" placeholder="/path/to/pip_video.mp4" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.pip_video_path_placeholder"><button type="button" class="btn-browse" data-target="pipPath" data-i18n="common.browse">Browse</button></div></div>
+                                <div class="path-input-row"><input type="text" id="pipPath" name="pip_path" class="text-input" placeholder="/path/to/pip_video.mp4" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.pip_video_path_placeholder"><button type="button" class="btn-browse" data-target="pipPath" data-i18n="common.browse">Browse File…</button></div></div>
                             <div class="form-group"><label for="pipPosition" data-i18n="forms.position">Position</label>
                                 <select id="pipPosition"><option value="bottom_right" data-i18n="video.position_bottom_right">Bottom Right</option><option value="bottom_left" data-i18n="video.position_bottom_left">Bottom Left</option><option value="top_right" data-i18n="video.position_top_right">Top Right</option><option value="top_left" data-i18n="video.position_top_left">Top Left</option><option value="center" data-i18n="video.position_center">Center</option></select></div>
                             <div class="form-group"><label for="pipScale" data-i18n="forms.scale">Scale</label><div class="slider-row"><input type="range" id="pipScale" min="0.1" max="0.6" value="0.25" step="0.05"><span class="slider-val" id="pipScaleVal">0.25</span></div></div>
                         </div>
                         <div id="blendParams" class="hidden">
                             <div class="form-group"><label for="blendOverlay" data-i18n="video.overlay_path">Overlay Path</label>
-                                <div class="path-input-row"><input type="text" id="blendOverlay" name="blend_overlay_path" class="text-input" placeholder="/path/to/overlay.mp4" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.overlay_path_placeholder"><button type="button" class="btn-browse" data-target="blendOverlay" data-i18n="common.browse">Browse</button></div></div>
+                                <div class="path-input-row"><input type="text" id="blendOverlay" name="blend_overlay_path" class="text-input" placeholder="/path/to/overlay.mp4" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.overlay_path_placeholder"><button type="button" class="btn-browse" data-target="blendOverlay" data-i18n="common.browse">Browse File…</button></div></div>
                             <div class="form-group"><label for="blendMode" data-i18n="forms.blend_mode">Blend Mode</label>
                                 <select id="blendMode"><option value="overlay" data-i18n="video.blend_overlay">Overlay</option><option value="multiply" data-i18n="video.blend_multiply">Multiply</option><option value="screen" data-i18n="video.blend_screen">Screen</option><option value="softlight" data-i18n="video.blend_soft_light">Soft Light</option><option value="hardlight" data-i18n="video.blend_hard_light">Hard Light</option><option value="difference" data-i18n="video.blend_difference">Difference</option><option value="addition" data-i18n="video.blend_addition">Addition</option><option value="dodge" data-i18n="video.blend_dodge">Dodge</option><option value="burn" data-i18n="video.blend_burn">Burn</option></select></div>
                             <div class="form-group"><label for="blendOpacity" data-i18n="forms.opacity">Opacity</label><div class="slider-row"><input type="range" id="blendOpacity" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="blendOpacityVal">0.5</span></div></div>
@@ -2655,7 +2655,7 @@
                         <div class="card-header"><div class="card-title" data-i18n="subtabs.transitions">Transitions</div></div>
                         <p class="card-desc" data-i18n="video.transition_desc">34 FFmpeg xfade transitions between clips. Select a clip above, provide a second clip path.</p>
                         <div class="form-group"><label for="transClipB" data-i18n="video.second_clip_path">Second Clip Path</label>
-                            <div class="path-input-row"><input type="text" id="transClipB" class="text-input" placeholder="/path/to/clip_b.mp4" data-i18n-placeholder="video.second_clip_path_placeholder"><button type="button" class="btn-browse" data-target="transClipB" data-i18n="common.browse">Browse</button></div></div>
+                            <div class="path-input-row"><input type="text" id="transClipB" class="text-input" placeholder="/path/to/clip_b.mp4" data-i18n-placeholder="video.second_clip_path_placeholder"><button type="button" class="btn-browse" data-target="transClipB" data-i18n="common.browse">Browse File…</button></div></div>
                         <div class="form-group"><label for="transType" data-i18n="forms.transition">Transition</label>
                             <select id="transType"><option value="fade" data-i18n="video.transition_crossfade">Crossfade</option><option value="wipeleft" data-i18n="video.transition_wipe_left">Wipe Left</option><option value="wiperight" data-i18n="video.transition_wipe_right">Wipe Right</option><option value="slideleft" data-i18n="video.transition_slide_left">Slide Left</option><option value="slideright" data-i18n="video.transition_slide_right">Slide Right</option><option value="circlecrop" data-i18n="video.transition_circle_crop">Circle Crop</option><option value="circleopen" data-i18n="video.transition_circle_open">Circle Open</option><option value="dissolve" data-i18n="video.transition_dissolve">Dissolve</option><option value="pixelize" data-i18n="video.transition_pixelize">Pixelize</option><option value="diagtl" data-i18n="video.transition_diagonal_tl">Diagonal TL</option><option value="radial" data-i18n="video.transition_radial">Radial</option><option value="zoomin" data-i18n="video.transition_zoom_in">Zoom In</option><option value="fadeblack" data-i18n="video.transition_fade_black">Fade Black</option><option value="fadewhite" data-i18n="video.transition_fade_white">Fade White</option><option value="smoothleft" data-i18n="video.transition_smooth_left">Smooth Left</option><option value="squeezeh" data-i18n="video.transition_squeeze_h">Squeeze H</option></select></div>
                         <div class="form-group"><label for="transDur" data-i18n="forms.duration">Duration (sec)</label><div class="slider-row"><input type="range" id="transDur" min="0.3" max="3.0" value="1.0" step="0.1"><span class="slider-val" id="transDurVal">1.0</span></div></div>
@@ -2666,7 +2666,7 @@
                 <!-- PARTICLES -->
                 <div class="sub-panel" id="sub-vid-particles">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.particles">Particle Effects</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.particles">Particles</div></div>
                         <p class="card-desc" data-i18n="video.particles_desc">Add confetti, sparkles, snow, rain, fire embers, smoke, or bubbles over your video.</p>
                         <div class="form-group"><label for="particlePreset" data-i18n="forms.preset">Preset</label>
                             <select id="particlePreset"><option value="confetti" data-i18n="video.particle_confetti">Confetti</option><option value="sparkles" data-i18n="video.particle_sparkles">Sparkles</option><option value="snow" data-i18n="video.particle_snow">Snow</option><option value="rain" data-i18n="video.particle_rain">Rain</option><option value="fire_embers" data-i18n="video.particle_fire_embers">Fire Embers</option><option value="smoke" data-i18n="video.particle_smoke">Smoke</option><option value="bubbles" data-i18n="video.particle_bubbles">Bubbles</option></select></div>
@@ -2678,7 +2678,7 @@
                 <!-- TITLES / MOTION GRAPHICS -->
                 <div class="sub-panel" id="sub-vid-titles">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.titles">Titles &amp; Motion Graphics</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.titles">Titles</div></div>
                         <p class="card-desc" data-i18n="video.titles_desc">Create animated title cards and lower thirds with fade, slide, typewriter, and bounce effects.</p>
                         <div class="form-group"><label for="titleText" data-i18n="video.title_text">Title Text</label>
                             <input type="text" id="titleText" class="text-input" placeholder="Your Title Here" data-i18n-placeholder="video.title_text_placeholder"></div>
@@ -2699,7 +2699,7 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
-                                <span data-i18n="subtabs.reframe">Reframe for Phone / Social</span>
+                                <span data-i18n="subtabs.reframe">Reframe</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="video.reframe_desc">Resize and crop video to fit vertical (TikTok, Shorts, Reels), square, or custom dimensions. Smart crop keeps the important center content.</p>
@@ -2787,7 +2787,7 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-                                <span data-i18n="subtabs.merge">Merge / Concatenate Clips</span>
+                                <span data-i18n="subtabs.merge">Merge</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="video.merge_desc">Join multiple clips into a single video file. Add clips using the batch picker or drag and drop.</p>
@@ -2828,7 +2828,7 @@
                 <!-- PRO UPSCALE -->
                 <div class="sub-panel" id="sub-vid-upscale">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.upscale">Pro Upscaling</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.upscale">Upscale</div></div>
                         <p class="card-desc" data-i18n="video.upscale_desc">Upscale low-resolution video to 2x, 3x, or 4x. Choose fast CPU or AI-powered GPU quality.</p>
                         <div class="form-group"><label for="upscalePreset" data-i18n="forms.quality_preset">Quality Preset</label>
                             <select id="upscalePreset"><option value="fast" data-i18n="video.upscale_preset_fast">Fast (CPU, good quality)</option><option value="balanced" data-i18n="video.upscale_preset_balanced">Balanced (AI, great quality)</option><option value="premium_v2x" data-i18n="video.upscale_preset_premium">Premium (AI, best quality)</option></select></div>
@@ -2841,7 +2841,7 @@
                 <!-- COLOR CORRECTION -->
                 <div class="sub-panel" id="sub-vid-color">
                     <section class="card">
-                        <div class="card-header" data-collapsible="true"><div class="card-title" data-i18n="subtabs.color">Color Correction</div></div>
+                        <div class="card-header" data-collapsible="true"><div class="card-title" data-i18n="subtabs.color">Color</div></div>
                         <p class="card-desc" data-i18n="video.color_desc">Professional color controls: exposure, contrast, saturation, temperature, lift/gamma/gain.</p>
                         <div class="form-group"><label for="ccExposure" data-i18n="video.color_exposure">Exposure</label><div class="slider-row"><input type="range" id="ccExposure" min="-3" max="3" value="0" step="0.1"><span class="slider-val" id="ccExposureVal">0</span></div></div>
                         <div class="form-group"><label for="ccContrast" data-i18n="video.color_contrast">Contrast</label><div class="slider-row"><input type="range" id="ccContrast" min="0.5" max="2.0" value="1.0" step="0.05"><span class="slider-val" id="ccContrastVal">1.0</span></div></div>
@@ -2856,7 +2856,7 @@
                 <!-- OBJECT/WATERMARK REMOVAL -->
                 <div class="sub-panel" id="sub-vid-remove">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.de_logo">Object &amp; Watermark Removal</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.de_logo">De-Logo</div></div>
                         <p class="card-desc" data-i18n="video.remove_desc">Remove a logo or watermark from a specific region of your video. Draw the area to erase.</p>
                         <div class="form-group">
                             <label for="removeMethod" data-i18n="forms.method">Method</label>
@@ -2900,7 +2900,7 @@
                             <select id="faceAiMode"><option value="enhance" data-i18n="video.face_mode_enhance">Enhance Facial Detail</option><option value="swap" data-i18n="video.face_mode_swap">Swap Faces</option></select></div>
                         <div id="faceSwapParams" class="hidden">
                             <div class="form-group"><label for="faceRefPath" data-i18n="video.reference_face_image">Reference Face Image</label>
-                                <div class="path-input-row"><input type="text" id="faceRefPath" class="text-input" placeholder="/path/to/face_reference.jpg" data-i18n-placeholder="video.reference_face_image_placeholder" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="faceRefPath" data-i18n="common.browse">Browse</button></div></div>
+                                <div class="path-input-row"><input type="text" id="faceRefPath" class="text-input" placeholder="/path/to/face_reference.jpg" data-i18n-placeholder="video.reference_face_image_placeholder" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="faceRefPath" data-i18n="common.browse">Browse File…</button></div></div>
                         </div>
                         <button type="button" class="btn-primary" id="runFaceAiBtn" disabled data-i18n="video.enhance_faces">Enhance Faces</button>
                     </section>
@@ -2912,7 +2912,7 @@
                 <div class="sub-tabs" role="tablist" id="exportSubTabs">
                     <button type="button" class="sub-tab active" data-sub="exp-platform" data-i18n="subtabs.presets">Presets</button>
                     <button type="button" class="sub-tab" data-sub="exp-transcript" data-i18n="subtabs.transcript">Transcript</button>
-                    <button type="button" class="sub-tab" data-sub="exp-shorts" data-i18n="subtabs.shorts">Auto Shorts</button>
+                    <button type="button" class="sub-tab" data-sub="exp-shorts" data-i18n="subtabs.shorts">Magic Clips</button>
                     <button type="button" class="sub-tab" data-sub="exp-thumbnail" data-i18n="export.thumbnails">Thumbnails</button>
                     <button type="button" class="sub-tab" data-sub="exp-batch" data-i18n="subtabs.batch">Batch</button>
                     <button type="button" class="sub-tab" data-sub="exp-deliverables" data-i18n="subtabs.deliverables">Deliverables</button>
@@ -2990,7 +2990,7 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                                <span data-i18n="export.thumbnails">Auto-Thumbnails</span>
+                                <span data-i18n="export.thumbnails">Thumbnails</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="export.thumbnail_desc">AI-scored thumbnail candidates from your video. Scores frames on sharpness, color, contrast, face presence, and composition.</p>
@@ -3130,7 +3130,7 @@
                                     <option value="/audio/normalize" data-i18n="workflow.step_normalize_audio">Normalize Audio</option>
                                     <option value="/captions/styled" data-i18n="workflow.step_styled_captions">Styled Captions</option>
                                     <option value="/captions/subtitle" data-i18n="workflow.step_export_subtitles">Export Subtitles</option>
-                                    <option value="/captions/burnin" data-i18n="workflow.step_burn_in_captions">Burn-in Captions</option>
+                                    <option value="/captions/burnin" data-i18n="workflow.step_burn_in_captions">Burn-In Captions</option>
                                     <option value="/video/stabilize" data-i18n="workflow.step_stabilize_video">Stabilize Video</option>
                                     <option value="/video/effects" data-i18n="workflow.step_video_effects">Video Effects</option>
                                     <option value="/export/preset" data-i18n="workflow.step_export_preset">Export Preset</option>
@@ -3157,7 +3157,7 @@
 
                 <div class="sub-panel" id="sub-exp-shorts">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.shorts">One-Click Shorts Pipeline</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.shorts">Magic Clips</div></div>
                         <p class="card-desc" data-i18n="export.auto_shorts_desc">Auto-generate short clips: transcribe, find highlights, reframe, add captions.</p>
                         <div class="form-group">
                             <label for="shortsPlatform" data-i18n="export.shorts_platform">Platform</label>
@@ -3195,7 +3195,7 @@
                             </div>
                         </div>
                         <label class="checkbox-row"><input type="checkbox" id="shortsFaceTrack" checked><span data-i18n="export.shorts_face_track">Face Tracking</span></label>
-                        <label class="checkbox-row"><input type="checkbox" id="shortsCaptions" checked><span data-i18n="export.shorts_captions">Burn-in Captions</span></label>
+                        <label class="checkbox-row"><input type="checkbox" id="shortsCaptions" checked><span data-i18n="export.shorts_captions">Burn-In Captions</span></label>
                         <div class="form-actions">
                             <button type="button" class="btn-secondary" id="previewShortsPlanBtn" disabled data-i18n="export.shorts_preview_plan">Preview Plan</button>
                             <button type="button" class="btn-primary" id="runShortsBtn" disabled data-i18n="export.generate_shorts">Generate Shorts</button>
@@ -3240,7 +3240,7 @@
                             <label for="deliverablesOutputDir" data-i18n="forms.output_dir">Output Directory</label>
                             <div class="input-row">
                                 <input type="text" id="deliverablesOutputDir" class="text-input" placeholder="Same as project if blank" data-i18n-placeholder="deliverables.output_dir_placeholder" autocomplete="off" spellcheck="false">
-                                <button type="button" class="btn-sm btn-browse" data-target="deliverablesOutputDir" data-i18n="common.browse_folder">Browse</button>
+                                <button type="button" class="btn-sm btn-browse" data-target="deliverablesOutputDir" data-i18n="common.browse_folder">Browse Folder…</button>
                             </div>
                         </div>
                         <div class="oc-status-line mt-xs" id="deliverablesStatus" data-state="idle" role="status" aria-live="polite" data-i18n="deliverables.status_load_prompt">Load sequence info, choose a destination if needed, then generate the docs you need.</div>
@@ -3352,7 +3352,7 @@
                         <p class="card-desc" data-i18n="timeline.beat_cut_desc">Detect beats and emit beat-aligned clip boundaries you can review and ripple-apply to the active sequence.</p>
                         <div class="form-group">
                             <label for="beatCutMode" data-i18n="timeline.beat_cut_mode">Cut on</label>
-                            <select id="beatCutMode" aria-label="Beat cut mode" data-i18n-aria-label="timeline.beat_cut_mode">
+                            <select id="beatCutMode" aria-label="Cut on" data-i18n-aria-label="timeline.beat_cut_mode">
                                 <option value="every_beat" selected data-i18n="timeline.beat_cut_every_beat">Every beat</option>
                                 <option value="every_2_beats" data-i18n="timeline.beat_cut_every_2">Every 2 beats</option>
                                 <option value="every_bar" data-i18n="timeline.beat_cut_every_bar">Every bar (4 beats)</option>
@@ -3398,7 +3398,7 @@
                             <label for="markerExportDir" data-i18n="timeline.output_directory">Output Directory</label>
                             <div class="input-row">
                                 <input type="text" id="markerExportDir" class="text-input" placeholder="Output folder…" data-i18n-placeholder="timeline.output_folder_placeholder" autocomplete="off" spellcheck="false">
-                                <button type="button" class="btn-sm btn-browse" data-target="markerExportDir" data-i18n="common.browse_folder">Browse</button>
+                                <button type="button" class="btn-sm btn-browse" data-target="markerExportDir" data-i18n="common.browse_folder">Browse Folder…</button>
                             </div>
                         </div>
                         <div class="btn-row gap-xs mt-xs">
@@ -3456,7 +3456,7 @@
                 <!-- FOOTAGE SEARCH -->
                 <div class="sub-panel active" id="sub-nlp-search">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="search.library_title">Search Footage Library</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="search.library_title">Search the footage library</div></div>
                         <p class="card-desc" data-i18n="search.library_desc">Index and semantically search all project clips by transcript content.</p>
                         <div class="oc-inline-summary-grid" aria-label="Search index status" data-i18n-aria-label="search.index_status_aria">
                             <div class="oc-inline-stat">
@@ -3526,7 +3526,7 @@
                 <section class="card settings-overview-card">
                     <div class="card-header"><div class="card-title" data-i18n="settings.studio_readiness_title">System Readiness</div></div>
                     <p class="card-desc" data-i18n="settings.studio_readiness_desc">Verify the backend, speech engine, live updates, and routing.</p>
-                    <div class="oc-inline-summary-grid" aria-label="Studio readiness" data-i18n-aria-label="settings.studio_readiness_aria">
+                    <div class="oc-inline-summary-grid" aria-label="System readiness" data-i18n-aria-label="settings.studio_readiness_aria">
                         <div class="oc-inline-stat">
                             <span class="oc-inline-label" data-i18n="settings.studio_label_backend">Backend</span>
                             <span class="oc-status-pill" id="settingsBackendPill" data-state="working" data-i18n="settings.studio_backend_checking">Checking…</span>
@@ -3556,8 +3556,8 @@
                     <div class="oc-wave-h-grid">
                         <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHTryDemo" data-i18n="wave_h.try_demo">Try on demo footage</button>
                         <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHRestartTour" data-i18n="wave_h.restart_tour">Restart onboarding tour</button>
-                        <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHGistPush" data-i18n="wave_h.gist_push">Export presets to Gist</button>
-                        <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHGistPull" data-i18n="wave_h.gist_pull">Import presets from Gist</button>
+                        <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHGistPush" data-i18n="wave_h.gist_push">Export presets to a gist</button>
+                        <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHGistPull" data-i18n="wave_h.gist_pull">Import presets from a gist</button>
                         <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHVirality" data-i18n="wave_h.virality">Score virality (selected clip)</button>
                         <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHCursorZoom" data-i18n="wave_h.cursor_zoom">Detect cursor zoom (screen rec)</button>
                         <button type="button" class="btn btn-ghost oc-wave-h-btn" id="ocWaveHSendLog" data-i18n="wave_h.send_log">Send log — open issue report</button>
@@ -3600,7 +3600,7 @@
                             <button type="button" class="icon-btn" id="journalRefreshBtn" title="Refresh" aria-label="Refresh journal" data-i18n-title="journal.refresh_title" data-i18n-aria-label="journal.refresh_aria">
                                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
                             </button>
-                            <button type="button" class="btn btn-ghost btn-sm" id="journalClearBtn" title="Clear all entries" data-i18n="common.clear" data-i18n-title="journal.clear_title">Clear</button>
+                            <button type="button" class="btn btn-ghost btn-sm" id="journalClearBtn" title="Clear operation journal?" data-i18n="common.clear" data-i18n-title="journal.clear_title">Clear</button>
                         </div>
                     </div>
                     <p class="card-description" data-i18n="journal.description">Track every timeline-affecting action in one place, then roll back supported changes before manual edits drift out of sync.</p>
@@ -3913,25 +3913,25 @@
                 <section class="card">
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.ai_engine_prefs">Engine Routing</div>
-                        <button type="button" class="link-btn utility-btn is-refresh" id="refreshEnginesBtn" title="Refresh engine availability" data-i18n-title="engines.settings_refresh_title">
+                        <button type="button" class="link-btn utility-btn is-refresh" id="refreshEnginesBtn" title="Refresh engine availability to review Auto routing and pinned domains." data-i18n-title="engines.settings_refresh_title">
                             <span class="btn-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.75 8.25A6.75 6.75 0 0 0 5.27 4.11"/><path d="M4 1.75v3.5h3.5"/><path d="M3.25 11.75a6.75 6.75 0 0 0 11.48 4.14"/><path d="M16 18.25v-3.5h-3.5"/></svg>
                             </span>
-                            <span class="btn-label" data-i18n="engines.settings_refresh_label">Refresh Availability</span>
+                            <span class="btn-label" data-i18n="engines.settings_refresh_label">Refresh availability</span>
                         </button>
                     </div>
                     <p class="card-desc" data-i18n="engines.settings_desc">Choose which engine OpenCut should favor for each editing domain. Leave a domain on Auto to keep the best available engine selected for this machine.</p>
                     <div id="engineRegistryGrid" class="dep-grid">
                         <div class="hint" data-i18n="engines.settings_empty_hint">Refresh availability to load engine options for this machine.</div>
                     </div>
-                    <div class="oc-status-line mt-xs" id="engineRegistryStatus" data-state="idle" role="status" aria-live="polite" data-i18n="engines.settings_refresh_title">Refresh engine availability to review Auto routing and any pinned domains.</div>
+                    <div class="oc-status-line mt-xs" id="engineRegistryStatus" data-state="idle" role="status" aria-live="polite" data-i18n="engines.settings_refresh_title">Refresh engine availability to review Auto routing and pinned domains.</div>
                 </section>
 
                 <section class="card">
                     <div class="card-header">
-                        <div class="card-title" data-i18n="settings.ws_bridge">Live Updates Bridge</div>
+                        <div class="card-title" data-i18n="settings.ws_bridge">WebSocket Bridge</div>
                     </div>
-                    <p class="card-desc" data-i18n="ws.settings_desc">Optional WebSocket connection for streaming progress during longer jobs. Not required for the panel to work -- the panel connects to the backend over HTTP automatically.</p>
+                    <p class="card-desc" data-i18n="ws.settings_desc">Optional WebSocket connection for streaming progress during longer jobs. Not required for the panel to work — the panel connects to the backend over HTTP automatically.</p>
                     <div class="settings-row settings-row-inline">
                         <span class="settings-label" data-i18n="ws.label_bridge">Bridge</span>
                         <span class="settings-value settings-status-pill" id="wsStatusText" data-state="unknown" data-i18n="ws.status_checking">Checking…</span>
@@ -3945,7 +3945,7 @@
                         <button type="button" class="btn-outline btn-sm" id="wsStopBtn" data-i18n="ws.button_stop_bridge">Stop Bridge</button>
                         <button type="button" class="btn-outline btn-sm" id="wsConnectBtn" data-i18n="ws.button_connect">Connect Live Updates</button>
                     </div>
-                    <div class="oc-status-line mt-xs" id="wsHint" data-state="idle" role="status" aria-live="polite" data-i18n="ws.hint_start_bridge">Start the bridge to stream progress from the backend into the panel during longer runs.</div>
+                    <div class="oc-status-line mt-xs" id="wsHint" data-state="idle" role="status" aria-live="polite" data-i18n="ws.hint_start_bridge">Start the bridge to stream progress, completion, and cancel feedback into the panel during longer runs.</div>
                 </section>
 
                 <section class="card">
@@ -4172,11 +4172,11 @@
             </div>
 
             <!-- System Status Bar -->
-            <div class="status-bar" id="statusBar" data-state="offline" role="status" aria-label="Server status" data-i18n-aria-label="status.server_status">
+            <div class="status-bar" id="statusBar" data-state="offline" role="status" aria-label="Backend status" data-i18n-aria-label="status.server_status">
                 <span class="status-dot" id="statusDot" aria-hidden="true"></span>
                 <span class="status-text" id="statusText" data-i18n="status.connecting">Connecting…</span>
                 <span class="status-separator" aria-hidden="true">|</span>
-                <span class="status-gpu" id="statusGpu" data-i18n="status.gpu_none">GPU: --</span>
+                <span class="status-gpu" id="statusGpu" data-i18n="status.gpu_none">GPU: N/A</span>
                 <span class="status-separator" aria-hidden="true">|</span>
                 <span class="status-jobs" id="statusJobs" data-i18n="status.jobs_none">Jobs: 0</span>
             </div>
@@ -4215,12 +4215,12 @@
             <div class="preview-modal-body">
                 <div class="preview-pane">
                     <div class="preview-label" id="previewOriginalLabel" data-i18n="preview.selected_frame">Selected Frame</div>
-                    <img id="previewOriginal" class="preview-img" alt="Original" data-i18n-alt="preview.original_alt">
+                    <img id="previewOriginal" class="preview-img" alt="Original frame" data-i18n-alt="preview.original_alt">
                 </div>
                 <div class="preview-divider" id="previewDivider" aria-hidden="true"></div>
                 <div class="preview-pane preview-pane-secondary" id="previewProcessedPane" aria-hidden="true">
                     <div class="preview-label" id="previewProcessedLabel" data-i18n="preview.processed">Processed Preview</div>
-                    <img id="previewProcessed" class="preview-img" alt="Preview" data-i18n-alt="preview.processed_alt">
+                    <img id="previewProcessed" class="preview-img" alt="Processed preview frame" data-i18n-alt="preview.processed_alt">
                 </div>
             </div>
             <div class="preview-modal-footer">

@@ -1568,6 +1568,16 @@
       "uxp.settings.update_available_summary"
     ]
   },
+  "shared.settings.update_check_failed": {
+    "cep": [
+      "settings.update_check_failed",
+      "toast.update_check_failed"
+    ],
+    "uxp": [
+      "uxp.settings.update_check_failed",
+      "uxp.status.update_check_failed"
+    ]
+  },
   "shared.settings.update_checking_summary": {
     "cep": [
       "settings.update_checking_summary"

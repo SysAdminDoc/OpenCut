@@ -31,9 +31,11 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -45,6 +47,15 @@ TRANSCRIPT_CORRECTION_JS = ROOT / "extension" / "com.opencut.panel" / "client" /
 GPU_SELECTION_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "gpu-selection-controller.js"
 HOST_WRITE_VERIFICATION_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "host-write-verification.js"
 CLIENT_DIR = ROOT / "extension" / "com.opencut.panel" / "client"
+UXP_DIR = ROOT / "extension" / "com.opencut.uxp"
+
+#: Both panels paint the inline `data-i18n` text before i18n init finishes and
+#: keep it as the fallback when a key is missing, so it has to say the same
+#: thing the locale does. (label, index.html, en.json)
+FALLBACK_PANELS = (
+    ("cep", INDEX_HTML, LOCALES / "en.json"),
+    ("uxp", UXP_DIR / "index.html", UXP_DIR / "locales" / "en.json"),
+)
 
 # Vendored or non-runtime scripts that never consume locale keys.
 _NON_RUNTIME_JS = frozenset({"CSInterface.js"})
@@ -144,6 +155,137 @@ def _scan_js_consumers() -> set[str]:
     return _scan_js_consumers_from_source(_read_runtime_js())
 
 
+# ----------------------------------------------------------------------
+# data-i18n fallback drift
+# ----------------------------------------------------------------------
+# The dead/missing-key checks above prove a key is *used*. They say nothing
+# about the English text sitting next to it in the HTML, which is what a user
+# reads on first paint and whenever i18n init fails. Those copies had drifted
+# far enough to rename features (a "Studio Workspace" heading where the locale
+# said "Cut Pass"), so the fallback text is now pinned to the locale value.
+
+_VOID_TAGS = frozenset({
+    "area", "base", "br", "col", "embed", "hr", "img", "input",
+    "link", "meta", "param", "source", "track", "wbr",
+})
+
+#: data-i18n-<x> attribute -> the attribute it translates.
+_FALLBACK_ATTRS = {
+    "data-i18n-title": "title",
+    "data-i18n-label": "label",
+    "data-i18n-alt": "alt",
+    "data-i18n-placeholder": "placeholder",
+    "data-i18n-aria-label": "aria-label",
+}
+
+#: Both panels hand the translated string to a nested label span when there is
+#: one, so that span's text is the fallback rather than the whole element's.
+_LABEL_CLASSES = ("btn-label", "i18n-text")
+
+
+class _FallbackParser(HTMLParser):
+    """Collect the text each `data-i18n` element and attribute paints."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.records: list[dict] = []
+        self._stack: list[dict] = []
+
+    def handle_starttag(self, tag, attrs):
+        attributes = {name: (value or "") for name, value in attrs}
+        line = self.getpos()[0]
+        for data_attr, target in _FALLBACK_ATTRS.items():
+            key = attributes.get(data_attr)
+            if key and target in attributes:
+                self.records.append({
+                    "key": key,
+                    "attr": target,
+                    "line": line,
+                    "text": attributes[target],
+                })
+        if tag in _VOID_TAGS:
+            return
+        self._stack.append({
+            "tag": tag,
+            "key": attributes.get("data-i18n"),
+            "line": line,
+            "text": [],
+            "label": None,
+            "is_label": any(
+                cls in attributes.get("class", "").split() for cls in _LABEL_CLASSES
+            ),
+        })
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+
+    def handle_data(self, data):
+        for frame in self._stack:
+            frame["text"].append(data)
+
+    def handle_endtag(self, tag):
+        for index in range(len(self._stack) - 1, -1, -1):
+            if self._stack[index]["tag"] != tag:
+                continue
+            frame = self._stack.pop(index)
+            # Unclosed inner tags leave stale frames above this one.
+            del self._stack[index:]
+            text = "".join(frame["text"])
+            if frame["is_label"]:
+                for parent in self._stack:
+                    if parent["label"] is None:
+                        parent["label"] = text
+            if frame["key"]:
+                self.records.append({
+                    "key": frame["key"],
+                    "attr": None,
+                    "line": frame["line"],
+                    "text": frame["label"] if frame["label"] is not None else text,
+                })
+            return
+
+
+def _collapse(value: str) -> str:
+    """HTML collapses runs of whitespace, so the comparison has to as well."""
+    return " ".join(html.unescape(value).split())
+
+
+def fallback_drifts(html_source: str, locale: dict) -> list[dict]:
+    """Every `data-i18n` fallback whose text disagrees with its locale value."""
+    parser = _FallbackParser()
+    parser.feed(html_source)
+    parser.close()
+    drifts = []
+    for record in parser.records:
+        expected = locale.get(record["key"])
+        if not isinstance(expected, str):
+            continue
+        actual = _collapse(record["text"])
+        # An empty element is filled entirely from the locale at runtime; there
+        # is no first-paint copy to keep honest.
+        if not actual or actual == _collapse(expected):
+            continue
+        drifts.append({
+            "key": record["key"],
+            "attr": record["attr"],
+            "line": record["line"],
+            "html": actual,
+            "locale": expected,
+        })
+    return sorted(drifts, key=lambda drift: drift["line"])
+
+
+def evaluate_fallbacks() -> list[dict]:
+    """Fallback drift for both panels, newest-panel-last for stable output."""
+    out = []
+    for panel, html_path, locale_path in FALLBACK_PANELS:
+        if not html_path.is_file() or not locale_path.is_file():
+            continue
+        locale = json.loads(locale_path.read_text(encoding="utf-8"))
+        for drift in fallback_drifts(html_path.read_text(encoding="utf-8"), locale):
+            out.append({"panel": panel, **drift})
+    return out
+
 def evaluate() -> dict:
     keys = _load_en_keys()
     html_consumers = _scan_html_consumers()
@@ -154,6 +296,7 @@ def evaluate() -> dict:
     consumers = html_consumers | js_consumers
     dead = sorted(keys - consumers)
     missing = sorted(consumers - keys)
+    fallbacks = evaluate_fallbacks()
     return {
         "total_keys": len(keys),
         "html_consumers": len(html_consumers),
@@ -167,6 +310,8 @@ def evaluate() -> dict:
         "missing_keys": missing,
         "baseline": DEAD_KEY_BASELINE,
         "dead_over_baseline": max(0, len(dead) - DEAD_KEY_BASELINE),
+        "fallback_drift_count": len(fallbacks),
+        "fallback_drifts": fallbacks,
     }
 
 
@@ -180,6 +325,17 @@ def cmd_report(check: bool) -> int:
     )
     print(f"  dead keys: {e['dead_count']} (baseline allowed: {e['baseline']})")
     print(f"  missing keys: {e['missing_count']}")
+    print(f"  fallback drift: {e['fallback_drift_count']}")
+    if e["fallback_drifts"]:
+        print("\n  Fallback text that disagrees with en.json:")
+        for drift in e["fallback_drifts"][:20]:
+            where = f"{drift['panel']} index.html:{drift['line']}"
+            attr = f" [@{drift['attr']}]" if drift["attr"] else ""
+            print(f"    {where} {drift['key']}{attr}")
+            print(f"      html   : {drift['html']}")
+            print(f"      locale : {drift['locale']}")
+        if e["fallback_drift_count"] > 20:
+            print(f"    ... +{e['fallback_drift_count'] - 20} more")
     if e["missing_keys"]:
         print("\n  Missing keys (consumed but not in en.json):")
         for k in e["missing_keys"][:20]:
@@ -192,6 +348,14 @@ def cmd_report(check: bool) -> int:
             print(
                 f"\nFAIL: {e['missing_count']} key(s) consumed but not in en.json — "
                 "add them or fix the typo.",
+                file=sys.stderr,
+            )
+            fail = True
+        if e["fallback_drift_count"] > 0:
+            print(
+                f"\nFAIL: {e['fallback_drift_count']} data-i18n fallback(s) no longer "
+                "match en.json. The locale is the source of truth: copy the locale "
+                "value into the HTML, or change both together.",
                 file=sys.stderr,
             )
             fail = True
@@ -213,7 +377,7 @@ def cmd_json() -> int:
     e = evaluate()
     json.dump(e, sys.stdout, indent=2)
     sys.stdout.write("\n")
-    if e["missing_count"] > 0 or e["dead_over_baseline"] > 0:
+    if e["missing_count"] > 0 or e["dead_over_baseline"] > 0 or e["fallback_drift_count"] > 0:
         return 1
     return 0
 

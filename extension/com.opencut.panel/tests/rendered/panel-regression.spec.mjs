@@ -2623,7 +2623,7 @@ for (const surfaceName of ["cep", "uxp"]) {
     ).first();
     const button = page.getByRole("button", { name: "Restart worker" });
     await expect(row).toContainText("Worker: stopped");
-    await expect(row).toContainText("not an OS security sandbox");
+    await expect(row).toContainText("isolates crashes so one plugin cannot take the others down");
     await expect(button).toBeVisible();
     await button.click();
     await expect.poll(() => capturedRequests.length).toBe(1);
