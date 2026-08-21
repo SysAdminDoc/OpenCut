@@ -54,6 +54,7 @@ const classicScriptFiles = [
   "settings-diagnostics-controller.js",
   "gpu-selection-controller.js",
   "navigation-controller.js",
+  "collapsible-cards.js",
   "bootstrap.js",
   "transcript-correction-controller.js",
   "main.js",

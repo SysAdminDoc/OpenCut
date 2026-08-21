@@ -13378,23 +13378,9 @@
     // Collapsible Cards
     // ================================================================
     function initCollapsibleCards() {
-        var headers = document.querySelectorAll("[data-collapsible]");
-        for (var i = 0; i < headers.length; i++) {
-            headers[i].addEventListener("click", function () {
-                this.classList.toggle("collapsed");
-                // Find the next sibling content (everything after header in the card)
-                var card = this.closest(".card");
-                if (!card) return;
-                var children = card.children;
-                var afterHeader = false;
-                for (var j = 0; j < children.length; j++) {
-                    if (children[j] === this) { afterHeader = true; continue; }
-                    if (afterHeader) {
-                        children[j].style.display = this.classList.contains("collapsed") ? "none" : "";
-                    }
-                }
-            });
-        }
+        // client/collapsible-cards.js owns the toggle and the button
+        // semantics keyboard users need. UXP already had them.
+        OpenCutCollapsibleCards.initCollapsibleCards(document);
     }
 
     // ================================================================
