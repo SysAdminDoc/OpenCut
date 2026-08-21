@@ -4113,24 +4113,28 @@
             }
         }
 
+        function raiseError(payload) {
+            if (typeof opts.onError !== "function") return;
+            try {
+                opts.onError(payload, requestSeq);
+            } catch (hookErr) {
+                console.error("utility job onError hook failed:", hookErr);
+            }
+        }
+
         api("POST", endpoint, payload, function (err, data) {
             if (isAbandoned()) {
                 finish(null);
                 return;
             }
             if (err || !data || data.error || !data.job_id) {
-                if (typeof opts.onError === "function") {
-                    try {
-                        opts.onError(data || err || { error: t("error.start_request_failed", "Failed to start request") }, requestSeq);
-                    } catch (hookErr) {
-                        console.error("utility job onError hook failed:", hookErr);
-                    }
-                }
+                raiseError(data || err || { error: t("error.start_request_failed", "Failed to start request") });
                 finish(data || err || null);
                 return;
             }
 
             var jobId = data.job_id;
+            var budget = OpenCutJobRuntime.createPollFailureBudget();
             function poll() {
                 if (isAbandoned()) {
                     finish(null);
@@ -4142,9 +4146,17 @@
                         return;
                     }
                     if (statusErr || !job) {
-                        setTimeout(poll, Math.max(250, POLL_MS));
+                        var verdict = budget.failed(statusErr);
+                        if (verdict === "retry") {
+                            setTimeout(poll, Math.max(250, POLL_MS));
+                            return;
+                        }
+                        var failed = OpenCutJobRuntime.pollFailureJob(verdict, t);
+                        raiseError(failed);
+                        finish(failed);
                         return;
                     }
+                    budget.succeeded();
                     if (typeof opts.onProgress === "function" && job.status === "running") {
                         try {
                             opts.onProgress(job, requestSeq);
@@ -4164,13 +4176,7 @@
                         return;
                     }
                     if (job.status === "error" || job.status === "cancelled") {
-                        if (typeof opts.onError === "function") {
-                            try {
-                                opts.onError(job, requestSeq);
-                            } catch (hookErr) {
-                                console.error("utility job onError hook failed:", hookErr);
-                            }
-                        }
+                        raiseError(job);
                         finish(job);
                         return;
                     }
@@ -4357,11 +4363,20 @@
 
     function trackJobPoll(jobId) {
         if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        var budget = OpenCutJobRuntime.createPollFailureBudget();
         pollTimer = setInterval(function () {
             api("GET", "/status/" + jobId, null, function (err, job) {
                 // Guard against in-flight polls returning after cancelJob()
                 if (!jobRuntime.isCurrent(jobId)) return;
-                if (err || !job) return;
+                if (err || !job) {
+                    var verdict = budget.failed(err);
+                    if (verdict === "retry") return;
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                    onJobDone(OpenCutJobRuntime.pollFailureJob(verdict, t));
+                    return;
+                }
+                budget.succeeded();
                 updateProgress(job);
                 if (OpenCutJobRuntime.isTerminalStatus(job.status)) {
                     clearInterval(pollTimer);

@@ -32,16 +32,6 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
 
 ### P2
 
-- [ ] P2 — F367 — CEP job polling never notices a dead or restarted backend
-  Category: reliability
-  Where: `extension/com.opencut.panel/client/main.js` — `trackJobPoll` (~4359-4373: `if (err || !job) return;` inside a forever interval), the utility-job `poll()` (~4134-4180: `setTimeout(poll, …)` on `statusErr` with no cap), `trackJobSSE` error path (~4334-4356) which falls back into the same polling
-  Problem: If the backend dies or is restarted mid-job, every `/status/<id>` call fails (or 404s forever — the job registry is in-memory, so a restart orphans the id; `opencut/routes/jobs_routes.py:59-65` returns 404) and both CEP poll loops retry indefinitely with no failure budget. The panel shows a phantom running job: progress frozen, elapsed timer climbing, no error surfaced. The exclusive-job runtime stays busy so no other job can start. The only escape is the Stop button, which does clear local state unconditionally (`cancelJob`, main.js:4740-4769) — but nothing tells the user that's the way out, and the separate status-bar "offline" flip never settles the active job.
-  Evidence: Traced both loops and the SSE fallback; confirmed `_get_job_copy` 404 after restart; confirmed no vitest exercises `trackJobPoll`/`statusErr` (grep of extension/com.opencut.panel/tests/ = 0 hits). The UXP panel already implements the correct behaviour in `extension/com.opencut.uxp/job-controller.js`: `maxStatusFailures = 3` finishes the job with the poll error, `maxPollAttempts = 3000` bounds total polling, both feeding `finishError` which unlocks and notifies.
-  Fix: Mirror `job-controller.js` semantics in the two CEP loops: count consecutive status failures (treat 404 as immediately terminal — the job no longer exists), and after the budget settle via the existing `onJobDone`/lifecycle path with the existing `error.backend_unreachable` string ("OpenCut couldn't reach the local backend. Restart it from Settings, then try again."), clear `pollTimer`/`elapsedTimer`, and unlock the job runtime. Add a vitest for the failure budget and the 404-terminal case, matching the existing job-meta-utils test style.
-  Acceptance: Killing the backend mid-job surfaces the backend-unreachable error within ~3 poll intervals and re-enables job start; restarting the backend mid-job does the same via the 404 path; new vitest covering both passes; no infinite `setTimeout`/`setInterval` remains on the poll error paths.
-  Confidence: Verified
-  Effort: M
-
 - [ ] P2 — F368 — UXP panel light theme is systematically broken at the base layer
   Category: visual
   Where: `extension/com.opencut.uxp/style.css` (zero `html.theme-light` rules in 5,253 lines; 21 winning dark-only declarations), `extension/com.opencut.uxp/uxp-command-center.css:1000-1008, 1092-1108, 134, 1337/2155, 1690, 1735`, `extension/com.opencut.uxp/uxp-command-center-layout.css:91`
@@ -93,6 +83,16 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
   Effort: M
 
 ### P3
+
+- [ ] P2 — F377 — The CEP panel lint gate fails at HEAD
+  Category: maintainability
+  Where: `extension/com.opencut.panel/package.json` `lint` script (`eslint --max-warnings 24 …`); the 25 warnings are all `no-unused-vars` in `extension/com.opencut.panel/client/main.js`
+  Problem: `npm run lint` exits 1 on a clean checkout because main.js carries 25 unused-variable warnings against a ceiling of 24. The gate has been red long enough that nobody reads it, so it cannot catch a real regression. Not caught by the 2026-08-20 audit, which ran ruff, pytest and vitest but not the panel lint script.
+  Evidence: measured this pass on clean HEAD (stashed working tree): `npm run lint` -> exit 1, `25 problems (0 errors, 25 warnings)`, `ESLint found too many warnings (maximum: 24)`. Identical count with F367's changes applied, so F367 did not cause it. Sample offenders: main.js:17953 `_wsAutoConnected`, :17954 `_origOnHealth`, :18714/:18717 `evt`, :18727 `res`.
+  Fix: Delete the genuinely unused bindings (most are assigned-never-read leftovers) rather than raising the ceiling; where a parameter must stay for signature reasons, prefix it `_` to match the config's ignore pattern. Then lower `--max-warnings` to the new count so the gate has teeth again.
+  Acceptance: `npm run lint` exits 0 on a clean tree, and `--max-warnings` equals the remaining warning count.
+  Confidence: Verified
+  Effort: S
 
 - [ ] P3 — F373 — One concept, many names: terminology drift across both panels
   Category: ux

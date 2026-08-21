@@ -649,6 +649,7 @@
   "error.file_not_found_reselect": "File not found. Re-select your clip.",
   "error.gpu_out_of_memory": "GPU ran out of memory. Try CPU mode in Settings.",
   "error.http_status": "HTTP {status}",
+  "error.job_missing": "That run is no longer on the backend. It may have restarted. Start the job again.",
   "error.install_from_settings": "You can install this from the Settings tab.",
   "error.memory_retry": "Try a smaller file, lower quality setting, or enable CPU mode in Settings.",
   "error.network": "Network error",
