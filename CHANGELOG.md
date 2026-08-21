@@ -127,7 +127,7 @@ record also lives in the git commit messages.
 
 ### Added - Coding agents get told how the MCP server works
 
-- The MCP server exposes 88 tools, and an agent meeting them for the first
+- The MCP server exposes 98 tools, and an agent meeting them for the first
   time had to work out the house rules from raw schemas every session: that a
   tool may hand back a job rather than a result, that edits are proposed and
   reviewed before anything touches the timeline, and that configuration routes

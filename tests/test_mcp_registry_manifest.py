@@ -14,6 +14,7 @@ The manifest is a small JSON file that mirrors the entry the upstream
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -162,3 +163,30 @@ def test_cli_writes_to_custom_path(tmp_path):
     data = json.loads(target.read_text(encoding="utf-8"))
     assert data["name"] == "opencut-mcp-server"
     assert data["tool_count"] >= 86
+
+
+def test_current_release_notes_do_not_carry_a_stale_tool_count():
+    """F364 — the shipped release section must state the shipped tool count.
+
+    The catalogue was resynced 88 to 98 inside the 1.49.0 window. The
+    generated doc block and the manifest were both updated; the changelog
+    paragraph announcing that very feature was not, so published release
+    notes advertised a count the release did not ship. Older sections
+    legitimately record the counts of their own releases, so this is scoped
+    to the section for the version the package currently declares.
+    """
+    changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    heading = f"## {__version__}"
+    start = changelog.find(heading)
+    assert start != -1, f"CHANGELOG.md has no section for {__version__}"
+    nxt = changelog.find("\n## ", start + len(heading))
+    section = changelog[start : nxt if nxt != -1 else len(changelog)]
+
+    live = json.loads(MANIFEST.read_text(encoding="utf-8"))["tool_count"]
+    claims = [int(n) for n in re.findall(r"MCP server exposes (\d+) tools", section)]
+    for claimed in claims:
+        assert claimed == live, (
+            f"CHANGELOG {__version__} says the MCP server exposes {claimed} "
+            f"tools; the shipped registry has {live}. Refresh the release note "
+            f"whenever the tool catalogue is resynced."
+        )

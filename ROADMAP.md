@@ -47,13 +47,6 @@ original acceptance criteria stay traceable.
   Acceptance: The qualified name appears in the README lede and in the repo description; the wording follows the project's public-writing voice rules; the naming section itself is left as F343 landed it.
   Complexity: S
 
-- [ ] P3 — F364 — Correct the tool count in the shipped v1.49.0 release notes
-  Why: The MCP catalogue was resynced from 88 to 98 tools during the same release, and `087ce619` updated `docs/MCP_SERVER.md` for it but missed the changelog entry that describes the very feature. The number now sits wrong inside published release notes, in the paragraph announcing the agent skill that regenerates from that tool list.
-  Evidence: `CHANGELOG.md:130` ("The MCP server exposes 88 tools") inside the released `## 1.49.0` section; `opencut/_generated/mcp_server_registry.json` and the agent-skill drift check both report 98; `docs/MCP_SERVER.md:88,290` already say 98
-  Touches: `CHANGELOG.md`
-  Acceptance: The released entry states the shipped count; a check or a note prevents the next resync from leaving prose counts behind again, since this is the second count-drift fix in the same release.
-  Complexity: S
-
 - [ ] P3 — F365 — Measure the cut-boundary fade instead of asserting its filter string
   Why: F335's acceptance asked for a fixture with a tone crossing a cut boundary to show bounded sample discontinuity with the fade on and an audible step with it off. What landed asserts that the right `afade` string is built and placed at interior joins only, which is good coverage of the wiring and no coverage of the claim. The risk is low because the filter is FFmpeg's, but the item promised a measurement and the audible-quality argument was the whole reason it was P1.
   Evidence: `tests/test_edge_fades.py` (clamp, filter geometry, interior-join placement, opt-out; no rendered audio); `opencut/helpers.py` (`build_edge_fade_filter`, `edge_fade_ms`); `opencut/core/transcript_timeline_edit.py` (`_concat_segments`)
