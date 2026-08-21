@@ -159,7 +159,7 @@ def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     assert sorted(key for key in english if key.startswith("uxp.audio.") and key not in spanish) == []
     assert spanish["uxp.audio.denoise"] == "Reducir ruido"
     assert spanish["uxp.audio.match_loudness"] == "Igualar sonoridad"
-    assert spanish["uxp.audio.runtime.beat_detection_done"] == "Detección de ritmo lista - {count} ritmos."
+    assert spanish["uxp.audio.runtime.beat_detection_done"] == "Detección de ritmo lista. {count} ritmos."
     assert sorted(key for key in english if key.startswith("uxp.fcc.") and key not in spanish) == []
     assert spanish["uxp.fcc.caption_display_settings"] == "Ajustes de visualizacion de subtitulos (FCC)"
     assert spanish["uxp.fcc.preview"] == "Vista previa"
@@ -204,13 +204,13 @@ def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     assert spanish["uxp.timeline.runtime.uxp_writeback_available_title"].startswith("La escritura de secuencia UXP")
     assert spanish["uxp.timeline.runtime.export_window_ready_many"] == "{count} ventanas listas"
     assert spanish["uxp.timeline.runtime.backend_reconnect_timeline_status"].startswith("Reconecta el backend local")
-    assert spanish["uxp.timeline.runtime.srt_ready_status"] == "SRT listo - {count} segmentos de subtitulos interpretados."
+    assert spanish["uxp.timeline.runtime.srt_ready_status"] == "SRT listo. {count} segmentos de subtítulos interpretados."
     assert spanish["uxp.timeline.runtime.otio_exported_output"] == "OTIO exportado: {output}"
     assert sorted(key for key in english if key.startswith("uxp.captions.") and key not in spanish) == []
     assert spanish["uxp.captions.transcription"] == "Transcripcion"
     assert spanish["uxp.captions.ai_chapters"] == "Capitulos IA"
     assert spanish["uxp.captions.runtime.transcription_complete"] == "Transcripcion completa."
-    assert spanish["uxp.captions.runtime.chapter_generation_done_status"] == "Generacion de capitulos completa - {count} capitulos."
+    assert spanish["uxp.captions.runtime.chapter_generation_done_status"] == "Generación de capítulos completa. {count} capítulos."
     assert spanish["uxp.captions.runtime.repeat_review_ready_status"].startswith("La revision de repeticiones")
     assert sorted(key for key in english if key.startswith("uxp.video.") and key not in spanish) == []
     assert spanish["uxp.video.clip_path"] == "Ruta del clip"

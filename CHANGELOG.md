@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Changed - Status copy reads as sentences, not dashes
+
+- Twenty-six status lines joined two clauses with a spaced hyphen: "Search
+  ready - 12 results.", "Job queued - watch the progress bar above.". They
+  are two sentences now. The Whisper model dropdown in Settings uses the same
+  parenthetical labels as the captions dropdown instead of a third format.
+- The compact status lines that genuinely join fields (a chapter's timecode
+  and title, a publisher and its fingerprint) keep the separator and are
+  listed by key in the test that enforces the rest.
+
 ### Fixed - Failures say what to do next
 
 - Nine strings across the two panels showed "Error: " and the raw backend

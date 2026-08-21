@@ -4096,7 +4096,7 @@ async function runSilenceRemoval() {
         rememberTimelineCuts(cuts, { source: "Silence Removal", clipPath });
         showCutResult({ ...result, cuts });
         UIController.showToast(formatI18n("uxp.cut.runtime.silences_removed", "Removed {count} silence region(s).", { count: cuts.length }), "success");
-        UIController.setStatus(formatI18n("uxp.cut.runtime.silence_done_status", "Done - {count} cuts", { count: cuts.length }));
+        UIController.setStatus(formatI18n("uxp.cut.runtime.silence_done_status", "Done. {count} cuts.", { count: cuts.length }));
       } else if (result.xml_path || result.output_path) {
         const out = result.xml_path || result.output_path;
         UIController.showToast(formatI18n("uxp.runtime.output_path", "Output: {path}", { path: out }), "success");
@@ -4216,7 +4216,7 @@ async function runFillerDetection() {
       if (cuts.length) rememberTimelineCuts(cuts, { source: "Filler Detection", clipPath });
       const count = result.count ?? cuts.length ?? 0;
       UIController.showToast(formatI18n("uxp.cut.runtime.filler_detected", "Detected {count} filler word(s).", { count }), "success");
-      UIController.setStatus(formatI18n("uxp.cut.runtime.filler_done_status", "Filler detection done - {count} removed.", { count }));
+      UIController.setStatus(formatI18n("uxp.cut.runtime.filler_done_status", "Filler detection done. {count} removed.", { count }));
       if (cuts.length) showCutResult({ ...result, cuts });
     },
     (err) => {
@@ -4408,7 +4408,7 @@ async function runTranscribe() {
   const wordLevel = document.getElementById("enableWordLevel")?.checked ?? true;
 
   UIController.setButtonLoading("runTranscribeBtn", true);
-  UIController.showProcessing(t("uxp.captions.runtime.transcribing_long", "Transcribing - this may take a while…"));
+  UIController.showProcessing(t("uxp.captions.runtime.transcribing_long", "Transcribing. This may take a while…"));
   setCaptionsSessionState(
     t("uxp.captions.runtime.working", "Working"),
     "working",
@@ -4768,7 +4768,7 @@ async function runChapterGeneration() {
         "success"
       );
       UIController.setStatus(
-        formatI18n("uxp.captions.runtime.chapter_generation_done_status", "Chapter generation complete - {count} chapters.", {
+        formatI18n("uxp.captions.runtime.chapter_generation_done_status", "Chapter generation complete. {count} chapters.", {
           count,
         })
       );
@@ -4900,7 +4900,7 @@ async function runRepeatDetection() {
         "success"
       );
       UIController.setStatus(
-        formatI18n("uxp.captions.runtime.repeat_detection_done_status", "Repeat detection done - {count} found.", { count })
+        formatI18n("uxp.captions.runtime.repeat_detection_done_status", "Repeat detection done. {count} found.", { count })
       );
       showRepeatResult(result);
     },
@@ -5136,7 +5136,7 @@ async function runBeatMarkers() {
       const beats = result.beats ?? result.markers ?? [];
       rememberTimelineMarkers(beats, { source: t("uxp.audio.beat_detection", "Beat Detection"), clipPath: trackPath });
       UIController.showToast(formatI18n("uxp.audio.runtime.beats_detected_add_markers", "Detected {count} beats. Adding markers to timeline…", { count: beats.length }), "success");
-      UIController.setStatus(formatI18n("uxp.audio.runtime.beat_detection_done", "Beat detection done - {count} beats.", { count: beats.length }));
+      UIController.setStatus(formatI18n("uxp.audio.runtime.beat_detection_done", "Beat detection done. {count} beats.", { count: beats.length }));
 
       // Attempt direct UXP marker insertion
       await addSequenceMarkers(beats, "green");
@@ -5259,7 +5259,7 @@ async function runMulticamCuts() {
           ? t("uxp.video.runtime.multicam_boundary_fallback", "ASR fallback boundaries")
           : t("uxp.video.runtime.multicam_boundary_other", "Provided speaker boundaries");
       UIController.setStatus(
-        `${formatI18n("uxp.video.runtime.multicam_cuts_ready_status", "Multicam cuts ready - {count} cuts.", {
+        `${formatI18n("uxp.video.runtime.multicam_cuts_ready_status", "Multicam cuts ready. {count} cuts.", {
           count: cuts.length,
         })} ${boundaryLabel}`
       );
@@ -5362,7 +5362,7 @@ async function applyTimelineCuts(cuts) {
             ? "Could not import the timeline interchange: {error}"
             : "Could not prepare the timeline interchange: {error}";
           UIController.showToast(formatI18n(errorKey, fallback, { error: result.reason || t("common.unknown", "unknown") }), "error");
-          UIController.setStatus(t("uxp.timeline.runtime.interchange_failed_status", "Timeline interchange failed - no direct clip writes were made."));
+          UIController.setStatus(t("uxp.timeline.runtime.interchange_failed_status", "Timeline interchange failed. No direct clip writes were made."));
         }
         return;
       }
@@ -5393,7 +5393,7 @@ async function applyTimelineCuts(cuts) {
         formatI18n("uxp.timeline.runtime.timeline_write_failed", "UXP timeline write failed: {reason}. Use CEP panel for Premiere < 25.6.", { reason: result.reason || t("common.unknown", "unknown") }),
         "warning"
       );
-      UIController.setStatus(t("uxp.timeline.runtime.timeline_write_failed_status", "Timeline write failed - see CEP panel."));
+      UIController.setStatus(t("uxp.timeline.runtime.timeline_write_failed_status", "Timeline write failed. Check the CEP panel."));
       noteTimelineAction(
         t("uxp.timeline.runtime.cep_fallback_needed_title", "CEP fallback needed"),
         "warning",
@@ -5406,7 +5406,7 @@ async function applyTimelineCuts(cuts) {
       t("uxp.timeline.runtime.timeline_api_preview_toast", "Connect via CEP panel for timeline operations (UXP timeline API in preview)."),
       "info"
     );
-    UIController.setStatus(t("uxp.timeline.runtime.timeline_api_unavailable_status", "UXP timeline API unavailable - use CEP panel."));
+    UIController.setStatus(t("uxp.timeline.runtime.timeline_api_unavailable_status", "UXP timeline API unavailable. Use the CEP panel."));
     noteTimelineAction(
       t("uxp.timeline.runtime.cep_fallback_needed_title", "CEP fallback needed"),
       "warning",
@@ -5529,7 +5529,7 @@ async function runBatchExport() {
       UIController.setButtonLoading("runBatchExportBtn", false);
       const count = result.exported ?? result.count ?? 0;
       UIController.showToast(formatI18n("uxp.timeline.runtime.exported_segments", "Exported {count} segment(s).", { count }), "success");
-      UIController.setStatus(formatI18n("uxp.timeline.runtime.batch_export_done_status", "Batch export done - {count} files.", { count }));
+      UIController.setStatus(formatI18n("uxp.timeline.runtime.batch_export_done_status", "Batch export done. {count} files.", { count }));
       noteTimelineAction(
         t("uxp.timeline.runtime.batch_export_complete_title", "Batch export complete"),
         "success",
@@ -5797,7 +5797,7 @@ async function runSrtImport() {
       UIController.setButtonLoading("runSrtImportBtn", false);
       const count = result.segments?.length ?? result.captions_imported ?? result.count ?? 0;
       UIController.showToast(formatI18n("uxp.timeline.runtime.srt_validated_segments", "Validated {count} caption segment(s).", { count }), "success");
-      UIController.setStatus(formatI18n("uxp.timeline.runtime.srt_ready_status", "SRT ready - {count} caption segments parsed.", { count }));
+      UIController.setStatus(formatI18n("uxp.timeline.runtime.srt_ready_status", "SRT ready. {count} caption segments parsed.", { count }));
       noteTimelineAction(
         t("uxp.timeline.runtime.srt_validated_title", "SRT validated"),
         "success",
@@ -5997,9 +5997,9 @@ async function runIndexLibrary() {
       const indexedToast = formatCountI18n(
         count,
         "uxp.search.runtime.library_indexed_toast_one",
-        "Library indexed - {count} file.",
+        "Library indexed. {count} file.",
         "uxp.search.runtime.library_indexed_toast_many",
-        "Library indexed - {count} files."
+        "Library indexed. {count} files."
       );
       UIController.showToast(indexedToast, "success");
       UIController.setStatus(indexedToast, "success");
@@ -6136,7 +6136,7 @@ async function runFootageSearch() {
             card.path
           );
           UIController.showToast(formatI18n("uxp.search.runtime.loaded_match_toast", "Loaded {label} into the workspace.", { label: card.label }), "success");
-          UIController.setStatus(formatI18n("uxp.search.runtime.loaded_match_status", "Search match loaded - {label}.", { label: card.label }), "success");
+          UIController.setStatus(formatI18n("uxp.search.runtime.loaded_match_status", "Search match loaded. {label}.", { label: card.label }), "success");
         });
         el.setAttribute("aria-pressed", "false");
         list.appendChild(el);
@@ -6163,9 +6163,9 @@ async function runFootageSearch() {
       ? formatCountI18n(
           cards.length,
           "uxp.search.runtime.search_ready_one",
-          "Search ready - {count} result.",
+          "Search ready. {count} result.",
           "uxp.search.runtime.search_ready_many",
-          "Search ready - {count} results."
+          "Search ready. {count} results."
         )
       : t("uxp.search.runtime.search_no_matches_status", "Search returned no matches.")
   );
@@ -6197,7 +6197,7 @@ async function runNlpCommand() {
       UIController.setButtonLoading("runNlpBtn", false);
       showNlpResult(result);
       UIController.showToast(t("uxp.search.runtime.nlp_command_parsed", "NLP command parsed."), "success");
-      UIController.setStatus(t("uxp.search.runtime.nlp_command_parsed_status", "NLP command parsed - review and apply."));
+      UIController.setStatus(t("uxp.search.runtime.nlp_command_parsed_status", "NLP command parsed. Review and apply."));
     },
     (err) => {
       UIController.hideProcessing();
@@ -6306,7 +6306,7 @@ async function loadSequenceInfo() {
 
   updateDeliverablesSummary();
   UIController.setStatus(
-    formatI18n("uxp.deliverables.runtime.sequence_ready_status", "Sequence ready - {name}", { name: info.name ?? t("uxp.deliverables.runtime.active_sequence_lower", "Active sequence") }),
+    formatI18n("uxp.deliverables.runtime.sequence_ready_status", "Sequence ready. {name}", { name: info.name ?? t("uxp.deliverables.runtime.active_sequence_lower", "Active sequence") }),
     "success"
   );
 }
@@ -6524,9 +6524,9 @@ async function runFullReportUnlocked() {
       formatCountI18n(
         generated,
         "uxp.deliverables.runtime.package_ready_status_one",
-        "{label} ready - {count} CSV document.",
+        "{label} ready. {count} CSV document.",
         "uxp.deliverables.runtime.package_ready_status_many",
-        "{label} ready - {count} CSV documents.",
+        "{label} ready. {count} CSV documents.",
         { label: packageLabel }
       ),
       "success"
@@ -9265,7 +9265,7 @@ function initAgentTab() {
     list.innerHTML = "";
     if (!Array.isArray(plan) || plan.length === 0) {
       const li = document.createElement("li");
-      li.textContent = t("uxp.agent.runtime.no_steps_matched", "No steps matched - try a more specific intent.");
+      li.textContent = t("uxp.agent.runtime.no_steps_matched", "No steps matched. Try a more specific intent.");
       list.appendChild(li);
       return;
     }
@@ -9448,7 +9448,7 @@ function initAgentTab() {
           })
         );
       } else {
-        setStatus("enhanceStatus", t("uxp.agent.runtime.job_queued", "Job queued - watch the progress bar above."));
+        setStatus("enhanceStatus", t("uxp.agent.runtime.job_queued", "Job queued. Watch the progress bar above."));
       }
     } catch (err) {
       setStatus("enhanceStatus", formatI18n("uxp.agent.runtime.error", "That step failed. Check the backend status in Settings, then try again. {error}", { error: err?.message || err }));
@@ -9960,7 +9960,7 @@ function initAgentTab() {
       const data = responseData(info);
       setStatus("sequenceIndexStatus",
         data?.available
-          ? formatI18n("uxp.agent.runtime.sequence_index_capability_ok", "Report capability OK - sort keys: {keys}", { keys: (data.sort_keys || []).join(", ") })
+          ? formatI18n("uxp.agent.runtime.sequence_index_capability_ok", "Report capability OK. Sort keys: {keys}", { keys: (data.sort_keys || []).join(", ") })
           : t("uxp.agent.runtime.sequence_index_unavailable", "Sequence report unavailable"));
     } catch (err) {
       setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.capability_check_failed", "Capability check failed: {error}", { error: err?.message || err }));
