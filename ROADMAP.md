@@ -17,16 +17,6 @@ Roadmap_Blocked.md; the rest landed.
 
 ### P2
 
-- [ ] P2 — F383 — Rendered goldens do not prove the light theme
-  Category: quality
-  Where: `extension/com.opencut.panel/tests/rendered/__screenshots__/chromium` (42 goldens), `tests/rendered/panel-regression.spec.mjs` `SURFACES`/`THEMES`
-  Problem: The rendered suite runs all three themes for the tab-matrix cases, but the 42 committed goldens are dark-theme captures of a handful of surfaces. A light-theme regression like F369 or F370 lands with the whole suite green, and the F368 pass found the goldens never capture a UXP primary button at all, so an accent-token change is invisible to them.
-  Evidence: 2026-08-21. `ls extension/com.opencut.panel/tests/rendered/__screenshots__/chromium` returns 42 files, every name ending `-dark-<width>.png` or with no theme segment. The three theme-flip regressions closed on 2026-08-21 (F368, F369, F370) were all found by `getComputedStyle` sweeps, never by this suite.
-  Fix: Either add light-theme `toHaveScreenshot` companions for the surfaces that already have dark goldens, or replace the theme claim with computed-style assertions on the tokens that actually flip (the studio timeline surface, chips, progress track, focus ring). Say in the spec file which one the suite is promising.
-  Acceptance: A deliberate light-theme token regression fails `npm run test:rendered`. Add the repro used to prove it to the commit message.
-  Confidence: Verified
-  Effort: M
-
 - [ ] P2 — F384 — Disabled CEP controls do not say why they are disabled
   Category: ux
   Where: `extension/com.opencut.panel/client/index.html` — 109 `disabled` attributes; the ones with no `title`/`data-i18n-title` include `#polishInterviewBtn`, `#loadWaveformBtn`, and the Timeline, Deliverables and Rename action buttons

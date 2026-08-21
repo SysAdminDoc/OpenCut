@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - The UXP progress bar is visible in the light theme
+
+- The progress track was a 7.5% white wash and the fill was the dark accent
+  gradient, both of which vanish on a light card. CEP got its light
+  counterparts in the F369 pass; UXP did not, and no test noticed because the
+  rendered goldens are all dark-theme captures. Both panels now flip.
+
 ### Fixed - The English next to a locale key is gated too
 
 - The fallback string in every `t(key, fallback)` call is what users read
