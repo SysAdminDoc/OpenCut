@@ -40,13 +40,6 @@ original acceptance criteria stay traceable.
 
 ### P3
 
-- [ ] P3 — F363 — Put the disambiguating name where F343 said it would go
-  Why: F343 refreshed the naming section accurately and landed the current star count and the 2026-07 rewrite context, but two of its three acceptance targets were not touched. The phrase exists once, mid-README, inside the section that explains it. The two places it was supposed to reach are the two places a stranger actually reads first.
-  Evidence: `README.md:48` is the only occurrence of "OpenCut for Premiere Pro"; the README lede (lines 1-24) has no disambiguation; the GitHub repo description is still the pre-F343 text with no qualified name; `pyproject.toml:15` does carry it, so the packaging half is done
-  Touches: `README.md` (lede), the GitHub repo description
-  Acceptance: The qualified name appears in the README lede and in the repo description; the wording follows the project's public-writing voice rules; the naming section itself is left as F343 landed it.
-  Complexity: S
-
 - [ ] P3 — F365 — Measure the cut-boundary fade instead of asserting its filter string
   Why: F335's acceptance asked for a fixture with a tone crossing a cut boundary to show bounded sample discontinuity with the fade on and an audible step with it off. What landed asserts that the right `afade` string is built and placed at interior joins only, which is good coverage of the wiring and no coverage of the claim. The risk is low because the filter is FFmpeg's, but the item promised a measurement and the audible-quality argument was the whole reason it was P1.
   Evidence: `tests/test_edge_fades.py` (clamp, filter geometry, interior-join placement, opt-out; no rendered audio); `opencut/helpers.py` (`build_edge_fade_filter`, `edge_fade_ms`); `opencut/core/transcript_timeline_edit.py` (`_concat_segments`)
