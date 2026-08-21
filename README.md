@@ -74,7 +74,7 @@ is the one step that needs the maintainer's PyPI account.
 
 **Option A: Windows Installer (recommended for Windows):**
 
-The latest published Windows installer is [OpenCut v1.49.0](https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.49.0). It predates the current source tree. Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python is needed for that packaged release; use Option B or C for the current source version.
+The latest published Windows installer is [OpenCut v1.52.0](https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.52.0). Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python is needed for the packaged release.
 
 Every assembled installer includes `release-composition.json`,
 `opencut-artifact-sbom.cyclonedx.json`, `THIRD-PARTY-NOTICES.txt`, and
