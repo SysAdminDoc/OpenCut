@@ -55,6 +55,47 @@ public class InstallerUserExperienceTests
         Assert.DoesNotContain("Type: filesandordirs; Name: \"{%USERPROFILE}\\.opencut\"", inno);
     }
 
+    [Fact]
+    public void InstallerUsesTheCompactRadiusScaleWithoutTextPills()
+    {
+        var allowed = new HashSet<int> { 0, 4, 6, 8, 10, 12 };
+        var xamlFiles = Directory.EnumerateFiles(InstallerRoot, "*.xaml", SearchOption.AllDirectories);
+
+        foreach (var file in xamlFiles)
+        {
+            var source = File.ReadAllText(file);
+            var matches = System.Text.RegularExpressions.Regex.Matches(
+                source,
+                "(?:CornerRadius=\\\"(?<value>[^\\\"]+)\\\"|Property=\\\"CornerRadius\\\"\\s+Value=\\\"(?<value>[^\\\"]+)\\\")");
+
+            foreach (System.Text.RegularExpressions.Match match in matches)
+            {
+                foreach (var token in match.Groups["value"].Value.Split(','))
+                {
+                    Assert.True(
+                        int.TryParse(token, out var radius) && allowed.Contains(radius),
+                        $"Unsupported corner radius '{token}' in {Path.GetRelativePath(RepoRoot, file)}");
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void InstallerUsesInlineSafetyFeedbackInsteadOfConfirmationDialogs()
+    {
+        var options = ReadSource("Pages", "OptionsPage.xaml.cs");
+        var uninstall = ReadSource("Pages", "UninstallPage.xaml.cs");
+        var mainWindow = ReadSource("MainWindow.xaml");
+        var progress = ReadSource("Pages", "ProgressPage.xaml");
+
+        Assert.DoesNotContain("MessageBox.Show", options);
+        Assert.DoesNotContain("MessageBox.Show", uninstall);
+        Assert.Contains("PathValidationPanel", ReadSource("Pages", "OptionsPage.xaml"));
+        Assert.DoesNotContain("Color=\"#", mainWindow);
+        Assert.DoesNotContain("Foreground=\"White\"", mainWindow);
+        Assert.DoesNotContain("#40FFFFFF", progress);
+    }
+
     private static string ReadSource(params string[] parts)
     {
         var pathParts = new string[parts.Length + 1];

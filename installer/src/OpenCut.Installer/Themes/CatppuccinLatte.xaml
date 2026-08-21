@@ -28,6 +28,9 @@
     <Color x:Key="BaseColor">#eff1f5</Color>
     <Color x:Key="MantleColor">#e6e9ef</Color>
     <Color x:Key="CrustColor">#dce0e8</Color>
+    <Color x:Key="WindowShadowColor">#4c4f69</Color>
+    <Color x:Key="OnDangerColor">#ffffff</Color>
+    <Color x:Key="ProgressShimmerColor">#405c5f77</Color>
 
     <!-- Brushes -->
     <SolidColorBrush x:Key="Rosewater" Color="{StaticResource RosewaterColor}" />
@@ -56,6 +59,7 @@
     <SolidColorBrush x:Key="Base" Color="{StaticResource BaseColor}" />
     <SolidColorBrush x:Key="Mantle" Color="{StaticResource MantleColor}" />
     <SolidColorBrush x:Key="Crust" Color="{StaticResource CrustColor}" />
+    <SolidColorBrush x:Key="OnDangerBrush" Color="{StaticResource OnDangerColor}" />
 
     <!-- Accent alias -->
     <SolidColorBrush x:Key="Accent" Color="{StaticResource BlueColor}" />
@@ -121,7 +125,7 @@
         <Setter Property="Background" Value="{StaticResource PanelBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource PanelStrokeBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="CornerRadius" Value="12" />
         <Setter Property="Padding" Value="18,16" />
     </Style>
 
@@ -297,7 +301,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border x:Name="Outer" Width="18" Height="18" CornerRadius="9"
+                        <Border x:Name="Outer" Width="18" Height="18" CornerRadius="10"
                                 BorderThickness="2" BorderBrush="{StaticResource Surface2}"
                                 Background="Transparent" Margin="0,0,8,0"
                                 VerticalAlignment="Center">
@@ -371,9 +375,9 @@
                 <ControlTemplate TargetType="ProgressBar">
                     <Grid>
                         <Border x:Name="PART_Track" Background="{TemplateBinding Background}"
-                                CornerRadius="3" />
+                                CornerRadius="4" />
                         <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}"
-                                CornerRadius="3" HorizontalAlignment="Left" />
+                                CornerRadius="4" HorizontalAlignment="Left" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -381,15 +385,84 @@
     </Style>
 
     <!-- ScrollBar Styles -->
-    <Style TargetType="ScrollBar">
-        <Setter Property="Width" Value="8" />
+    <Style x:Key="InstallerScrollRepeatButton" TargetType="RepeatButton">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
         <Setter Property="Background" Value="Transparent" />
-        <Style.Triggers>
-            <Trigger Property="Orientation" Value="Horizontal">
-                <Setter Property="Width" Value="Auto" />
-                <Setter Property="Height" Value="8" />
-            </Trigger>
-        </Style.Triggers>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Border Background="{TemplateBinding Background}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="InstallerScrollThumb" TargetType="Thumb">
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Background" Value="{StaticResource Surface2}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border x:Name="ThumbSurface" Margin="2"
+                            CornerRadius="4"
+                            Background="{TemplateBinding Background}" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ThumbSurface" Property="Background" Value="{StaticResource Overlay0}" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="ThumbSurface" Property="Background" Value="{StaticResource Blue}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ScrollBar">
+        <Setter Property="Width" Value="10" />
+        <Setter Property="MinWidth" Value="10" />
+        <Setter Property="Background" Value="{StaticResource Surface0}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid Background="{TemplateBinding Background}">
+                        <Track x:Name="PART_Track"
+                               Orientation="{TemplateBinding Orientation}"
+                               IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton x:Name="DecreaseButton"
+                                              Style="{StaticResource InstallerScrollRepeatButton}"
+                                              Command="{x:Static ScrollBar.PageUpCommand}" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb x:Name="ScrollThumb"
+                                       Style="{StaticResource InstallerScrollThumb}" />
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton x:Name="IncreaseButton"
+                                              Style="{StaticResource InstallerScrollRepeatButton}"
+                                              Command="{x:Static ScrollBar.PageDownCommand}" />
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Orientation" Value="Horizontal">
+                            <Setter Property="Width" Value="Auto" />
+                            <Setter Property="Height" Value="10" />
+                            <Setter Property="MinWidth" Value="0" />
+                            <Setter Property="MinHeight" Value="10" />
+                            <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
+                            <Setter TargetName="DecreaseButton" Property="Command" Value="{x:Static ScrollBar.PageLeftCommand}" />
+                            <Setter TargetName="IncreaseButton" Property="Command" Value="{x:Static ScrollBar.PageRightCommand}" />
+                            <Setter TargetName="ScrollThumb" Property="MinHeight" Value="0" />
+                            <Setter TargetName="ScrollThumb" Property="MinWidth" Value="28" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style TargetType="ScrollViewer">

@@ -70,7 +70,7 @@ public class ShortcutCreator
             var startupPath = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
             var linkPath = Path.Combine(startupPath, "OpenCut.lnk");
             CreateShortcut(linkPath, "wscript.exe", $"\"{vbsPath}\"",
-                config.InstallPath, iconPath, "OpenCut Server - Autostart");
+                config.InstallPath, iconPath, "OpenCut Server Autostart");
             Report(progress, step, totalSteps, stepName, "Startup shortcut created.", LogLevel.Success);
         }
     }

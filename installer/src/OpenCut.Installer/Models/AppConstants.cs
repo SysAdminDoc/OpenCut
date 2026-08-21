@@ -55,10 +55,10 @@ public static class AppConstants
     // Whisper model sizes for display
     public static readonly Dictionary<string, string> WhisperModels = new()
     {
-        ["tiny"] = "tiny (75 MB) — Fastest, lower accuracy",
-        ["base"] = "base (150 MB) — Good balance",
-        ["small"] = "small (500 MB) — Better accuracy, slower",
-        ["medium"] = "medium (1.5 GB) — High accuracy, more RAM",
-        ["turbo"] = "turbo (1.6 GB) — Best speed/accuracy (recommended)"
+        ["tiny"] = "tiny (75 MB): fastest, lower accuracy",
+        ["base"] = "base (150 MB): good balance",
+        ["small"] = "small (500 MB): better accuracy, slower",
+        ["medium"] = "medium (1.5 GB): high accuracy, more RAM",
+        ["turbo"] = "turbo (1.6 GB): best speed/accuracy (recommended)"
     };
 }
