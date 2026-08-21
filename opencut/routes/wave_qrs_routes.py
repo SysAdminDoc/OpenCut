@@ -666,11 +666,14 @@ def route_qwen3vl_analyze(job_id, filepath, data):
             code="MISSING_DEPENDENCY",
             message="The local Ollama Qwen3-VL model is not available.",
         )
+    transcript_segments = list(data.get("transcript_segments") or [])
+    if len(transcript_segments) > multimodal_qwen3vl.MAX_SEGMENTS:
+        raise too_many_items("transcript_segments", multimodal_qwen3vl.MAX_SEGMENTS)
     result = multimodal_qwen3vl.analyze(
         video_path=filepath,
         prompt=str(data.get("prompt") or "Summarise the video."),
         max_tokens=safe_int(data.get("max_tokens"), 1024, min_val=1, max_val=8192),
-        transcript_segments=data.get("transcript_segments") or [],
+        transcript_segments=transcript_segments,
         model=str(data.get("model") or "").strip() or None,
         segment_duration=safe_float(
             data.get("segment_duration"), 30.0, min_val=1.0, max_val=600.0,
@@ -682,6 +685,7 @@ def route_qwen3vl_analyze(job_id, filepath, data):
             data.get("frame_interval"), 10.0, min_val=1.0, max_val=120.0,
         ),
         on_progress=_prog_factory(job_id),
+        is_cancelled=lambda: _is_cancelled(job_id),
     )
     return _result_dict(result)
 

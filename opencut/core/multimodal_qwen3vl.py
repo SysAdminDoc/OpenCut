@@ -16,16 +16,26 @@ import re
 import subprocess
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence
 
 from opencut.helpers import get_ffmpeg_path, get_ffprobe_path
 
 logger = logging.getLogger("opencut")
 
+CancellationCallback = Optional[Callable[[], bool]]
+
 DEFAULT_MODEL = "qwen3-vl:8b"
 DEFAULT_BASE_URL = "http://localhost:11434"
 TRANSCRIPT_WEIGHT = 0.65
 VISUAL_WEIGHT = 0.35
+# Each segment costs up to six 20s ffmpeg frame grabs plus one Ollama call, so
+# the segment count is the only thing standing between a request and hours of
+# work. Callers above this are refused by the route; the no-transcript fallback
+# coarsens its windows to stay under it rather than refusing.
+MAX_SEGMENTS = 2000
+# Notes are one string per skipped segment and land in the persisted job
+# result, so they need their own ceiling.
+MAX_NOTES = 100
 INSTALL_HINT = "Install Ollama, then run: ollama pull qwen3-vl:8b"
 _VISION_SYSTEM_PROMPT = (
     "You are a careful video editor. Score the transcript and sampled frames "
@@ -98,6 +108,11 @@ def _normalise_transcript_segments(segments: Optional[Iterable[Dict[str, Any]]])
             continue
         normalised.append({"start": start, "end": end, "text": text})
     return normalised
+
+
+def _raise_if_cancelled(is_cancelled: CancellationCallback) -> None:
+    if is_cancelled and is_cancelled():
+        raise InterruptedError("Qwen3-VL analysis cancelled")
 
 
 def _probe_duration(video_path: str) -> float:
@@ -189,6 +204,11 @@ def _fallback_segments(duration: float, segment_duration: float) -> List[Dict[st
     segment_duration = max(1.0, segment_duration)
     if duration <= 0:
         return [{"start": 0.0, "end": segment_duration, "text": ""}]
+    # A long file at a fine segment_duration would otherwise produce thousands
+    # of windows. Coarsen rather than refuse: the caller asked to analyse the
+    # whole video, so cover it at the finest granularity the cap allows.
+    if duration / segment_duration > MAX_SEGMENTS:
+        segment_duration = duration / MAX_SEGMENTS
     segments = []
     start = 0.0
     while start < duration:
@@ -287,9 +307,15 @@ def analyze(
     frames_per_segment: int = 3,
     frame_interval: float = 10.0,
     base_url: Optional[str] = None,
+    is_cancelled: CancellationCallback = None,
     **kwargs,
 ) -> Qwen3VLResult:
-    """Score transcript windows with local Qwen3-VL decision-point frames."""
+    """Score transcript windows with local Qwen3-VL decision-point frames.
+
+    *is_cancelled* is polled once per segment. It must be an explicit
+    parameter: this function ends in ``**kwargs`` with ``del kwargs``, so a
+    callback passed by keyword alone would be silently discarded.
+    """
     del kwargs
     if not video_path or not os.path.isfile(video_path):
         raise FileNotFoundError(f"Video file not found: {video_path}")
@@ -321,14 +347,26 @@ def analyze(
     ]
     frames_analyzed = 0
 
+    def _note(message: str) -> None:
+        """Record a per-segment note, keeping the persisted list bounded."""
+        if len(notes) < MAX_NOTES:
+            notes.append(message)
+        elif len(notes) == MAX_NOTES:
+            notes.append("Further per-segment notes were suppressed.")
+
     for index, segment in enumerate(segments):
+        # Polled per segment so a cancelled job stops here instead of running
+        # the whole list out. Nothing else can interrupt this worker: the frame
+        # grabs use subprocess.run, so no process is registered for the job
+        # runner to kill.
+        _raise_if_cancelled(is_cancelled)
         start = max(0.0, _finite_float(segment.get("start")))
         end = max(start, _finite_float(segment.get("end"), start))
         timestamps = _decision_points(start, end, frames_per_segment)
         frames = _sample_video_frames(video_path, timestamps)
         frames_analyzed += len(frames)
         if not frames:
-            notes.append(f"Segment {index + 1} had no readable decision-point frames.")
+            _note(f"Segment {index + 1} had no readable decision-point frames.")
             continue
 
         if on_progress:
@@ -352,12 +390,12 @@ def analyze(
                 system_prompt=_VISION_SYSTEM_PROMPT,
             )
         except Exception as exc:  # noqa: BLE001
-            notes.append(f"Segment {index + 1} vision query failed: {exc}")
+            _note(f"Segment {index + 1} vision query failed: {exc}")
             continue
 
         response_text = getattr(response, "text", response)
         if not response_text or str(response_text).startswith("LLM error:"):
-            notes.append(f"Segment {index + 1} returned no usable vision response.")
+            _note(f"Segment {index + 1} returned no usable vision response.")
             continue
         payload = _parse_score_payload(str(response_text))
         transcript_score = _score_value(
