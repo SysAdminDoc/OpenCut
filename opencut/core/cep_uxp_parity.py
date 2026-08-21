@@ -42,6 +42,184 @@ ROUTE_EXCLUSIONS: Mapping[str, str] = {
     "/jobs": "CEP job-status polling transport; UXP uses JobPoller internally.",
 }
 
+# Every CEP route that has no UXP equivalent yet. These are not exclusions:
+# each one is a feature the UXP panel is expected to gain before the CEP
+# sunset, and calling them "excluded" would quietly retire work nobody
+# decided to drop. The gate below fails on a CEP route that appears in
+# neither map, so a new route cannot ship unclassified, and the floor stops
+# this list growing without someone raising it on purpose. Porting a route
+# to UXP lowers the count; re-record the floor in the same change.
+UXP_PENDING_REASONS: Mapping[str, str] = {
+    "analysis": (
+        "Virality, assistant, and context analysis surfaces. Read-only "
+        "scoring the UXP panel has no view for yet."
+    ),
+    "audio": (
+        "Audio generation, repair, and effects. Needs the UXP audio surface, "
+        "which is behind the cut and caption work in the migration order."
+    ),
+    "automation": (
+        "Workflow, template, preset, and batch surfaces. These compose other "
+        "routes, so they port after the routes they call."
+    ),
+    "delivery": (
+        "Social platform metadata, export presets, and thumbnails. Blocked "
+        "with the rest of the export surface on UXP encoder work."
+    ),
+    "plumbing": (
+        "Settings, diagnostics, job history, and process control. Mostly "
+        "served in UXP by panel-local state or the typed host APIs rather "
+        "than by porting the CEP endpoint one for one; each still needs a "
+        "decision, so they are tracked rather than excluded."
+    ),
+    "timeline": (
+        "Timeline organisation helpers (renaming, smart bins, beat cuts). "
+        "Depend on host write paths still being validated on 26.3."
+    ),
+    "transcript": (
+        "Caption styling, burn-in segments, and alternate ASR backends. The "
+        "core transcribe path is already covered; these are the extras."
+    ),
+    "video-effects": (
+        "Compositing, colour, titles, transitions, and speed. The largest "
+        "single block and the least started on the UXP side."
+    ),
+    "video-restore": (
+        "Face, upscale, watermark, and interpolation models. Long-running "
+        "model jobs that need the UXP durable-job surface first."
+    ),
+}
+
+# route -> family key in UXP_PENDING_REASONS
+ROUTE_UXP_PENDING: Mapping[str, str] = {
+    # analysis
+    "/analyze/virality": "analysis",
+    "/analyze/virality/rank": "analysis",
+    "/assistant/dismiss": "analysis",
+    "/assistant/suggest": "analysis",
+    "/context/analyze": "analysis",
+    "/interview-polish": "analysis",
+    "/interview-polish/state": "analysis",
+    # audio
+    "/audio/beats": "audio",
+    "/audio/duck-video": "audio",
+    "/audio/effects/apply": "audio",
+    "/audio/gen/sfx": "audio",
+    "/audio/gen/tone": "audio",
+    "/audio/music-ai/generate": "audio",
+    "/audio/pro/apply": "audio",
+    "/audio/pro/deepfilter": "audio",
+    "/audio/pro/effects": "audio",
+    "/audio/pro/install": "audio",
+    "/audio/tts/generate": "audio",
+    "/audio/tts/install": "audio",
+    # automation
+    "/batch": "automation",
+    "/batch/create": "automation",
+    "/deliverables": "automation",
+    "/favorites": "automation",
+    "/favorites/save": "automation",
+    "/presets": "automation",
+    "/presets/save": "automation",
+    "/templates/apply": "automation",
+    "/templates/list": "automation",
+    "/templates/save": "automation",
+    "/workflow/approve": "automation",
+    "/workflow/compile": "automation",
+    "/workflow/presets": "automation",
+    "/workflow/run": "automation",
+    "/workflow/save": "automation",
+    "/workflows": "automation",
+    "/workflows/list": "automation",
+    # delivery
+    "/export/presets": "delivery",
+    "/export/thumbnails": "delivery",
+    "/social/platforms": "delivery",
+    # plumbing
+    "/cancel": "plumbing",
+    "/info": "plumbing",
+    "/jobs/history": "plumbing",
+    "/journal/clear": "plumbing",
+    "/journal/list": "plumbing",
+    "/llm/test": "plumbing",
+    "/models/list": "plumbing",
+    "/outputs/recent": "plumbing",
+    "/preflight": "plumbing",
+    "/queue/list": "plumbing",
+    "/queue/replay": "plumbing",
+    "/settings/auto-zoom": "plumbing",
+    "/settings/export": "plumbing",
+    "/settings/gist/pull": "plumbing",
+    "/settings/gist/push": "plumbing",
+    "/settings/import": "plumbing",
+    "/settings/loudness-target": "plumbing",
+    "/settings/onboarding": "plumbing",
+    "/shutdown": "plumbing",
+    "/status": "plumbing",
+    "/system/changelog/mark-seen": "plumbing",
+    "/system/demo/sample": "plumbing",
+    "/system/dependencies": "plumbing",
+    "/system/estimate-time": "plumbing",
+    "/system/gpu-recommend": "plumbing",
+    "/system/issue-report/bundle": "plumbing",
+    "/system/open-path": "plumbing",
+    "/system/qe-reflect": "plumbing",
+    "/system/status": "plumbing",
+    # timeline
+    "/timeline/batch-rename": "timeline",
+    "/timeline/beat-cut": "timeline",
+    "/timeline/smart-bins": "timeline",
+    # transcript
+    "/caption-styles": "transcript",
+    "/captions/burnin/segments": "transcript",
+    "/captions/enhanced/capabilities": "transcript",
+    "/captions/whisperx": "transcript",
+    "/transcript": "transcript",
+    "/transcript/export": "transcript",
+    "/transcript/summarize": "transcript",
+    "/whisper/clear-cache": "transcript",
+    "/whisper/reinstall": "transcript",
+    "/whisper/settings": "transcript",
+    # video-effects
+    "/silence/speed-up": "video-effects",
+    "/video/auto-edit": "video-effects",
+    "/video/blend": "video-effects",
+    "/video/chromakey": "video-effects",
+    "/video/color/correct": "video-effects",
+    "/video/cursor-zoom/resolve": "video-effects",
+    "/video/highlights": "video-effects",
+    "/video/lut/apply": "video-effects",
+    "/video/lut/generate-from-ref": "video-effects",
+    "/video/merge": "video-effects",
+    "/video/particles/apply": "video-effects",
+    "/video/pip": "video-effects",
+    "/video/speed/ramp": "video-effects",
+    "/video/speed/reverse": "video-effects",
+    "/video/title/overlay": "video-effects",
+    "/video/title/render": "video-effects",
+    "/video/transitions/apply": "video-effects",
+    "/video/trim": "video-effects",
+    "/video/watermark": "video-effects",
+    # video-restore
+    "/video/ai/capabilities": "video-restore",
+    "/video/ai/denoise": "video-restore",
+    "/video/ai/install": "video-restore",
+    "/video/ai/interpolate": "video-restore",
+    "/video/ai/rembg": "video-restore",
+    "/video/auto-detect-watermark": "video-restore",
+    "/video/face/blur": "video-restore",
+    "/video/face/enhance": "video-restore",
+    "/video/face/install": "video-restore",
+    "/video/face/swap": "video-restore",
+    "/video/reframe/face": "video-restore",
+    "/video/remove/watermark": "video-restore",
+    "/video/upscale/run": "video-restore",
+}
+
+# The gate refuses to let this grow. Lower it whenever a route is ported.
+UXP_PENDING_FLOOR = 113
+
+
 _CEP_ROUTE_PATTERNS = (
     re.compile(r"\bstartJob\s*\(\s*[\"'](/[^\"']+)"),
     re.compile(
@@ -103,15 +281,38 @@ def _route_gate_errors(
     cep_routes: Iterable[str],
     uxp_routes: Iterable[str],
     exclusions: Mapping[str, str] = ROUTE_EXCLUSIONS,
+    pending: Mapping[str, str] = ROUTE_UXP_PENDING,
+    pending_floor: int | None = None,
 ) -> list[str]:
     cep = {_normalize_route(route) for route in cep_routes}
     uxp = {_normalize_route(route) for route in uxp_routes}
     excluded = {_normalize_route(route) for route in exclusions}
-    missing = sorted(cep - uxp - excluded)
+    deferred = {_normalize_route(route) for route in pending}
+    unclassified = sorted(cep - uxp - excluded - deferred)
     priority_missing = sorted(set(PRIORITY_ROUTE_COVERAGE) - uxp - excluded)
+    floor = UXP_PENDING_FLOOR if pending_floor is None else pending_floor
     errors: list[str] = []
-    if missing:
-        errors.append(f"CEP routes without a UXP path or justified exclusion: {', '.join(missing)}")
+    if unclassified:
+        errors.append(
+            "CEP routes classified as neither covered, excluded, nor pending: "
+            + ", ".join(unclassified)
+        )
+    unknown_family = sorted(
+        {family for family in pending.values() if family not in UXP_PENDING_REASONS}
+    )
+    if unknown_family:
+        errors.append(
+            "pending routes name a family with no recorded reason: "
+            + ", ".join(unknown_family)
+        )
+    # Only routes the CEP panel actually calls count against the floor, so
+    # deleting a CEP route lowers it rather than leaving a stale allowance.
+    live_pending = deferred & cep
+    if len(live_pending) > floor:
+        errors.append(
+            f"UXP-pending routes grew to {len(live_pending)} against a floor of "
+            f"{floor}; port the route or raise the floor deliberately"
+        )
     if priority_missing:
         errors.append(f"priority routes without a UXP path: {', '.join(priority_missing)}")
     return errors
@@ -121,10 +322,12 @@ def validate_route_coverage(
     cep_routes: Iterable[str],
     uxp_routes: Iterable[str],
     exclusions: Mapping[str, str] = ROUTE_EXCLUSIONS,
+    pending: Mapping[str, str] = ROUTE_UXP_PENDING,
+    pending_floor: int | None = None,
 ) -> list[str]:
     """Return route-parity gate errors for a CEP/UXP route inventory."""
 
-    return _route_gate_errors(cep_routes, uxp_routes, exclusions)
+    return _route_gate_errors(cep_routes, uxp_routes, exclusions, pending, pending_floor)
 
 
 def build_route_coverage_manifest() -> dict:
@@ -135,14 +338,23 @@ def build_route_coverage_manifest() -> dict:
     cep_routes = sorted(cep_sources)
     uxp_routes = sorted(uxp_sources)
     excluded = {_normalize_route(route): reason for route, reason in ROUTE_EXCLUSIONS.items()}
+    pending = {_normalize_route(route): family for route, family in ROUTE_UXP_PENDING.items()}
     rows: list[dict] = []
     for route in cep_routes:
+        family = ""
         if route in uxp_sources:
             status = "covered"
+            justification = ""
         elif route in excluded:
             status = "excluded"
+            justification = excluded[route]
+        elif route in pending:
+            status = "pending"
+            family = pending[route]
+            justification = UXP_PENDING_REASONS.get(family, "")
         else:
             status = "missing"
+            justification = ""
         rows.append(
             {
                 "route": route,
@@ -150,13 +362,18 @@ def build_route_coverage_manifest() -> dict:
                 "priority": route in PRIORITY_ROUTE_COVERAGE,
                 "cep_sources": cep_sources[route],
                 "uxp_sources": uxp_sources.get(route, []),
-                "justification": excluded.get(route, ""),
+                "justification": justification,
+                "pending_family": family,
             }
         )
 
-    errors = _route_gate_errors(cep_routes, uxp_routes, excluded)
+    errors = _route_gate_errors(cep_routes, uxp_routes, excluded, pending)
     covered_count = sum(row["status"] == "covered" for row in rows)
     excluded_count = sum(row["status"] == "excluded" for row in rows)
+    pending_rows = [row for row in rows if row["status"] == "pending"]
+    pending_families: dict[str, int] = {}
+    for row in pending_rows:
+        pending_families[row["pending_family"]] = pending_families.get(row["pending_family"], 0) + 1
     missing_routes = [row["route"] for row in rows if row["status"] == "missing"]
     priority_missing = [
         route
@@ -170,11 +387,15 @@ def build_route_coverage_manifest() -> dict:
         "uxp_sources": list(ROUTE_UXP_SOURCES),
         "priority_routes": list(PRIORITY_ROUTE_COVERAGE),
         "exclusions": excluded,
+        "pending_reasons": dict(UXP_PENDING_REASONS),
+        "pending_floor": UXP_PENDING_FLOOR,
         "summary": {
             "cep_route_count": total,
             "uxp_route_count": len(uxp_routes),
             "covered": covered_count,
             "excluded": excluded_count,
+            "pending": len(pending_rows),
+            "pending_by_family": dict(sorted(pending_families.items())),
             "missing": len(missing_routes),
             "coverage_percent": round(((covered_count + excluded_count) / total) * 100, 1) if total else 100.0,
             "priority_count": len(PRIORITY_ROUTE_COVERAGE),

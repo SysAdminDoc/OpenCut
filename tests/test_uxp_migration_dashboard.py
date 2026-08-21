@@ -7,7 +7,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-from opencut.core.cep_uxp_parity import build_dashboard_manifest, validate_route_coverage
+from opencut.core.cep_uxp_parity import (
+    PRIORITY_ROUTE_COVERAGE,
+    ROUTE_UXP_PENDING,
+    UXP_PENDING_FLOOR,
+    UXP_PENDING_REASONS,
+    build_dashboard_manifest,
+    validate_route_coverage,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GENERATED_DASHBOARD = REPO_ROOT / "opencut" / "_generated" / "uxp_migration_dashboard.json"
@@ -53,9 +60,23 @@ def test_f260_dashboard_manifest_derives_from_f198_catalogue():
         "/export/preset",
         "/full",
     ]
-    assert route_coverage["gate"]["passes"] is False
+    # F362: the gate used to be permanently red on 113 unclassified routes,
+    # which meant its colour carried no information. Every CEP route is now
+    # covered, excluded, or recorded as UXP-pending with a reason, so red
+    # again means something changed.
+    assert route_coverage["gate"]["passes"] is True, route_coverage["gate"]["errors"]
+    assert route_coverage["summary"]["missing"] == 0
+    assert route_coverage["summary"]["pending"] > 0
     assert route_coverage["summary"]["priority_covered"] == len(route_coverage["priority_routes"])
     assert route_coverage["summary"]["priority_missing"] == 0
+
+    # Every pending route names a family, and every family has a reason.
+    families = set(route_coverage["summary"]["pending_by_family"])
+    assert families <= set(route_coverage["pending_reasons"])
+    assert all(reason.strip() for reason in route_coverage["pending_reasons"].values())
+    assert sum(route_coverage["summary"]["pending_by_family"].values()) == (
+        route_coverage["summary"]["pending"]
+    )
 
 
 def test_f260_route_gate_rejects_uncovered_routes_and_accepts_justified_exclusions():
@@ -76,6 +97,73 @@ def test_f260_route_gate_rejects_uncovered_routes_and_accepts_justified_exclusio
     errors = validate_route_coverage(["/known", "/missing", *priority_routes], ["/known", *priority_routes], {})
     assert errors
     assert "/missing" in errors[0]
+
+
+class TestF362PendingRoutesAreTrackedRatherThanExcluded:
+    """A route nobody has ported is backlog, not an intentional exclusion.
+
+    Calling all 113 of them "excluded" would have turned the gate green by
+    retiring work nobody decided to drop. They are recorded as pending with
+    a reason per family instead, and the floor is what keeps the list from
+    quietly growing.
+    """
+
+    PRIORITY = list(PRIORITY_ROUTE_COVERAGE)
+
+    def test_a_pending_route_is_classified_not_missing(self):
+        assert validate_route_coverage(
+            ["/deferred", *self.PRIORITY],
+            list(self.PRIORITY),
+            {},
+            {"/deferred": "audio"},
+            pending_floor=1,
+        ) == []
+
+    def test_a_route_in_neither_map_still_fails(self):
+        errors = validate_route_coverage(
+            ["/brand-new", *self.PRIORITY],
+            list(self.PRIORITY),
+            {},
+            {},
+            pending_floor=0,
+        )
+        assert errors and "/brand-new" in errors[0]
+        assert "neither covered, excluded, nor pending" in errors[0]
+
+    def test_pending_cannot_grow_past_the_floor(self):
+        errors = validate_route_coverage(
+            ["/a", "/b", *self.PRIORITY],
+            list(self.PRIORITY),
+            {},
+            {"/a": "audio", "/b": "audio"},
+            pending_floor=1,
+        )
+        assert errors
+        assert "grew to 2 against a floor of 1" in errors[0]
+
+    def test_a_family_with_no_recorded_reason_is_refused(self):
+        errors = validate_route_coverage(
+            ["/x", *self.PRIORITY],
+            list(self.PRIORITY),
+            {},
+            {"/x": "not-a-real-family"},
+            pending_floor=1,
+        )
+        assert any("no recorded reason" in error for error in errors)
+
+    def test_deleting_a_cep_route_lowers_the_count_it_charges(self):
+        """A stale allowance would let a new route slip in unnoticed."""
+        assert validate_route_coverage(
+            [*self.PRIORITY],
+            list(self.PRIORITY),
+            {},
+            {"/gone": "audio"},
+            pending_floor=0,
+        ) == []
+
+    def test_the_shipped_floor_matches_the_shipped_pending_list(self):
+        assert UXP_PENDING_FLOOR == len(ROUTE_UXP_PENDING)
+        assert set(ROUTE_UXP_PENDING.values()) <= set(UXP_PENDING_REASONS)
 
 
 def test_f260_generated_and_panel_dashboards_are_in_sync():
