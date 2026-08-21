@@ -3,7 +3,7 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
-## Unreleased
+## 1.51.0 - The copy the panels actually ship
 
 ### Fixed - The MCP route catalogue is checked against the app, not just itself
 

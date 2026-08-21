@@ -7,9 +7,9 @@
     <RootNamespace>OpenCut.Installer</RootNamespace>
     <AssemblyName>OpenCut-Setup</AssemblyName>
     <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
-    <Version>1.50.0</Version>
-    <FileVersion>1.50.0.0</FileVersion>
-    <AssemblyVersion>1.50.0.0</AssemblyVersion>
+    <Version>1.51.0</Version>
+    <FileVersion>1.51.0.0</FileVersion>
+    <AssemblyVersion>1.51.0.0</AssemblyVersion>
     <Company>SysAdminDoc</Company>
     <Product>OpenCut Installer</Product>
     <Description>OpenCut Video Editing Automation - Installer</Description>
