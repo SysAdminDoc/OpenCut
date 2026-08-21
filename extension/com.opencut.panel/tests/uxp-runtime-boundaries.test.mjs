@@ -427,6 +427,23 @@ describe("UXP job controller", () => {
 });
 
 describe("UXP i18n runtime", () => {
+  it("loads English directly without probing a missing regional catalog", async () => {
+    const requestedPaths = [];
+    const runtime = createI18nRuntime({
+      fetchJson: async (path) => {
+        requestedPaths.push(path);
+        return path === "locales/en.json" ? { greeting: "Hello" } : null;
+      },
+      documentRef: null,
+      navigatorRef: { languages: ["en-US"] },
+    });
+
+    await runtime.load();
+
+    expect(runtime.currentLang).toBe("en");
+    expect(requestedPaths).toEqual(["locales/en.json"]);
+  });
+
   it("merges the requested locale over English and interpolates values", async () => {
     const locales = {
       "locales/en.json": { greeting: "Hello {name}", shared: "English" },
