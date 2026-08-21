@@ -201,6 +201,11 @@ def plan_variants(
     return result
 
 
+def _raise_if_cancelled(is_cancelled: Optional[Callable[[], bool]]) -> None:
+    if is_cancelled and is_cancelled():
+        raise InterruptedError("Shorts variant generation cancelled")
+
+
 def _render_one_variant(
     input_path: str,
     desc: dict,
@@ -210,8 +215,10 @@ def _render_one_variant(
     on_progress: Optional[Callable[[int, str], None]],
     pct_floor: int,
     pct_ceil: int,
+    is_cancelled: Optional[Callable[[], bool]] = None,
 ) -> ShortsVariant:
     """Trim → reframe → optionally burn captions for a single variant."""
+    _raise_if_cancelled(is_cancelled)
     import time
     start_ts = time.perf_counter()
     base = os.path.splitext(os.path.basename(input_path))[0]
@@ -226,11 +233,15 @@ def _render_one_variant(
     try:
         from opencut.core.shorts_pipeline import _trim_clip
         _trim_clip(input_path, float(desc["start"]), float(desc["end"]), trim_out)
+    except InterruptedError:
+        shutil.rmtree(trim_dir, ignore_errors=True)
+        raise
     except Exception as exc:
         shutil.rmtree(trim_dir, ignore_errors=True)
         raise RuntimeError(f"trim failed: {exc}") from exc
     if on_progress:
         on_progress(pct_floor + (pct_ceil - pct_floor) // 4, f"variant {desc['variant_id']} trimmed")
+    _raise_if_cancelled(is_cancelled)
 
     # 2) Reframe — call face_reframe.reframe_face when face_track=True,
     #    otherwise a fixed scale+crop via FFmpeg.
@@ -246,6 +257,9 @@ def _render_one_variant(
             )
         else:
             _fixed_crop(trim_out, reframe_out, int(desc["width"]), int(desc["height"]))
+    except InterruptedError:
+        shutil.rmtree(trim_dir, ignore_errors=True)
+        raise
     except Exception as exc:
         # Fall back to a fixed crop if face_track wasn't available — never
         # let the variant pipeline die on one missing optional dep.
@@ -256,6 +270,7 @@ def _render_one_variant(
             raise RuntimeError(f"reframe failed: {exc2} (initial: {exc})") from exc2
     if on_progress:
         on_progress(pct_floor + (pct_ceil - pct_floor) // 2, f"variant {desc['variant_id']} reframed")
+    _raise_if_cancelled(is_cancelled)
 
     # 3) Burn captions (optional) — uses the existing styled_captions surface.
     notes: List[str] = []
@@ -352,6 +367,7 @@ def generate_variants(
     burn_captions: bool = True,
     output_dir: str = "",
     on_progress: Optional[Callable[[int, str], None]] = None,
+    is_cancelled: Optional[Callable[[], bool]] = None,
 ) -> VariantsResult:
     """Render ``n_variants`` short-form variants of ``input_path[start:end]``.
 
@@ -367,6 +383,9 @@ def generate_variants(
             the descriptor but no burn-in happens.
         output_dir: Where to write the variant MP4s. Default = ``<src_dir>/variants``.
         on_progress: ``(pct, msg)`` callback. Pct ranges 0..100.
+        is_cancelled: Optional zero-arg callback. When it returns True the
+            loop raises :class:`InterruptedError` before the next variant
+            so a user cancel does not keep rendering the rest of the set.
 
     Returns:
         :class:`VariantsResult` with one :class:`ShortsVariant` per variant.
@@ -384,6 +403,7 @@ def generate_variants(
 
     span = max(1, 95 // len(descriptors))
     for i, desc in enumerate(descriptors):
+        _raise_if_cancelled(is_cancelled)
         floor = 5 + i * span
         ceil = min(95, floor + span)
         variant = _render_one_variant(
@@ -395,6 +415,7 @@ def generate_variants(
             on_progress=on_progress,
             pct_floor=floor,
             pct_ceil=ceil,
+            is_cancelled=is_cancelled,
         )
         result.variants.append(variant)
 

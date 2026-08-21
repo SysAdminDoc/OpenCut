@@ -63,6 +63,7 @@ OpenCut's security model leans on a handful of intentional choices:
 - **Scripting console sandbox.** Dunder builtins stripped, `__import__` / `exec` / `eval` / `compile` / `open` / `os` / `sys` / `subprocess` blocked in AST. Context keys containing `__` rejected.
 - **Fuzz harness** for parsers (`tests/fuzz/`) — SRT / VTT / `.cube` / voice-grammar parsers are expected to be total.
 - **Atomic writes** for user-data files via `tempfile + os.replace`.
+- **XML import hardening.** Third-party XML (captions, Final Draft `.fdx`, GPX) is size-capped and rejected if it carries a DTD or entity declaration, before stdlib parsers see it.
 
 ## Hardening Recommendations
 

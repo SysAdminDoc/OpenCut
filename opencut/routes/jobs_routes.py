@@ -1111,7 +1111,8 @@ def _process_queue(app=None):
     def _run():
         try:
             _dispatch_queue_entry(entry, resolved_app)
-            # Wait for the job to finish (timeout after 30 minutes)
+            # Wait for the child job using the same stuck-job timeout the
+            # rest of the worker pool uses (default 7200s), then cancel it.
             with job_queue_lock:
                 job_id = entry.get("job_id")
                 entry_status = entry.get("status")
@@ -1128,6 +1129,21 @@ def _process_queue(app=None):
                         break
                     time.sleep(1)
                 else:
+                    try:
+                        _cancel_job(
+                            job_id,
+                            message=f"Queued job timed out after {job_timeout} seconds",
+                        )
+                    except Exception as exc:  # noqa: BLE001 - still fail the queue entry
+                        logger.debug(
+                            "Failed to cancel timed-out queue job %s: %s",
+                            job_id,
+                            exc,
+                        )
+                        try:
+                            _kill_job_process(job_id)
+                        except Exception:  # noqa: BLE001
+                            pass
                     _update_queue_entry(
                         entry,
                         "error",

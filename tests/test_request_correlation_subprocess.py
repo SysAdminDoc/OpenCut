@@ -160,3 +160,39 @@ def test_async_job_worker_receives_original_request_id(app, monkeypatch):
     assert live["request_id"] == request_id
     assert live["client_request_id"] == "client-supplied"
     assert live["result"]["worker_request_id"] == request_id
+
+
+def test_run_ffmpeg_tracks_thread_local_job_without_explicit_id(monkeypatch):
+    """Cancel can only kill FFmpeg if the worker thread's job is registered."""
+    from opencut import helpers
+    from opencut import jobs as jobs_mod
+
+    registered = []
+
+    class FakeProc:
+        returncode = 0
+
+        def communicate(self, timeout=None):
+            return b"", b"ok"
+
+        def kill(self):
+            pass
+
+    monkeypatch.setattr(helpers, "_require_safe_media_binary", lambda path: path)
+    monkeypatch.setattr(helpers, "_ffmpeg_path", "ffmpeg")
+    monkeypatch.setattr(helpers, "_guard_ffmpeg_command", lambda cmd: cmd)
+    monkeypatch.setattr(helpers._sp, "Popen", lambda cmd, **kwargs: FakeProc())
+    monkeypatch.setattr(helpers._sp, "PIPE", object())
+    monkeypatch.setattr(
+        jobs_mod, "_register_job_process", lambda job_id, proc: registered.append(job_id)
+    )
+    monkeypatch.setattr(jobs_mod, "_unregister_job_process", lambda job_id: None)
+
+    jobs_mod._thread_local.job_id = "job-auto"
+    try:
+        helpers.run_ffmpeg(["ffmpeg", "-version"])
+    finally:
+        jobs_mod._thread_local.job_id = ""
+
+    assert registered == ["job-auto"]
+

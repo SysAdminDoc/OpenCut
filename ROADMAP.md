@@ -93,13 +93,3 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
   Acceptance: All listed keys updated in en.json (both panels) + es.json; no "..."/"…" collision remains within either panel's locale; the FCC notice is a single translatable string in UXP.
   Confidence: Likely
   Effort: S
-
-- [ ] P3 — F376 — Third-party XML parsed with stdlib parsers at import boundaries
-  Category: security
-  Where: import paths that accept files commonly obtained from third parties: `opencut/core/caption_interchange.py:703` (`fromstring`), `opencut/core/screenplay_parser.py:79` (`ElementTree.parse`), `opencut/core/iso_ingest.py:387`, `opencut/core/multicam_xml.py:24`, `opencut/core/multi_pov.py:303` (`minidom.parseString`), `opencut/core/standards_validators.py:172`, `opencut/core/flight_path_map.py:132`; generation-only sites (podcast_rss, fcpxml_export, premiere.py) are lower concern
-  Problem: `xml.etree`/`minidom` do not resolve external entities (XXE-safe by default) but remain exposed to entity-expansion memory amplification on crafted DTDs. Caption/timeline/screenplay files are exactly the kind of artifact users download from strangers, so a malicious file can spike the local server's memory. Loopback-only deployment caps the blast radius at self-DoS, hence P3, and no SECURITY.md claim is contradicted (checked — the file makes no XML-hardening claim).
-  Evidence: bandit B314/B318 hits triaged one by one this pass; `defusedxml` absent from the dependency tree (grep of opencut/, requirements, pyproject = 0 hits). Not reproduced as an actual memory spike — hence the confidence level.
-  Fix: Either adopt `defusedxml` for the seven import-boundary sites (actively maintained, PSF-license-compatible; keep stdlib for generation), or pre-reject DTDs cheaply (refuse input whose prolog contains `<!DOCTYPE` — caption/FCPXML/screenplay interchange formats never legitimately carry one) at the shared read helper before parsing. The DTD-reject route avoids a new dependency and matches the repo's stdlib-first posture.
-  Acceptance: A fixture with a billion-laughs DTD is rejected with a clean error at every listed import path (parameterized test); legitimate fixture files still parse; whichever mechanism lands is noted in SECURITY.md's input-handling section.
-  Confidence: Needs-repro
-  Effort: M

@@ -18,6 +18,7 @@ import sys
 import tempfile
 import unittest
 import wave
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -141,6 +142,60 @@ class TestVariantsResultProtocol(unittest.TestCase):
         self.assertEqual(r["variants"][0]["variant_id"], 0)
         self.assertIn("variants", r.keys())
         self.assertIn("dry_run", r.keys())
+
+
+class TestGenerateVariantsCancel(unittest.TestCase):
+    def test_generate_variants_stops_when_cancelled(self):
+        from opencut.core.shorts_variants import (
+            ShortsVariant,
+            generate_variants,
+        )
+
+        rendered = []
+
+        def fake_render(**kwargs):
+            rendered.append(kwargs["desc"]["variant_id"])
+            return ShortsVariant(
+                variant_id=kwargs["desc"]["variant_id"],
+                output="/tmp/v.mp4",
+                start=0.0,
+                end=5.0,
+                hook_offset=0.0,
+                caption_style="default",
+                face_track=False,
+                width=1080,
+                height=1920,
+            )
+
+        def cancel_after_first():
+            return len(rendered) >= 1
+
+        with tempfile.TemporaryDirectory(prefix="variants_cancel_") as tmp:
+            with patch(
+                "opencut.core.shorts_variants._render_one_variant",
+                side_effect=fake_render,
+            ), patch(
+                "opencut.core.shorts_variants._validate_window",
+                return_value=(0.0, 10.0, 10.0),
+            ):
+                with self.assertRaises(InterruptedError):
+                    generate_variants(
+                        "clip.mp4",
+                        0.0,
+                        10.0,
+                        n_variants=4,
+                        output_dir=tmp,
+                        is_cancelled=cancel_after_first,
+                    )
+
+        self.assertEqual(rendered, [0])
+
+    def test_is_cancelled_is_an_explicit_parameter(self):
+        import inspect
+
+        from opencut.core.shorts_variants import generate_variants
+
+        self.assertIn("is_cancelled", inspect.signature(generate_variants).parameters)
 
 
 class TestShortsVariantsRoutes(unittest.TestCase):

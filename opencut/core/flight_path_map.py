@@ -16,10 +16,10 @@ import math
 import os
 import re
 import tempfile
-import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
+from opencut.core.xml_safe import parse_xml_root
 from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
@@ -129,8 +129,7 @@ def _parse_dji_srt_gps(srt_path: str) -> List[GpsPoint]:
 
 def _parse_gpx(gpx_path: str) -> List[GpsPoint]:
     """Parse GPS data from GPX XML file."""
-    tree = ET.parse(gpx_path)
-    root = tree.getroot()
+    root = parse_xml_root(gpx_path)
 
     # Handle namespace
     ns = ""
