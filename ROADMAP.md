@@ -15,13 +15,6 @@ original acceptance criteria stay traceable.
 
 ### P1
 
-- [ ] P1 — F359 — Answer issue #5 and close the CSRF report with the reporter
-  Why: F338 shipped the engineering half of the CSRF fix (structured error code, recovery suggestion, README troubleshooting entry naming the exact string) but never did the half its own justification rested on. Issue #5 is still open with zero comments, so the only open external bug on the project remains unanswered while the fix that closes it is already released. The item argued that for a project this size one first-contact failure costs more than any missing feature, and that argument is still true of the silence.
-  Evidence: https://github.com/SysAdminDoc/OpenCut/issues/5 (state OPEN, 0 comments as of 2026-08-20); F338 acceptance text required "the issue can be answered with a pinned commit and a workaround for the published v1.25.1 build"; `72a795b6` (structured code and suggestion); README troubleshooting now carries the "Invalid or missing CSRF token" section
-  Touches: GitHub issue #5, `README.md` (troubleshooting, if the reply exposes a gap), release notes
-  Acceptance: The reporter gets a reply naming the commit that fixed it and the release it ships in, plus a workaround usable on the v1.25.1 build they reported against; the issue is closed or left open only with a stated reason; if answering it turns up a case the fix does not cover, that case becomes its own item rather than a silent reopen.
-  Complexity: S
-
 - [ ] P1 — F360 — Make the release gate reproduce, or stop calling it a gate
   Why: `panel-rendered` passed inside the receipt that backs the v1.49.0 release and then failed on a re-run against that identical commit roughly two hours later, with no source change in between. F358 was queued to resolve exactly this step and its acceptance required the failure be handled "so the gate stops failing on it"; the step is failing again, so whatever `7e3d9237` fixed was not that. A release gate that passes or fails depending on when you run it teaches everyone to re-run until it goes green, which is the same as not having one.
   Evidence: `build/release-receipt.json` (commit `a90757b7`, 43 steps, `panel-rendered` ok in 339299 ms, generated 2026-08-20T23:20:05Z) against a same-commit re-run returning `release smoke failed: panel-rendered; no receipt was written`; the machine was running an unrelated 16-worker job during the failing run, so contention is a live hypothesis and not yet excluded; F358 note already recorded 2-3% golden drift on this machine with no CSS change
