@@ -23,7 +23,7 @@
             <Border Grid.Column="0" Style="{StaticResource SetupHeroBorder}" Margin="0,0,18,0">
                 <StackPanel>
                     <Border Background="{DynamicResource HeroBadgeBrush}" BorderBrush="{DynamicResource HeroBadgeStrokeBrush}" BorderThickness="1"
-                            CornerRadius="999" Padding="10,4" HorizontalAlignment="Left">
+                            CornerRadius="6" Padding="10,4" HorizontalAlignment="Left">
                         <TextBlock x:Name="InstallModeBadgeText" Text="Fresh install"
                                    Foreground="{DynamicResource Blue}" FontSize="11"
                                    FontFamily="{DynamicResource UIFont}" FontWeight="SemiBold" />
@@ -46,43 +46,27 @@
                                FontFamily="{DynamicResource UIFont}" FontWeight="SemiBold"
                                Margin="0,8,0,0" />
                     <TextBlock Margin="0,14,0,0"
-                               Text="Set up the OpenCut server, Premiere integration, and editing tools in one guided flow. The installer keeps the experience local, predictable, and ready for the first session."
+                               Text="Set up the local OpenCut server and Premiere panel in one guided flow. When setup finishes, you can open the panel and start working."
                                Style="{StaticResource BodyText}" />
 
-                    <Grid Margin="0,24,0,0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <Border Grid.Row="0" Style="{StaticResource SetupCardBorder}" Margin="0,0,0,10">
-                            <StackPanel>
-                                <TextBlock Text="Premiere Ready" Foreground="{DynamicResource TextBrush}"
-                                           FontSize="14" FontWeight="SemiBold" />
-                                <TextBlock Text="Install the CEP panel and the recommended debug mode so OpenCut can talk to Premiere without extra manual setup."
-                                           Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Grid.Row="1" Style="{StaticResource SetupCardBorder}" Margin="0,0,0,10">
-                            <StackPanel>
-                                <TextBlock Text="Local Workflow" Foreground="{DynamicResource TextBrush}"
-                                           FontSize="14" FontWeight="SemiBold" />
-                                <TextBlock Text="The setup keeps the server, FFmpeg, shortcuts, and optional AI extras in one predictable install location."
-                                           Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Grid.Row="2" Style="{StaticResource SetupCardBorder}">
-                            <StackPanel>
-                                <TextBlock Text="Guided Finish" Foreground="{DynamicResource TextBrush}"
-                                           FontSize="14" FontWeight="SemiBold" />
-                                <TextBlock Text="You can review options, watch progress clearly, and launch the server immediately when setup is done."
-                                           Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
-                            </StackPanel>
-                        </Border>
-                    </Grid>
+                    <Border Style="{StaticResource SetupCardBorder}" Margin="0,22,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Premiere panel" Foreground="{DynamicResource TextBrush}"
+                                       FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Text="Installs the CEP panel and configures Adobe for first launch."
+                                       Style="{StaticResource CaptionText}" Margin="0,4,0,0" />
+                            <Border Height="1" Background="{DynamicResource Surface1}" Margin="0,12" />
+                            <TextBlock Text="Local install" Foreground="{DynamicResource TextBrush}"
+                                       FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Text="Keeps the server, FFmpeg, and optional tools in one dedicated folder."
+                                       Style="{StaticResource CaptionText}" Margin="0,4,0,0" />
+                            <Border Height="1" Background="{DynamicResource Surface1}" Margin="0,12" />
+                            <TextBlock Text="Ready to launch" Foreground="{DynamicResource TextBrush}"
+                                       FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Text="Shows install activity, then offers to launch the server."
+                                       Style="{StaticResource CaptionText}" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Border>
 

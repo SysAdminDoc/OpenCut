@@ -11,13 +11,13 @@
 
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="44" GlassFrameThickness="0"
-                      ResizeBorderThickness="0" CornerRadius="16" />
+                      ResizeBorderThickness="0" CornerRadius="12" />
     </WindowChrome.WindowChrome>
 
-    <Border Margin="14" CornerRadius="16" Background="{DynamicResource Base}"
+    <Border Margin="14" CornerRadius="12" Background="{DynamicResource Base}"
             BorderBrush="{DynamicResource Surface1}" BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="28" ShadowDepth="0" Opacity="0.28" Color="#000000" />
+            <DropShadowEffect BlurRadius="28" ShadowDepth="0" Opacity="0.28" Color="{DynamicResource WindowShadowColor}" />
         </Border.Effect>
         <Grid Background="{DynamicResource WindowChromeBrush}">
             <Grid.RowDefinitions>
@@ -45,7 +45,7 @@
                                FontWeight="SemiBold"
                                VerticalAlignment="Center" />
                     <Border Background="{DynamicResource BuildBadgeBrush}" BorderBrush="{DynamicResource BuildBadgeStrokeBrush}" BorderThickness="1"
-                            CornerRadius="999" Padding="8,2" Margin="8,0,0,0">
+                            CornerRadius="6" Padding="8,2" Margin="8,0,0,0">
                         <TextBlock x:Name="WindowVersionText"
                                    Text="{Binding Source={x:Static models:AppConstants.AppVersion}, StringFormat='v{0}'}"
                                    Foreground="{DynamicResource Blue}" FontSize="10.5"
@@ -90,17 +90,17 @@
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="Bd" Background="{TemplateBinding Background}"
-                                        CornerRadius="0,16,0,0">
+                                        CornerRadius="0,12,0,0">
                                     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
                                         <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Red}" />
-                                        <Setter Property="Foreground" Value="White" />
+                                        <Setter Property="Foreground" Value="{DynamicResource OnDangerBrush}" />
                                     </Trigger>
                                     <Trigger Property="IsKeyboardFocused" Value="True">
                                         <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Red}" />
-                                        <Setter Property="Foreground" Value="White" />
+                                        <Setter Property="Foreground" Value="{DynamicResource OnDangerBrush}" />
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>

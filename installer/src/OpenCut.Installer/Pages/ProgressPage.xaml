@@ -16,7 +16,7 @@
         <StackPanel Grid.Row="0" Margin="0,0,0,14">
             <TextBlock Text="Installing OpenCut…" Style="{StaticResource SectionTitleText}" />
             <TextBlock x:Name="ProgressSummaryText"
-                       Text="Setting up the local server, Premiere integration, and any extras you selected. First install can take a few minutes."
+                       Text="Setting up OpenCut and its Premiere panel. Optional tools are added when selected, so a first install can take a few minutes."
                        Style="{StaticResource BodyText}" Margin="0,8,0,0" />
         </StackPanel>
 
@@ -36,7 +36,7 @@
                 </StackPanel>
 
                 <Border Grid.Column="1" Background="{DynamicResource SuccessTintBrush}" BorderBrush="{DynamicResource Surface1}"
-                        BorderThickness="1" CornerRadius="999" Padding="10,4" HorizontalAlignment="Right">
+                        BorderThickness="1" CornerRadius="6" Padding="10,4" HorizontalAlignment="Right">
                     <TextBlock x:Name="ProgressPercentText" Text="0%"
                                Foreground="{DynamicResource Green}" FontSize="12"
                                FontWeight="SemiBold" />
@@ -48,13 +48,13 @@
             <ProgressBar x:Name="ProgressBar" Height="10" Minimum="0" Maximum="100" Value="0"
                          AutomationProperties.Name="Install progress"
                          AutomationProperties.HelpText="Shows overall OpenCut setup progress from 0 to 100 percent." />
-            <Border x:Name="Shimmer" Height="10" CornerRadius="5"
+            <Border x:Name="Shimmer" Height="10" CornerRadius="6"
                     HorizontalAlignment="Left" Width="96"
                     IsHitTestVisible="False" Opacity="0.32">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                         <GradientStop Color="Transparent" Offset="0" />
-                        <GradientStop Color="#40FFFFFF" Offset="0.5" />
+                        <GradientStop Color="{DynamicResource ProgressShimmerColor}" Offset="0.5" />
                         <GradientStop Color="Transparent" Offset="1" />
                     </LinearGradientBrush>
                 </Border.Background>

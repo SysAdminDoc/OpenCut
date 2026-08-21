@@ -26,10 +26,12 @@
                 <TextBlock Text="OpenCut user data is preserved by default."
                            Style="{StaticResource CaptionText}" Foreground="{DynamicResource TextBrush}" />
                 <CheckBox x:Name="RemoveUserDataCheckBox"
-                          Content="Also remove settings, jobs, journals, indexes, plugins, models, and project/agent state"
+                          Content="Back up and remove settings, jobs, journals, indexes, plugins, models, and project/agent state"
                           AutomationProperties.Name="Remove OpenCut user data after backup"
                           AutomationProperties.HelpText="Unchecked by default. Creates and validates a backup outside the OpenCut data folder before removal."
                           Margin="0,10,0,0" />
+                <TextBlock Text="Selecting this option removes the listed data when you choose Remove OpenCut."
+                           Style="{StaticResource CaptionText}" Margin="24,4,0,0" />
                 <TextBlock x:Name="UserDataPathText" Style="{StaticResource CaptionText}" Margin="24,4,0,0"
                            TextWrapping="Wrap" />
             </StackPanel>
@@ -76,7 +78,7 @@
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
                         <Setter Property="Background" Value="{StaticResource Red}" />
-                        <Setter Property="Foreground" Value="White" />
+                        <Setter Property="Foreground" Value="{DynamicResource OnDangerBrush}" />
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{StaticResource Maroon}" />

@@ -120,7 +120,7 @@ public class UninstallEngine
             // A drive root, a Windows directory, or the user's profile: deleting
             // it recursively would destroy unrelated data, so refuse instead.
             Report(progress, step, totalSteps, "Removing files",
-                $"Refusing to delete '{_config.InstallPath}' - it is not a dedicated "
+                $"Refusing to delete '{_config.InstallPath}'. It is not a dedicated "
                 + "install folder. Remove it by hand if it really is OpenCut's.",
                 LogLevel.Warning);
         }

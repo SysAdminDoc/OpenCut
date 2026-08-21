@@ -34,7 +34,7 @@ public class DependencyInstaller
         if (python == null)
         {
             Report(progress, step, totalSteps, stepName,
-                "Python 3.11-3.14 not found in PATH — optional tools skipped. Install a supported Python from python.org.",
+                "Python 3.11-3.14 wasn't found in PATH. Optional tools were skipped. Install a supported Python from python.org.",
                 LogLevel.Warning);
             return;
         }

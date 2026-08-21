@@ -72,7 +72,7 @@ public class InstallPathValidatorTests
     }
 
     [Fact]
-    public void ANonEmptyForeignDirectoryNeedsConfirmation()
+    public void ANonEmptyForeignDirectoryRequiresADedicatedFolder()
     {
         var temp = Path.Combine(Path.GetTempPath(), "OpenCutPathTest_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
@@ -82,8 +82,9 @@ public class InstallPathValidatorTests
 
             var result = InstallPathValidator.Validate(temp);
 
-            Assert.Equal(InstallPathVerdict.NeedsConfirmation, result.Verdict);
+            Assert.Equal(InstallPathVerdict.RequiresDedicatedFolder, result.Verdict);
             Assert.Equal(temp, result.NormalizedPath);
+            Assert.Contains("dedicated OpenCut folder", result.Message);
         }
         finally
         {
@@ -92,7 +93,7 @@ public class InstallPathValidatorTests
     }
 
     [Fact]
-    public void AnEmptyOrPreviousInstallDirectoryIsAcceptedWithoutPrompting()
+    public void AnEmptyOrPreviousInstallDirectoryIsAcceptedDirectly()
     {
         var temp = Path.Combine(Path.GetTempPath(), "OpenCutPathTest_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);

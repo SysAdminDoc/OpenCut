@@ -7,8 +7,8 @@ public enum InstallPathVerdict
     /// <summary>The path is usable as-is.</summary>
     Accepted,
 
-    /// <summary>Usable, but the user must confirm before install proceeds.</summary>
-    NeedsConfirmation,
+    /// <summary>The folder contains unrelated files and must not be reused.</summary>
+    RequiresDedicatedFolder,
 
     /// <summary>Refused outright; installing here would be destructive.</summary>
     Rejected,
@@ -70,12 +70,12 @@ public static class InstallPathValidator
         fullPath = TrimTrailingSeparator(fullPath);
         var message = string.Empty;
 
-        // A bare drive root is never an install target - `rmdir /s /q D:\` on
+        // A bare drive root is never an install target. `rmdir /s /q D:\` on
         // uninstall would wipe the drive. Put the app in its own folder.
         if (IsDriveRoot(fullPath))
         {
             fullPath = Path.Combine(fullPath, AppFolderName);
-            message = $"Installing into {fullPath} - OpenCut needs its own folder, "
+            message = $"Installing into {fullPath}. OpenCut needs its own folder, "
                     + "not the root of a drive.";
         }
 
@@ -96,9 +96,8 @@ public static class InstallPathValidator
         if (DirectoryHasForeignContent(fullPath))
         {
             var warning = $"{fullPath} already contains files that are not part of OpenCut. "
-                        + "Uninstalling OpenCut deletes everything in the install folder. "
-                        + "Install here anyway?";
-            return new InstallPathResult(InstallPathVerdict.NeedsConfirmation, fullPath, warning);
+                        + "Choose an empty folder or a dedicated OpenCut folder so uninstalling can't remove unrelated files.";
+            return new InstallPathResult(InstallPathVerdict.RequiresDedicatedFolder, fullPath, warning);
         }
 
         return new InstallPathResult(InstallPathVerdict.Accepted, fullPath, message);

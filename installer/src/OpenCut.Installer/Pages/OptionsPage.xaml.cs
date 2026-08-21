@@ -42,6 +42,8 @@ public partial class OptionsPage : Page
 
     private void PathBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        if (PathValidationPanel != null)
+            PathValidationPanel.Visibility = Visibility.Collapsed;
         UpdateDiskSpace();
         UpdateSelectionSummary();
     }
@@ -227,26 +229,13 @@ public partial class OptionsPage : Page
             config.WhisperModel = GetSelectedWhisperModel();
         }
 
-        // Normalise once, here. Everything downstream - including the
-        // recursive delete the uninstaller performs - trusts InstallPath.
+        // Normalise once here. Everything downstream, including the
+        // recursive delete the uninstaller performs, trusts InstallPath.
         var pathCheck = InstallPathValidator.Validate(config.InstallPath);
-        if (pathCheck.Verdict == InstallPathVerdict.Rejected)
+        if (pathCheck.Verdict != InstallPathVerdict.Accepted)
         {
-            MessageBox.Show(pathCheck.Message, "OpenCut Setup",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShowPathValidation(pathCheck.Message);
             return;
-        }
-
-        if (pathCheck.Verdict == InstallPathVerdict.NeedsConfirmation)
-        {
-            var answer = MessageBox.Show(pathCheck.Message, "OpenCut Setup",
-                MessageBoxButton.YesNo, MessageBoxImage.Warning);
-            if (answer != MessageBoxResult.Yes) return;
-        }
-        else if (!string.IsNullOrEmpty(pathCheck.Message))
-        {
-            MessageBox.Show(pathCheck.Message, "OpenCut Setup",
-                MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         config.InstallPath = pathCheck.NormalizedPath;
@@ -260,18 +249,25 @@ public partial class OptionsPage : Page
                 var driveInfo = new DriveInfo(root);
                 if (driveInfo.IsReady && driveInfo.AvailableFreeSpace < 500L * 1024 * 1024)
                 {
-                    MessageBox.Show($"Insufficient disk space on {root}. At least 500 MB required.",
-                        "OpenCut Setup", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    ShowPathValidation($"Insufficient disk space on {root}. At least 500 MB is required.");
                     return;
                 }
             }
         }
         catch (Exception)
         {
-            // DriveInfo may fail on network paths — allow anyway.
+            // DriveInfo may fail on network paths. Allow them to continue.
         }
 
         _mainWindow.SetStep(3);
         _mainWindow.NavigateToPage(new ProgressPage(_mainWindow));
+    }
+
+    private void ShowPathValidation(string message)
+    {
+        PathValidationText.Text = message;
+        PathValidationPanel.Visibility = Visibility.Visible;
+        PathBox.Focus();
+        PathBox.SelectAll();
     }
 }
