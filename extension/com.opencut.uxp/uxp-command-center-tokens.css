@@ -13,6 +13,7 @@ html.theme-darkest {
   --cc-text: #e8ebf0;
   --cc-muted: #a2a9b4;
   --cc-accent: #86a8f7;
+  --cc-on-accent: #08101f;
   --cc-accent-soft: rgba(134, 168, 247, 0.12);
   --cc-success: #76b99e;
   --cc-warning: #d7ad62;
@@ -39,6 +40,7 @@ html.theme-dark {
   --cc-text: #f0f2f5;
   --cc-muted: #b8bec7;
   --cc-accent: #91aff7;
+  --cc-on-accent: #08101f;
   --cc-accent-soft: rgba(145, 175, 247, 0.15);
   --cc-success: #7bc2a5;
   --cc-warning: #e1ba70;
@@ -77,6 +79,7 @@ html.theme-light {
   --cc-text: #182132;
   --cc-muted: #5e697a;
   --cc-accent: #466fd3;
+  --cc-on-accent: #ffffff;
   --cc-accent-soft: rgba(70, 111, 211, 0.13);
   --cc-success: #287f64;
   --cc-warning: #895d0c;

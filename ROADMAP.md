@@ -32,16 +32,6 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
 
 ### P2
 
-- [ ] P2 — F368 — UXP panel light theme is systematically broken at the base layer
-  Category: visual
-  Where: `extension/com.opencut.uxp/style.css` (zero `html.theme-light` rules in 5,253 lines; 21 winning dark-only declarations), `extension/com.opencut.uxp/uxp-command-center.css:1000-1008, 1092-1108, 134, 1337/2155, 1690, 1735`, `extension/com.opencut.uxp/uxp-command-center-layout.css:91`
-  Problem: In light theme the UXP panel's primary CTA keeps the dark accent (`.oc-btn-primary` re-hardcodes `#86a8f7`/`#10141b` at uxp-command-center.css:1000-1008, defeating the tokenized rule at :92; no `theme-light` counterpart exists in any UXP stylesheet — verified by grep). Seven near-white inks are invisible on white: `.oc-result-copy strong` (:1668), `.oc-result-list-item-title` (:1757, verified `#f7f9fc`), `.oc-deliv-title` (:1912), `.oc-result-insight-value` (:3755), `#seqInfoGrid .oc-info-val` (:3946), `.oc-deliv-btn:hover` (:1823), `.oc-chip:hover` (:1872). The light status-line overrides at :1410-1424 are dead code — the ID-scoped dark rules at :1095-1108 (specificity 1,2,0) beat `html.theme-light …` (0,3,1), so Settings status lines keep dark tints in light theme. Toast `[data-state]` gradients (style.css:4216-4226) beat the tokenized `.oc-toast` and stay dark-green/brown/red-black on light. The focus-visible block at style.css:4824-4826 discards the `var(--border-focus)` token used by the earlier correct rule at :4606 and hardcodes the dark-theme blue.
-  Evidence: Cascade-resolved sweep over all UXP stylesheets (only winning declarations reported); the three highest-impact claims re-verified directly in source this pass (`sed`/`grep` on :1000-1008, :1757, :1095-1108, and `grep -c theme-light style.css` = 0). Note: the rendered Playwright goldens pass because they pin the current (broken) light renderings — fixing this requires regenerating light-theme goldens, and the existing 1% threshold discipline from CLAUDE.md applies.
-  Fix: Route every listed declaration through the existing `--cc-*`/`--border-focus` token system (the light values already exist: accent `#466fd3`, `--cc-shadow-float`); add the missing `html.theme-light .oc-btn-primary` pair or better, drop the re-hardcode at :1000-1008 entirely so :92's tokens win; de-ID the `#tab-settings .oc-status-line` rules (or raise the light overrides' specificity) so :1410-1424 stops being dead; tokenize the toast gradients and the :4824 focus block. Then re-capture the light-theme goldens deliberately.
-  Acceptance: Grep for the listed literals in UXP CSS returns only token-definition lines; the light-theme rendered suite shows a `#466fd3`-family primary button, readable result-list titles, and light toasts; the dead-rule pair at :1410-1424 either applies or is removed.
-  Confidence: Verified
-  Effort: L
-
 - [ ] P2 — F369 — CEP light theme gaps rooted in a mislabeled dark block
   Category: visual
   Where: `extension/com.opencut.panel/client/style.css:17537-17915` (structural cause), plus winning hits at :17765-17766, :18282-18302, :18594, :18599, :18733-18740, :18814; `extension/com.opencut.panel/client/command-center.css:574, 639, 669, 1190, 1553, 1597`; `extension/com.opencut.panel/client/main.js:12213, 12222`
