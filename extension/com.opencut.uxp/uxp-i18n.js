@@ -9,6 +9,7 @@ import {
 export function createI18nRuntime({
   defaultLocale = "en",
   localeDir = "locales",
+  supportedLocales = ["en", "es"],
   fetchJson,
   documentRef = typeof document !== "undefined" ? document : null,
   navigatorRef = typeof navigator !== "undefined" ? navigator : null,
@@ -23,6 +24,9 @@ export function createI18nRuntime({
 
   let currentLang = defaultLocale;
   let messages = {};
+  const supported = new Set(
+    [...supportedLocales, defaultLocale].map((locale) => normalizeLocaleTag(locale, defaultLocale)),
+  );
 
   const t = (key, fallback) => translate(messages, key, fallback);
   const format = (key, fallback, values = {}) => interpolateI18n(t(key, fallback), values);
@@ -92,6 +96,7 @@ export function createI18nRuntime({
     let activeLang = defaultLocale;
     let active = {};
     for (const candidate of getLocaleCandidates(requested, defaultLocale)) {
+      if (!supported.has(candidate)) continue;
       if (candidate === defaultLocale) {
         active = base;
         break;
