@@ -176,7 +176,7 @@ TARGETS = [
     (
         "SECURITY.md",
         r"^\| [0-9]+\.[0-9]+\.x\s+\| ✅ Active\s+\|[^\n\r]*(?=\r?$)",
-        r"| {series}  | ✅ Active         | —                    |",
+        r"| {series}  | ✅ Active         | n/a                  |",
     ),
     (
         "SECURITY.md",

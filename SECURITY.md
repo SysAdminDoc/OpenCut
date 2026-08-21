@@ -2,14 +2,14 @@
 
 ## Supported Versions
 
-OpenCut ships rapidly. We actively support the **latest minor** (`1.51.x`) and the one immediately preceding it (`1.50.x`). Older minors receive security-only backports for 90 days after they're superseded.
+OpenCut ships rapidly. We actively support the **latest minor** (`1.52.x`) and the one immediately preceding it (`1.51.x`). Older minors receive security-only backports for 90 days after they're superseded.
 
 | Version | Supported         | Security fixes until |
 |---------|-------------------|----------------------|
-| 1.51.x  | ✅ Active         | —                    |
-| 1.50.x  | ✅ Previous       | +90 days after 1.51  |
-| 1.49.x  | ⚠️ Critical only | +30 days after 1.51 |
-| ≤ 1.48  | ❌ End of life   | n/a                  |
+| 1.52.x  | ✅ Active         | n/a                  |
+| 1.51.x  | ✅ Previous       | +90 days after 1.52  |
+| 1.50.x  | ⚠️ Critical only | +30 days after 1.52 |
+| ≤ 1.49  | ❌ End of life   | n/a                  |
 
 Version numbers ship in [`opencut/__init__.py`](opencut/__init__.py) and are kept in sync by [`scripts/sync_version.py`](scripts/sync_version.py).
 
@@ -19,17 +19,17 @@ Version numbers ship in [`opencut/__init__.py`](opencut/__init__.py) and are kep
 
 Email [matt@mavenimaging.com](mailto:matt@mavenimaging.com) with:
 
-1. A description of the issue — what you see, what you expected.
+1. A description of the issue: what you see and what you expected.
 2. Reproducer steps, ideally as a minimal request / script / config.
 3. The commit SHA + `__version__` you tested against.
 4. Your assessment of severity (low / medium / high / critical) and why.
 
 We acknowledge reports within **72 hours** and aim to land a fix or mitigation within:
 
-- **Critical** — 72 hours (RCE, auth bypass, data exfiltration, sandbox escape)
-- **High** — 7 days (privilege escalation, unauthenticated DoS on a production endpoint)
-- **Medium** — 30 days (authenticated DoS, information disclosure, supply-chain risk)
-- **Low** — 90 days (hardening suggestions, theoretical concerns)
+- **Critical:** 72 hours (RCE, auth bypass, data exfiltration, sandbox escape)
+- **High:** 7 days (privilege escalation, unauthenticated DoS on a production endpoint)
+- **Medium:** 30 days (authenticated DoS, information disclosure, supply-chain risk)
+- **Low:** 90 days (hardening suggestions, theoretical concerns)
 
 We don't run a paid bounty programme, but we credit reporters in `CHANGELOG.md` and the release notes unless you prefer to remain anonymous.
 
@@ -48,7 +48,7 @@ We don't run a paid bounty programme, but we credit reporters in `CHANGELOG.md` 
   `requirements.txt`, `requirements-lock.txt`, and panel dependencies locally
   with `python scripts/release_smoke.py --json`, `pip-audit`, npm advisory
   checks, and the declared SBOM generator.
-- User-supplied plugins loaded via `~/.opencut/plugins/` — plugins run with the host's trust, so audit before installing.
+- User-supplied plugins loaded via `~/.opencut/plugins/`. Plugins run with the host's trust, so audit before installing.
 - Social-engineering / phishing attacks against maintainers.
 - Reports that require pre-existing local code execution (e.g. "an attacker with shell access can edit `~/.opencut/settings.json`").
 
@@ -59,9 +59,9 @@ OpenCut's security model leans on a handful of intentional choices:
 - **CSRF on every mutation.** `@require_csrf` decorator on all `POST`/`PUT`/`PATCH`/`DELETE` routes. Token rotates per server start, delivered via `GET /health`, sent as `X-OpenCut-Token` header.
 - **Path validation.** All file-accepting routes pass user-supplied paths through `security.validate_path()` / `validate_filepath()` / `validate_output_path()`. Realpath resolution, null-byte rejection, symlink-out-of-allowlist defence.
 - **SSRF defence.** Outbound URL validators (`_validate_webhook_url`, `_validate_download_url`) reject localhost, loopback, private IPs, link-local, reserved ranges.
-- **Rate-limit categories.** Four-way classification (`gpu_heavy` / `cpu_heavy` / `io_bound` / `light`) bounds concurrent work per category — see `core/rate_limit_categories.py`.
+- **Rate-limit categories.** Four-way classification (`gpu_heavy` / `cpu_heavy` / `io_bound` / `light`) bounds concurrent work per category. See `core/rate_limit_categories.py`.
 - **Scripting console sandbox.** Dunder builtins stripped, `__import__` / `exec` / `eval` / `compile` / `open` / `os` / `sys` / `subprocess` blocked in AST. Context keys containing `__` rejected.
-- **Fuzz harness** for parsers (`tests/fuzz/`) — SRT / VTT / `.cube` / voice-grammar parsers are expected to be total.
+- **Fuzz harness** for parsers (`tests/fuzz/`). SRT / VTT / `.cube` / voice-grammar parsers are expected to be total.
 - **Atomic writes** for user-data files via `tempfile + os.replace`.
 - **XML import hardening.** Third-party XML (captions, Final Draft `.fdx`, GPX) is size-capped and rejected if it carries a DTD or entity declaration, before stdlib parsers see it.
 
@@ -69,7 +69,7 @@ OpenCut's security model leans on a handful of intentional choices:
 
 Operators running OpenCut in a shared-network environment should:
 
-1. Bind to `127.0.0.1` only (default) — the service is single-user. Non-loopback binds require `OPENCUT_ALLOW_REMOTE=1`.
+1. Bind to `127.0.0.1` only by default because the service is single-user. Non-loopback binds require `OPENCUT_ALLOW_REMOTE=1`.
    Reaching the service by a hostname other than a loopback name or
    `OPENCUT_HOST` requires listing it in `OPENCUT_TRUSTED_HOSTS`; see
    *Host-header trust* below.
@@ -84,19 +84,19 @@ Operators running OpenCut in a shared-network environment should:
    opencut-server --print-auth     # print the persisted token
    opencut-server --rotate-auth    # generate a fresh token, then exit
    ```
-   The `GET /auth/info` endpoint returns *metadata only* — it never
+   The `GET /auth/info` endpoint returns *metadata only*. It never
    includes the token value. Treat `~/.opencut/auth.json` like an SSH
    private key; never check it into source control.
 4. Set `SENTRY_DSN` so crashes route to a tracker you control.
 5. Set `PLAUSIBLE_HOST` + `PLAUSIBLE_DOMAIN` (optional) for usage telemetry.
 6. Configure `OPENCUT_TEMP_CLEANUP_*` to fit the expected workload.
-7. Use the bundled FFmpeg or build FFmpeg explicitly — distro builds can lag on CVE fixes.
+7. Use the bundled FFmpeg or build FFmpeg explicitly. Distro builds can lag on CVE fixes.
 8. Keep `~/.opencut/plugins/` empty until you've audited each plugin manifest.
 
 ### Host-header trust (DNS-rebinding defence)
 
 Loopback peers are trusted by default, so the browser's origin model is the
-only thing separating a hostile page from the local API — and DNS rebinding
+only thing separating a hostile page from the local API. DNS rebinding
 defeats it. An attacker page on `evil.example` whose name resolves to
 `127.0.0.1` arrives from a loopback socket carrying its own `Host` and
 `Origin`. Everything derived from `request.host` is then attacker-controlled,
@@ -112,7 +112,7 @@ produced for a rejected request.
 
 Trusted by default:
 
-- Loopback names (`localhost`) and loopback literals — the full IPv4
+- Loopback names (`localhost`) and loopback literals. The full IPv4
   `127.0.0.0/8` range and IPv6 `::1`, bracketed or not, with any valid port.
 - `OPENCUT_HOST` when it names a single authority. Wildcard binds
   (`0.0.0.0`, `::`) name no authority and contribute nothing.
@@ -125,7 +125,7 @@ OPENCUT_TRUSTED_HOSTS="studio.lan,.render.studio.lan"
 
 A leading dot trusts a subtree. Non-loopback **IP literals** are accepted only
 when `OPENCUT_ALLOW_REMOTE=1`, because a browser sends an IP `Host` only when
-the user navigated to that IP — rebinding needs a name, so literals stay safe
+the user navigated to that IP. Rebinding needs a name, so literals stay safe
 while LAN-by-IP access keeps working. Names are never implicitly trusted, even
 with a remote bind.
 
@@ -143,12 +143,12 @@ render host on a private VLAN), the threat surface changes:
 - Anyone who can hit the bind address can issue render jobs, read media
   paths, or call shell-adjacent endpoints (FFmpeg invocations, OS
   shell-out for ``open``/Finder integration).
-- CSRF alone is not enough — CSRF protects browser sessions, not API
+- CSRF alone is not enough. CSRF protects browser sessions, not API
   clients on the same network.
 
 The local auth token closes that gap: non-loopback callers must include
 the token in the `X-OpenCut-Auth` header. Query-string tokens are not
-accepted — URLs leak into access logs, browser history, and `Referer`
+accepted. URLs leak into access logs, browser history, and `Referer`
 headers, so the header is the only credential channel. `/health` and
 `/auth/info` remain exempt so panels can bootstrap connectivity and
 render a "Authentication required" hint.

@@ -3,6 +3,46 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## 1.52.0: The panels report what is actually happening
+
+### Changed: The workspace opens on live state
+
+- CEP and UXP no longer mount a fabricated project, workstation, queue, or
+  recent job. The opening view now keeps the real connection state and gives
+  people a clear route into their live workspace.
+- Both panels share the same shell source and regression guard, so one host
+  cannot quietly drift back to placeholder state.
+
+### Improved: The workbench is calmer at every size
+
+- Reworked the header, workspace context, action hierarchy, empty states, and
+  status surfaces across dark and light themes. Narrow panels keep the same
+  actions without crowding or clipped labels.
+- Focus, disabled, selected, reduced-motion, and forced-colors states now stay
+  legible in the live shell. Forty rendered references were refreshed against
+  the finished state.
+
+### Improved: The Windows installer explains risk before acting
+
+- The WPF installer now uses one visual system across welcome, install,
+  progress, options, and uninstall pages. Scrollbars, shadows, warning states,
+  and progress feedback follow the active theme.
+- Unsafe or already-populated install paths are blocked inline with a useful
+  recovery message. Uninstall data removal is explicit and runs only after the
+  existing backup step, without opening a confirmation dialog.
+
+### Fixed: Regional UXP locales stop probing files that do not ship
+
+- Locale requests now resolve to the bundled English or Spanish catalogue
+  before loading. Regional browser settings no longer generate avoidable 404s.
+
+### Tested: Release checks exercise the finished surfaces
+
+- Added boundaries against fabricated panel state, stale forced-colors
+  selectors, unsafe installer paths, and confirmation-dialog regressions.
+  Headless CEP and UXP rendering now verifies the live shell in wide, narrow,
+  dark, light, and forced-colors configurations.
+
 ## 1.51.0 - The copy the panels actually ship
 
 ### Fixed - The MCP route catalogue is checked against the app, not just itself
