@@ -209,7 +209,7 @@ export function createUxpUpdateController({
 
     checkInFlight = (async () => {
       renderNotice(null, true);
-      setStatus(translate("uxp.status.update_checking", "Checking for updates..."), "working");
+      setStatus(translate("uxp.status.update_checking", "Checking for updates…"), "working");
       let result;
       try {
         result = await client?.get?.("/system/update-check");

@@ -66,14 +66,18 @@ class TestCaptionDisplaySettingsHtml(unittest.TestCase):
         # The compliance date must be discoverable. Hard-coded string
         # match here; the JS module will overlay the date from the
         # backend's compliance_date field at runtime if it changes.
-        self.assertIn('id="fccComplianceDate"', self.html)
+        self.assertIn('id="fccComplianceNoticeText"', self.html)
         self.assertIn("2026-08-17", self.html)
         self.assertIn("FCC", self.html)
+        # One key, one sentence: the notice used to be two concatenated keys
+        # wrapped around a bare date span, which no translator could reorder.
+        js = UXP_JS.read_text(encoding="utf-8", errors="replace")
+        self.assertIn("uxp.fcc.compliance_notice", js)
+        self.assertNotIn("compliance_notice_prefix", self.html)
 
     def test_static_shell_uses_i18n_hooks(self):
         for key in (
             "uxp.fcc.caption_display_settings",
-            "uxp.fcc.compliance_notice_prefix",
             "uxp.fcc.source_link",
             "uxp.fcc.font",
             "uxp.fcc.text_color",
@@ -111,7 +115,8 @@ class TestCaptionDisplaySettingsJs(unittest.TestCase):
         ):
             with self.subTest(key=key):
                 self.assertIn(f'setStatus("{key}"', self.js)
-        self.assertIn('document.getElementById("fccComplianceDate")', self.js)
+        # The backend-supplied date re-renders the whole notice sentence.
+        self.assertIn("renderComplianceNotice(data.compliance_date)", self.js)
 
     def test_font_options_surface_resolution_status(self):
         self.assertIn("const fontOptionLabel", self.js)

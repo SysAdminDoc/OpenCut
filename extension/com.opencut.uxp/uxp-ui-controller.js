@@ -177,7 +177,7 @@ export function createUxpUiController({
     }
   }
 
-  function showProcessing(msg = translate("processing.processing", "Processing...")) {
+  function showProcessing(msg = translate("processing.processing", "Processing…")) {
     const banner = getElement("processingBanner");
     if (banner) banner.classList.remove("hidden");
     getElement("mainContent")?.setAttribute("aria-busy", "true");
@@ -272,7 +272,7 @@ export function createUxpUiController({
     if (statusBar) statusBar.dataset.connection = state;
     const labels = {
       connected: translate("conn.online", "Online"),
-      connecting: translate("conn.connecting", "Connecting..."),
+      connecting: translate("conn.connecting", "Connecting…"),
       disconnected: translate("conn.offline", "Offline"),
     };
     label.textContent = labels[state] ?? state;

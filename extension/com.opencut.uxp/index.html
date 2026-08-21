@@ -546,7 +546,7 @@
         <div class="oc-section-title" data-i18n="uxp.fcc.caption_display_settings">Caption Display Settings (FCC)</div>
         <div class="oc-card" id="captionDisplaySettingsCard">
           <p class="oc-hint" id="fccComplianceNotice">
-            <span data-i18n="uxp.fcc.compliance_notice_prefix">Per FCC 47 CFR section 79.103 (effective </span><span id="fccComplianceDate">2026-08-17</span><span data-i18n="uxp.fcc.compliance_notice_suffix">), users must be able to readily access caption display controls. Pick a preset or override individual tokens.</span>
+            <span id="fccComplianceNoticeText">Per FCC 47 CFR section 79.103 (effective 2026-08-17), users must be able to readily access caption display controls. Pick a preset or override individual tokens.</span>
             <a href="https://www.ecfr.gov/current/title-47/section-79.103" target="_blank" rel="noopener" data-i18n="uxp.fcc.source_link">FCC source</a>
           </p>
           <div class="oc-field-row">
@@ -581,7 +581,7 @@
             <button type="button" class="oc-btn oc-btn-primary" id="capDispPreviewBtn" data-i18n="uxp.fcc.preview">Preview</button>
             <button type="button" class="oc-btn oc-btn-secondary" id="capDispResetBtn" data-i18n="uxp.fcc.reset_defaults">Reset Defaults</button>
           </div>
-          <div class="oc-status-line" id="capDispStatus" role="status" aria-live="polite" data-i18n="uxp.fcc.loading_tokens">Loading tokens...</div>
+          <div class="oc-status-line" id="capDispStatus" role="status" aria-live="polite" data-i18n="uxp.fcc.loading_tokens">Loading tokens…</div>
           <!-- Live preview rendered via the /captions/display-settings/preview payload. -->
           <div class="oc-card oc-card--nested" id="capDispPreviewBox" hidden>
             <div class="oc-card-header"><span data-i18n="uxp.fcc.live_preview">Live Preview</span></div>
@@ -1252,7 +1252,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="exportDir" data-i18n="uxp.timeline.output_folder">Output Folder</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="exportDir" placeholder="Choose an export destination..." data-i18n-placeholder="uxp.timeline.export_destination_placeholder">
+                <input type="text" class="oc-input" id="exportDir" placeholder="Choose an export destination…" data-i18n-placeholder="uxp.timeline.export_destination_placeholder">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseExportDir" data-i18n="common.browse">Browse</button>
               </div>
             </div>
@@ -1338,7 +1338,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="srtFilePath" data-i18n="uxp.timeline.srt_file">SRT File</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="srtFilePath" placeholder="Path to .srt file..." data-i18n-placeholder="uxp.timeline.srt_file_placeholder">
+                <input type="text" class="oc-input" id="srtFilePath" placeholder="Path to .srt file…" data-i18n-placeholder="uxp.timeline.srt_file_placeholder">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseSrtFile" data-i18n="common.browse">Browse</button>
               </div>
             </div>
@@ -1387,7 +1387,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="indexFolder" data-i18n="uxp.search.media_folder">Media Folder</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="indexFolder" placeholder="Choose the root folder to index..." data-i18n-placeholder="uxp.search.index_folder_placeholder">
+                <input type="text" class="oc-input" id="indexFolder" placeholder="Choose the root folder to index…" data-i18n-placeholder="uxp.search.index_folder_placeholder">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseIndexFolder" data-i18n="common.browse">Browse</button>
               </div>
             </div>
@@ -1524,7 +1524,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="delivOutputDir" data-i18n="uxp.deliverables.output_folder">Output Folder</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="delivOutputDir" placeholder="Choose where reports and handoff docs should land..." data-i18n-placeholder="uxp.deliverables.output_folder_placeholder">
+                <input type="text" class="oc-input" id="delivOutputDir" placeholder="Choose where reports and handoff docs should land…" data-i18n-placeholder="uxp.deliverables.output_folder_placeholder">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseDelivDir" data-i18n="common.browse">Browse</button>
               </div>
             </div>
@@ -1652,7 +1652,7 @@
           <p class="oc-hint" data-i18n="uxp.agent.one_click_enhance_hint">Apply loudness, denoise, stabilization, deflicker, and grading in one pass.</p>
           <div class="oc-field-row">
             <label class="oc-label" for="enhanceClipPath" data-i18n="uxp.agent.clip_path">Clip Path</label>
-            <input type="text" class="oc-input" id="enhanceClipPath" placeholder="Paste a clip path..." data-i18n-placeholder="uxp.agent.clip_path_placeholder">
+            <input type="text" class="oc-input" id="enhanceClipPath" placeholder="Paste a clip path…" data-i18n-placeholder="uxp.agent.clip_path_placeholder">
           </div>
           <div class="oc-field-row">
             <label class="oc-label" for="enhanceStyle" data-i18n="uxp.agent.style">Style</label>
@@ -1674,7 +1674,7 @@
           <p class="oc-hint" data-i18n="uxp.agent.shorts_ab_variants_hint">Create 2-6 variants with different hooks, captions, and framing.</p>
           <div class="oc-field-row">
             <label class="oc-label" for="variantsClipPath" data-i18n="uxp.agent.clip_path">Clip Path</label>
-            <input type="text" class="oc-input" id="variantsClipPath" placeholder="Paste a clip path..." data-i18n-placeholder="uxp.agent.clip_path_placeholder">
+            <input type="text" class="oc-input" id="variantsClipPath" placeholder="Paste a clip path…" data-i18n-placeholder="uxp.agent.clip_path_placeholder">
           </div>
           <div class="oc-slider-row">
             <label class="oc-label" for="variantsStart" data-i18n="uxp.agent.start_seconds">Start (s)</label>
@@ -1708,7 +1708,7 @@
             <div class="oc-status-line" id="sequenceIndexSummary"></div>
             <div class="oc-field-row">
               <label class="oc-label" for="sequenceIndexSearch" data-i18n="uxp.agent.index_search">Search</label>
-              <input type="search" class="oc-input" id="sequenceIndexSearch" placeholder="Name, path, transcript, tag..." data-i18n-placeholder="uxp.agent.index_search_placeholder">
+              <input type="search" class="oc-input" id="sequenceIndexSearch" placeholder="Name, path, transcript, tag…" data-i18n-placeholder="uxp.agent.index_search_placeholder">
             </div>
             <div class="oc-field-row">
               <label class="oc-label" for="sequenceIndexTrackType" data-i18n="uxp.agent.index_track">Track</label>
@@ -1842,18 +1842,18 @@
           <div class="oc-inline-summary-grid oc-inline-summary-grid--settings" aria-label="Timeline recovery summary" data-i18n-aria-label="uxp.journal.recovery_summary">
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.journal.interrupted">Interrupted</span>
-              <span class="oc-inline-value" id="settingsRecoveryCountValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsRecoveryCountValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.journal.auto_restore">Auto-restore</span>
-              <span class="oc-inline-value" id="settingsRecoveryAutoValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsRecoveryAutoValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
           </div>
-          <div class="oc-status-line" id="settingsRecoveryStatus" role="status" aria-live="polite" data-i18n="uxp.journal.checking">Checking interrupted host writes...</div>
+          <div class="oc-status-line" id="settingsRecoveryStatus" role="status" aria-live="polite" data-i18n="uxp.journal.checking">Checking interrupted host writes…</div>
           <div id="uxpRecoveryList" class="oc-engine-grid">
             <div class="oc-empty-state oc-empty-state-inline">
               <div class="oc-empty-state-kicker" data-i18n="uxp.journal.recovery">Timeline recovery</div>
-              <p data-i18n="uxp.journal.checking_hint">Loading durable checkpoints and saved inverse plans...</p>
+              <p data-i18n="uxp.journal.checking_hint">Loading durable checkpoints and saved inverse plans…</p>
             </div>
           </div>
           <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshRecoveryBtn" data-i18n="uxp.journal.refresh">Refresh Recovery</button>
@@ -1870,29 +1870,29 @@
               <option value="auto" data-i18n="uxp.settings.gpu_adapter_auto">Auto (recommended)</option>
             </select>
           </div>
-          <div class="oc-status-line" id="uxpGpuSelectionStatus" role="status" aria-live="polite" data-i18n="uxp.settings.gpu_adapter_checking">Checking available GPU adapters...</div>
+          <div class="oc-status-line" id="uxpGpuSelectionStatus" role="status" aria-live="polite" data-i18n="uxp.settings.gpu_adapter_checking">Checking available GPU adapters…</div>
         </div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.engine_routing_hint">Pick the engine OpenCut should favor for each editing domain. Leave a domain on Auto to keep the best available option active for the current machine.</p>
           <div class="oc-inline-summary-grid oc-inline-summary-grid--settings" aria-label="Engine routing summary" data-i18n-aria-label="uxp.settings.engine_routing_summary">
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.defaults">Defaults</span>
-              <span class="oc-inline-value" id="settingsEngineDefaultsValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsEngineDefaultsValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.pinned">Pinned</span>
-              <span class="oc-inline-value" id="settingsEnginePinnedValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsEnginePinnedValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.coverage">Coverage</span>
-              <span class="oc-inline-value" id="settingsEngineCoverageValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsEngineCoverageValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
           </div>
-          <div class="oc-status-line" id="settingsEngineStatus" role="status" aria-live="polite" data-i18n="uxp.settings.loading_engine_availability">Loading engine availability...</div>
+          <div class="oc-status-line" id="settingsEngineStatus" role="status" aria-live="polite" data-i18n="uxp.settings.loading_engine_availability">Loading engine availability…</div>
           <div id="uxpEngineGrid" class="oc-engine-grid">
             <div class="oc-empty-state oc-empty-state-inline">
               <div class="oc-empty-state-kicker" data-i18n="uxp.settings.engine_routing">Engine routing</div>
-              <p data-i18n="uxp.settings.loading_engines_preferences">Loading available engines and saved preferences...</p>
+              <p data-i18n="uxp.settings.loading_engines_preferences">Loading available engines and saved preferences…</p>
             </div>
           </div>
           <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshEnginesBtn" data-i18n="uxp.settings.refresh_availability">Refresh Availability</button>
@@ -1906,7 +1906,7 @@
           <div class="oc-inline-summary-grid oc-inline-summary-grid--settings" aria-label="Live updates bridge summary" data-i18n-aria-label="uxp.settings.live_updates_bridge_summary">
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.bridge">Bridge</span>
-              <span id="uxpWsStatus" class="oc-inline-value oc-status-pill" data-state="unknown" data-i18n="uxp.settings.checking">Checking...</span>
+              <span id="uxpWsStatus" class="oc-inline-value oc-status-pill" data-state="unknown" data-i18n="uxp.settings.checking">Checking…</span>
             </div>
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.listeners">Listeners</span>
@@ -1941,7 +1941,7 @@
             </div>
             <div class="oc-command-state-row" role="listitem">
               <span class="oc-label" data-i18n="uxp.settings.engine_availability">Engine Availability</span>
-              <strong class="oc-command-state-value" id="settingsDiagnosticsEngineValue" data-i18n="uxp.settings.loading">Loading...</strong>
+              <strong class="oc-command-state-value" id="settingsDiagnosticsEngineValue" data-i18n="uxp.settings.loading">Loading…</strong>
             </div>
             <div class="oc-command-state-row" role="listitem">
               <span class="oc-label" data-i18n="uxp.settings.last_check">Last Check</span>
@@ -1959,26 +1959,26 @@
           <div class="oc-inline-summary-grid oc-inline-summary-grid--settings" aria-label="UXP migration risk summary" data-i18n-aria-label="uxp.settings.migration_risk_summary">
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.direct_uxp">Direct UXP</span>
-              <span class="oc-inline-value" id="settingsMigrationDirectValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsMigrationDirectValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.fallbacks">Fallbacks</span>
-              <span class="oc-inline-value" id="settingsMigrationFallbackValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsMigrationFallbackValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.high_risk">High Risk</span>
-              <span class="oc-inline-value" id="settingsMigrationRiskValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsMigrationRiskValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.route_coverage">Route Coverage</span>
-              <span class="oc-inline-value" id="settingsMigrationRouteValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsMigrationRouteValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
           </div>
-          <div class="oc-status-line" id="settingsMigrationStatus" role="status" aria-live="polite" data-i18n="uxp.settings.loading_migration_risk_data">Loading UXP migration risk data...</div>
+          <div class="oc-status-line" id="settingsMigrationStatus" role="status" aria-live="polite" data-i18n="uxp.settings.loading_migration_risk_data">Loading UXP migration risk data…</div>
           <div id="uxpMigrationRiskGrid" class="oc-engine-grid">
             <div class="oc-empty-state oc-empty-state-inline">
               <div class="oc-empty-state-kicker" data-i18n="uxp.settings.migration_risk">Migration risk</div>
-              <p data-i18n="uxp.settings.loading_host_action_coverage">Loading CEP and UXP host-action coverage...</p>
+              <p data-i18n="uxp.settings.loading_host_action_coverage">Loading CEP and UXP host-action coverage…</p>
             </div>
           </div>
           <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshMigrationRiskBtn" data-i18n="uxp.settings.refresh_migration_risk">Refresh Migration Risk</button>
@@ -1992,26 +1992,26 @@
           <div class="oc-inline-summary-grid oc-inline-summary-grid--settings" aria-label="Plugin trust summary" data-i18n-aria-label="uxp.settings.plugin_trust_summary">
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.loaded">Loaded</span>
-              <span class="oc-inline-value" id="settingsPluginLoadedValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsPluginLoadedValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.failed_unsigned">Failed / Unsigned</span>
-              <span class="oc-inline-value" id="settingsPluginFailedValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsPluginFailedValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.quarantine">Quarantine</span>
-              <span class="oc-inline-value" id="settingsPluginQuarantineValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsPluginQuarantineValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
             <div class="oc-inline-stat">
               <span class="oc-label" data-i18n="uxp.settings.marketplace">Marketplace</span>
-              <span class="oc-inline-value" id="settingsPluginMarketplaceValue" data-i18n="uxp.settings.loading">Loading...</span>
+              <span class="oc-inline-value" id="settingsPluginMarketplaceValue" data-i18n="uxp.settings.loading">Loading…</span>
             </div>
           </div>
-          <div class="oc-status-line" id="settingsPluginTrustStatus" role="status" aria-live="polite" data-i18n="uxp.settings.loading_plugin_trust">Loading plugin trust dashboard...</div>
+          <div class="oc-status-line" id="settingsPluginTrustStatus" role="status" aria-live="polite" data-i18n="uxp.settings.loading_plugin_trust">Loading plugin trust dashboard…</div>
           <div id="uxpPluginTrustGrid" class="oc-engine-grid">
             <div class="oc-empty-state oc-empty-state-inline">
               <div class="oc-empty-state-kicker" data-i18n="uxp.settings.plugin_trust">Plugin trust</div>
-              <p data-i18n="uxp.settings.loading_plugin_trust_hint">Checking installed plugins, locks, quarantine, and cached marketplace entries...</p>
+              <p data-i18n="uxp.settings.loading_plugin_trust_hint">Checking installed plugins, locks, quarantine, and cached marketplace entries…</p>
             </div>
           </div>
           <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshPluginTrustBtn" data-i18n="uxp.settings.refresh_plugin_trust">Refresh Plugin Trust</button>

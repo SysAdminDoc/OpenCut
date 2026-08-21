@@ -197,7 +197,7 @@ def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     assert sorted(key for key in english if key.startswith("uxp.search.") and key not in spanish) == []
     assert spanish["uxp.search.library_index"] == "Indice de biblioteca"
     assert spanish["uxp.search.command_placeholder"] == 'p. ej. "elimina todos los silencios de mas de 1 segundo"'
-    assert spanish["uxp.search.runtime.searching_for_query"] == 'Buscando "{query}"...'
+    assert spanish["uxp.search.runtime.searching_for_query"] == 'Buscando "{query}"…'
     assert spanish["uxp.search.runtime.loaded_match_toast"] == "{label} cargado en el espacio de trabajo."
     assert sorted(key for key in english if key.startswith("uxp.timeline.") and key not in spanish) == []
     assert spanish["uxp.timeline.sequence_write_back"] == "Escritura de secuencia"
@@ -267,7 +267,6 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
         "uxp.cut.detect_remove_fillers",
         "uxp.cut.apply_cuts_to_timeline",
         "uxp.fcc.caption_display_settings",
-        "uxp.fcc.compliance_notice_prefix",
         "uxp.fcc.source_link",
         "uxp.fcc.text_color",
         "uxp.fcc.preview",
