@@ -75,6 +75,28 @@ class TestCaptionDisplaySettingsHtml(unittest.TestCase):
         self.assertIn("uxp.fcc.compliance_notice", js)
         self.assertNotIn("compliance_notice_prefix", self.html)
 
+    def test_compliance_notice_matches_the_locale(self):
+        # The notice is rendered by JS, so it carries no data-i18n attribute
+        # and the i18n_lint fallback gate cannot see it. This is that check.
+        import json
+        import re
+
+        locale = json.loads(
+            (REPO_ROOT / "extension" / "com.opencut.uxp" / "locales" / "en.json")
+            .read_text(encoding="utf-8")
+        )
+        js = UXP_JS.read_text(encoding="utf-8", errors="replace")
+        default_date = re.search(r'date \|\| "(\d{4}-\d{2}-\d{2})"', js)
+        self.assertIsNotNone(default_date, "renderComplianceNotice lost its default date")
+        expected = locale["uxp.fcc.compliance_notice"].replace(
+            "{date}", default_date.group(1)
+        )
+        painted = re.search(
+            r'<span id="fccComplianceNoticeText">([^<]*)</span>', self.html
+        )
+        self.assertIsNotNone(painted, "the FCC notice span is gone")
+        self.assertEqual(painted.group(1).strip(), expected)
+
     def test_static_shell_uses_i18n_hooks(self):
         for key in (
             "uxp.fcc.caption_display_settings",

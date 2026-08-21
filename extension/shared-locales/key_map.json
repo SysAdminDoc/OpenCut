@@ -215,6 +215,24 @@
       "uxp.captions.model_base"
     ]
   },
+  "shared.captions.model_distil_large_v3": {
+    "cep": [
+      "captions.model_distil_large_v3",
+      "settings.whisper_model_distil_large_v3"
+    ],
+    "uxp": [
+      "uxp.captions.model_distil_large_v3"
+    ]
+  },
+  "shared.captions.model_distil_large_v35": {
+    "cep": [
+      "captions.model_distil_large_v35",
+      "settings.whisper_model_distil_large_v35"
+    ],
+    "uxp": [
+      "uxp.captions.model_distil_large_v35"
+    ]
+  },
   "shared.captions.model_large_v3": {
     "cep": [
       "captions.model_large_v3"
@@ -225,7 +243,8 @@
   },
   "shared.captions.model_medium": {
     "cep": [
-      "captions.model_medium"
+      "captions.model_medium",
+      "cut.filler_model_medium"
     ],
     "uxp": [
       "uxp.captions.model_medium"
@@ -233,7 +252,8 @@
   },
   "shared.captions.model_small": {
     "cep": [
-      "captions.model_small"
+      "captions.model_small",
+      "cut.filler_model_small"
     ],
     "uxp": [
       "uxp.captions.model_small"
@@ -246,6 +266,14 @@
     ],
     "uxp": [
       "uxp.captions.model_tiny"
+    ]
+  },
+  "shared.captions.model_turbo": {
+    "cep": [
+      "captions.model_turbo"
+    ],
+    "uxp": [
+      "uxp.captions.model_turbo"
     ]
   },
   "shared.captions.render_animated": {
@@ -1112,6 +1140,14 @@
     ],
     "uxp": [
       "processing.progress"
+    ]
+  },
+  "shared.search.clearing_title": {
+    "cep": [
+      "search.clearing_title"
+    ],
+    "uxp": [
+      "uxp.search.runtime.clearing_index_title"
     ]
   },
   "shared.search.no_matches_title": {

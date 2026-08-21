@@ -5,6 +5,25 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - The English next to a locale key is gated too
+
+- The fallback string in every `t(key, fallback)` call is what users read
+  when the locale has not loaded, and 35 of them disagreed with en.json. A
+  whole family still called the local service "the server" where the locale
+  says "backend", including the two connection-dot aria-labels. They now
+  match, and `scripts/i18n_lint.py` fails on any that drift again.
+- Two keys were being used for the wrong string. The speech-enhancement
+  status line printed a literal "{output}" because its locale value carried
+  a placeholder the caller never filled, and the issue-report flow threw one
+  key's message into the handler that formats the same key, so the detail
+  read "Issue report could not be opened: {error}".
+- The Spanish update-check message told people to click "Check Again" on a
+  panel whose button reads "Comprobar de nuevo".
+- One noun for the search index on both panels: the flow from the Clear
+  Index button to the toast says "footage index", and "footage library"
+  means the media it is built from. The Whisper model dropdowns in Settings,
+  Captions, and filler detection use one label per model.
+
 ### Changed - Status copy reads as sentences, not dashes
 
 - Twenty-six status lines joined two clauses with a spaced hyphen: "Search

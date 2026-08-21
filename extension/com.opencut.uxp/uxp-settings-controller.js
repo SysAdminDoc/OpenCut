@@ -325,7 +325,7 @@ export function createUxpSettingsController({
         const data = responseData(response);
         if (!data.url) {
           throw new Error(t(
-            "uxp.settings.issue_report_failed",
+            "uxp.settings.issue_report_no_url",
             "The issue report URL was not returned. Export a local support bundle instead.",
           ));
         }

@@ -305,6 +305,65 @@ class TestSpacedHyphenCopy(unittest.TestCase):
         stale = sorted(self.SEPARATORS - seen)
         self.assertEqual(stale, [], f"SEPARATORS lists keys that no longer use ' - ': {stale}")
 
+class TestJsFallbackDrift(unittest.TestCase):
+    """The second argument to every translate helper is shipped copy too."""
+
+    def setUp(self):
+        self.mod = _load_module()
+        self.locale = {
+            "conn.dot_connected": "Backend connected",
+            "search.searching": 'Searching for "{query}"…',
+            "toast.saved": "Saved to {path}",
+        }
+
+    def _drifts(self, source):
+        return self.mod.js_fallback_drifts(source, self.locale)
+
+    def test_live_panels_have_no_js_fallback_drift(self):
+        drifts = self.mod.evaluate_js_fallbacks()
+        self.assertEqual(
+            drifts, [],
+            "t(key, fallback) copy must match en.json: "
+            + ", ".join(f"{d['file']}:{d['line']} {d['key']}" for d in drifts[:10]),
+        )
+
+    def test_matching_fallback_passes(self):
+        self.assertEqual(
+            self._drifts('t("conn.dot_connected", "Backend connected")'), []
+        )
+
+    def test_drifted_fallback_fails(self):
+        drifts = self._drifts('t("conn.dot_connected", "Server connected")')
+        self.assertEqual(len(drifts), 1)
+        self.assertEqual(drifts[0]["js"], "Server connected")
+        self.assertEqual(drifts[0]["locale"], "Backend connected")
+
+    def test_single_quoted_literals_are_read(self):
+        self.assertEqual(self._drifts("t('conn.dot_connected', 'Backend connected')"), [])
+        self.assertEqual(
+            len(self._drifts("t('conn.dot_connected', 'Server connected')")), 1
+        )
+
+    def test_escaped_quotes_survive_decoding(self):
+        source = 't("search.searching", "Searching for \\"{query}\\"…")'
+        self.assertEqual(self._drifts(source), [])
+
+    def test_line_numbers_point_at_the_call(self):
+        source = "\n\n\nt(\"conn.dot_connected\", \"Server connected\")"
+        self.assertEqual(self._drifts(source)[0]["line"], 4)
+
+    def test_unknown_keys_are_left_alone(self):
+        self.assertEqual(self._drifts('t("nope.nope", "Anything")'), [])
+
+    def test_helpers_other_than_t_are_covered(self):
+        source = 'formatI18n("toast.saved", "Written to {path}", { path })'
+        self.assertEqual(len(self._drifts(source)), 1)
+
+    def test_evaluate_reports_the_js_count(self):
+        e = self.mod.evaluate()
+        self.assertIn("js_fallback_drift_count", e)
+        self.assertEqual(e["js_fallback_drift_count"], len(e["js_fallback_drifts"]))
+
 
 if __name__ == "__main__":
     unittest.main()

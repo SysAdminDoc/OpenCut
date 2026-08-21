@@ -56,7 +56,7 @@ export function createTranscriptCorrectionController(options = {}) {
       status(options.t("uxp.captions.bulk_needs_transcript", "Run transcription before previewing a correction."), "warning");
       return;
     }
-    status(options.t("uxp.captions.bulk_preview_working", "Building correction preview..."), "working");
+    status(options.t("uxp.captions.bulk_preview_working", "Building correction preview…"), "working");
     const response = await options.post("/transcript-edit/corrections/preview", request);
     if (!response.ok || response.data?.error) {
       pending = null;
@@ -72,7 +72,7 @@ export function createTranscriptCorrectionController(options = {}) {
 
   async function apply() {
     if (!pending) return;
-    status(options.t("uxp.captions.bulk_apply_working", "Applying transcript correction..."), "working");
+    status(options.t("uxp.captions.bulk_apply_working", "Applying transcript correction…"), "working");
     const response = await options.post("/transcript-edit/corrections/apply", {
       ...pending.request,
       confirm_token: pending.preview.confirm_token,

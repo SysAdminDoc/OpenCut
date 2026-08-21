@@ -195,7 +195,7 @@ def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     assert spanish["uxp.deliverables.runtime.generated_csv_handoff_many"] == "Se generaron {count} documentos de entrega CSV."
     assert spanish["uxp.deliverables.status_line"] == "Carga información de secuencia, elige un destino si hace falta y genera los documentos de entrega que necesitas."
     assert sorted(key for key in english if key.startswith("uxp.search.") and key not in spanish) == []
-    assert spanish["uxp.search.library_index"] == "Indice de biblioteca"
+    assert spanish["uxp.search.library_index"] == "Índice de metraje"
     assert spanish["uxp.search.command_placeholder"] == 'p. ej. "elimina todos los silencios de mas de 1 segundo"'
     assert spanish["uxp.search.runtime.searching_for_query"] == 'Buscando "{query}"…'
     assert spanish["uxp.search.runtime.loaded_match_toast"] == "{label} cargado en el espacio de trabajo."
