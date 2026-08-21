@@ -46,9 +46,13 @@
      * progress banner clears and the exclusive-job lock releases exactly as a
      * server-reported failure would.
      */
-    function pollFailureJob(verdict, translate) {
+    function pollFailureJob(jobId, verdict, translate) {
         var t = typeof translate === "function" ? translate : function (_key, fallback) { return fallback; };
         return {
+            // The id matters: job-lifecycle settle() drops any record without
+            // one, which would silently skip the per-job onError/onFinally
+            // hooks and leave their callers stuck waiting.
+            id: jobId,
             status: "error",
             error: verdict === "missing"
                 ? t("error.job_missing", "That run is no longer on the backend. It may have restarted. Start the job again.")

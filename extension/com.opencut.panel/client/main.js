@@ -4151,7 +4151,7 @@
                             setTimeout(poll, Math.max(250, POLL_MS));
                             return;
                         }
-                        var failed = OpenCutJobRuntime.pollFailureJob(verdict, t);
+                        var failed = OpenCutJobRuntime.pollFailureJob(jobId, verdict, t);
                         raiseError(failed);
                         finish(failed);
                         return;
@@ -4373,7 +4373,7 @@
                     if (verdict === "retry") return;
                     clearInterval(pollTimer);
                     pollTimer = null;
-                    onJobDone(OpenCutJobRuntime.pollFailureJob(verdict, t));
+                    onJobDone(OpenCutJobRuntime.pollFailureJob(jobId, verdict, t));
                     return;
                 }
                 budget.succeeded();

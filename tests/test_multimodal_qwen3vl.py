@@ -278,3 +278,49 @@ def test_per_segment_notes_cannot_grow_without_bound(tmp_path, monkeypatch):
     # Two preamble notes plus the capped per-segment run, not 399 of them.
     assert len(result.notes) <= qwen.MAX_NOTES + 3, len(result.notes)
     assert result.notes[-1] == "Further per-segment notes were suppressed."
+
+
+def test_the_route_refuses_an_oversized_transcript_segment_list(client, csrf_token, tmp_path, monkeypatch):
+    """F366 — transcript_segments is the one caller-supplied list on this route.
+
+    A minimal segment is about 20 bytes, so the 100 MB body limit admits
+    millions of them, and each costs up to six ffmpeg frame grabs plus an
+    Ollama call. The guard has to refuse before any of that work starts.
+    """
+    import time
+
+    from opencut.core import multimodal_qwen3vl as qwen
+    from tests.conftest import csrf_headers
+
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"test video placeholder")
+
+    monkeypatch.setattr(qwen, "check_qwen3vl_available", lambda *a, **k: True)
+    # If the guard ever stops firing, this makes the failure loud instead of
+    # letting the test pass on a slow analyse that happens to error later.
+    def _must_not_run(*_args, **_kwargs):
+        raise AssertionError("analyze() ran despite an oversized segment list")
+
+    monkeypatch.setattr(qwen, "analyze", _must_not_run)
+
+    response = client.post(
+        "/analyze/video/qwen3vl",
+        json={
+            "filepath": str(video),
+            "transcript_segments": [
+                {"start": i, "end": i + 1} for i in range(qwen.MAX_SEGMENTS + 1)
+            ],
+        },
+        headers=csrf_headers(csrf_token),
+    )
+    assert response.status_code == 200, response.data
+    job_id = json.loads(response.data.decode("utf-8"))["job_id"]
+
+    for _ in range(100):
+        status = json.loads(client.get(f"/status/{job_id}").data.decode("utf-8"))
+        if status.get("status") in ("complete", "error", "cancelled"):
+            break
+        time.sleep(0.05)
+
+    assert status["status"] == "error", status
+    assert "transcript_segments" in str(status.get("error", "")), status
