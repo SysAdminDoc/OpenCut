@@ -14,11 +14,19 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import shutil  # noqa: E402
+import struct  # noqa: E402
+import subprocess  # noqa: E402
+import wave  # noqa: E402
+
+import pytest  # noqa: E402
+
 from opencut.helpers import (  # noqa: E402
     EDGE_FADE_DEFAULT_MS,
     EDGE_FADE_MAX_MS,
     build_edge_fade_filter,
     edge_fade_ms,
+    get_ffmpeg_path,
 )
 
 
@@ -138,3 +146,123 @@ class TestRenderPathsDeClickTheirSplices:
             monkeypatch, tte, lambda: tte._concat_segments("in.mp4", cuts, "out.mp4")
         )
         assert "afade" not in fc
+
+
+def _ffmpeg_or_skip() -> str:
+    path = get_ffmpeg_path() or shutil.which("ffmpeg")
+    if not path or not os.path.exists(path):
+        pytest.skip("ffmpeg is not available")
+    return path
+
+
+def _ffmpeg(binary: str, *args: str) -> None:
+    result = subprocess.run(
+        [binary, "-y", "-loglevel", "error", *args],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise AssertionError(f"ffmpeg failed: {result.stderr[:800]}")
+
+
+def _read_mono_pcm(path) -> list[int]:
+    with wave.open(str(path), "rb") as handle:
+        assert handle.getnchannels() == 1 and handle.getsampwidth() == 2
+        raw = handle.readframes(handle.getnframes())
+    return list(struct.unpack(f"<{len(raw) // 2}h", raw))
+
+
+def _largest_step(samples: list[int], centre: int, radius: int) -> int:
+    """Largest absolute sample-to-sample jump in a window."""
+    low = max(1, centre - radius)
+    high = min(len(samples), centre + radius)
+    return max(abs(samples[i] - samples[i - 1]) for i in range(low, high))
+
+
+class TestTheFadeActuallyRemovesTheStep:
+    """F365 — measure the splice, do not just assert the filter string.
+
+    The tests above prove the render path emits this filter at interior joins
+    and nowhere else. They cannot show that the filter does anything audible.
+    This renders a real cut with FFmpeg and measures the sample-level
+    discontinuity at the join, which is the click, using the same segment
+    geometry `_concat_segments` builds.
+
+    The source is a chirp so the instantaneous phase at the two splice points
+    differs, which is what makes the join step rather than happening to line
+    up at a zero crossing. The yardstick is the waveform's own steepest slope
+    away from the join: a discontinuity worth hearing is a jump the signal
+    would never make on its own.
+    """
+
+    SAMPLE_RATE = 48000
+    SEGMENTS = ((0.0, 1.0), (2.0, 3.0))
+
+    def _render(self, binary, source, target, fade_ms):
+        chains, labels = [], []
+        for index, (start, end) in enumerate(self.SEGMENTS):
+            chain = f"atrim=start={start}:end={end},asetpts=PTS-STARTPTS"
+            fade = build_edge_fade_filter(
+                end - start,
+                fade_ms,
+                fade_in=index > 0,
+                fade_out=index < len(self.SEGMENTS) - 1,
+            )
+            if fade:
+                chain += "," + fade
+            chains.append(f"[0:a]{chain}[a{index}]")
+            labels.append(f"[a{index}]")
+        graph = (
+            ";".join(chains)
+            + ";"
+            + "".join(labels)
+            + f"concat=n={len(self.SEGMENTS)}:v=0:a=1[out]"
+        )
+        _ffmpeg(
+            binary,
+            "-i", str(source),
+            "-filter_complex", graph,
+            "-map", "[out]",
+            "-ac", "1",
+            "-ar", str(self.SAMPLE_RATE),
+            "-c:a", "pcm_s16le",
+            str(target),
+        )
+        return _read_mono_pcm(target)
+
+    def test_the_join_steps_without_the_fade_and_not_with_it(self, tmp_path):
+        binary = _ffmpeg_or_skip()
+        source = tmp_path / "chirp.wav"
+        _ffmpeg(
+            binary,
+            "-f", "lavfi",
+            "-i", f"aevalsrc=0.8*sin(2*PI*(300*t+150*t*t)):s={self.SAMPLE_RATE}:d=4",
+            "-ac", "1",
+            "-ar", str(self.SAMPLE_RATE),
+            "-c:a", "pcm_s16le",
+            str(source),
+        )
+
+        join = int(self.SEGMENTS[0][1] * self.SAMPLE_RATE)
+        clicking = self._render(binary, source, tmp_path / "nofade.wav", 0)
+        faded = self._render(binary, source, tmp_path / "faded.wav", 5.0)
+
+        # Steepest slope the signal reaches well away from the join, measured
+        # on the un-faded render so the fade cannot flatter the reference.
+        natural = _largest_step(clicking, join // 2, 200)
+        assert natural > 0
+
+        clicking_step = _largest_step(clicking, join, 3)
+        faded_step = _largest_step(faded, join, 3)
+
+        assert clicking_step > natural, (
+            f"the un-faded splice should jump further than the waveform ever "
+            f"does on its own: join step {clicking_step} vs natural {natural}"
+        )
+        assert faded_step < natural, (
+            f"the faded splice should disappear into the waveform's own "
+            f"motion: join step {faded_step} vs natural {natural}"
+        )
+        assert faded_step * 4 < clicking_step, (
+            f"the fade should remove most of the step: {clicking_step} -> {faded_step}"
+        )

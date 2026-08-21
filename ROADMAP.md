@@ -39,10 +39,3 @@ original acceptance criteria stay traceable.
   Complexity: L
 
 ### P3
-
-- [ ] P3 — F365 — Measure the cut-boundary fade instead of asserting its filter string
-  Why: F335's acceptance asked for a fixture with a tone crossing a cut boundary to show bounded sample discontinuity with the fade on and an audible step with it off. What landed asserts that the right `afade` string is built and placed at interior joins only, which is good coverage of the wiring and no coverage of the claim. The risk is low because the filter is FFmpeg's, but the item promised a measurement and the audible-quality argument was the whole reason it was P1.
-  Evidence: `tests/test_edge_fades.py` (clamp, filter geometry, interior-join placement, opt-out; no rendered audio); `opencut/helpers.py` (`build_edge_fade_filter`, `edge_fade_ms`); `opencut/core/transcript_timeline_edit.py` (`_concat_segments`)
-  Touches: `tests/test_edge_fades.py`, a generated tone fixture
-  Acceptance: A tone is rendered across a cut boundary with the fade on and off, and the sample-level step at the join is measured in both cases and asserted bounded in one and not the other; the fixture is generated rather than committed as binary; the test is skipped cleanly where FFmpeg is unavailable.
-  Complexity: S
