@@ -244,6 +244,14 @@
       "uxp.captions.similarity_threshold"
     ]
   },
+  "shared.captions.srt_path_placeholder": {
+    "cep": [
+      "captions.srt_path_placeholder"
+    ],
+    "uxp": [
+      "uxp.timeline.srt_file_placeholder"
+    ]
+  },
   "shared.captions.srt_resync_applied": {
     "cep": [
       "captions.srt_resync_applied"
@@ -258,6 +266,14 @@
     ],
     "uxp": [
       "uxp.timeline.srt_resync_apply"
+    ]
+  },
+  "shared.captions.srt_resync_applying": {
+    "cep": [
+      "captions.srt_resync_applying"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.resync_applying"
     ]
   },
   "shared.captions.srt_resync_failed": {
@@ -314,6 +330,14 @@
     ],
     "uxp": [
       "uxp.timeline.srt_resync_title"
+    ]
+  },
+  "shared.captions.srt_resync_working": {
+    "cep": [
+      "captions.srt_resync_working"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.resync_working"
     ]
   },
   "shared.cleanup_chain.applied_summary": {
@@ -481,6 +505,14 @@
     ],
     "uxp": [
       "uxp.deliverables.runtime.active_sequence"
+    ]
+  },
+  "shared.deliverables.generating_status": {
+    "cep": [
+      "deliverables.generating_status"
+    ],
+    "uxp": [
+      "uxp.deliverables.runtime.generating_label"
     ]
   },
   "shared.deliverables.last_export_summary": {
@@ -1083,6 +1115,14 @@
       "uxp.settings.gpu_adapter_saved"
     ]
   },
+  "shared.settings.gpu_adapter_saving": {
+    "cep": [
+      "settings.gpu_adapter_saving"
+    ],
+    "uxp": [
+      "uxp.settings.gpu_adapter_saving"
+    ]
+  },
   "shared.settings.gpu_adapter_status": {
     "cep": [
       "settings.gpu_adapter_status"
@@ -1680,6 +1720,14 @@
     ],
     "uxp": [
       "uxp.timeline.runtime.interchange_imported_status"
+    ]
+  },
+  "shared.timeline.interchange_preparing": {
+    "cep": [
+      "timeline.interchange_preparing"
+    ],
+    "uxp": [
+      "uxp.timeline.runtime.interchange_preparing"
     ]
   },
   "shared.timeline.interchange_sequence_name": {

@@ -114,7 +114,7 @@ export function createJobController({
         const status = job.status ?? "running";
         onProgress(
           typeof job.progress === "number" ? job.progress : 0,
-          job.message ?? job.msg ?? translate("processing.processing", "Processing..."),
+          job.message ?? job.msg ?? translate("processing.processing", "Processing…"),
         );
         if (TERMINAL_SUCCESS.has(status)) {
           closeSse();
@@ -162,7 +162,7 @@ export function createJobController({
     const status = job.status ?? "running";
     onProgress(
       typeof job.progress === "number" ? job.progress : 0,
-      job.message ?? job.msg ?? translate("processing.processing", "Processing..."),
+      job.message ?? job.msg ?? translate("processing.processing", "Processing…"),
     );
     if (TERMINAL_SUCCESS.has(status)) {
       finishSuccess(jobId, job, onComplete);

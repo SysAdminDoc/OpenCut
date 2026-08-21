@@ -73,7 +73,7 @@ export function createUxpGpuSelectionController({
   async function load() {
     if (disposed || !client?.get) return false;
     resolveElements();
-    setStatus(t("uxp.settings.gpu_adapter_checking", "Checking available GPU adapters..."), "working");
+    setStatus(t("uxp.settings.gpu_adapter_checking", "Checking available GPU adapters…"), "working");
     const response = await client.get("/system/gpu");
     if (!response?.ok) {
       setStatus(
@@ -89,7 +89,7 @@ export function createUxpGpuSelectionController({
   async function choose(value) {
     if (disposed || !client?.post) return false;
     const requested = value === "auto" ? null : Number(value);
-    setStatus(t("uxp.settings.gpu_adapter_saving", "Saving GPU adapter selection..."), "working");
+    setStatus(t("uxp.settings.gpu_adapter_saving", "Saving GPU adapter selection…"), "working");
     const response = await client.post("/system/gpu", { gpu_index: requested });
     if (!response?.ok || responseData(response)?.success === false) {
       render(state);

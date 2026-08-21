@@ -72,21 +72,22 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
   Confidence: Likely
   Effort: M
 
-- [ ] P3 — F374 — Remaining copy mechanics: ellipses, FCC split, placeholders
-  Category: ux
-  Where: Pointilism and Pestanas and `->` were fixed 2026-08-21. Still open: 26 ASCII "..." strings in CEP en.json where the house style is "…" (collisions listed: 1552, 1633, 2843 vs 831, 1380, 1601; UXP mirrors the inverse with "…" leaking at uxp:135, 465), `en.json:1329` trailing space in `progress.step_prefix`, `en.json:2034` the locale's only curly apostrophe, `uxp:1071-1072` FCC sentence split across two concatenated keys (untranslatable, unpaired paren; CEP's `en.json:284` is one sentence), "-- Select a clip --" placeholders (`en.json:1059`, `uxp:1665`) and "GPU: --"/"Jobs: --" (`en.json:1771, 1774`) vs "N/A" (`en.json:409`), status phrasing "faster-whisper is not installed until requested." (`uxp:1835-1836, 1846`)
-  Problem: The FCC split is an i18n correctness bug — no translator can reorder around a hardcoded concatenation point. The rest is unfinished copy.
-  Fix: Normalize each panel to its own ellipsis convention (or both to "…"), strip the trailing space, pick straight apostrophes everywhere, merge the FCC string into one key with a {date} placeholder like CEP's, replace "--" placeholders with "N/A", reword the install-status lines to "Not installed. Installs on first use."
-  Acceptance: No "..."/"…" collision remains within either panel's locale; the FCC notice is a single translatable string in UXP.
-  Confidence: Likely
-  Effort: S
-
 - [ ] P3 — F380 — Generic "Error: {error}" / "Unknown error" copy still has no recovery path
   Category: ux
   Where: nine bare "Error: {error}" keys (en.json:261, 1109, 1888, 1974, 2047; uxp:40, 1591, 1597, 1602), five "Unknown error" strings (en.json:237, 1331, 2166, 2818; uxp:1141). The named-ID leaks from F372 are done.
   Problem: These still dump the raw error with no next step, unlike `cleanUiMessage` / `ERROR_CODE_ACTIONS` in CEP `main.js`.
   Fix: Route them through the existing recovery phrasing. Keep internal detail in logs.
   Acceptance: Grep for `^Error: \{error\}$` and `Unknown error` in both en.json files returns zero user-visible hits, or each remaining hit names a recovery action.
+  Confidence: Verified
+  Effort: S
+
+- [ ] P3 — F382 — Spaced hyphens stand in for dashes across 52 locale strings
+  Category: ux
+  Where: 9 CEP keys (`settings.whisper_model_*`, `settings.plugin_publisher_identity`) and 43 UXP keys (`uxp.cut.runtime.filler_done_status`, `uxp.agent.runtime.job_queued`, `uxp.search.runtime.search_ready_*`, `uxp.deliverables.runtime.*`, `uxp.captions.runtime.chapter_line`, …)
+  Problem: The house rule bans " - " as a dash substitute in anything a user reads, and these are user-visible status lines and option labels. Some are genuinely prose ("Job queued - watch the progress bar above.", "No steps matched - try a more specific intent."); others are compact separators inside a status line ("{time} - {title}") where a period would read worse.
+  Evidence: Enumerated 2026-08-21 while closing F374; the two classes need different treatment, which is why F374 did not sweep them.
+  Fix: Split the list into prose and separator uses. Rewrite the prose ones as two sentences; leave or re-punctuate the separators deliberately (a middot is already used elsewhere: `search.files_with_segments` = "{files} • {segments}").
+  Acceptance: No user-visible locale string uses " - " as sentence punctuation in either panel; separator uses are a short, documented list.
   Confidence: Verified
   Effort: S
 

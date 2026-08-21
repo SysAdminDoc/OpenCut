@@ -2993,7 +2993,7 @@
         placeholder.value = "";
         placeholder.selected = true;
         placeholder.textContent = files.length
-            ? t("media.select_clip_placeholder", "-- Select a clip --")
+            ? t("media.select_clip_placeholder", "Select a clip…")
             : t("media.no_project_media", "No project media found");
         frag.appendChild(placeholder);
         for (var i = 0; i < files.length; i++) {
@@ -4235,9 +4235,12 @@
 
     function getProgressStepPrefix() {
         if (jobStepTotal <= 1) return "";
-        return t("progress.step_prefix", "Step {current}/{total}: ")
+        // The separating space belongs to the join, not to the translated
+        // string: a trailing space is invisible in a locale file and the first
+        // translator to trim it would run the prefix into the step label.
+        return t("progress.step_prefix", "Step {current}/{total}:")
             .replace("{current}", jobStepCurrent)
-            .replace("{total}", jobStepTotal);
+            .replace("{total}", jobStepTotal) + " ";
     }
 
     function startJob(endpoint, payload, options) {
@@ -4777,7 +4780,7 @@
             // Fire cancel to backend (best-effort, UI already updated)
             api("POST", "/cancel/" + cancellingJob, {}, function (err) {
                 if (err) {
-                    showToast(t("toast.cancel_failed", "Couldn’t cancel — server not responding"), "error");
+                    showToast(t("toast.cancel_failed", "Couldn't cancel. The backend isn't responding."), "error");
                 }
             });
         }
@@ -5660,7 +5663,7 @@
             "bridge",
             _wsConnected
                 ? t("ws.status_panel_connected", "Panel connected")
-                : t("ws.studio_checking", "Checking live updates..."),
+                : t("ws.studio_checking", "Checking live updates…"),
             _wsConnected ? "ready" : "working",
             _wsConnected
                 ? t("ws.studio_panel_title", "The panel is connected to the live updates bridge.")
@@ -5836,7 +5839,7 @@
         if (!grid) return;
         setSettingsStudioState(
             "engines",
-            t("engines.checking_availability", "Checking availability..."),
+            t("engines.checking_availability", "Checking availability…"),
             "working",
             t("engines.checking_installed_title", "Checking installed engines for each editing domain.")
         );
@@ -6199,7 +6202,7 @@
                 this.disabled = true;
                 setStatusLine(
                     "pluginTrustStatusLine",
-                    t("settings.plugin_install_starting", "Starting authenticated plugin installation..."),
+                    t("settings.plugin_install_starting", "Starting authenticated plugin installation…"),
                     "working"
                 );
                 api("POST", "/plugins/marketplace/install", {
@@ -6239,7 +6242,7 @@
                 button.disabled = true;
                 setStatusLine(
                     "pluginTrustStatusLine",
-                    t("settings.plugin_worker_restarting", "Restarting plugin worker..."),
+                    t("settings.plugin_worker_restarting", "Restarting plugin worker…"),
                     "working"
                 );
                 api("POST", route, { name: name }, function (err) {
@@ -6339,7 +6342,7 @@
             "working"
         );
         list.innerHTML = buildEmptyHintMarkup(
-            t("settings.plugin_trust_loading_title", "Loading plugin trust..."),
+            t("settings.plugin_trust_loading_title", "Loading plugin trust…"),
             t("settings.plugin_trust_loading_body", "Checking installed plugin locks, failed loads, quarantine, and marketplace cache."),
             "info"
         );
@@ -7012,13 +7015,13 @@
         if (!_workflowPresetsLoaded) {
             setStatusPill(
                 "workflowPresetPill",
-                t("workflow.preset_loading_pill", "Loading..."),
+                t("workflow.preset_loading_pill", "Loading…"),
                 "working",
                 t("workflow.preset_loading_title", "Loading workflow presets.")
             );
             summaryLabel = t(
                 "workflow.preset_loading_summary",
-                "Checking built-in and custom workflow presets..."
+                "Checking built-in and custom workflow presets…"
             );
             summaryTitle = t("workflow.preset_loading_title", "Loading workflow presets.");
         } else if (!availableCount) {
@@ -7135,7 +7138,7 @@
         var draftName = el.customWorkflowName ? el.customWorkflowName.value.trim() : "";
         var stepCount = _workflowSteps.length;
         var savedLabel = !_savedWorkflowLibraryLoaded
-            ? t("workflow.saved_loading_label", "Checking saved workflows...")
+            ? t("workflow.saved_loading_label", "Checking saved workflows…")
             : (_savedWorkflowCount
             ? workflowSavedCountLabel(_savedWorkflowCount)
             : t("workflow.saved_empty_label", "No saved workflows yet"));
@@ -8476,7 +8479,7 @@
 
     function refreshCaptionDisplayPreview() {
         if (el.capDispPreviewBtn) el.capDispPreviewBtn.disabled = true;
-        setCaptionDisplayStatus(t("captions.display_rendering_preview", "Rendering preview..."), "working");
+        setCaptionDisplayStatus(t("captions.display_rendering_preview", "Rendering preview…"), "working");
         api("POST", "/captions/display-settings/preview", {
             settings: readCaptionDisplaySettings(),
             sample_text: t("captions.display_sample_text", "The quick brown fox jumps over the lazy dog.")
@@ -8506,7 +8509,7 @@
     function loadCaptionDisplayTokens() {
         var reconnectTitle = t("workspace.status_reconnect_title", "Start or reconnect the local OpenCut backend service");
         setCaptionDisplayControlsDisabled(true, reconnectTitle);
-        setCaptionDisplayStatus(t("captions.display_loading_tokens", "Loading tokens..."), "working");
+        setCaptionDisplayStatus(t("captions.display_loading_tokens", "Loading tokens…"), "working");
         api("GET", "/captions/display-settings/tokens", null, function (err, data) {
             if (err || !data || data.error) {
                 setCaptionDisplayControlsDisabled(true, reconnectTitle);
@@ -8540,17 +8543,17 @@
     // ================================================================
     var _settingsStudioState = {
         backend: {
-            label: t("settings.studio_backend_checking", "Checking..."),
+            label: t("settings.studio_backend_checking", "Checking…"),
             state: "working",
             title: t("settings.studio_backend_checking_title", "Checking the local OpenCut backend.")
         },
         speech: {
-            label: t("settings.studio_speech_checking", "Checking transcription..."),
+            label: t("settings.studio_speech_checking", "Checking transcription…"),
             state: "working",
             title: t("settings.studio_speech_checking_title", "Checking transcription readiness.")
         },
         bridge: {
-            label: t("ws.studio_checking", "Checking live updates..."),
+            label: t("ws.studio_checking", "Checking live updates…"),
             state: "working",
             title: t("ws.studio_checking_title", "Checking the live updates bridge.")
         },
@@ -8573,18 +8576,18 @@
     function renderSettingsStudioOverview() {
         setStatusPill(
             "settingsBackendPill",
-            (_settingsStudioState.backend && _settingsStudioState.backend.label) || t("settings.studio_backend_checking", "Checking..."),
+            (_settingsStudioState.backend && _settingsStudioState.backend.label) || t("settings.studio_backend_checking", "Checking…"),
             (_settingsStudioState.backend && _settingsStudioState.backend.state) || "working",
             (_settingsStudioState.backend && _settingsStudioState.backend.title) || t("settings.studio_backend_checking_title", "Checking the local OpenCut backend.")
         );
         setTextAndTitle(
             "settingsSpeechSummary",
-            (_settingsStudioState.speech && _settingsStudioState.speech.label) || t("settings.studio_speech_checking", "Checking transcription..."),
+            (_settingsStudioState.speech && _settingsStudioState.speech.label) || t("settings.studio_speech_checking", "Checking transcription…"),
             (_settingsStudioState.speech && _settingsStudioState.speech.title) || t("settings.studio_speech_checking_title", "Checking transcription readiness.")
         );
         setTextAndTitle(
             "settingsBridgeSummary",
-            (_settingsStudioState.bridge && _settingsStudioState.bridge.label) || t("ws.studio_checking", "Checking live updates..."),
+            (_settingsStudioState.bridge && _settingsStudioState.bridge.label) || t("ws.studio_checking", "Checking live updates…"),
             (_settingsStudioState.bridge && _settingsStudioState.bridge.title) || t("ws.studio_checking_title", "Checking the live updates bridge.")
         );
         setTextAndTitle(
@@ -13455,8 +13458,8 @@
                 dot.className = "status-dot";
                 if (el.statusBar) el.statusBar.setAttribute("data-state", "offline");
                 text.textContent = t("status.disconnected", "Disconnected");
-                gpu.textContent = t("status.gpu_none", "GPU: --");
-                jobsEl.textContent = t("status.jobs_unknown", "Jobs: --");
+                gpu.textContent = t("status.gpu_none", "GPU: N/A");
+                jobsEl.textContent = t("status.jobs_unknown", "Jobs: N/A");
                 return;
             }
 
@@ -14848,7 +14851,7 @@
     function testLLM() {
         var cfg = getLLMConfig();
         refreshLlmStatusLine(
-            t("llm.testing_connection_status", "Testing {provider} connection...")
+            t("llm.testing_connection_status", "Testing {provider} connection…")
                 .replace("{provider}", humanizeLlmProvider(cfg.provider)),
             "working"
         );
@@ -14949,7 +14952,7 @@
     function runSummarize() {
         var llm = getLLMConfig();
         if (el.summaryResult) el.summaryResult.classList.remove("hidden");
-        if (el.summaryContent) el.summaryContent.textContent = t("transcript.summarizing", "Summarizing...");
+        if (el.summaryContent) el.summaryContent.textContent = t("transcript.summarizing", "Summarizing…");
         startJob("/transcript/summarize", {
             filepath: selectedPath,
             style: "bullets",

@@ -5,6 +5,27 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Copy mechanics: one ellipsis, one FCC sentence, no stray placeholders
+
+- Both panels now write "…" everywhere instead of mixing it with "...". The
+  CEP locale had 26 ASCII holdouts against 101 typographic ones; UXP had it
+  the other way round in its locale while its own HTML already used "…". The
+  shipped fallback strings in HTML and JS moved with the locale values.
+- The UXP FCC caption notice was two locale keys concatenated around a bare
+  date span, so no translator could reorder the sentence and the opening
+  parenthesis had no partner in either key. It is one string with a {date}
+  slot now, rendered once at init and again when the backend reports its own
+  compliance date.
+- "Step 1/2: " no longer hides its separating space at the end of a locale
+  value where the first translator to trim would run the prefix into the
+  step label. The join owns the space.
+- Clip pickers say "Select a clip…" instead of "-- Select a clip --", and
+  the status strip says "GPU: N/A" / "Jobs: N/A" rather than two dashes,
+  matching the "N/A" it already used elsewhere.
+- The cancel-failure toast dropped its curly apostrophe and em dash, and the
+  UXP install-status lines say what they mean: "Not installed. faster-whisper
+  installs on first use."
+
 ### Fixed - Cancel actually stops FFmpeg and queued work
 
 - `run_ffmpeg` now registers the worker thread's job when callers forget to

@@ -3373,7 +3373,7 @@ function syncCommandCenterSettings({ connectionChecked = false } = {}) {
   setCommandCenterStateValue("settingsDiagnosticsEndpointValue", BACKEND || "—", "neutral");
   setCommandCenterStateValue(
     "settingsDiagnosticsEngineValue",
-    engineCoverage?.textContent?.trim() || t("uxp.settings.loading", "Loading..."),
+    engineCoverage?.textContent?.trim() || t("uxp.settings.loading", "Loading…"),
     engineStatus
   );
   if (connectionChecked) {
@@ -3908,7 +3908,7 @@ async function clearFootageIndex() {
     "working",
     t("uxp.search.runtime.clearing_index_title", "Clearing the current search index.")
   );
-  setIndexStatus(t("uxp.search.runtime.clearing_index", "Clearing the current search index..."), "working");
+  setIndexStatus(t("uxp.search.runtime.clearing_index", "Clearing the current search index…"), "working");
 
   const r = await BackendClient.del("/search/index");
 
@@ -4039,7 +4039,7 @@ async function scanProjectClips() {
   const clipSelect = document.getElementById("clipSelect");
   if (clipSelect) {
     const currentVal = clipSelect.value;
-    clipSelect.innerHTML = `<option value="">${UIController.escapeHtml(t("uxp.common.select_clip", "-- Select a clip --"))}</option>` +
+    clipSelect.innerHTML = `<option value="">${UIController.escapeHtml(t("uxp.common.select_clip", "Select a clip…"))}</option>` +
       items.map(c =>
         `<option value="${UIController.escapeHtml(c.path)}">${UIController.escapeHtml(c.name)}</option>`
       ).join("");
@@ -4070,15 +4070,15 @@ async function runSilenceRemoval() {
   const detectMethod = document.getElementById("silenceDetectMethod")?.value ?? "auto";
 
   UIController.setButtonLoading("runSilenceBtn", true);
-  UIController.showProcessing(t("uxp.cut.runtime.detecting_silences", "Detecting silences..."));
-  UIController.setStatus(t("uxp.cut.runtime.running_silence_removal", "Running silence removal..."));
+  UIController.showProcessing(t("uxp.cut.runtime.detecting_silences", "Detecting silences…"));
+  UIController.setStatus(t("uxp.cut.runtime.running_silence_removal", "Running silence removal…"));
 
   await JobPoller.start(
     "/silence",
     { filepath: clipPath, threshold: threshold, min_duration: minSilence, padding_before: padding / 1000, padding_after: padding / 1000, mode, method: detectMethod },
     (pct, msg) => {
       UIController.setProgress(pct);
-      UIController.setProcessingMsg(msg || t("processing.processing", "Processing..."));
+      UIController.setProcessingMsg(msg || t("processing.processing", "Processing…"));
     },
     (result) => {
       UIController.hideProcessing();
@@ -4195,14 +4195,14 @@ async function runFillerDetection() {
   UIController.setButtonLoading("runFillerBtn", true);
   UIController.showProcessing(
     fillerBackend === "crisper"
-      ? t("uxp.cut.runtime.detecting_fillers_crisper", "Detecting fillers with CrisperWhisper...")
-      : t("uxp.cut.runtime.detecting_filler_words", "Detecting filler words...")
+      ? t("uxp.cut.runtime.detecting_fillers_crisper", "Detecting fillers with CrisperWhisper…")
+      : t("uxp.cut.runtime.detecting_filler_words", "Detecting filler words…")
   );
 
   await JobPoller.start(
     "/fillers",
     { filepath: clipPath, custom_words: words.split(",").map(w => w.trim()), filler_backend: fillerBackend },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.cut.runtime.transcribing", "Transcribing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.cut.runtime.transcribing", "Transcribing…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runFillerBtn", false);
@@ -4334,7 +4334,7 @@ async function applyCleanupChainUxp() {
   }
   const sourcePath = plan.source.filepath;
   UIController.setButtonLoading("applyCleanupChainUxpBtn", true);
-  UIController.showProcessing(t("cleanup_chain.applying", "Applying the reviewed cleanup chain..."));
+  UIController.showProcessing(t("cleanup_chain.applying", "Applying the reviewed cleanup chain…"));
   await JobPoller.start(
     "/cleanup/apply",
     {
@@ -4344,7 +4344,7 @@ async function applyCleanupChainUxp() {
     },
     (pct, msg) => {
       UIController.setProgress(pct);
-      UIController.setProcessingMsg(msg || t("processing.processing", "Processing..."));
+      UIController.setProcessingMsg(msg || t("processing.processing", "Processing…"));
     },
     async (result) => {
       UIController.hideProcessing();
@@ -4372,13 +4372,13 @@ async function runFullPipelineUxp() {
   _pendingCleanupPlanUxp = null;
   document.getElementById("applyCleanupChainUxpBtn")?.classList.add("hidden");
   UIController.setButtonLoading("runFullPipelineBtn", true);
-  UIController.showProcessing(t("cleanup_chain.previewing", "Previewing the cleanup chain..."));
+  UIController.showProcessing(t("cleanup_chain.previewing", "Previewing the cleanup chain…"));
   // Keep the legacy "/full" route available to UXP chat actions while
   // the visible control uses the review-first cleanup contract below.
   await JobPoller.start(
     "/cleanup/preview",
     { filepath: clipPath, cleanup_preset: preset, denoise, loudness, captions },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runFullPipelineBtn", false);
@@ -4408,7 +4408,7 @@ async function runTranscribe() {
   const wordLevel = document.getElementById("enableWordLevel")?.checked ?? true;
 
   UIController.setButtonLoading("runTranscribeBtn", true);
-  UIController.showProcessing(t("uxp.captions.runtime.transcribing_long", "Transcribing - this may take a while..."));
+  UIController.showProcessing(t("uxp.captions.runtime.transcribing_long", "Transcribing - this may take a while…"));
   setCaptionsSessionState(
     t("uxp.captions.runtime.working", "Working"),
     "working",
@@ -4419,7 +4419,7 @@ async function runTranscribe() {
     "working",
     clipPath
   );
-  setTextAndTitle("captionsOutputValue", t("uxp.captions.runtime.processing_transcript", "Processing transcript..."), clipPath);
+  setTextAndTitle("captionsOutputValue", t("uxp.captions.runtime.processing_transcript", "Processing transcript…"), clipPath);
   syncCaptionsActionButtons();
 
   // The "captionStyle" select offers visual styles from /captions/styles.
@@ -4432,7 +4432,7 @@ async function runTranscribe() {
     "/captions",
     { filepath: clipPath, model, language: lang === "auto" ? null : lang,
       format: "srt", caption_style: style, diarize, word_timestamps: wordLevel },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.cut.runtime.transcribing", "Transcribing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.cut.runtime.transcribing", "Transcribing…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runTranscribeBtn", false);
@@ -4574,12 +4574,12 @@ function captionSegmentsReviewText(segments) {
 /** ── WHISPER INSTALL ── */
 async function installWhisperUxp() {
   UIController.setButtonLoading("installWhisperBtn", true);
-  UIController.showProcessing(t("uxp.captions.runtime.installing_whisper", "Installing faster-whisper..."));
-  setTextAndTitle("whisperInstallStatus", t("uxp.captions.runtime.installing_whisper", "Installing faster-whisper..."), t("uxp.captions.runtime.installing_whisper", "Installing faster-whisper..."));
+  UIController.showProcessing(t("uxp.captions.runtime.installing_whisper", "Installing faster-whisper…"));
+  setTextAndTitle("whisperInstallStatus", t("uxp.captions.runtime.installing_whisper", "Installing faster-whisper…"), t("uxp.captions.runtime.installing_whisper", "Installing faster-whisper…"));
   await JobPoller.start(
     "/install-whisper",
     { backend: "faster-whisper", no_input: true },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing…")); },
     () => {
       UIController.hideProcessing();
       UIController.setButtonLoading("installWhisperBtn", false);
@@ -4621,11 +4621,11 @@ async function runCaptionTranslation() {
     accept_restricted_license: true,
   };
   UIController.setButtonLoading("runTranslateBtn", true);
-  UIController.showProcessing(t("uxp.captions.runtime.translating", "Translating captions..."));
+  UIController.showProcessing(t("uxp.captions.runtime.translating", "Translating captions…"));
   await JobPoller.start(
     "/captions/translate",
     payload,
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runTranslateBtn", false);
@@ -4672,11 +4672,11 @@ async function installTranslationBackendUxp() {
     return;
   }
   UIController.setButtonLoading("installTranslationBtn", true);
-  UIController.showProcessing(t("uxp.captions.runtime.installing_translation", "Installing translation dependencies..."));
+  UIController.showProcessing(t("uxp.captions.runtime.installing_translation", "Installing translation dependencies…"));
   await JobPoller.start(
     "/captions/enhanced/install",
     { component: "nllb", no_input: true, accept_restricted_license: true },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing…")); },
     () => {
       UIController.hideProcessing();
       UIController.setButtonLoading("installTranslationBtn", false);
@@ -4705,11 +4705,11 @@ async function runAnimatedCaptions() {
   const fontSize = parseInt(document.getElementById("animCapFontSize")?.value || "56", 10);
   const maxWords = parseInt(document.getElementById("animCapWpl")?.value || "6", 10);
   UIController.setButtonLoading("runAnimatedCaptionsBtn", true);
-  UIController.showProcessing(t("uxp.captions.runtime.rendering_animated", "Rendering animated captions..."));
+  UIController.showProcessing(t("uxp.captions.runtime.rendering_animated", "Rendering animated captions…"));
   await JobPoller.start(
     "/captions/animated/render",
     { filepath: clipPath, word_segments: wordSegments, animation, font_size: fontSize, max_words: maxWords },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runAnimatedCaptionsBtn", false);
@@ -4741,7 +4741,7 @@ async function runChapterGeneration() {
   }
 
   UIController.setButtonLoading("runChaptersBtn", true);
-  UIController.showProcessing(t("uxp.captions.runtime.generating_chapters", "Generating chapters with AI..."));
+  UIController.showProcessing(t("uxp.captions.runtime.generating_chapters", "Generating chapters with AI…"));
   setCaptionsSessionState(
     t("uxp.captions.runtime.working", "Working"),
     "working",
@@ -4752,13 +4752,13 @@ async function runChapterGeneration() {
     "working",
     clipPath
   );
-  setTextAndTitle("captionsOutputValue", t("uxp.captions.runtime.drafting_chapters", "Drafting chapters..."), clipPath);
+  setTextAndTitle("captionsOutputValue", t("uxp.captions.runtime.drafting_chapters", "Drafting chapters…"), clipPath);
   syncCaptionsActionButtons();
 
   await JobPoller.start(
     "/captions/chapters",
     { filepath: clipPath, llm_provider: provider, llm_model: model },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.captions.runtime.generating", "Generating...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.captions.runtime.generating", "Generating…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runChaptersBtn", false);
@@ -4876,7 +4876,7 @@ async function runRepeatDetection() {
   const keepBest  = document.getElementById("keepBestRepeat")?.checked ?? true;
 
   UIController.setButtonLoading("runRepeatBtn", true);
-  UIController.showProcessing(t("uxp.captions.runtime.detecting_repeated_segments", "Detecting repeated segments..."));
+  UIController.showProcessing(t("uxp.captions.runtime.detecting_repeated_segments", "Detecting repeated segments…"));
   setCaptionsSessionState(
     t("uxp.captions.runtime.working", "Working"),
     "working",
@@ -4884,13 +4884,13 @@ async function runRepeatDetection() {
     "working",
     clipPath
   );
-  setTextAndTitle("captionsOutputValue", t("uxp.captions.runtime.scanning_repeats", "Scanning for repeats..."), clipPath);
+  setTextAndTitle("captionsOutputValue", t("uxp.captions.runtime.scanning_repeats", "Scanning for repeats…"), clipPath);
   syncCaptionsActionButtons();
 
     await JobPoller.start(
     "/captions/repeat-detect",
     { filepath: clipPath, threshold, keep_best: keepBest },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.captions.runtime.analyzing", "Analyzing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.captions.runtime.analyzing", "Analyzing…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runRepeatBtn", false);
@@ -4936,12 +4936,12 @@ async function runDenoise() {
   const strength = parseInt(document.getElementById("denoiseStrength")?.value ?? 75) / 100;
 
   UIController.setButtonLoading("runDenoiseBtn", true);
-  UIController.showProcessing(t("uxp.audio.runtime.applying_noise_reduction", "Applying noise reduction..."));
+  UIController.showProcessing(t("uxp.audio.runtime.applying_noise_reduction", "Applying noise reduction…"));
 
   await JobPoller.start(
     "/audio/denoise",
     { filepath: clipPath, method, strength },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runDenoiseBtn", false);
@@ -4970,11 +4970,11 @@ async function runStemSeparation() {
   const format = document.getElementById("stemFormat")?.value || "wav";
   const autoImport = document.getElementById("stemAutoImport")?.checked ?? true;
   UIController.setButtonLoading("runStemSeparationBtn", true);
-  UIController.showProcessing(t("uxp.audio.runtime.separating_stems", "Separating audio stems..."));
+  UIController.showProcessing(t("uxp.audio.runtime.separating_stems", "Separating audio stems…"));
   await JobPoller.start(
     "/audio/separate",
     { filepath: clipPath, model, stems, format, auto_import: autoImport },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runStemSeparationBtn", false);
@@ -5007,7 +5007,7 @@ async function runAudioEnhance() {
   await JobPoller.start(
     "/audio/enhance",
     { filepath: clipPath, backend, model, denoise, enhance },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runAudioEnhanceBtn", false);
@@ -5032,12 +5032,12 @@ async function runNormalize() {
   const truePeak   = document.getElementById("normalizeTruePeak")?.checked ?? true;
 
   UIController.setButtonLoading("runNormalizeBtn", true);
-  UIController.showProcessing(t("uxp.audio.runtime.normalizing_audio", "Normalizing audio..."));
+  UIController.showProcessing(t("uxp.audio.runtime.normalizing_audio", "Normalizing audio…"));
 
   await JobPoller.start(
     "/audio/normalize",
     { filepath: clipPath, target_lufs: targetLufs, true_peak: truePeak ? -1.0 : null },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.audio.runtime.normalizing", "Normalizing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.audio.runtime.normalizing", "Normalizing…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runNormalizeBtn", false);
@@ -5063,7 +5063,7 @@ async function runLoudnessMatch() {
   }
 
   UIController.setButtonLoading("runLoudnessBtn", true);
-  UIController.showProcessing(t("uxp.audio.runtime.measuring_loudness_reference", "Measuring reference loudness..."));
+  UIController.showProcessing(t("uxp.audio.runtime.measuring_loudness_reference", "Measuring reference loudness…"));
 
   const measurement = await BackendClient.post("/audio/measure", { filepath: refPath });
   const targetLufs = Number(measurement.data?.integrated_lufs);
@@ -5083,7 +5083,7 @@ async function runLoudnessMatch() {
   }
 
   UIController.showProcessing(
-    formatI18n("uxp.audio.runtime.matching_loudness_reference", "Matching loudness to reference ({target} LUFS)...", {
+    formatI18n("uxp.audio.runtime.matching_loudness_reference", "Matching loudness to reference ({target} LUFS)…", {
       target: targetLufs.toFixed(1),
     }),
   );
@@ -5091,7 +5091,7 @@ async function runLoudnessMatch() {
   await JobPoller.start(
     "/audio/loudness-match",
     payload,
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.audio.runtime.matching", "Matching...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.audio.runtime.matching", "Matching…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runLoudnessBtn", false);
@@ -5123,19 +5123,19 @@ async function runBeatMarkers() {
   const sensitivity = parseInt(document.getElementById("beatSensitivity")?.value ?? 60) / 100;
 
   UIController.setButtonLoading("runBeatMarkersBtn", true);
-  UIController.showProcessing(t("uxp.audio.runtime.detecting_beats", "Detecting beats..."));
+  UIController.showProcessing(t("uxp.audio.runtime.detecting_beats", "Detecting beats…"));
 
   await JobPoller.start(
     "/audio/beat-markers",
     { filepath: trackPath, subdivisions: Math.max(1, Math.round(sensitivity * 4)) },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.audio.runtime.analyzing_tempo", "Analyzing tempo...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.audio.runtime.analyzing_tempo", "Analyzing tempo…")); },
     async (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runBeatMarkersBtn", false);
 
       const beats = result.beats ?? result.markers ?? [];
       rememberTimelineMarkers(beats, { source: t("uxp.audio.beat_detection", "Beat Detection"), clipPath: trackPath });
-      UIController.showToast(formatI18n("uxp.audio.runtime.beats_detected_add_markers", "Detected {count} beats. Adding markers to timeline...", { count: beats.length }), "success");
+      UIController.showToast(formatI18n("uxp.audio.runtime.beats_detected_add_markers", "Detected {count} beats. Adding markers to timeline…", { count: beats.length }), "success");
       UIController.setStatus(formatI18n("uxp.audio.runtime.beat_detection_done", "Beat detection done - {count} beats.", { count: beats.length }));
 
       // Attempt direct UXP marker insertion
@@ -5164,12 +5164,12 @@ async function runColorMatch() {
   const strength = parseInt(document.getElementById("colorMatchStrength")?.value ?? 80) / 100;
 
   UIController.setButtonLoading("runColorMatchBtn", true);
-  UIController.showProcessing(t("uxp.video.runtime.matching_color_grading", "Matching color grading..."));
+  UIController.showProcessing(t("uxp.video.runtime.matching_color_grading", "Matching color grading…"));
 
   await JobPoller.start(
     "/video/color-match",
     { source: clipPath, reference: refPath, strength },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.video.runtime.grading", "Grading...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.video.runtime.grading", "Grading…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runColorMatchBtn", false);
@@ -5193,12 +5193,12 @@ async function runAutoZoom() {
   const maxZoom   = parseFloat(document.getElementById("zoomFactor")?.value ?? 1.4);
 
   UIController.setButtonLoading("runAutoZoomBtn", true);
-  UIController.showProcessing(t("uxp.video.runtime.applying_auto_zoom_reframe", "Applying auto zoom / reframe..."));
+  UIController.showProcessing(t("uxp.video.runtime.applying_auto_zoom_reframe", "Applying auto zoom / reframe…"));
 
   await JobPoller.start(
     "/video/auto-zoom",
     { filepath: clipPath, zoom_amount: maxZoom, easing: "ease_in_out" },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.video.runtime.reframing", "Reframing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.video.runtime.reframing", "Reframing…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runAutoZoomBtn", false);
@@ -5226,7 +5226,7 @@ async function runMulticamCuts() {
   const strategy = document.getElementById("multicamStrategy")?.value ?? "speaker";
 
   UIController.setButtonLoading("runMulticamBtn", true);
-  UIController.showProcessing(t("uxp.video.runtime.generating_multicam_cuts", "Generating multicam cuts..."));
+  UIController.showProcessing(t("uxp.video.runtime.generating_multicam_cuts", "Generating multicam cuts…"));
 
   // Backend /video/multicam-cuts wants either ``segments`` (inline list),
   // ``diarization_file`` (a JSON file with diarization data), or a single
@@ -5240,7 +5240,7 @@ async function runMulticamCuts() {
   await JobPoller.start(
     "/video/multicam-cuts",
     { filepath: cam1Path, strategy, min_cut_duration: 1.0 },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.video.runtime.analyzing_cameras", "Analyzing cameras...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.video.runtime.analyzing_cameras", "Analyzing cameras…")); },
     async (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runMulticamBtn", false);
@@ -5290,7 +5290,7 @@ async function applyTimelineCutsViaInterchange(cutsToApply) {
   const sourcePath = getWorkspaceSource();
   if (!sourcePath) return { ok: false, reason: t("uxp.timeline.runtime.interchange_source_required", "Select a source clip before importing a timeline interchange."), phase: "export" };
 
-  UIController.setStatus(formatI18n("uxp.timeline.runtime.interchange_preparing", "Preparing one linked timeline for {count} requested cuts...", { count: cutsToApply.length }));
+  UIController.setStatus(formatI18n("uxp.timeline.runtime.interchange_preparing", "Preparing one linked timeline for {count} requested cuts…", { count: cutsToApply.length }));
   const exported = await BackendClient.post("/timeline/export-premiere-interchange", {
     filepath: sourcePath,
     cuts: cutsToApply,
@@ -5336,7 +5336,7 @@ async function applyTimelineCuts(cuts) {
   }
 
   if (PProBridge.available()) {
-  UIController.setStatus(t("uxp.timeline.runtime.applying_cuts_uxp", "Applying cuts to timeline via UXP..."));
+  UIController.setStatus(t("uxp.timeline.runtime.applying_cuts_uxp", "Applying cuts to timeline via UXP…"));
     // Disable the trigger for the duration of the ripple-delete loop so a
     // second click cannot start an overlapping pass on the same sequence.
     UIController.setButtonLoading("applyTimelineCutsBtn", true);
@@ -5438,7 +5438,7 @@ async function addSequenceMarkers(markers, color) {
   }));
 
   if (PProBridge.available()) {
-  UIController.setStatus(t("uxp.timeline.runtime.adding_markers_uxp", "Adding markers to sequence via UXP..."));
+  UIController.setStatus(t("uxp.timeline.runtime.adding_markers_uxp", "Adding markers to sequence via UXP…"));
     // Disable the trigger while markers insert so a rapid second click cannot
     // stack a duplicate insertion pass.
     UIController.setButtonLoading("addBeatMarkersBtn", true);
@@ -5518,12 +5518,12 @@ async function runBatchExport() {
   }
 
   UIController.setButtonLoading("runBatchExportBtn", true);
-  UIController.showProcessing(t("uxp.timeline.runtime.starting_batch_export", "Starting batch export from markers..."));
+  UIController.showProcessing(t("uxp.timeline.runtime.starting_batch_export", "Starting batch export from markers…"));
 
   await JobPoller.start(
     "/timeline/export-from-markers",
     { input_file: clipPath, markers: markersToExport, output_dir: outputDir, format: preset },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.timeline.runtime.exporting", "Exporting...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.timeline.runtime.exporting", "Exporting…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runBatchExportBtn", false);
@@ -5570,11 +5570,11 @@ async function runExportPreset() {
     h265: "hevc_1080p",
   }[selectedPreset] || selectedPreset;
   UIController.setButtonLoading("runExportPresetBtn", true);
-  UIController.showProcessing(t("uxp.timeline.runtime.starting_preset_export", "Starting preset export..."));
+  UIController.showProcessing(t("uxp.timeline.runtime.starting_preset_export", "Starting preset export…"));
   await JobPoller.start(
     "/export/preset",
     { filepath: clipPath, output_dir: outputDir, preset },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.timeline.runtime.exporting", "Exporting...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.timeline.runtime.exporting", "Exporting…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runExportPresetBtn", false);
@@ -5786,12 +5786,12 @@ async function runSrtImport() {
   if (!srtPath) { UIController.showToast(t("uxp.timeline.runtime.select_srt_file", "Please select an SRT file."), "warning"); return; }
 
   UIController.setButtonLoading("runSrtImportBtn", true);
-  UIController.showProcessing(t("uxp.timeline.runtime.validating_srt_import", "Validating SRT for timeline import..."));
+  UIController.showProcessing(t("uxp.timeline.runtime.validating_srt_import", "Validating SRT for timeline import…"));
 
   await JobPoller.start(
     "/timeline/srt-to-captions",
     { srt_path: srtPath, track_index: trackIndex },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.timeline.runtime.validating", "Validating...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.timeline.runtime.validating", "Validating…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runSrtImportBtn", false);
@@ -5851,7 +5851,7 @@ async function runSrtResyncPreview() {
   const applyBtn = document.getElementById("runSrtResyncApplyBtn");
   UIController.setButtonLoading("runSrtResyncPreviewBtn", true);
   if (applyBtn) applyBtn.disabled = true;
-  setSrtResyncStatus(t("uxp.timeline.runtime.resync_working", "Matching subtitle cues to the source clip..."), "working");
+  setSrtResyncStatus(t("uxp.timeline.runtime.resync_working", "Matching subtitle cues to the source clip…"), "working");
 
   const payload = {
     srt_path: srtPath,
@@ -5905,7 +5905,7 @@ async function runSrtResyncApply() {
   }
   const applyBtn = document.getElementById("runSrtResyncApplyBtn");
   UIController.setButtonLoading("runSrtResyncApplyBtn", true);
-  setSrtResyncStatus(t("uxp.timeline.runtime.resync_applying", "Writing the reviewed subtitle timing..."), "working");
+  setSrtResyncStatus(t("uxp.timeline.runtime.resync_applying", "Writing the reviewed subtitle timing…"), "working");
   const response = await BackendClient.post("/subtitle/resync", {
     ..._pendingSrtResyncUxp.payload,
     apply: true,
@@ -5946,17 +5946,17 @@ async function runIndexLibrary() {
 
   const statusLine = document.getElementById("indexStatus");
   UIController.setButtonLoading("runIndexLibBtn", true);
-  UIController.showProcessing(t("uxp.search.runtime.indexing_media_library", "Indexing media library..."));
+  UIController.showProcessing(t("uxp.search.runtime.indexing_media_library", "Indexing media library…"));
   setStatusPill("indexStatePill", t("uxp.search.runtime.indexing", "Indexing"), "working", folder);
-  setIndexStatus(t("uxp.search.runtime.indexing_media_library_status", "Indexing the media library..."), "working", folder);
-  if (statusLine) statusLine.textContent = t("uxp.search.runtime.indexing_media_library_status", "Indexing the media library...");
+  setIndexStatus(t("uxp.search.runtime.indexing_media_library_status", "Indexing the media library…"), "working", folder);
+  if (statusLine) statusLine.textContent = t("uxp.search.runtime.indexing_media_library_status", "Indexing the media library…");
 
   await JobPoller.start(
     "/search/index",
     { folder, model: "base" },
     (pct, msg) => {
       UIController.setProgress(pct);
-      const progressMsg = msg || t("uxp.search.runtime.scanning", "Scanning...");
+      const progressMsg = msg || t("uxp.search.runtime.scanning", "Scanning…");
       UIController.setProcessingMsg(progressMsg);
       if (statusLine) statusLine.textContent = progressMsg;
     },
@@ -6062,7 +6062,7 @@ async function runFootageSearch() {
   }
 
   UIController.setButtonLoading("runFootageSearchBtn", true);
-  UIController.setStatus(t("uxp.search.runtime.searching_footage", "Searching footage..."), "working");
+  UIController.setStatus(t("uxp.search.runtime.searching_footage", "Searching footage…"), "working");
   setTextAndTitle(
     "searchStatus",
     formatI18n("uxp.search.runtime.searching_for_query", "Searching for \"{query}\"...", { query }),
@@ -6186,12 +6186,12 @@ async function runNlpCommand() {
   if (!command) { UIController.showToast(t("uxp.search.runtime.enter_natural_language_command", "Please enter a natural language command."), "warning"); return; }
 
   UIController.setButtonLoading("runNlpBtn", true);
-  UIController.showProcessing(t("uxp.search.runtime.parsing_command", "Parsing command..."));
+  UIController.showProcessing(t("uxp.search.runtime.parsing_command", "Parsing command…"));
 
   await JobPoller.start(
     "/nlp/command",
     { command, llm_provider: provider, filepath: getWorkspaceSource("search") },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.search.runtime.thinking", "Thinking...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.search.runtime.thinking", "Thinking…")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runNlpBtn", false);
@@ -6216,7 +6216,7 @@ async function runMatchedNlpRoute(action) {
   const params = Object.assign({}, action.params || {});
   if (clipPath && !params.filepath) params.filepath = clipPath;
   UIController.setButtonLoading("applyNlpBtn", true);
-  UIController.showProcessing(t("uxp.search.runtime.running_matched_command", "Running the matched command..."));
+  UIController.showProcessing(t("uxp.search.runtime.running_matched_command", "Running the matched command…"));
   const done = (err) => {
     UIController.hideProcessing();
     UIController.setButtonLoading("applyNlpBtn", false);
@@ -6225,7 +6225,7 @@ async function runMatchedNlpRoute(action) {
   };
   await JobPoller.start(
     action.route, params,
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing…")); },
     () => done(),
     (err) => done(err)
   );
@@ -6268,7 +6268,7 @@ function showNlpResult(result) {
 /** ── LOAD SEQUENCE INFO ── */
 async function loadSequenceInfo() {
   UIController.setButtonLoading("loadSeqInfoBtn", true);
-  UIController.setStatus(t("uxp.deliverables.runtime.loading_sequence_info", "Loading sequence info..."), "working");
+  UIController.setStatus(t("uxp.deliverables.runtime.loading_sequence_info", "Loading sequence info…"), "working");
 
   const info = await ensureSequenceInfo({ force: true, silent: true });
 
@@ -6333,13 +6333,13 @@ async function runDeliverables(type) {
 
   const btnId = DELIVERABLE_BUTTON_IDS[type];
   if (btnId) UIController.setButtonLoading(btnId, true);
-  setDeliverablesStatus(formatI18n("uxp.deliverables.runtime.generating_label", "Generating {label}...", { label: deliverableLabel }), "working");
-  UIController.showProcessing(formatI18n("uxp.deliverables.runtime.generating_label", "Generating {label}...", { label: deliverableLabel }));
+  setDeliverablesStatus(formatI18n("uxp.deliverables.runtime.generating_label", "Generating {label}…", { label: deliverableLabel }), "working");
+  UIController.showProcessing(formatI18n("uxp.deliverables.runtime.generating_label", "Generating {label}…", { label: deliverableLabel }));
 
   await JobPoller.start(
     `/deliverables/${type.replace(/_/g, "-")}`,
     { sequence_data: seqData, output_dir: outputDir || null },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.deliverables.runtime.generating", "Generating...")); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.deliverables.runtime.generating", "Generating…")); },
     (result) => {
       UIController.hideProcessing();
       if (btnId) UIController.setButtonLoading(btnId, false);
@@ -6456,8 +6456,8 @@ async function runFullReportUnlocked() {
         : formatI18n("uxp.deliverables.runtime.doc_package_label", "{count}-Doc Package", { count: selectedTypes.length }));
 
   UIController.setButtonLoading("runFullReportBtn", true);
-  setDeliverablesStatus(formatI18n("uxp.deliverables.runtime.generating_label", "Generating {label}...", { label: packageLabel }), "working", packageSummary.title);
-  UIController.showProcessing(formatI18n("uxp.deliverables.runtime.generating_label", "Generating {label}...", { label: packageLabel }));
+  setDeliverablesStatus(formatI18n("uxp.deliverables.runtime.generating_label", "Generating {label}…", { label: packageLabel }), "working", packageSummary.title);
+  UIController.showProcessing(formatI18n("uxp.deliverables.runtime.generating_label", "Generating {label}…", { label: packageLabel }));
   UIController.setProgress(0);
 
   let generated = 0;
@@ -6468,7 +6468,7 @@ async function runFullReportUnlocked() {
     const type = types[index];
     const label = getDeliverableLabel(type.replace(/-/g, "_"));
     UIController.setProgress(Math.round((index / types.length) * 100));
-    UIController.setProcessingMsg(formatI18n("uxp.deliverables.runtime.generating_step", "Generating {label} ({step}/{total})...", {
+    UIController.setProcessingMsg(formatI18n("uxp.deliverables.runtime.generating_step", "Generating {label} ({step}/{total})…", {
       label,
       step: index + 1,
       total: types.length,
@@ -6573,7 +6573,7 @@ async function runBrollGenerate() {
   const payload = { prompt, backend };
   if (seedEl?.value) payload.seed = parseInt(seedEl.value);
   UIController.setButtonLoading("runBrollGenBtnUxp", true);
-  UIController.showProcessing(t("uxp.video.runtime.generating_ai_broll", "Generating AI B-roll..."));
+  UIController.showProcessing(t("uxp.video.runtime.generating_ai_broll", "Generating AI B-roll…"));
   try {
     const r = await BackendClient.post("/video/broll-generate", payload);
     if (r.ok && r.data?.job_id) {
@@ -6606,7 +6606,7 @@ async function runMultimodalDiarize() {
   const payload = { filepath: clipPath, sample_fps: 2.0, min_face_confidence: 0.5 };
   if (numSpeakers) payload.num_speakers = parseInt(numSpeakers);
   UIController.setButtonLoading("runMmDiarizeBtnUxp", true);
-  UIController.showProcessing(t("uxp.video.runtime.running_multimodal_diarization", "Running multimodal diarization..."));
+  UIController.showProcessing(t("uxp.video.runtime.running_multimodal_diarization", "Running multimodal diarization…"));
   try {
     const r = await BackendClient.post("/video/multimodal-diarize", payload);
     if (r.ok && r.data?.job_id) {
@@ -6647,7 +6647,7 @@ async function runSocialUpload() {
   const description = document.getElementById("socialDescriptionUxp")?.value ?? "";
   const privacy = document.getElementById("socialPrivacyUxp")?.value ?? "private";
   UIController.setButtonLoading("socialUploadBtnUxp", true);
-  UIController.showProcessing(formatI18n("uxp.video.runtime.uploading_to_platform", "Uploading to {platform}...", { platform }));
+  UIController.showProcessing(formatI18n("uxp.video.runtime.uploading_to_platform", "Uploading to {platform}…", { platform }));
   try {
     const r = await BackendClient.post("/social/upload", {
       filepath: clipPath, platform, title, description, privacy,
@@ -6760,7 +6760,7 @@ async function loadInterruptedProxyRecovery() {
 
 async function checkConnection({ rescan = false, background = false } = {}) {
   if (rescan) {
-    UIController.setStatus(t("uxp.status.scanning_backend_ports", "Scanning OpenCut backend ports..."), "working");
+    UIController.setStatus(t("uxp.status.scanning_backend_ports", "Scanning OpenCut backend ports…"), "working");
     await refreshBackendBaseUrl();
   }
 
@@ -7029,7 +7029,7 @@ function bindEvents() {
     const jobId = event.currentTarget?.dataset?.jobId || _offeredProxyResumeJobId;
     if (!jobId) return;
     document.getElementById("proxyRecoveryBanner")?.classList.add("hidden");
-    UIController.showProcessing(t("processing.resuming_proxy_batch", "Resuming proxy batch..."));
+    UIController.showProcessing(t("processing.resuming_proxy_batch", "Resuming proxy batch…"));
     await JobPoller.resume(
       jobId,
       (pct, msg) => {
@@ -7309,7 +7309,7 @@ function bindEvents() {
   document.getElementById("installDepthBtnUxp")?.addEventListener("click", async () => {
     const r = await BackendClient.post("/video/depth/install", {});
     if (r.ok) {
-      UIController.showToast(t("uxp.video.runtime.installing_depth_anything", "Installing Depth Anything V2..."), "info");
+      UIController.showToast(t("uxp.video.runtime.installing_depth_anything", "Installing Depth Anything V2…"), "info");
     } else {
       const error = r.error || t("common.unknown", "unknown");
       UIController.showToast(formatI18n("uxp.video.runtime.depth_install_failed", "Install failed: {error}", { error }), "error");
@@ -7403,7 +7403,7 @@ async function runDepthEffect() {
   UIController.setButtonLoading("runDepthBtnUxp", true);
   const r = await BackendClient.post(endpoint, payload);
   if (r.ok && r.data?.job_id) {
-    UIController.showProcessing(t("uxp.video.runtime.running_depth_effect", "Running depth effect..."));
+    UIController.showProcessing(t("uxp.video.runtime.running_depth_effect", "Running depth effect…"));
     try {
       const result = await JobPoller.poll(r.data.job_id);
       const output = result?.output_path?.split(/[/\\]/).pop() || t("uxp.video.runtime.done", "done");
@@ -7431,7 +7431,7 @@ async function runEmotionHighlights() {
   UIController.setButtonLoading("runEmotionBtnUxp", true);
   const r = await BackendClient.post("/video/emotion-highlights", { filepath: clipPath });
   if (r.ok && r.data?.job_id) {
-    UIController.showProcessing(t("uxp.video.runtime.analyzing_emotions", "Analyzing emotions..."));
+    UIController.showProcessing(t("uxp.video.runtime.analyzing_emotions", "Analyzing emotions…"));
     try {
       const result = await JobPoller.poll(r.data.job_id);
       const peaks = result?.peaks?.length ?? 0;
@@ -7462,7 +7462,7 @@ async function runBrollAnalysis() {
   UIController.setButtonLoading("runBrollPlanBtnUxp", true);
   const r = await BackendClient.post("/video/broll-plan", { filepath: clipPath });
   if (r.ok && r.data?.job_id) {
-    UIController.showProcessing(t("uxp.video.runtime.analyzing_broll_points", "Analyzing B-roll points..."));
+    UIController.showProcessing(t("uxp.video.runtime.analyzing_broll_points", "Analyzing B-roll points…"));
     try {
       const result = await JobPoller.poll(r.data.job_id);
       const windows = result?.windows?.length ?? 0;
@@ -7551,10 +7551,10 @@ async function executeChatActions(actions, filepath) {
   }
 
   UIController.showToast(
-    formatI18n("uxp.runtime.executing_actions", "Executing {count} action(s)...", { count: requests.length }),
+    formatI18n("uxp.runtime.executing_actions", "Executing {count} action(s)…", { count: requests.length }),
     "info",
   );
-  UIController.showProcessing(t("uxp.runtime.executing_chat_action", "Executing assistant action..."));
+  UIController.showProcessing(t("uxp.runtime.executing_chat_action", "Executing assistant action…"));
 
   try {
     for (const request of requests) {
@@ -7564,7 +7564,7 @@ async function executeChatActions(actions, filepath) {
           request.payload,
           (pct, msg) => {
             UIController.setProgress(pct);
-            UIController.setProcessingMsg(msg || t("uxp.runtime.executing_chat_action", "Executing assistant action..."));
+            UIController.setProcessingMsg(msg || t("uxp.runtime.executing_chat_action", "Executing assistant action…"));
           },
           resolve,
           reject,
@@ -8038,14 +8038,14 @@ async function loadJournalRecoveryUxp() {
 async function uxpLoadEngines() {
   const grid = document.getElementById("uxpEngineGrid");
   if (!grid) return;
-  setTextAndTitle("settingsEngineDefaultsValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_automatic_engine_routing_coverage", "Loading automatic engine routing coverage."));
-  setTextAndTitle("settingsEnginePinnedValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_pinned_engine_preferences", "Loading pinned engine preferences."));
-  setTextAndTitle("settingsEngineCoverageValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_engine_availability_title", "Loading engine availability."));
-  setSettingsStatus("settingsEngineStatus", t("uxp.settings.loading_engine_availability", "Loading engine availability..."), "working");
+  setTextAndTitle("settingsEngineDefaultsValue", t("uxp.settings.loading", "Loading…"), t("uxp.settings.loading_automatic_engine_routing_coverage", "Loading automatic engine routing coverage."));
+  setTextAndTitle("settingsEnginePinnedValue", t("uxp.settings.loading", "Loading…"), t("uxp.settings.loading_pinned_engine_preferences", "Loading pinned engine preferences."));
+  setTextAndTitle("settingsEngineCoverageValue", t("uxp.settings.loading", "Loading…"), t("uxp.settings.loading_engine_availability_title", "Loading engine availability."));
+  setSettingsStatus("settingsEngineStatus", t("uxp.settings.loading_engine_availability", "Loading engine availability…"), "working");
   grid.innerHTML = `
     <div class="oc-empty-state oc-empty-state-inline">
       <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.engine_routing", "Engine routing"))}</div>
-      <p>${UIController.escapeHtml(t("uxp.settings.loading_engines_preferences", "Loading available engines and saved preferences..."))}</p>
+      <p>${UIController.escapeHtml(t("uxp.settings.loading_engines_preferences", "Loading available engines and saved preferences…"))}</p>
     </div>`;
 
   const r = await BackendClient.get("/engines");
@@ -8264,15 +8264,15 @@ function migrationStatusLabel(status) {
 async function uxpLoadMigrationRisk() {
   const grid = document.getElementById("uxpMigrationRiskGrid");
   if (!grid) return;
-  setTextAndTitle("settingsMigrationDirectValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_direct_uxp_coverage", "Loading direct UXP host-action coverage."));
-  setTextAndTitle("settingsMigrationFallbackValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_cep_fallback_count", "Loading CEP fallback count."));
-  setTextAndTitle("settingsMigrationRiskValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_high_risk_migration_count", "Loading high-risk migration count."));
-  setTextAndTitle("settingsMigrationRouteValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_route_coverage", "Loading CEP and UXP route coverage."));
-  setSettingsStatus("settingsMigrationStatus", t("uxp.settings.loading_migration_risk_data", "Loading UXP migration risk data..."), "working");
+  setTextAndTitle("settingsMigrationDirectValue", t("uxp.settings.loading", "Loading…"), t("uxp.settings.loading_direct_uxp_coverage", "Loading direct UXP host-action coverage."));
+  setTextAndTitle("settingsMigrationFallbackValue", t("uxp.settings.loading", "Loading…"), t("uxp.settings.loading_cep_fallback_count", "Loading CEP fallback count."));
+  setTextAndTitle("settingsMigrationRiskValue", t("uxp.settings.loading", "Loading…"), t("uxp.settings.loading_high_risk_migration_count", "Loading high-risk migration count."));
+  setTextAndTitle("settingsMigrationRouteValue", t("uxp.settings.loading", "Loading…"), t("uxp.settings.loading_route_coverage", "Loading CEP and UXP route coverage."));
+  setSettingsStatus("settingsMigrationStatus", t("uxp.settings.loading_migration_risk_data", "Loading UXP migration risk data…"), "working");
   grid.innerHTML = `
     <div class="oc-empty-state oc-empty-state-inline">
       <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.migration_risk", "Migration risk"))}</div>
-      <p>${UIController.escapeHtml(t("uxp.settings.loading_host_action_coverage", "Loading CEP and UXP host-action coverage..."))}</p>
+      <p>${UIController.escapeHtml(t("uxp.settings.loading_host_action_coverage", "Loading CEP and UXP host-action coverage…"))}</p>
     </div>`;
 
   try {
@@ -8570,7 +8570,7 @@ function bindPluginMarketplaceInstallActions(marketplace) {
       const plugin = byId.get(pluginId);
       if (!plugin?.authenticated) return;
       button.disabled = true;
-      setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.plugin_install_starting", "Starting authenticated plugin installation..."), "working");
+      setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.plugin_install_starting", "Starting authenticated plugin installation…"), "working");
       const response = await BackendClient.post("/plugins/marketplace/install", {
         plugin_id: pluginId,
         approved_capabilities: Array.isArray(plugin.capabilities) ? plugin.capabilities : [],
@@ -8609,7 +8609,7 @@ function bindPluginWorkerActions(actions) {
       const name = button.getAttribute("data-plugin-name");
       if (!name) return;
       button.disabled = true;
-      setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.plugin_worker_restarting", "Restarting plugin worker..."), "working");
+      setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.plugin_worker_restarting", "Restarting plugin worker…"), "working");
       const response = await BackendClient.post(route, { name });
       if (!response.ok) {
         setSettingsStatus("settingsPluginTrustStatus", response.error || t("uxp.settings.plugin_worker_restart_failed", "Plugin worker could not be restarted."), "error");
@@ -8682,14 +8682,14 @@ function renderPluginTrustDashboard(data) {
 async function uxpLoadPluginTrust() {
   const grid = document.getElementById("uxpPluginTrustGrid");
   if (!grid) return;
-  setTextAndTitle("settingsPluginLoadedValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_plugin_count", "Loading plugin count."));
-  setTextAndTitle("settingsPluginFailedValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_plugin_failures", "Loading failed and unsigned plugin count."));
-  setTextAndTitle("settingsPluginQuarantineValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_plugin_quarantine", "Loading plugin quarantine count."));
-  setTextAndTitle("settingsPluginMarketplaceValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_plugin_marketplace", "Loading cached marketplace count."));
-  setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.loading_plugin_trust", "Loading plugin trust dashboard..."), "working");
+  setTextAndTitle("settingsPluginLoadedValue", t("uxp.settings.loading", "Loading…"), t("uxp.settings.loading_plugin_count", "Loading plugin count."));
+  setTextAndTitle("settingsPluginFailedValue", t("uxp.settings.loading", "Loading…"), t("uxp.settings.loading_plugin_failures", "Loading failed and unsigned plugin count."));
+  setTextAndTitle("settingsPluginQuarantineValue", t("uxp.settings.loading", "Loading…"), t("uxp.settings.loading_plugin_quarantine", "Loading plugin quarantine count."));
+  setTextAndTitle("settingsPluginMarketplaceValue", t("uxp.settings.loading", "Loading…"), t("uxp.settings.loading_plugin_marketplace", "Loading cached marketplace count."));
+  setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.loading_plugin_trust", "Loading plugin trust dashboard…"), "working");
   grid.innerHTML = `<div class="oc-empty-state oc-empty-state-inline">
     <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.plugin_trust", "Plugin trust"))}</div>
-    <p>${UIController.escapeHtml(t("uxp.settings.loading_plugin_trust_hint", "Checking installed plugins, locks, quarantine, and cached marketplace entries..."))}</p>
+    <p>${UIController.escapeHtml(t("uxp.settings.loading_plugin_trust_hint", "Checking installed plugins, locks, quarantine, and cached marketplace entries…"))}</p>
   </div>`;
 
   const response = await BackendClient.get("/plugins/trust");
@@ -8738,7 +8738,7 @@ async function runUpscaleUxp() {
   const model = document.getElementById("upscaleModelUxp")?.value ?? "realesrgan-x4plus";
 
   UIController.setButtonLoading("runUpscaleBtnUxp", true);
-  UIController.showProcessing(t("uxp.video.runtime.upscaling_video", "Upscaling video..."));
+  UIController.showProcessing(t("uxp.video.runtime.upscaling_video", "Upscaling video…"));
   try {
     const r = await BackendClient.post("/video/ai/upscale", { filepath: clipPath, scale, model });
     if (r.ok && r.data?.job_id) {
@@ -8767,7 +8767,7 @@ async function runSceneDetectUxp() {
   const threshold = parseFloat(document.getElementById("sceneThresholdUxp")?.value ?? "0.3");
 
   UIController.setButtonLoading("runSceneDetectBtnUxp", true);
-  UIController.showProcessing(t("uxp.video.runtime.detecting_scenes", "Detecting scenes..."));
+  UIController.showProcessing(t("uxp.video.runtime.detecting_scenes", "Detecting scenes…"));
   try {
     const r = await BackendClient.post("/video/scenes", { filepath: clipPath, method, threshold });
     if (r.ok && r.data?.job_id) {
@@ -8796,7 +8796,7 @@ async function runStyleTransferUxp() {
   const intensity = (parseInt(document.getElementById("styleIntensityUxp")?.value ?? "100", 10)) / 100;
 
   UIController.setButtonLoading("runStyleTransferBtnUxp", true);
-  UIController.showProcessing(t("uxp.video.runtime.applying_style_transfer", "Applying style transfer..."));
+  UIController.showProcessing(t("uxp.video.runtime.applying_style_transfer", "Applying style transfer…"));
   try {
     const r = await BackendClient.post("/video/style/apply", { filepath: clipPath, style, intensity });
     if (r.ok && r.data?.job_id) {
@@ -9057,7 +9057,7 @@ async function renderApprovedShortsUxp() {
   payload.approved_candidate_ids = ids;
 
   UIController.setButtonLoading("renderShortsApprovedBtnUxp", true);
-  UIController.showProcessing(t("uxp.video.runtime.rendering_approved_shorts", "Rendering approved short-form clips..."));
+  UIController.showProcessing(t("uxp.video.runtime.rendering_approved_shorts", "Rendering approved short-form clips…"));
   try {
     const r = await BackendClient.post("/video/shorts-pipeline", payload);
     if (r.ok && r.data?.job_id) {
@@ -9083,7 +9083,7 @@ async function runShortsPipelineUxp() {
   if (!payload.filepath) { showSelectClipWarning(); return; }
 
   UIController.setButtonLoading("runShortsPipelineBtnUxp", true);
-  UIController.showProcessing(t("uxp.video.runtime.generating_short_form_clips", "Generating short-form clips..."));
+  UIController.showProcessing(t("uxp.video.runtime.generating_short_form_clips", "Generating short-form clips…"));
   try {
     const r = await BackendClient.post("/video/shorts-pipeline", payload);
     if (r.ok && r.data?.job_id) {
@@ -9330,7 +9330,7 @@ function initAgentTab() {
         return;
       }
       planBtn.disabled = true;
-      setStatus("agentChatStatus", t("uxp.agent.runtime.building_plan", "Building plan..."));
+      setStatus("agentChatStatus", t("uxp.agent.runtime.building_plan", "Building plan…"));
       try {
         const resp = await BackendClient.post("/agent/chat/plan", { intent });
         if (!resp || resp.error || resp.ok === false) {
@@ -9372,7 +9372,7 @@ function initAgentTab() {
         return;
       }
       reviewBtn.disabled = true;
-      setStatus("agentChatStatus", t("uxp.agent.runtime.running_self_review", "Running self-review..."));
+      setStatus("agentChatStatus", t("uxp.agent.runtime.running_self_review", "Running self-review…"));
       try {
         const resp = await BackendClient.post("/agent/chat/review", {
           session_id: activeSessionId,
@@ -9426,8 +9426,8 @@ function initAgentTab() {
     setStatus(
       "enhanceStatus",
       dryRun
-        ? t("uxp.agent.runtime.building_plan", "Building plan...")
-        : t("uxp.agent.runtime.running_enhance", "Running Enhance...")
+        ? t("uxp.agent.runtime.building_plan", "Building plan…")
+        : t("uxp.agent.runtime.running_enhance", "Running Enhance…")
     );
     try {
       const endpoint = dryRun ? "/enhance/auto/dry-run" : "/enhance/auto";
@@ -9479,8 +9479,8 @@ function initAgentTab() {
     setStatus(
       "variantsStatus",
       dryRun
-        ? t("uxp.agent.runtime.planning_variants", "Planning variants...")
-        : t("uxp.agent.runtime.rendering_variants", "Rendering variants...")
+        ? t("uxp.agent.runtime.planning_variants", "Planning variants…")
+        : t("uxp.agent.runtime.rendering_variants", "Rendering variants…")
     );
     try {
       const endpoint = dryRun ? "/shorts/variants/dry-run" : "/shorts/variants";
@@ -9702,7 +9702,7 @@ function initAgentTab() {
 
   async function sequenceIndexJumpToRow(row) {
     const seconds = Number(row?.start_s ?? 0);
-    setStatus("sequenceIndexStatus", t("uxp.agent.runtime.index_jumping", "Moving the playhead..."));
+    setStatus("sequenceIndexStatus", t("uxp.agent.runtime.index_jumping", "Moving the playhead…"));
     try {
       const result = await PProBridge.setSequencePlayhead({ seconds });
       if (result?.ok) {
@@ -9860,7 +9860,7 @@ function initAgentTab() {
     if (btn) btn.disabled = true;
     sequenceIndexFilterController.invalidate();
     sequenceIndexSetBusy(true);
-    setStatus("sequenceIndexStatus", t("uxp.agent.runtime.reading_active_sequence", "Reading active sequence..."));
+    setStatus("sequenceIndexStatus", t("uxp.agent.runtime.reading_active_sequence", "Reading active sequence…"));
     try {
       // getSequenceInfo() only reports track *counts*; the index needs one
       // entry per clip, so walk the timeline explicitly.
@@ -9912,7 +9912,7 @@ function initAgentTab() {
     const btn = $("sequenceIndexExportBtn");
     if (!sequenceIndexState.built) return;
     if (btn) btn.disabled = true;
-    setStatus("sequenceIndexStatus", t("uxp.agent.runtime.index_exporting", "Writing CSV..."));
+    setStatus("sequenceIndexStatus", t("uxp.agent.runtime.index_exporting", "Writing CSV…"));
     try {
       const payload = sequenceIndexFilterPayload();
       payload.columns = sequenceIndexActiveColumns().map((c) => c.key);
@@ -10011,17 +10011,17 @@ function initCaptionDisplaySettingsCard() {
 
   let cachedSchema = null;
 
-  const formatMessage = (key, fallback, params = {}) => {
-    let message = t(key, fallback);
-    for (const [name, value] of Object.entries(params)) {
-      message = message.replace(new RegExp(`\\{${name}\\}`, "g"), String(value));
-    }
-    return message;
+  // One translatable sentence with a {date} slot: the notice used to be two
+  // keys concatenated around a bare span, which no translator could reorder.
+  const renderComplianceNotice = (date) => {
+    const node = $("fccComplianceNoticeText");
+    if (node) node.textContent = formatI18n("uxp.fcc.compliance_notice", "Per FCC 47 CFR section 79.103 (effective {date}), users must be able to readily access caption display controls. Pick a preset or override individual tokens.", { date: date || "2026-08-17" });
   };
+  renderComplianceNotice();
 
   const setStatus = (key, fallback, params = {}) => {
     const el = $("capDispStatus");
-    if (el) el.textContent = formatMessage(key, fallback, params);
+    if (el) el.textContent = formatI18n(key, fallback, params);
   };
 
   const fontOptionLabel = (opt) => {
@@ -10101,7 +10101,7 @@ function initCaptionDisplaySettingsCard() {
   async function refreshPreview() {
     const btn = $("capDispPreviewBtn");
     if (btn) btn.disabled = true;
-    setStatus("uxp.fcc.rendering_preview", "Rendering preview...");
+    setStatus("uxp.fcc.rendering_preview", "Rendering preview…");
     try {
       const resp = await BackendClient.post("/captions/display-settings/preview", {
         settings: readSettings(),
@@ -10146,10 +10146,7 @@ function initCaptionDisplaySettingsCard() {
       }
       populateSelects(data);
       // Surface the compliance-date string in the hint if the backend supplies one.
-      const complianceDate = document.getElementById("fccComplianceDate");
-      if (complianceDate && data.compliance_date) {
-        complianceDate.textContent = data.compliance_date;
-      }
+      if (data.compliance_date) renderComplianceNotice(data.compliance_date);
       setStatus("uxp.fcc.defaults_loaded", "Defaults loaded. Adjust tokens then Preview.");
     } catch (err) {
       setStatus("uxp.fcc.token_schema_failed", "Token-schema fetch failed: {error}", { error: err?.message || err });
