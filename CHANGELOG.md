@@ -18,6 +18,37 @@ record also lives in the git commit messages.
   job record is marked error immediately. It used to sit in `running` until
   the two-hour stuck-job sweeper noticed.
 
+### Fixed - UXP Apply actually runs the matched command
+
+- Natural-language parse returns `{route, params, confidence}`. Apply only
+  knew how to send cuts and markers to Premiere, so the common match (silence
+  removal, fillers, transcribe) showed the JSON and then a dead-end toast.
+  Apply now posts the matched route on the current clip, the same way CEP
+  already did after the confirm dialog.
+
+### Fixed - Light theme no longer keeps dark chips, menus, and waveforms
+
+- The CEP light-theme section had an unprefixed dark chrome block sitting
+  inside it, so stage-card icons, feature-gated badges, progress tracks,
+  wizard checkbox hover, footage-search selection, and dropdown shadows
+  stayed dark-on-light. Those rules are now scoped or given light
+  counterparts, and the waveform canvas reads theme tokens.
+- Studio workbench clips, sequence chips, and result thumbs now flip with
+  the light timeline in both panels. The workbench action focus ring is a
+  real outline instead of a 10% alpha glow.
+- UXP toasts, onboarding, idle status pills, result paths, and the
+  workspace guide kicker no longer keep near-white ink on light surfaces.
+  Number keys 1-8 switch CEP tabs from the page, not only when the body
+  itself is focused.
+
+### Fixed - User-facing copy no longer names internal IDs
+
+- Apply, settings, and caption strings no longer tell people to regenerate
+  F260, call ocAddNativeCaptionTrack, send `/video/shorts-pipeline`, or
+  type confirm_token. Plugin uninstall still asks for the plugin name;
+  migration failures ask for a reinstall; captions talk about Premiere
+  tracks. Pointillism and Spanish Pestañas are spelled correctly.
+
 ### Fixed - Third-party XML imports refuse DTDs
 
 - Final Draft `.fdx` and GPX tracks are size-capped and rejected if they

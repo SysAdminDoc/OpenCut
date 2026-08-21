@@ -32,26 +32,6 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
 
 ### P2
 
-- [ ] P2 — F369 — CEP light theme gaps rooted in a mislabeled dark block
-  Category: visual
-  Where: `extension/com.opencut.panel/client/style.css:17537-17915` (structural cause), plus winning hits at :17765-17766, :18282-18302, :18594, :18599, :18733-18740, :18814; `extension/com.opencut.panel/client/command-center.css:574, 639, 669, 1190, 1553, 1597`; `extension/com.opencut.panel/client/main.js:12213, 12222`
-  Problem: An unprefixed dark-theme block (~30 rules, 49 color declarations) begins at style.css:17537 *inside* the section labeled `LIGHT THEME (html.theme-light)` (banner at :16988), so both themes receive dark styling and only accidental earlier-specificity light rules neutralize most of it. The two that escape: `.quick-action-icon`/`.workspace-stage-card-icon` ink `#bcd4ff` on white (~1.6:1, used 3x in index.html) and its `rgba(119,167,255,0.12)` background. Also winning in light theme: `.oc-feature-gated::after` badges (`#ffbd63` on white ~1.9:1, applied by feature-state.js), the progress track (`rgba(255,255,255,0.075)` — invisible on light) and fill (dark-accent gradient `#77a7ff→#4fd6a4`), wizard checkbox-row hover/focus (white-wash hover, 12%-alpha focus ring), dropdown/context-menu/recent-clips black shadows (command-center.css, `--cc-shadow-float` exists and is unused), `.oc-status-line` white wash, and the waveform canvas painting `rgba(0,0,0,0.3)` + fixed HSL bars regardless of theme (main.js:12213/12222).
-  Evidence: Cascade-resolved sweep (winning declarations only); the structural mislabel at :17537 is the root cause the individual hits fall out of. Same golden-pinning caveat as F368.
-  Fix: First move/prefix the :17537-17915 block correctly (it belongs above the light section or under explicit dark scoping) so the section banner stops lying; then tokenize the listed survivors (progress track/fill and feature-gated badges need real light values, shadows use `--cc-shadow-float`); have `drawWaveform` read its two colors from CSS custom properties via getComputedStyle like cep-theme.js already does for other canvas work.
-  Acceptance: Light-theme CEP shows readable stage-card icons, visible progress track with the `#466fd3`-family fill, readable feature-gated badges, soft light shadows on dropdown/context menus, and a theme-aware waveform; the LIGHT THEME section contains only `html.theme-light` rules.
-  Confidence: Verified
-  Effort: L
-
-- [ ] P2 — F370 — Studio workbench clips don't flip with their timeline in light theme
-  Category: visual
-  Where: `extension/com.opencut.panel/client/studio-workbench-v2.css` and the byte-identical `extension/com.opencut.uxp/studio-workbench-v2.css` — :841-852 (`.studio-clip`), :1586-1599 (`.studio-sequence-clip`), :1676-1677 (`.studio-result-thumb`), :1475/:1485 (`.studio-subject`), :1494 (`.studio-before-after`), :744-749 (`.studio-action` focus ring), :887 (dead `.studio-wave--slate`)
-  Problem: `html.theme-light .studio-timeline` flips the track surface to `#e9eef5` (:799-800) and `.studio-sequence-grid` likewise (:1582), but the clips sitting on them keep dark-navy chips (`#172a3c` fills, `#8fb3ff`/`#9ebcff` ink, dark repeating gradients) — half-flipped components in both panels. `.studio-result-thumb` and `.studio-subject` blocks are dark-only; `.studio-before-after` is a hard `#fff` that blows out in dark theme. Separately, `.studio-action`'s focus indicator is `outline: none` replaced by a 3px ring of `--studio-accent-soft`, which is 10-12% alpha in both themes — effectively invisible focus for keyboard users on those controls. `.studio-wave--slate` (:887) matches nothing in HTML or JS.
-  Evidence: Sweep resolved parent-flips-child-doesn't asymmetry per selector; media mocks deliberately excluded (caption-over-video previews at :1318-1324 etc. are intentionally dark). The file ships twice verbatim, so `tests/test_shared_panel_assets.py` treats it as shared — fix once, byte-copy applies to both.
-  Fix: Add `html.theme-light` counterparts for `.studio-clip`/`.studio-sequence-clip`/`.studio-result-thumb`/`.studio-subject` using the existing light studio palette (the `#e9eef5` family already chosen at :799); give `.studio-before-after` a token or dark variant; raise `--studio-accent-soft` ring alpha to a visible level or use `var(--border-focus)`; delete the dead :887 rule. Keep the two copies byte-identical so the shared-asset gate passes.
-  Acceptance: Light-theme workbench shows light clips on the light timeline in both panels; `.studio-action` focus ring is visible in both themes; `.studio-wave--slate` is gone; `tests/test_shared_panel_assets.py` still passes.
-  Confidence: Verified
-  Effort: M
-
 - [ ] P2 — F371 — Shipped HTML fallback strings have drifted from the locales
   Category: ux
   Where: `extension/com.opencut.panel/client/index.html` (57 fallback strings no longer matching `client/locales/en.json`), `extension/com.opencut.uxp/index.html` (32 vs `locales/en.json`)
@@ -62,15 +42,23 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
   Confidence: Verified
   Effort: M
 
-- [ ] P2 — F372 — Internal identifiers leak into user-facing strings
-  Category: ux
-  Where: `extension/com.opencut.uxp/locales/en.json:387-388` ("Regenerate the F260 dashboard artifact"), six strings naming `ocAddNativeCaptionTrack` (uxp:914, 1001, 1255, 1314, 1316, 1394), `en.json:622`/`uxp:1615` (exposes `/video/shorts-pipeline`), `en.json:1503`/`uxp:358` and `en.json:1536`/`uxp:380` (leak `confirm_name`/`confirm_token` API params), `uxp:772` ("Check result JSON."), `en.json:1484`/`uxp:345` (worker-isolation design-doc prose), bare dead-ends `en.json:651`+`uxp:393` ("HTTP {status}"), nine bare "Error: {error}" keys (en.json:261, 1109, 1888, 1974, 2047; uxp:40, 1591, 1597, 1602), five "Unknown error" strings (en.json:237, 1331, 2166, 2818; uxp:1141)
-  Problem: Users are told to regenerate an internal F-numbered build artifact, validate files "for the CEP ocAddNativeCaptionTrack bridge", or check a JSON payload they cannot see. These read as debugger notes, give no action a user can take, and leak internal route/parameter names into the UI. The bare "Error: {error}"/"HTTP {status}"/"Unknown error" family gives no recovery path where the panel already owns good recovery copy (`cleanUiMessage` and `ERROR_CODE_ACTIONS` in main.js:4390-4470 demonstrate the house style).
-  Evidence: Every key spot-checkable by exact reference; F260 strings and confirm_token leak re-verified verbatim this pass via json load.
-  Fix: Rewrite each to state what happened and the user's next step in the existing calm style (e.g. migration dashboard: "Migration data isn't available in this build. Reinstall or update OpenCut."); route generic failures through `cleanUiMessage`-equivalent phrasing; keep internal detail in logs, not labels. Do not touch the two panels' log lines — only user-visible strings.
-  Acceptance: Grep for `F260`, `ocAddNativeCaptionTrack`, `confirm_token`, `shorts-pipeline` in both en.json files returns zero user-visible hits; the rewritten strings pass the human-voice rules; es.json gets the same keys re-translated.
+- [ ] P2 — F378 — CEP collapsible headers are mouse-only
+  Category: a11y
+  Where: `extension/com.opencut.panel/client/main.js` around the collapsible-header click wiring (~13378). UXP already does this in `uxp-ui-controller.js:363-386`.
+  Problem: CEP section headers toggle on click only. They have no `role="button"`, `tabindex`, `aria-expanded`, or Enter/Space handling, so keyboard and screen-reader users cannot open Settings subsections the UXP panel already exposes.
+  Why this pass skipped it: CEP `main.js` sits on a 18815-line budget (18800 after this audit). The UXP controller already owns the correct pattern; copying it inline would blow the budget. Extract a shared helper or delete dead CEP lines first.
+  Acceptance: Every collapsible header is reachable by Tab, announces expanded/collapsed, and toggles on Enter and Space, matching UXP.
   Confidence: Verified
-  Effort: M
+  Effort: S
+
+- [ ] P2 — F379 — Restart Backend and Clear Whisper cache have no confirm
+  Category: ux
+  Where: `restartBackend()` in `extension/com.opencut.panel/client/main.js:8855`; Whisper cache clear in the same settings card. UXP already uses panel-local confirm for Clear Index.
+  Problem: Restart Backend immediately POSTs `/shutdown`. There is no `showPanelConfirm`, so a misclick drops every in-flight job. Clear Whisper cache is similarly one-click destructive.
+  Why this pass skipped it: wrapping `restartBackend` in `showPanelConfirm` is ~8 lines and the CEP budget cannot absorb it without an extraction. Add keys next to `settings.restart_backend` in CEP `en.json` when it lands.
+  Acceptance: Both actions ask for confirmation with a calm title, what will stop, and a labelled confirm button. Esc and the overlay dismiss without restarting.
+  Confidence: Verified
+  Effort: S
 
 ### P3
 
@@ -84,12 +72,26 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
   Confidence: Likely
   Effort: M
 
-- [ ] P3 — F374 — Copy mechanics: typos, mixed ellipses, split-sentence i18n
+- [ ] P3 — F374 — Remaining copy mechanics: ellipses, FCC split, placeholders
   Category: ux
-  Where: `en.json:2523` + `uxp:1527` ("Pointilism" → "Pointillism"), `uxp/locales/es.json:15` ("Pestanas" → "Pestañas"), 26 ASCII "..." strings in CEP en.json where the house style is "…" (collisions listed: 1552, 1633, 2843 vs 831, 1380, 1601; UXP mirrors the inverse with "…" leaking at uxp:135, 465), `en.json:2355-2356` ("->" where `en.json:961` uses "→"), `en.json:1329` trailing space in `progress.step_prefix`, `en.json:2034` the locale's only curly apostrophe, `uxp:1071-1072` FCC sentence split across two concatenated keys (untranslatable, unpaired paren; CEP's `en.json:284` is one sentence), "-- Select a clip --" placeholders (`en.json:1059`, `uxp:1665`) and "GPU: --"/"Jobs: --" (`en.json:1771, 1774`) vs "N/A" (`en.json:409`), status phrasing "faster-whisper is not installed until requested." (`uxp:1835-1836, 1846`)
-  Problem: Individually trivial, collectively the difference between finished and near-finished copy. The FCC split is also an i18n correctness bug — no translator can reorder around a hardcoded concatenation point.
-  Evidence: Sweep with exact keys; Pointilism and es.json hits re-verified this pass.
-  Fix: One copy pass over the listed keys: fix the two spellings, normalize each panel to its own ellipsis convention (or both to "…"), replace "->" with "→", strip the trailing space (the step prefix already gets its spacing from the join), pick straight apostrophes everywhere, merge the FCC string into one key with a {date} placeholder like CEP's, replace "--" placeholders with the select's proper placeholder pattern and "N/A", reword the install-status lines to "Not installed — installs on first use."
-  Acceptance: All listed keys updated in en.json (both panels) + es.json; no "..."/"…" collision remains within either panel's locale; the FCC notice is a single translatable string in UXP.
+  Where: Pointilism and Pestanas and `->` were fixed 2026-08-21. Still open: 26 ASCII "..." strings in CEP en.json where the house style is "…" (collisions listed: 1552, 1633, 2843 vs 831, 1380, 1601; UXP mirrors the inverse with "…" leaking at uxp:135, 465), `en.json:1329` trailing space in `progress.step_prefix`, `en.json:2034` the locale's only curly apostrophe, `uxp:1071-1072` FCC sentence split across two concatenated keys (untranslatable, unpaired paren; CEP's `en.json:284` is one sentence), "-- Select a clip --" placeholders (`en.json:1059`, `uxp:1665`) and "GPU: --"/"Jobs: --" (`en.json:1771, 1774`) vs "N/A" (`en.json:409`), status phrasing "faster-whisper is not installed until requested." (`uxp:1835-1836, 1846`)
+  Problem: The FCC split is an i18n correctness bug — no translator can reorder around a hardcoded concatenation point. The rest is unfinished copy.
+  Fix: Normalize each panel to its own ellipsis convention (or both to "…"), strip the trailing space, pick straight apostrophes everywhere, merge the FCC string into one key with a {date} placeholder like CEP's, replace "--" placeholders with "N/A", reword the install-status lines to "Not installed. Installs on first use."
+  Acceptance: No "..."/"…" collision remains within either panel's locale; the FCC notice is a single translatable string in UXP.
   Confidence: Likely
   Effort: S
+
+- [ ] P3 — F380 — Generic "Error: {error}" / "Unknown error" copy still has no recovery path
+  Category: ux
+  Where: nine bare "Error: {error}" keys (en.json:261, 1109, 1888, 1974, 2047; uxp:40, 1591, 1597, 1602), five "Unknown error" strings (en.json:237, 1331, 2166, 2818; uxp:1141). The named-ID leaks from F372 are done.
+  Problem: These still dump the raw error with no next step, unlike `cleanUiMessage` / `ERROR_CODE_ACTIONS` in CEP `main.js`.
+  Fix: Route them through the existing recovery phrasing. Keep internal detail in logs.
+  Acceptance: Grep for `^Error: \{error\}$` and `Unknown error` in both en.json files returns zero user-visible hits, or each remaining hit names a recovery action.
+  Confidence: Verified
+  Effort: S
+
+- [ ] P3 — F381 — Areas this audit did not exercise
+  Category: quality
+  Where: live Premiere CEP/UXP host, WPF installer, Bolt WebView scaffold, MCP extended tool catalogue, `npm run test:rendered` screenshot goldens, CEP disabled Timeline/Deliverables/Rename `title` why-disabled copy
+  Why: No Premiere host on this machine; installer and Bolt need their own runtime; the rendered suite is a known 2-4% geometry flake (CLAUDE.md 2026-08-20) and is not theme proof. Disabled-button titles need CEP `main.js` budget the same way F378/F379 do.
+  Acceptance: Each surface has a named follow-up with a repro that does not require guessing.
