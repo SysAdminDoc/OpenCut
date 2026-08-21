@@ -1010,7 +1010,7 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
             await expect(
               page
                 .locator(
-                  "#contentTitle:visible, .content-header h1:visible, .studio-page-heading h2:visible",
+                  "#contentTitle:visible, .content-header h1:visible",
                 )
                 .first(),
             ).toBeVisible();
@@ -1084,6 +1084,39 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
   });
 }
 
+for (const [surfaceName, surface] of Object.entries(SURFACES)) {
+  test(`${surfaceName} gives live workspace state priority over decorative samples`, async ({
+    page,
+  }) => {
+    const { pageErrors } = await openSurface(page, surfaceName, "dark", 1200, {
+      height: 800,
+    });
+
+    await expect(page.locator(".studio-workbench, .studio-jobbar")).toHaveCount(0);
+    await expect(page.locator(surface.activePanelSelector)).not.toContainText(
+      /A001_C001\.mov|NVIDIA RTX detected|184 GB available|OpenCut 1\.48\.0/,
+    );
+
+    if (surfaceName === "cep") {
+      await expect(page.locator(".content-header-copy")).toBeVisible();
+      await expect(page.locator("#contentTitle")).toBeVisible();
+      await expect(page.locator(".brand-meta")).toHaveText("Editorial Suite");
+      await expect(page.locator("#jobHistoryToggle")).toHaveAccessibleName(
+        /^Activity\s*\(0\)$/,
+      );
+      await expect(page.locator("#outputBrowserToggle")).toHaveAccessibleName(
+        /^Outputs\s*\(0\)$/,
+      );
+    } else {
+      await expect(page.locator("#workspaceOverviewTitle")).toBeVisible();
+      await expect(page.locator("#uxpHeaderVersion")).toBeVisible();
+      await expect(page.locator("#uxpHeaderVersion")).toHaveText(/^v\d+\.\d+\.\d+$/);
+    }
+
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 // F383 — the committed goldens are dark-theme captures, so three light-theme
 // regressions shipped in one day without turning the suite red. These probe
 // the resolved colours instead: an unprefixed dark rule winning in light
@@ -1093,14 +1126,14 @@ const LIGHT_THEME_PROBES = {
     // Icon ink that F369 found at ~1.6:1 on white.
     graphics: [".quick-action-icon", ".workspace-stage-card-icon"],
     // Text that has to stay readable on whatever paints behind it.
-    text: [".studio-clip", ".studio-source-state", ".card-desc"],
+    text: [".content-subtitle", ".quick-action-meta", ".card-desc"],
     // Surfaces that must repaint, not stay dark under a light parent.
-    surfaces: [".studio-timeline", ".studio-clip", ".progress-track"],
+    surfaces: [".content-header", ".workspace-stage", ".progress-track"],
   },
   uxp: {
     graphics: [".oc-logo-mark path"],
-    text: [".studio-clip", ".studio-source-state", ".oc-hint"],
-    surfaces: [".studio-timeline", ".studio-clip", ".oc-progress-track"],
+    text: [".oc-workspace-subtitle", ".oc-workspace-meta-label", ".oc-hint"],
+    surfaces: [".oc-workspace-overview", ".oc-card", ".oc-progress-track"],
   },
 };
 
@@ -1939,7 +1972,7 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   expect(cepGeometry.cardColumns).toBeGreaterThan(200);
   expect(cepGeometry.bodyFontSize).toBeGreaterThanOrEqual(14);
   expect(cepGeometry.brandMetaDisplay).toBe("block");
-  expect(cepGeometry.kickerDisplay).toBe("none");
+  expect(cepGeometry.kickerDisplay).toBe("flex");
   expect(cepGeometry.cardShadow).toBe("none");
   expect(cepGeometry.cardRadius).toBe("0px");
   expect(cepGeometry.statusRadius).toBe("0px");
@@ -1989,12 +2022,12 @@ test("wide command-center shells expose editorial rails and settings grids", asy
         .map((title) => title.textContent?.trim()),
     };
   });
-  expect(uxpGeometry.railWidth).toBeGreaterThanOrEqual(164);
-  expect(uxpGeometry.railWidth).toBeLessThanOrEqual(172);
+  expect(uxpGeometry.railWidth).toBe(176);
   expect(uxpGeometry.tabDirection).toBe("column");
   expect(uxpGeometry.headerHeight).toBeGreaterThanOrEqual(70);
   expect(uxpGeometry.headerHeight).toBeLessThanOrEqual(76);
-  expect(uxpGeometry.overviewHeight).toBeLessThanOrEqual(90);
+  expect(uxpGeometry.overviewHeight).toBeGreaterThanOrEqual(90);
+  expect(uxpGeometry.overviewHeight).toBeLessThanOrEqual(100);
   expect(uxpGeometry.connectionRadius).toBe("0px");
   expect(uxpGeometry.connectionBackground).toBe("rgba(0, 0, 0, 0)");
   expect(uxpGeometry.settingsColumns).toBeGreaterThan(170);
@@ -2007,8 +2040,8 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   expect(uxpGeometry.statusPillRadius).toBe("0px");
   expect(uxpGeometry.statusPillBackground).toBe("rgba(0, 0, 0, 0)");
   expect(uxpGeometry.metaBackground).toBe("rgba(0, 0, 0, 0)");
-  expect(uxpGeometry.metaItemBackground).toBe("rgba(0, 0, 0, 0)");
-  expect(uxpGeometry.metaItemBorderTop).toBe("0px");
+  expect(uxpGeometry.metaItemBackground).not.toBe("rgba(0, 0, 0, 0)");
+  expect(uxpGeometry.metaItemBorderTop).toBe("1px");
   expect(uxpGeometry.commandBarInHeader).toBe(true);
   expect(uxpGeometry.guideDisplay).toBe("none");
   expect(uxpGeometry.groupTitles).toEqual(["Workspace"]);
@@ -2810,8 +2843,9 @@ for (const surfaceName of ["cep", "uxp"]) {
     await checkbox.check();
     await expect(button).toBeEnabled();
     await button.click();
-    await expect.poll(() => capturedRequests.length).toBe(1);
-    expect(capturedRequests[0]).toEqual({
+    await expect.poll(() => capturedRequests.filter((request) => request.plugin_id).length).toBe(1);
+    const installRequest = capturedRequests.find((request) => request.plugin_id);
+    expect(installRequest).toEqual({
       plugin_id: "signed-captions",
       approved_capabilities: ["http.routes", "host.network"],
       approve_publisher_fingerprint: "b".repeat(64),
@@ -2897,8 +2931,9 @@ for (const surfaceName of ["cep", "uxp"]) {
     await expect(row).toContainText("isolates crashes so one plugin cannot take the others down");
     await expect(button).toBeVisible();
     await button.click();
-    await expect.poll(() => capturedRequests.length).toBe(1);
-    expect(capturedRequests[0]).toEqual({
+    await expect.poll(() => capturedRequests.filter((request) => request.worker_restart).length).toBe(1);
+    const restartRequest = capturedRequests.find((request) => request.worker_restart);
+    expect(restartRequest).toEqual({
       worker_restart: { name: "isolated-captions" },
     });
     expect(pageErrors).toEqual([]);
