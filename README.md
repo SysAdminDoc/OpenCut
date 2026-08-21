@@ -1,6 +1,6 @@
 # OpenCut for Premiere Pro
 
-![Version](https://img.shields.io/badge/version-1.51.0-blue)
+![Version](https://img.shields.io/badge/version-1.52.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
@@ -9,7 +9,7 @@
 ![Tests](https://img.shields.io/badge/Tests-14400+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
-> reflects **shipped** routes only — each route is tagged
+> reflects **shipped** routes only. Each route is tagged
 > `implemented` / `dependency-gated` / `stub`, and strategic 501 stubs are
 > excluded from the advertised count. Run
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
@@ -133,7 +133,7 @@ After the installer finishes, you are ready to use OpenCut -- see **Launch** bel
 
 If you prefer manual control or are on macOS/Linux, follow these steps:
 
-1. **Install a dated post-fix git-master snapshot** of FFmpeg and make sure it is on your system PATH. OpenCut blocks older and unparseable builds before media processing because 8.1.2 is affected by CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, and CVE-2026-66041. No tagged release currently clears those: 8.1.2 closed the 8.1 line, 8.1.3 was never published, and the 9.0 series branched on 2026-06-26 — before those fixes landed on master — so a 9.0.x build is refused until someone shows the fixes were backported onto that branch. A higher version number on its own is not evidence:
+1. **Install a dated post-fix git-master snapshot** of FFmpeg and make sure it is on your system PATH. OpenCut blocks older and unparseable builds before media processing because 8.1.2 is affected by CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, and CVE-2026-66041. No tagged release currently clears those: 8.1.2 closed the 8.1 line, 8.1.3 was never published, and the 9.0 series branched on 2026-06-26 before those fixes landed on master. A 9.0.x build is refused until someone shows the fixes were backported onto that branch. A higher version number on its own is not evidence:
    - Windows: download the `ffmpeg-git-full` snapshot from https://www.gyan.dev/ffmpeg/builds/ (the bundled build is `2026-08-03-git-01a25f74cc-full_build-www.gyan.dev`, source commit `01a25f74cc446a683318bab13dfd98a467082ef7`) and add its `bin` folder to your PATH
    - macOS: `brew install ffmpeg`
    - Linux: `sudo apt install ffmpeg` (Debian/Ubuntu) or equivalent for your distro
@@ -265,7 +265,7 @@ flag always preserves user data.
    - You should see output like `Running on http://127.0.0.1:5679` -- **keep this terminal window open**
 2. Open Premiere Pro and go to **Window > Extensions > OpenCut**.
    On **Premiere 2026 and later** the CEP panel is listed under
-   **Window > Extensions (Legacy) > OpenCut** instead — Adobe moved CEP panels
+   **Window > Extensions (Legacy) > OpenCut** instead. Adobe moved CEP panels
    to their own menu when UXP became the primary extension platform. If the
    panel seems to be missing after a successful install, check that menu before
    reinstalling; an empty **Extensions** menu on 2026 is expected, not a fault.
@@ -281,7 +281,7 @@ The OpenCut panel connects to a backend server running on `http://127.0.0.1:5679
 - The "Live Updates Bridge" toggle in the Settings tab is an optional WebSocket feature for streaming progress updates. It is **not** required for the panel to work -- do not confuse it with the main server connection.
 
 **The OpenCut panel is not in the Extensions menu at all:**
-On Premiere 2026 and later, look under **Window > Extensions (Legacy)** — Adobe
+On Premiere 2026 and later, look under **Window > Extensions (Legacy)**. Adobe
 moved CEP panels there when UXP became the primary extension platform, so the
 plain **Extensions** menu can be empty even though the install succeeded. On
 Premiere 2025 and earlier the panel is under **Window > Extensions**. If it is
@@ -336,7 +336,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 
 ## Feature Overview
 
-OpenCut v1.51.0 includes **1,564 shipped API routes** (implemented or dependency-gated; 29 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,254 integration-only routes** are explicitly classified rather than presented as direct user workflows.
+OpenCut v1.52.0 includes **1,564 shipped API routes** (implemented or dependency-gated; 29 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,254 integration-only routes** are explicitly classified rather than presented as direct user workflows.
 
 ### Cut & Clean
 
@@ -394,7 +394,7 @@ checked with Netflix Photon's `IMPAnalyzer` when `OPENCUT_PHOTON_JAR` points
 at the jar and a JRE is on `PATH`, and loudness is checked against a signal
 whose BS.1770 value is derived from the standard's own K-weighting
 coefficients. When a validator is absent the report says `available: false`
-and `passed: null` — "not checked" never reads as "passed".
+and `passed: null`. "Not checked" never reads as "passed".
 
 Transcript caches, caption sidecars, interview state, and JSON exports retain
 the exact ASR engine, model revision, alignment backend, language decision, and
@@ -984,7 +984,7 @@ also has a direct Python scripting bridge.
 A: `git pull` and restart the server. Or download the latest exe from [Releases](https://github.com/SysAdminDoc/OpenCut/releases).
 
 **Q: What's the difference between the CEP and UXP panels?**
-A: The CEP panel is the current full-feature surface for Premiere Pro 2019+; the UXP panel targets Premiere Pro 25.6+ on Adobe's modern platform. Both connect to the same backend. Adobe's November 2025 guidance plans dual CEP/UXP support for a calendar year, so OpenCut uses approximately November 2026 as a planning horizon—not an announced removal date—and continues CEP security, reliability, and user-blocking fixes while migrating the remaining features.
+A: The CEP panel is the current full-feature surface for Premiere Pro 2019+; the UXP panel targets Premiere Pro 25.6+ on Adobe's modern platform. Both connect to the same backend. Adobe's November 2025 guidance plans dual CEP/UXP support for a calendar year, so OpenCut uses approximately November 2026 as a planning horizon, not an announced removal date. CEP security, reliability, and user-blocking fixes continue while the remaining features move across.
 
 **Q: How do I choose between AI backends?**
 A: Go to Settings > AI Engine Preferences. Each feature domain (silence, transcription, TTS, etc.) has a dropdown showing available backends with quality and speed ratings. The default "Auto" mode picks the highest-priority available engine.

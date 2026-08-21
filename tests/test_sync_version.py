@@ -47,7 +47,7 @@ def test_security_policy_targets_sync_minor_series(monkeypatch, tmp_path):
                 "",
                 "| Version | Supported         | Security fixes until |",
                 "|---------|-------------------|----------------------|",
-                "| 1.32.x  | ✅ Active         | —                    |",
+                "| 1.32.x  | ✅ Active         | n/a                  |",
                 "| 1.31.x  | ✅ Previous       | +90 days after 1.32  |",
                 "| 1.30.x  | ⚠️ Critical only  | +30 days after 1.32  |",
                 "| ≤ 1.29  | ❌ End of life    | n/a                  |",
@@ -73,6 +73,7 @@ def test_security_policy_targets_sync_minor_series(monkeypatch, tmp_path):
     assert "| 1.32.x" in text
     assert "| 1.31.x" in text
     assert "| ≤ 1.30" in text
+    assert "| 1.33.x  | ✅ Active         | n/a" in text
     assert "+90 days after 1.33" in text
     assert "+30 days after 1.33" in text
     assert all(
@@ -198,7 +199,7 @@ def test_security_policy_check_passes_on_a_crlf_checkout(monkeypatch, tmp_path):
                 "",
                 "| Version | Supported         | Security fixes until |",
                 "|---------|-------------------|----------------------|",
-                "| 1.43.x  | ✅ Active         | —                    |",
+                "| 1.43.x  | ✅ Active         | n/a                  |",
                 "| 1.42.x  | ✅ Previous       | +90 days after 1.43  |",
                 "| 1.41.x  | ⚠️ Critical only  | +30 days after 1.43  |",
                 "| ≤ 1.40  | ❌ End of life    | n/a                  |",
