@@ -60,16 +60,34 @@ describe("createPollFailureBudget", () => {
 describe("pollFailureJob", () => {
   it("settles as a terminal error so the panel unlocks", () => {
     for (const verdict of ["missing", "unreachable"]) {
-      const job = jr.pollFailureJob(verdict, null);
+      const job = jr.pollFailureJob("job-1", verdict, null);
       expect(job.status, verdict).toBe("error");
       expect(jr.isTerminalStatus(job.status), verdict).toBe(true);
       expect(String(job.error).length, verdict).toBeGreaterThan(0);
     }
   });
 
+  it("carries the job id so per-job lifecycle hooks still fire", () => {
+    // job-lifecycle settle() drops any record without an id, which would skip
+    // the caller's onError/onFinally and leave it waiting forever — the
+    // interview-polish button stays disabled, the batch chain never advances.
+    const registry = require("../client/job-lifecycle.js").createJobLifecycleRegistry();
+    const calls = [];
+    registry.register("job-7", {
+      onError: (job) => calls.push(["onError", job.status]),
+      onFinally: () => calls.push(["onFinally"]),
+    });
+
+    registry.settle(jr.pollFailureJob("job-7", "unreachable", null));
+
+    expect(calls).toEqual([["onError", "error"], ["onFinally"]]);
+  });
+
   it("tells the user the run is gone versus the backend is unreachable", () => {
-    expect(jr.pollFailureJob("missing", null).error).toMatch(/no longer on the backend/i);
-    expect(jr.pollFailureJob("unreachable", null).error).toMatch(/couldn't reach the local backend/i);
+    expect(jr.pollFailureJob("job-1", "missing", null).error).toMatch(/no longer on the backend/i);
+    expect(jr.pollFailureJob("job-1", "unreachable", null).error).toMatch(
+      /couldn't reach the local backend/i,
+    );
   });
 
   it("routes both messages through the panel translator", () => {
@@ -78,10 +96,10 @@ describe("pollFailureJob", () => {
       seen.push(key);
       return `translated:${fallback}`;
     };
-    expect(jr.pollFailureJob("missing", translate).error).toBe(
+    expect(jr.pollFailureJob("job-1", "missing", translate).error).toBe(
       "translated:That run is no longer on the backend. It may have restarted. Start the job again.",
     );
-    jr.pollFailureJob("unreachable", translate);
+    jr.pollFailureJob("job-1", "unreachable", translate);
     expect(seen).toEqual(["error.job_missing", "error.backend_unreachable"]);
   });
 });
