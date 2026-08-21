@@ -138,3 +138,143 @@ def test_highlights_passes_sampled_frames_to_local_ollama(monkeypatch, tmp_path)
 
     assert result.total_found == 1
     assert captured["images"] == ["frame-one", "frame-two"]
+
+
+def _stub_scoring(monkeypatch, qwen, llm, on_segment=None):
+    """Wire analyze() to fake frames and a fake Ollama so it runs instantly."""
+    monkeypatch.setattr(
+        qwen,
+        "_sample_video_frames",
+        lambda _path, timestamps: [
+            {"timestamp": timestamp, "base64": "frame"} for timestamp in timestamps
+        ],
+    )
+
+    def fake_vision_query(*, prompt, images, config, system_prompt):
+        if on_segment is not None:
+            on_segment()
+        return SimpleNamespace(
+            text=json.dumps({"transcript_score": 0.5, "visual_score": 0.5})
+        )
+
+    monkeypatch.setattr(llm, "query_ollama_vision", fake_vision_query)
+
+
+def test_cancelling_stops_the_loop_instead_of_running_the_list_out(tmp_path, monkeypatch):
+    """F366 — nothing else can interrupt this worker.
+
+    The frame grabs use subprocess.run, so the job runner registers no process
+    to kill and only checks cancellation before start and after return. Without
+    a per-segment poll a cancelled job keeps spawning ffmpeg and Ollama calls
+    until the whole segment list is exhausted.
+    """
+    from opencut.core import llm
+    from opencut.core import multimodal_qwen3vl as qwen
+
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"test video placeholder")
+    monkeypatch.setattr(qwen, "_probe_duration", lambda _path: 100.0)
+
+    scored = []
+    _stub_scoring(monkeypatch, qwen, llm, on_segment=lambda: scored.append(1))
+    cancelled = {"value": False}
+
+    segments = [{"start": i, "end": i + 1, "text": f"line {i}"} for i in range(50)]
+
+    try:
+        qwen.analyze(
+            str(video),
+            transcript_segments=segments,
+            is_cancelled=lambda: cancelled["value"],
+            frames_per_segment=1,
+        )
+    except InterruptedError:
+        raise AssertionError("uncancelled run must not raise")
+
+    assert len(scored) == 50, "control run should score every segment"
+
+    # Now cancel after the first segment and prove the loop stops there.
+    scored.clear()
+
+    def cancel_after_first():
+        scored.append(1)
+        cancelled["value"] = True
+
+    _stub_scoring(monkeypatch, qwen, llm, on_segment=cancel_after_first)
+
+    try:
+        qwen.analyze(
+            str(video),
+            transcript_segments=segments,
+            is_cancelled=lambda: cancelled["value"],
+            frames_per_segment=1,
+        )
+    except InterruptedError:
+        pass
+    else:
+        raise AssertionError("a cancelled run must raise InterruptedError")
+
+    assert len(scored) == 1, f"loop kept going after cancel: {len(scored)} segments"
+
+
+def test_is_cancelled_is_an_explicit_parameter_not_swallowed_by_kwargs():
+    """F366 — analyze() ends in **kwargs with `del kwargs`.
+
+    A callback passed by keyword alone would be silently discarded, which is
+    exactly the trap a call-site-only fix would fall into.
+    """
+    import inspect
+
+    from opencut.core import multimodal_qwen3vl as qwen
+
+    assert "is_cancelled" in inspect.signature(qwen.analyze).parameters
+
+
+def test_the_no_transcript_fallback_coarsens_instead_of_making_thousands(monkeypatch):
+    """F366 — a 2-hour video at segment_duration=1.0 used to yield 7,200 windows."""
+    from opencut.core import multimodal_qwen3vl as qwen
+
+    two_hours = 7200.0
+    segments = qwen._fallback_segments(two_hours, 1.0)
+
+    assert len(segments) <= qwen.MAX_SEGMENTS
+    # Still covers the whole file, just at a coarser granularity.
+    assert segments[0]["start"] == 0.0
+    assert abs(segments[-1]["end"] - two_hours) < 0.01
+    # A file that already fits is left exactly as it was.
+    short = qwen._fallback_segments(60.0, 30.0)
+    assert [(s["start"], s["end"]) for s in short] == [(0.0, 30.0), (30.0, 60.0)]
+
+
+def test_per_segment_notes_cannot_grow_without_bound(tmp_path, monkeypatch):
+    """F366 — notes are one string per skipped segment and land in the job result."""
+    from opencut.core import llm
+    from opencut.core import multimodal_qwen3vl as qwen
+
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"test video placeholder")
+    monkeypatch.setattr(qwen, "_probe_duration", lambda _path: 500.0)
+
+    # Only the first segment yields frames, so it scores and the run succeeds;
+    # every other segment wants to append a note.
+    def frames_for_first_only(_path, timestamps):
+        if timestamps and timestamps[0] < 1.0:
+            return [{"timestamp": timestamps[0], "base64": "frame"}]
+        return []
+
+    monkeypatch.setattr(qwen, "_sample_video_frames", frames_for_first_only)
+    monkeypatch.setattr(
+        llm,
+        "query_ollama_vision",
+        lambda **_kwargs: SimpleNamespace(
+            text=json.dumps({"transcript_score": 0.5, "visual_score": 0.5})
+        ),
+    )
+
+    segments = [{"start": i, "end": i + 1, "text": f"line {i}"} for i in range(400)]
+    result = qwen.analyze(str(video), transcript_segments=segments, frames_per_segment=1)
+
+    assert len(result.structured_data) == 1
+    # Two preamble notes plus the capped per-segment run, not 399 of them.
+    assert len(result.notes) <= qwen.MAX_NOTES + 3, len(result.notes)
+    assert result.notes[-1] == "Further per-segment notes were suppressed."

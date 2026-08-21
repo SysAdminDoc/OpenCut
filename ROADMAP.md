@@ -30,16 +30,6 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
 
 ### P1
 
-- [ ] P1 — F366 — Bound and make cancellable the Qwen3-VL analysis loop
-  Category: reliability
-  Where: `opencut/core/multimodal_qwen3vl.py` `analyze()` loop (lines 324-389) and `_normalise_transcript_segments` (88-100); route `opencut/routes/wave_qrs_routes.py:656-686`
-  Problem: The per-segment loop has no upper bound and never checks job cancellation. `transcript_segments` is the only unvalidated input on the route (everything else goes through `safe_int`/`safe_float`); a minimal segment is ~20 bytes so the 100 MB `MAX_CONTENT_LENGTH` (opencut/config.py:117-122) admits millions. The no-transcript fallback for a 2-hour video at `segment_duration=1.0` yields 7,200 segments. Worst case per segment: up to 6 ffmpeg spawns at 20s timeout each (multimodal_qwen3vl.py:152-174) plus one Ollama call with a 300s HTTP timeout (opencut/core/llm.py:158) — about 7 minutes, times the segment count. Cancellation cannot stop it: the runner checks `_is_cancelled` only before start and after return (opencut/jobs.py:1000, 1021, 1031); `_kill_job_process` is a no-op because nothing registers a Popen (jobs.py:514-528; the frame extractor uses `subprocess.run`); the stuck-job watchdog only relabels the record to error after 7200s without interrupting the thread (jobs.py:677-685). A "cancelled" job keeps burning a `max_concurrent_jobs` slot (default 10) to exhaustion, and `notes` grows one string per failing segment into the persisted result.
-  Evidence: Traced end-to-end and confirmed by an independent fresh-context refutation attempt that failed to refute. Contrast in the same file: Parakeet (wave_qrs_routes.py:595) and Canary (:636) pass `is_cancelled=lambda: _is_cancelled(job_id)`; the batch route at :622-623 applies `too_many_items("audio_paths", 64)` — both patterns omitted here. Trap for the fixer: `analyze()` ends in `**kwargs` with `del kwargs` (multimodal_qwen3vl.py:291-293), so passing `is_cancelled=` today is silently discarded — the parameter must be added explicitly.
-  Fix: (1) In the route, cap `transcript_segments` with the imported `too_many_items` helper (a few hundred is generous; downsample or refuse above it) and cap `_fallback_segments` count by raising the effective `segment_duration` for long files. (2) Add an explicit `is_cancelled: Optional[Callable[[], bool]] = None` parameter to `analyze()` and raise per iteration via the `_raise_if_cancelled` pattern from `opencut/core/asr_nemo.py:121-122` / `audio_reactive_fx.py:168-169`; pass `lambda: _is_cancelled(job_id)` from the route like Parakeet does. (3) Cap the `notes` list.
-  Acceptance: A request with 10,000 transcript_segments is refused or downsampled with a recorded note; cancelling a running qwen3vl job stops the worker within one segment (test: monkeypatched frame sampler + fake Ollama, cancel after first iteration, assert loop exited early); a segment-cap and a cancellation test land in `tests/test_multimodal_qwen3vl.py`.
-  Confidence: Verified
-  Effort: M
-
 ### P2
 
 - [ ] P2 — F367 — CEP job polling never notices a dead or restarted backend
