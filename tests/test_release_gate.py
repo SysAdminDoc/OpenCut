@@ -122,6 +122,97 @@ def test_failed_smoke_never_writes_receipt(monkeypatch, tmp_path):
     assert not target.exists()
 
 
+def test_a_failing_step_keeps_its_output_instead_of_discarding_it(monkeypatch, tmp_path):
+    """F360 — an intermittent gate failure has to leave evidence behind.
+
+    `panel-rendered` failed once and passed on a re-run of the same commit,
+    and the failure could not be attributed because the gate raised with the
+    step name alone while holding that step's captured output. The report is
+    what makes the next occurrence diagnosable.
+    """
+    module = _module()
+    target = tmp_path / "receipt.json"
+    monkeypatch.setattr(
+        module,
+        "current_source_state",
+        lambda: {"commit": "abc123", "branch": "main", "dirty_paths": []},
+    )
+    monkeypatch.setattr(
+        module,
+        "_run",
+        lambda *args, **kwargs: module.subprocess.CompletedProcess(
+            args[0],
+            1,
+            json.dumps(
+                {
+                    "status": "fail",
+                    "steps": [
+                        {
+                            "name": "panel-rendered",
+                            "status": "fail",
+                            "exit_code": 1,
+                            "stdout_tail": "62 passed, 1 failed",
+                            "stderr_tail": "Timed out waiting for http://127.0.0.1:41737",
+                        },
+                        {"name": "pytest-fast", "status": "ok"},
+                    ],
+                }
+            ),
+            "",
+        ),
+    )
+
+    with pytest.raises(module.ReleaseGateError) as excinfo:
+        module.run_verification(target)
+
+    message = str(excinfo.value)
+    assert "Timed out waiting for http://127.0.0.1:41737" in message, message
+
+    report = tmp_path / "release-failure.json"
+    assert report.is_file(), "a failed gate must leave a report behind"
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["status"] == "fail"
+    assert payload["source"]["commit"] == "abc123"
+    rendered = next(s for s in payload["steps"] if s["name"] == "panel-rendered")
+    assert rendered["stderr_tail"].startswith("Timed out")
+
+    # The report records a failure, so it must never pass for a receipt.
+    assert not target.exists()
+    with pytest.raises(module.ReleaseGateError):
+        module.validate_receipt(report)
+
+
+def test_a_failing_step_with_no_output_still_reports_cleanly(monkeypatch, tmp_path):
+    module = _module()
+    target = tmp_path / "receipt.json"
+    monkeypatch.setattr(
+        module,
+        "current_source_state",
+        lambda: {"commit": "abc123", "branch": "main", "dirty_paths": []},
+    )
+    monkeypatch.setattr(
+        module,
+        "_run",
+        lambda *args, **kwargs: module.subprocess.CompletedProcess(
+            args[0],
+            1,
+            json.dumps(
+                {
+                    "status": "fail",
+                    "steps": [{"name": "npm-advisory", "status": "fail"}],
+                }
+            ),
+            "",
+        ),
+    )
+
+    with pytest.raises(module.ReleaseGateError) as excinfo:
+        module.run_verification(target)
+
+    assert "recorded no output" in str(excinfo.value)
+    assert (tmp_path / "release-failure.json").is_file()
+
+
 def test_source_drift_during_smoke_never_writes_receipt(monkeypatch, tmp_path):
     module = _module()
     target = tmp_path / "receipt.json"

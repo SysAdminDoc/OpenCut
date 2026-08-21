@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
 import os
 import subprocess
 import sys
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -16,6 +18,9 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RECEIPT = REPO_ROOT / "build" / "release-receipt.json"
 RECEIPT_SCHEMA_VERSION = 1
+# Enough of a failing step's tail to identify the failure without turning the
+# exception into the whole log; the written report always has all of it.
+_EVIDENCE_CHARS = 1200
 DEFAULT_MAX_AGE_SECONDS = 2 * 60 * 60
 LOCAL_STATE_PATHS = frozenset({"ROADMAP.md", "RESEARCH.md", "Roadmap_Blocked.md"})
 REQUIRED_STEPS = frozenset(
@@ -179,6 +184,57 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _write_failure_report(
+    receipt_path: Path, source: dict[str, Any], smoke: dict[str, Any]
+) -> Path:
+    """Persist the whole failed smoke payload next to where the receipt would go.
+
+    A gate that reports only which step failed makes every failure a fresh
+    investigation, and an intermittent one nearly impossible to attribute.
+    The step results already carry their own output; this keeps them instead
+    of discarding them with the exception. It is deliberately not a receipt:
+    the name differs and the status is ``fail``, so ``validate_receipt``
+    refuses it.
+    """
+    report_path = receipt_path.with_name("release-failure.json")
+    payload = {
+        "schema_version": RECEIPT_SCHEMA_VERSION,
+        "status": "fail",
+        "strict": True,
+        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "command": "python scripts/release_gate.py verify",
+        "source": source,
+        "steps": smoke.get("steps") or [],
+    }
+    with contextlib.suppress(OSError):
+        _write_json(report_path, payload)
+    return report_path
+
+
+def _failure_evidence(
+    smoke: dict[str, Any], failed_steps: Sequence[str], report_path: Path
+) -> str:
+    """Summarise why the failing steps failed, for the error message itself."""
+    lines = [f"Full step output: {report_path}"]
+    by_name = {
+        str(step.get("name")): step
+        for step in smoke.get("steps") or []
+        if isinstance(step, dict)
+    }
+    for name in failed_steps:
+        step = by_name.get(name) or {}
+        tail = (step.get("stderr_tail") or "").strip() or (
+            step.get("stdout_tail") or ""
+        ).strip()
+        if not tail:
+            continue
+        excerpt = tail[-_EVIDENCE_CHARS:].strip()
+        lines.append(f"--- {name} ---\n{excerpt}")
+    if len(lines) == 1:
+        lines.append("The failing steps recorded no output.")
+    return "\n".join(lines)
+
+
 def run_verification(receipt_path: Path) -> dict[str, Any]:
     source = current_source_state()
     if source["dirty_paths"]:
@@ -204,7 +260,11 @@ def run_verification(receipt_path: Path) -> dict[str, Any]:
             )
         ]
         detail = f": {', '.join(failed_steps)}" if failed_steps else ""
-        raise ReleaseGateError(f"release smoke failed{detail}; no receipt was written")
+        report_path = _write_failure_report(receipt_path, source, smoke)
+        raise ReleaseGateError(
+            f"release smoke failed{detail}; no receipt was written. "
+            + _failure_evidence(smoke, failed_steps, report_path)
+        )
 
     verified_source = current_source_state()
     if verified_source != source:
