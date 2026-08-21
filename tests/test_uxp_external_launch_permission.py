@@ -52,7 +52,7 @@ def test_live_uxp_oauth_launch_uses_https_normalizer_and_consent_context():
     assert "async function openHttpsExternalUrl" in source
     assert "shell.openExternal(" in source
     assert "developerText ||" in source
-    assert "Invalid HTTPS authorization URL received from server." in source
+    assert "Invalid HTTPS authorization URL received from the backend." in source
     # Consent context message is localized via formatI18n with a {platform}
     # placeholder (was a raw ${platform} template literal).
     assert "Opening {platform} authorization page in your browser" in source

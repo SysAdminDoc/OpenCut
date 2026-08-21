@@ -81,6 +81,16 @@
       "uxp.captions.animation_highlight_box"
     ]
   },
+  "shared.captions.burn_in": {
+    "cep": [
+      "captions.burn_in",
+      "export.shorts_captions",
+      "workflow.step_burn_in_captions"
+    ],
+    "uxp": [
+      "uxp.video.burn_in_captions"
+    ]
+  },
   "shared.captions.burnin_style_cinematic_serif": {
     "cep": [
       "captions.burnin_style_cinematic_serif",
@@ -209,6 +219,49 @@
     ],
     "uxp": [
       "uxp.agent.runtime.failed"
+    ]
+  },
+  "shared.captions.model_base": {
+    "cep": [
+      "captions.model_base",
+      "cut.filler_model_base",
+      "video.depth_model_base"
+    ],
+    "uxp": [
+      "uxp.captions.model_base"
+    ]
+  },
+  "shared.captions.model_large_v3": {
+    "cep": [
+      "captions.model_large_v3"
+    ],
+    "uxp": [
+      "uxp.captions.model_large_v3"
+    ]
+  },
+  "shared.captions.model_medium": {
+    "cep": [
+      "captions.model_medium"
+    ],
+    "uxp": [
+      "uxp.captions.model_medium"
+    ]
+  },
+  "shared.captions.model_small": {
+    "cep": [
+      "captions.model_small"
+    ],
+    "uxp": [
+      "uxp.captions.model_small"
+    ]
+  },
+  "shared.captions.model_tiny": {
+    "cep": [
+      "captions.model_tiny",
+      "cut.filler_model_tiny"
+    ],
+    "uxp": [
+      "uxp.captions.model_tiny"
     ]
   },
   "shared.captions.render_animated": {
@@ -473,6 +526,16 @@
     ],
     "uxp": [
       "uxp.cut.captions_srt"
+    ]
+  },
+  "shared.cut.clean_fillers": {
+    "cep": [
+      "cut.clean_fillers",
+      "cut.remove_fillers",
+      "favorites.op_fillers"
+    ],
+    "uxp": [
+      "uxp.cut.detect_remove_fillers"
     ]
   },
   "shared.cut.filler_backend_aria": {
@@ -1081,6 +1144,14 @@
     ],
     "uxp": [
       "uxp.search.zero_files_indexed"
+    ]
+  },
+  "shared.settings.ai_engine_prefs": {
+    "cep": [
+      "settings.ai_engine_prefs"
+    ],
+    "uxp": [
+      "uxp.settings.engine_routing"
     ]
   },
   "shared.settings.gpu_adapter_auto": {

@@ -366,7 +366,7 @@ async function copyTextToClipboard(text, { successLabel = t("uxp.runtime.output"
 async function openHttpsExternalUrl(value, developerText) {
   const url = normalizeHttpsExternalUrl(value);
   if (!url) {
-    UIController.showToast(t("uxp.runtime.invalid_https_authorization_url", "Invalid HTTPS authorization URL received from server."), "warning");
+    UIController.showToast(t("uxp.runtime.invalid_https_authorization_url", "Invalid HTTPS authorization URL received from the backend."), "warning");
     return false;
   }
 
@@ -4589,8 +4589,8 @@ async function installWhisperUxp() {
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("installWhisperBtn", false);
-      setTextAndTitle("whisperInstallStatus", t("uxp.captions.runtime.whisper_install_failed", "Whisper installation failed."), String(err));
-      UIController.showToast(formatI18n("uxp.captions.runtime.whisper_install_error", "Whisper installation failed: {error}", { error: err }), "error");
+      setTextAndTitle("whisperInstallStatus", t("uxp.captions.runtime.whisper_install_failed", "faster-whisper installation failed."), String(err));
+      UIController.showToast(formatI18n("uxp.captions.runtime.whisper_install_error", "faster-whisper installation failed: {error}", { error: err }), "error");
     }
   );
 }
@@ -6828,7 +6828,7 @@ async function checkConnection({ rescan = false, background = false } = {}) {
     syncQuickActionButtons();
     // Show reconnection toast when server comes back
     if (alive && wasAlive === false) {
-      UIController.showToast(t("uxp.status.server_reconnected", "Server reconnected."), "success");
+      UIController.showToast(t("uxp.status.server_reconnected", "Backend reconnected."), "success");
       void loadInterruptedProxyRecovery();
       // Re-run the connect-time loaders the initial-connect path performs:
       // OTIO adapter discovery and journal recovery both fail silently while
@@ -8044,7 +8044,7 @@ async function uxpLoadEngines() {
   setSettingsStatus("settingsEngineStatus", t("uxp.settings.loading_engine_availability", "Loading engine availability…"), "working");
   grid.innerHTML = `
     <div class="oc-empty-state oc-empty-state-inline">
-      <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.engine_routing", "Engine routing"))}</div>
+      <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.engine_routing", "Engine Routing"))}</div>
       <p>${UIController.escapeHtml(t("uxp.settings.loading_engines_preferences", "Loading available engines and saved preferences…"))}</p>
     </div>`;
 
@@ -9092,12 +9092,12 @@ async function runShortsPipelineUxp() {
       renderShortsBundleSummaryUxp(result);
       UIController.showToast(formatI18n("uxp.video.runtime.generated_short_form_clips", "Generated {count} short-form clip(s).", { count }), "success");
     } else if (!r.ok) {
-      const error = r.data?.error || r.error || t("uxp.video.runtime.shorts_pipeline_failed_default", "Shorts pipeline failed.");
-      UIController.showToast(formatI18n("uxp.video.runtime.shorts_pipeline_failed", "Shorts pipeline failed: {error}", { error }), "error");
+      const error = r.data?.error || r.error || t("uxp.video.runtime.shorts_pipeline_failed_default", "Magic Clips failed.");
+      UIController.showToast(formatI18n("uxp.video.runtime.shorts_pipeline_failed", "Magic Clips failed: {error}", { error }), "error");
     }
   } catch (e) {
     const error = e.message || t("common.unknown", "unknown");
-    UIController.showToast(formatI18n("uxp.video.runtime.shorts_pipeline_failed", "Shorts pipeline failed: {error}", { error }), "error");
+    UIController.showToast(formatI18n("uxp.video.runtime.shorts_pipeline_failed", "Magic Clips failed: {error}", { error }), "error");
   } finally {
     UIController.hideProcessing();
     UIController.setButtonLoading("runShortsPipelineBtnUxp", false);
