@@ -40,14 +40,14 @@ class TestCepPluginTrustSettingsUi(unittest.TestCase):
             "capability_badges",
             "quarantine.entries",
             "marketplace.plugins",
-            "confirm_name and confirm_token",
+            "type the plugin name to confirm",
             "/plugins/quarantine/delete",
             "plugin-install-approval-checkbox",
             'api("POST", "/plugins/marketplace/install"',
             "approve_publisher_fingerprint",
             "function bindPluginWorkerActions(actions)",
             "/plugins/workers/restart",
-            "not an OS security sandbox",
+            "cannot take the others down",
         ):
             with self.subTest(needle=needle):
                 self.assertIn(needle, self.js)
@@ -100,14 +100,14 @@ class TestUxpPluginTrustSettingsUi(unittest.TestCase):
             "capability_badges",
             "quarantine?.entries",
             "marketplace?.plugins",
-            "confirm_name and confirm_token",
+            "type the plugin name to confirm",
             "/plugins/quarantine/delete",
             "oc-plugin-install-approval-checkbox",
             'BackendClient.post("/plugins/marketplace/install"',
             "approve_publisher_fingerprint",
             "function bindPluginWorkerActions(actions)",
             "/plugins/workers/restart",
-            "not an OS security sandbox",
+            "cannot take the others down",
         ):
             with self.subTest(needle=needle):
                 self.assertIn(needle, self.js)
