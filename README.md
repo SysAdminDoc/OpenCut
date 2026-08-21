@@ -1,6 +1,6 @@
 # OpenCut for Premiere Pro
 
-![Version](https://img.shields.io/badge/version-1.49.0-blue)
+![Version](https://img.shields.io/badge/version-1.50.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
@@ -74,7 +74,7 @@ is the one step that needs the maintainer's PyPI account.
 
 **Option A -- Windows Installer (recommended for Windows):**
 
-The latest published Windows installer is [OpenCut v1.49.0](https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.49.0). Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python is needed for that packaged release; use Option B or C for source installs.
+The latest published Windows installer is [OpenCut v1.49.0](https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.49.0). It predates the current source tree. Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python is needed for that packaged release; use Option B or C for the current source version.
 
 Every assembled installer includes `release-composition.json`,
 `opencut-artifact-sbom.cyclonedx.json`, `THIRD-PARTY-NOTICES.txt`, and
@@ -336,7 +336,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 
 ## Feature Overview
 
-OpenCut v1.49.0 includes **1,564 shipped API routes** (implemented or dependency-gated; 29 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,254 integration-only routes** are explicitly classified rather than presented as direct user workflows.
+OpenCut v1.50.0 includes **1,564 shipped API routes** (implemented or dependency-gated; 29 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,254 integration-only routes** are explicitly classified rather than presented as direct user workflows.
 
 ### Cut & Clean
 
