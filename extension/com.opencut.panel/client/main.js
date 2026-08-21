@@ -8796,6 +8796,18 @@
     }
 
     function clearWhisperCache() {
+        showPanelConfirm({
+            title: t("settings.clear_whisper_confirm_title", "Clear the Whisper model cache?"),
+            message: t("settings.clear_whisper_confirm_message", "Downloaded speech models are deleted from disk. The next transcription downloads them again, which can take several minutes on a slow connection."),
+            confirmLabel: t("settings.clear_whisper_confirm_button", "Clear Cache"),
+            confirmClass: "btn btn-secondary",
+            tone: "warning"
+        }, function (confirmed) {
+            if (confirmed) runWhisperCacheClear();
+        });
+    }
+
+    function runWhisperCacheClear() {
         showAlert(t("toast.clearing_whisper_cache", "Clearing Whisper cache…"));
         api("POST", "/whisper/clear-cache", {}, function (err, data) {
             if (!err && data) {
@@ -8856,6 +8868,18 @@
     }
 
     function restartBackend() {
+        showPanelConfirm({
+            title: t("settings.restart_confirm_title", "Restart the backend?"),
+            message: t("settings.restart_confirm_message", "Every job that is running or queued stops immediately. Anything already written to your Premiere sequence stays as it is."),
+            confirmLabel: t("settings.restart_confirm_button", "Restart Backend"),
+            confirmClass: "btn btn-secondary",
+            tone: "warning"
+        }, function (confirmed) {
+            if (confirmed) runBackendRestart();
+        });
+    }
+
+    function runBackendRestart() {
         showAlert(t("toast.restarting_backend", "Restarting backend…"));
         setStatusLine(
             "systemStatusLine",

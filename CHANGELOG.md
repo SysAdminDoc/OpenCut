@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Restart Backend and Clear Cache ask first
+
+- Restart Backend posted `/shutdown` on the click, so a misclick in Settings
+  dropped every running and queued job with no way back. Clearing the Whisper
+  model cache was the same one-click delete. Both now open the panel's own
+  confirm dialog, name what stops or gets deleted, and back out on Escape or
+  a click outside the card.
+
 ### Fixed - CEP collapsible card headers work from the keyboard
 
 - Section headers on the CEP panel toggled on click only. They had no button
