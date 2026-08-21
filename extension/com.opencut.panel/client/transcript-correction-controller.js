@@ -73,7 +73,7 @@
                 if (err || !data || data.error) {
                     pending = null;
                     setStatus(options.t("transcript.bulk_preview_failed", "Correction preview failed: {error}")
-                        .replace("{error}", (data && data.error) || (err && err.message) || options.t("toast.unknown_error", "Unknown error")), "error");
+                        .replace("{error}", (data && data.error) || (err && err.message) || options.t("toast.unknown_error", "no details reported")), "error");
                     update();
                     return;
                 }
@@ -114,7 +114,7 @@
             options.api("POST", "/transcript-edit/corrections/apply", request, function (err, data) {
                 if (err || !data || data.error || !data.applied) {
                     setStatus(options.t("transcript.bulk_apply_failed", "Correction was not applied: {error}")
-                        .replace("{error}", (data && data.error) || (err && err.message) || options.t("toast.unknown_error", "Unknown error")), "error");
+                        .replace("{error}", (data && data.error) || (err && err.message) || options.t("toast.unknown_error", "no details reported")), "error");
                     update();
                     return;
                 }

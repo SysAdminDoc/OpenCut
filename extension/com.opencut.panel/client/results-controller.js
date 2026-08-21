@@ -200,7 +200,7 @@
             resultsTitle.textContent = t("progress.run_failed", "Run failed");
             resultsTitle.removeAttribute("style");
             resultsTitle.setAttribute("data-state", "error");
-            resultsStats.textContent = message || t("progress.unknown_error", "Unknown error");
+            resultsStats.textContent = message || t("progress.unknown_error", "no details reported");
             resultsPath.textContent = "";
             resultsPath.title = "";
             if (canRetry && retryJob) retryJob.classList.remove("hidden");

@@ -4109,7 +4109,7 @@ async function runSilenceRemoval() {
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runSilenceBtn", false);
-      UIController.showToast(formatI18n("uxp.runtime.error_prefix", "Error: {error}", { error: err }), "error");
+      UIController.showToast(formatI18n("uxp.runtime.error_prefix", "That run failed. Check the backend status in Settings, then try again. {error}", { error: err }), "error");
       UIController.setStatus(t("uxp.cut.runtime.silence_error_status", "Error during silence removal."));
     }
   );
@@ -4222,7 +4222,7 @@ async function runFillerDetection() {
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runFillerBtn", false);
-      UIController.showToast(formatI18n("uxp.runtime.error_prefix", "Error: {error}", { error: err }), "error");
+      UIController.showToast(formatI18n("uxp.runtime.error_prefix", "That run failed. Check the backend status in Settings, then try again. {error}", { error: err }), "error");
     }
   );
 }
@@ -4907,7 +4907,7 @@ async function runRepeatDetection() {
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runRepeatBtn", false);
-      UIController.showToast(formatI18n("uxp.runtime.error_prefix", "Error: {error}", { error: err }), "error");
+      UIController.showToast(formatI18n("uxp.runtime.error_prefix", "That run failed. Check the backend status in Settings, then try again. {error}", { error: err }), "error");
       if (!_lastCaptionsResult) {
         setTextAndTitle(
           "captionsOutputValue",
@@ -5110,7 +5110,7 @@ async function runLoudnessMatch() {
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runLoudnessBtn", false);
-      UIController.showToast(formatI18n("uxp.runtime.error_prefix", "Error: {error}", { error: err }), "error");
+      UIController.showToast(formatI18n("uxp.runtime.error_prefix", "That run failed. Check the backend status in Settings, then try again. {error}", { error: err }), "error");
     }
   );
 }
@@ -7417,7 +7417,7 @@ async function runDepthEffect() {
   } else if (!r.ok) {
     UIController.setButtonLoading("runDepthBtnUxp", false);
     const error = r.error || r.data?.error || t("uxp.video.runtime.failed_to_start_depth_effect", "Failed to start depth effect");
-    UIController.showToast(formatI18n("uxp.video.runtime.depth_effect_start_error", "Error: {error}", { error }), "error");
+    UIController.showToast(formatI18n("uxp.video.runtime.depth_effect_start_error", "Couldn't start depth effects. Check the backend status in Settings, then try again. {error}", { error }), "error");
   }
 }
 
@@ -7448,7 +7448,7 @@ async function runEmotionHighlights() {
   } else if (!r.ok) {
     UIController.setButtonLoading("runEmotionBtnUxp", false);
     const error = r.error || r.data?.error || t("uxp.video.runtime.failed_to_start_emotion_analysis", "Failed to start emotion analysis");
-    UIController.showToast(formatI18n("uxp.video.runtime.emotion_analysis_start_error", "Error: {error}", { error }), "error");
+    UIController.showToast(formatI18n("uxp.video.runtime.emotion_analysis_start_error", "Couldn't start emotion analysis. Check the backend status in Settings, then try again. {error}", { error }), "error");
   }
 }
 
@@ -7479,7 +7479,7 @@ async function runBrollAnalysis() {
   } else if (!r.ok) {
     UIController.setButtonLoading("runBrollPlanBtnUxp", false);
     const error = r.error || r.data?.error || t("uxp.video.runtime.failed_to_start_broll_analysis", "Failed to start B-roll analysis");
-    UIController.showToast(formatI18n("uxp.video.runtime.broll_analysis_start_error", "Error: {error}", { error }), "error");
+    UIController.showToast(formatI18n("uxp.video.runtime.broll_analysis_start_error", "Couldn't start B-roll analysis. Check the backend status in Settings, then try again. {error}", { error }), "error");
   }
 }
 
@@ -7532,7 +7532,7 @@ async function sendChatMessage() {
     if (history) {
       const errDiv = document.createElement("div");
       errDiv.className = "oc-chat-error";
-      errDiv.textContent = formatI18n("uxp.runtime.error_prefix", "Error: {error}", { error: r.error || t("uxp.runtime.failed", "Failed") });
+      errDiv.textContent = formatI18n("uxp.runtime.error_prefix", "That run failed. Check the backend status in Settings, then try again. {error}", { error: r.error || t("uxp.runtime.failed", "Failed") });
       history.appendChild(errDiv);
     }
   }
@@ -7856,7 +7856,7 @@ async function uxpWsStopBridge() {
   const failure = formatI18n(
     "uxp.settings.stop_live_updates_bridge_failed",
     "Couldn't stop the live-updates bridge. The panel is still connected; check the backend and try again. {reason}",
-    { reason: r.error || r.data?.error || t("uxp.status.unknown_error", "Unknown error") }
+    { reason: r.error || r.data?.error || t("uxp.status.unknown_error", "no details reported") }
   );
   setSettingsStatus("settingsBridgeStatus", failure, "error", failure);
   UIController.setStatus(failure, "error");
@@ -9451,7 +9451,7 @@ function initAgentTab() {
         setStatus("enhanceStatus", t("uxp.agent.runtime.job_queued", "Job queued - watch the progress bar above."));
       }
     } catch (err) {
-      setStatus("enhanceStatus", formatI18n("uxp.agent.runtime.error", "Error: {error}", { error: err?.message || err }));
+      setStatus("enhanceStatus", formatI18n("uxp.agent.runtime.error", "That step failed. Check the backend status in Settings, then try again. {error}", { error: err?.message || err }));
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -9497,7 +9497,7 @@ function initAgentTab() {
           ? formatI18n("uxp.agent.runtime.variant_plan_ready", "Plan: {count} variant(s) will be generated.", { count: variants.length })
           : formatI18n("uxp.agent.runtime.variants_generated", "Generated {count} variant(s).", { count: variants.length }));
     } catch (err) {
-      setStatus("variantsStatus", formatI18n("uxp.agent.runtime.error", "Error: {error}", { error: err?.message || err }));
+      setStatus("variantsStatus", formatI18n("uxp.agent.runtime.error", "That step failed. Check the backend status in Settings, then try again. {error}", { error: err?.message || err }));
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -9901,7 +9901,7 @@ function initAgentTab() {
         }));
       await sequenceIndexApplyFilter();
     } catch (err) {
-      setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.error", "Error: {error}", { error: err?.message || err }));
+      setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.error", "That step failed. Check the backend status in Settings, then try again. {error}", { error: err?.message || err }));
     } finally {
       if (btn) btn.disabled = false;
       sequenceIndexSetBusy(false);
@@ -9928,7 +9928,7 @@ function initAgentTab() {
         { rows: data.rows ?? 0, output: data.output || "" }
       ));
     } catch (err) {
-      setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.error", "Error: {error}", { error: err?.message || err }));
+      setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.error", "That step failed. Check the backend status in Settings, then try again. {error}", { error: err?.message || err }));
     } finally {
       if (btn) btn.disabled = !sequenceIndexState.visibleRows.length;
     }

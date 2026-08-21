@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Failures say what to do next
+
+- Nine strings across the two panels showed "Error: " and the raw backend
+  message with no next step, and five more substituted the words "Unknown
+  error" into a sentence. They now name a recovery: reconnect Premiere from
+  the status bar, re-export the interchange file, refresh engine
+  availability, check the backend status in Settings. The raw detail moves to
+  the end of the sentence, the way the panel's other recovery copy already
+  did it.
+
 ### Fixed - Restart Backend and Clear Cache ask first
 
 - Restart Backend posted `/shutdown` on the click, so a misclick in Settings
