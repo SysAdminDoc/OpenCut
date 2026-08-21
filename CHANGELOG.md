@@ -3,7 +3,7 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
-## Unreleased
+## 1.50.0 - Gates that mean something
 
 ### Changed - The UXP route gate says something again
 
