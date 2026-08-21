@@ -1164,7 +1164,7 @@
     function destructiveErrorMessage(err, data, fallback) {
         var message = data && data.error
             ? data.error
-            : (err && err.message ? err.message : String(err || t("toast.unknown_error", "Unknown error")));
+            : (err && err.message ? err.message : String(err || t("toast.unknown_error", "no details reported")));
         if (data && data.suggestion) message += " " + data.suggestion;
         return replaceTemplateValue(fallback, "{error}", message);
     }
@@ -2514,7 +2514,7 @@
     }
 
     function formatInstallError(detail, fallback) {
-        var unknownFallback = fallback || t("progress.unknown_error", "Unknown error");
+        var unknownFallback = fallback || t("progress.unknown_error", "no details reported");
         if (!detail) return unknownFallback;
         if (typeof detail === "string") return detail;
 
@@ -4213,7 +4213,7 @@
                 if (typeof config.onSuccess === "function") config.onSuccess(result || {}, job || null);
             },
             onError: function(detail) {
-                var errMsg = formatInstallError(detail, t("progress.unknown_error", "Unknown error"));
+                var errMsg = formatInstallError(detail, t("progress.unknown_error", "no details reported"));
                 if (hintEl) {
                     setHintState(
                         hintEl,
@@ -4572,7 +4572,7 @@
         if (job.status === "error") {
             hideProgress();
             ResultsController.showFailure(job, enhanceError(
-                job.error || job.message || t("progress.unknown_error", "Unknown error"),
+                job.error || job.message || t("progress.unknown_error", "no details reported"),
                 job
             ), !!lastJobEndpoint);
             // Also show alert banner with action link for code-aware errors
@@ -4581,7 +4581,7 @@
             }
             // Assertive: a failure carries a recovery action the user needs
             // before continuing, so name the retry route in the announcement.
-            var failureReason = el.resultsStats.textContent || t("progress.unknown_error", "Unknown error");
+            var failureReason = el.resultsStats.textContent || t("progress.unknown_error", "no details reported");
             var failureTemplate = lastJobEndpoint
                 ? t("progress.announce_failed_retry", "Run failed: {reason} Use the Retry button in the results card to run it again.")
                 : t("progress.announce_failed", "Run failed: {reason}");
@@ -5134,7 +5134,7 @@
             if (!err && data && data.output_path) {
                 showAlert(t("toast.exported_to", "Exported to: {filename}").replace("{filename}", String(data.output_path).split(/[/\\]/).pop()));
             } else {
-                showAlert(replaceTemplateValue(t("toast.export_failed", "Export failed: {error}"), "{error}", data ? data.error : t("toast.unknown_error", "Unknown error")));
+                showAlert(replaceTemplateValue(t("toast.export_failed", "Export failed: {error}"), "{error}", data ? data.error : t("toast.unknown_error", "no details reported")));
             }
         });
     }
@@ -5184,7 +5184,7 @@
             if (err || (data && data.error)) {
                 var errMsg = data
                     ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error)
-                    : t("progress.unknown_error", "Unknown error");
+                    : t("progress.unknown_error", "no details reported");
                 setHintState(
                     el.separateHint,
                     replaceTemplateValue(t("install.failed", "Installation failed: {error}"), "{error}", errMsg),
@@ -5346,7 +5346,7 @@
             if (err || (data && data.error)) {
                 var errMsg = data
                     ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error)
-                    : t("progress.unknown_error", "Unknown error");
+                    : t("progress.unknown_error", "no details reported");
                 setHintState(
                     el.watermarkHint,
                     replaceTemplateValue(t("install.failed", "Installation failed: {error}"), "{error}", errMsg),
@@ -5373,7 +5373,7 @@
             if (err || !data) {
                 setHintState(
                     resEl,
-                    replaceTemplateValue(t("video.watermark_detection_failed", "Detection failed: {error}"), "{error}", (err && err.message) || t("progress.unknown_error", "Unknown error")),
+                    replaceTemplateValue(t("video.watermark_detection_failed", "Detection failed: {error}"), "{error}", (err && err.message) || t("progress.unknown_error", "no details reported")),
                     "error"
                 );
                 return;
@@ -5802,7 +5802,7 @@
             if (err || !r || !r.success) {
                 var reason = r && r.error
                     ? r.error
-                    : (err && err.message ? err.message : t("toast.unknown_error", "Unknown error"));
+                    : (err && err.message ? err.message : t("toast.unknown_error", "no details reported"));
                 var failure = replaceTemplateValue(t(
                     "ws.hint_stop_failed",
                     "Couldn't stop the live-updates bridge. The panel is still connected; check the backend and try again. {reason}"
@@ -6015,7 +6015,7 @@
                     var domainLabel = humanizeEngineDomain(dom);
                     var selectedLabel = this.options[this.selectedIndex] ? this.options[this.selectedIndex].textContent : t("engines.state_auto", "Auto");
                     api("POST", "/engines/preference", { domain: dom, engine: eng }, function (perr, r) {
-                        if (perr) { showAlert(replaceTemplateValue(t("toast.engine_preference_error", "Error: {error}"), "{error}", perr.message)); loadEngineRegistry(); return; }
+                        if (perr) { showAlert(replaceTemplateValue(t("toast.engine_preference_error", "Couldn't save that engine preference. Refresh availability in Settings, then set it again. {error}"), "{error}", perr.message)); loadEngineRegistry(); return; }
                         if (r && r.success) {
                             showToast(
                                 eng
@@ -6841,7 +6841,7 @@
             if (err || !data || data.error) {
                 var batchStatusError = (data && data.error) || t("batch.unknown", "Unknown");
                 var batchSummaryError = (data && data.error) || (err && err.message) ||
-                    t("batch.unknown_error", "Unknown error");
+                    t("batch.unknown_error", "no details reported");
                 el.batchStatusText.textContent = replaceTemplateValue(t("batch.error_status", "Batch error: {error}"), "{error}", batchStatusError);
                 updateBatchSummary(
                     replaceTemplateValue(t("batch.start_failed_summary", "Batch couldn't start: {error}."), "{error}", batchSummaryError),
@@ -8486,7 +8486,7 @@
         }, function (err, data) {
             if (el.capDispPreviewBtn) el.capDispPreviewBtn.disabled = false;
             if (err || !data || data.error) {
-                var previewError = (data && data.error) || (err && err.message) || t("toast.unknown_error", "Unknown error");
+                var previewError = (data && data.error) || (err && err.message) || t("toast.unknown_error", "no details reported");
                 setCaptionDisplayStatus(replaceTemplateValue(t("captions.display_preview_failed", "Preview failed: {error}"), "{error}", previewError), "error");
                 return;
             }
@@ -9213,7 +9213,7 @@
     }
 
     function showErrorWithAction(errorData) {
-        var msg = errorData.error || errorData.message || t("progress.unknown_error", "Unknown error");
+        var msg = errorData.error || errorData.message || t("progress.unknown_error", "no details reported");
         showAlert(msg, errorData);
     }
 
@@ -9606,7 +9606,7 @@
                 );
                 updateJournalSummary(
                     [],
-                    replaceTemplateValue(t("journal.unavailable_status", "Couldn't load timeline history: {error}."), "{error}", err.error || err.message || t("toast.unknown_error", "Unknown error")),
+                    replaceTemplateValue(t("journal.unavailable_status", "Couldn't load timeline history: {error}."), "{error}", err.error || err.message || t("toast.unknown_error", "no details reported")),
                     "error"
                 );
                 return;
@@ -9766,7 +9766,7 @@
         if (!entry || !entry.transaction_id) return;
         api("GET", "/journal/checkpoints/" + encodeURIComponent(entry.transaction_id) + "/diagnostics", null, function (err, data) {
             if (err || !data) {
-                showAlert(replaceTemplateValue(t("journal.diagnostics_failed", "Could not export recovery diagnostics: {error}"), "{error}", (err && (err.error || err.message)) || t("toast.unknown_error", "Unknown error")));
+                showAlert(replaceTemplateValue(t("journal.diagnostics_failed", "Could not export recovery diagnostics: {error}"), "{error}", (err && (err.error || err.message)) || t("toast.unknown_error", "no details reported")));
                 return;
             }
             var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -9835,7 +9835,7 @@
                 if (err || !resolved) {
                     btn.disabled = false;
                     btn.textContent = t("journal.restore", "Restore");
-                    showAlert(replaceTemplateValue(t("journal.recovery_payload_failed", "Could not verify the saved recovery payload: {error}"), "{error}", (err && (err.error || err.message)) || t("toast.unknown_error", "Unknown error")));
+                    showAlert(replaceTemplateValue(t("journal.recovery_payload_failed", "Could not verify the saved recovery payload: {error}"), "{error}", (err && (err.error || err.message)) || t("toast.unknown_error", "no details reported")));
                     return;
                 }
                 _journalDispatchRevert(resolved, btn);
@@ -10306,7 +10306,7 @@
                 reader.onload = function () {
                     try {
                         var err = JSON.parse(reader.result);
-                        showAlert(replaceTemplateValue(t("toast.preview_failed", "Preview failed: {error}"), "{error}", err.error || t("toast.unknown_error", "Unknown error")));
+                        showAlert(replaceTemplateValue(t("toast.preview_failed", "Preview failed: {error}"), "{error}", err.error || t("toast.unknown_error", "no details reported")));
                     } catch (e) {
                         showAlert(t("toast.preview_failed_http", "Preview failed (HTTP {status})").replace("{status}", xhr.status));
                     }
@@ -10613,7 +10613,7 @@
             },
             onError: function (job) {
                 _polishBatchResults.push({ filepath: filepath, ok: false,
-                    error: (job && job.error) || t("toast.unknown_error", "Unknown error") });
+                    error: (job && job.error) || t("toast.unknown_error", "no details reported") });
             },
             onFinally: function () {
                 _polishActive = false;
@@ -15465,7 +15465,7 @@
             cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", cb);
         }, function (r) {
             if (!r || r.error) {
-                showAlert(replaceTemplateValue(t("timeline.action_failed", "Error: {error}"), "{error}", (r && r.error) || t("common.unknown", "Unknown")));
+                showAlert(replaceTemplateValue(t("timeline.action_failed", "Couldn't finish that timeline action. Reconnect Premiere from the status bar, then try again. {error}"), "{error}", (r && r.error) || t("common.unknown", "Unknown")));
                 return;
             }
             showToast(t("timeline.multicam_cuts_applied", "Multicam cuts applied: {count}")
@@ -15655,7 +15655,7 @@
                 cs.evalScript("ocBatchRenameProjectItems('" + escSingleQuote(payload) + "')", cb);
             }, function (r) {
                 if (r.error) {
-                    showAlert(replaceTemplateValue(t("timeline.action_failed", "Error: {error}"), "{error}", r.error));
+                    showAlert(replaceTemplateValue(t("timeline.action_failed", "Couldn't finish that timeline action. Reconnect Premiere from the status bar, then try again. {error}"), "{error}", r.error));
                     return;
                 }
                 showToast(t("timeline.renamed_items", "Renamed {count} items")
@@ -15762,7 +15762,7 @@
                 cs.evalScript("ocCreateSmartBins('" + escSingleQuote(payload) + "')", cb);
             }, function (r) {
                 if (r.error) {
-                    showAlert(replaceTemplateValue(t("timeline.action_failed", "Error: {error}"), "{error}", r.error));
+                    showAlert(replaceTemplateValue(t("timeline.action_failed", "Couldn't finish that timeline action. Reconnect Premiere from the status bar, then try again. {error}"), "{error}", r.error));
                     return;
                 }
                 showToast(t("timeline.bins_created", "Created {count} bins")
@@ -15910,7 +15910,7 @@
             cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", cb);
         }, function (r) {
             if (r.error) {
-                showAlert(replaceTemplateValue(t("captions.action_failed", "Error: {error}"), "{error}", r.error));
+                showAlert(replaceTemplateValue(t("captions.action_failed", "Couldn't finish that caption step. Check the clip is still where OpenCut expects it, then try again. {error}"), "{error}", r.error));
                 return;
             }
             showToast(t("captions.chapter_markers_added", "Added {count} chapter markers")
@@ -15942,7 +15942,7 @@
                 cs.evalScript("ocAddNativeCaptionTrack('" + escSingleQuote(payload) + "')", cb);
             }, function (r) {
                 if (r.error) {
-                    showAlert(replaceTemplateValue(t("captions.action_failed", "Error: {error}"), "{error}", r.error));
+                    showAlert(replaceTemplateValue(t("captions.action_failed", "Couldn't finish that caption step. Check the clip is still where OpenCut expects it, then try again. {error}"), "{error}", r.error));
                     return;
                 }
                 var importedCount = r.captions_added || segments.length;
@@ -16714,7 +16714,7 @@
             var outEl = document.getElementById("nlpCommandOutput");
             if (res) res.classList.remove("hidden");
             if (err || !data) {
-                if (routeEl) routeEl.textContent = replaceTemplateValue(t("nlp.route_error", "Error: {error}"), "{error}", err ? err.message : t("common.unknown", "Unknown"));
+                if (routeEl) routeEl.textContent = replaceTemplateValue(t("nlp.route_error", "Couldn't run that command. Rephrase it or start the action from its own tab. {error}"), "{error}", err ? err.message : t("common.unknown", "Unknown"));
                 return;
             }
             if (routeEl) routeEl.textContent = t("nlp.route_label", "Route: {route}")
@@ -16852,7 +16852,7 @@
                     var lossDetail = preflight && preflight.lossy_fields && preflight.lossy_fields.length
                         ? " " + preflight.lossy_fields.join(", ")
                         : "";
-                    var otioError = replaceTemplateValue(t("timeline.otio_error", "Error: {error}"), "{error}", (data && data.error) || (err && err.message) || t("common.unknown", "Unknown"));
+                    var otioError = replaceTemplateValue(t("timeline.otio_error", "Couldn't read that timeline interchange file. Re-export it from Premiere and try again. {error}"), "{error}", (data && data.error) || (err && err.message) || t("common.unknown", "Unknown"));
                     // Only genuine preflight blocks (the backend tags them
                     // with code OTIO_PREFLIGHT_FAILED plus a preflight
                     // report) get the preflight wording; every other failure
@@ -17145,7 +17145,7 @@
             }
             _lastWorkflowRunContext = null;
         } else if (job.status === "error") {
-            var errorMsg = replaceTemplateValue(t("workflow.failed", "Workflow failed: {error}."), "{error}", job.error || job.message || t("workflow.unknown_error", "Unknown error"));
+            var errorMsg = replaceTemplateValue(t("workflow.failed", "Workflow failed: {error}."), "{error}", job.error || job.message || t("workflow.unknown_error", "no details reported"));
             if (ctx && ctx.kind === "preset") {
                 updateWorkflowPresetSummary(errorMsg, "error");
             } else if (ctx && ctx.kind === "custom") {

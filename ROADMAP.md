@@ -34,15 +34,6 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
 
 ### P3
 
-- [ ] P3 — F380 — Generic "Error: {error}" / "Unknown error" copy still has no recovery path
-  Category: ux
-  Where: nine bare "Error: {error}" keys (en.json:261, 1109, 1888, 1974, 2047; uxp:40, 1591, 1597, 1602), five "Unknown error" strings (en.json:237, 1331, 2166, 2818; uxp:1141). The named-ID leaks from F372 are done.
-  Problem: These still dump the raw error with no next step, unlike `cleanUiMessage` / `ERROR_CODE_ACTIONS` in CEP `main.js`.
-  Fix: Route them through the existing recovery phrasing. Keep internal detail in logs.
-  Acceptance: Grep for `^Error: \{error\}$` and `Unknown error` in both en.json files returns zero user-visible hits, or each remaining hit names a recovery action.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — F382 — Spaced hyphens stand in for dashes across 52 locale strings
   Category: ux
   Where: 9 CEP keys (`settings.whisper_model_*`, `settings.plugin_publisher_identity`) and 43 UXP keys (`uxp.cut.runtime.filler_done_status`, `uxp.agent.runtime.job_queued`, `uxp.search.runtime.search_ready_*`, `uxp.deliverables.runtime.*`, `uxp.captions.runtime.chapter_line`, …)

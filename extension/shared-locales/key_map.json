@@ -57,22 +57,6 @@
       "uxp.status.unknown_error"
     ]
   },
-  "shared.captions.action_failed": {
-    "cep": [
-      "captions.action_failed",
-      "nlp.route_error",
-      "timeline.action_failed",
-      "timeline.otio_error",
-      "toast.engine_preference_error"
-    ],
-    "uxp": [
-      "uxp.agent.runtime.error",
-      "uxp.runtime.error_prefix",
-      "uxp.video.runtime.broll_analysis_start_error",
-      "uxp.video.runtime.depth_effect_start_error",
-      "uxp.video.runtime.emotion_analysis_start_error"
-    ]
-  },
   "shared.captions.animation_highlight_box": {
     "cep": [
       "captions.animation_highlight_box"
