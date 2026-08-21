@@ -688,6 +688,25 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
         body: JSON.stringify({ job_id: "plugin-install-fixture" }),
       });
     }
+    if (url.pathname === "/shutdown" && route.request().method() === "POST") {
+      capturedRequests.push({ shutdown: true });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true }),
+      });
+    }
+    if (
+      url.pathname === "/whisper/clear-cache" &&
+      route.request().method() === "POST"
+    ) {
+      capturedRequests.push({ clearWhisperCache: true });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, cleared: [] }),
+      });
+    }
     if (
       url.pathname === "/plugins/workers/restart" &&
       route.request().method() === "POST"
@@ -1510,6 +1529,67 @@ test("CEP collapsible card headers work from the keyboard", async ({ page }) => 
   await expect(header).toHaveAttribute("aria-expanded", "false");
   await header.click();
   await expect(header).toHaveAttribute("aria-expanded", "true");
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP confirms before restarting the backend or clearing the model cache", async ({
+  page,
+}) => {
+  const { capturedRequests, pageErrors } = await openSurface(
+    page,
+    "cep",
+    "dark",
+    900,
+  );
+  await page.locator(".nav-tab[data-nav='settings']").click();
+
+  const restart = page.locator("#restartBackendBtn");
+  await restart.scrollIntoViewIfNeeded();
+  await restart.click();
+  const dialog = page.locator(".panel-dialog-overlay[role='dialog']");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Restart the backend?");
+  await expect(dialog).toContainText("stops immediately");
+  await expect(
+    dialog.getByRole("button", { name: "Restart Backend" }),
+  ).toBeVisible();
+
+  // Escape backs out and nothing is sent.
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  expect(capturedRequests.filter((entry) => entry.shutdown)).toEqual([]);
+
+  // The overlay backdrop backs out too.
+  await restart.click();
+  await expect(dialog).toBeVisible();
+  await dialog.click({ position: { x: 4, y: 4 } });
+  await expect(dialog).toHaveCount(0);
+  expect(capturedRequests.filter((entry) => entry.shutdown)).toEqual([]);
+
+  await restart.click();
+  await dialog.getByRole("button", { name: "Restart Backend" }).click();
+  await expect
+    .poll(() => capturedRequests.filter((entry) => entry.shutdown).length)
+    .toBe(1);
+
+  const clearCache = page.locator("#settingsClearCacheBtn");
+  await clearCache.scrollIntoViewIfNeeded();
+  await clearCache.click();
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Clear the Whisper model cache?");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  expect(
+    capturedRequests.filter((entry) => entry.clearWhisperCache),
+  ).toEqual([]);
+
+  await clearCache.click();
+  await dialog.getByRole("button", { name: "Clear Cache" }).click();
+  await expect
+    .poll(
+      () => capturedRequests.filter((entry) => entry.clearWhisperCache).length,
+    )
+    .toBe(1);
   expect(pageErrors).toEqual([]);
 });
 

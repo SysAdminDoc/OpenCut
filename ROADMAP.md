@@ -32,15 +32,6 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
 
 ### P2
 
-- [ ] P2 — F379 — Restart Backend and Clear Whisper cache have no confirm
-  Category: ux
-  Where: `restartBackend()` in `extension/com.opencut.panel/client/main.js:8855`; Whisper cache clear in the same settings card. UXP already uses panel-local confirm for Clear Index.
-  Problem: Restart Backend immediately POSTs `/shutdown`. There is no `showPanelConfirm`, so a misclick drops every in-flight job. Clear Whisper cache is similarly one-click destructive.
-  Why this pass skipped it: wrapping `restartBackend` in `showPanelConfirm` is ~8 lines and the CEP budget cannot absorb it without an extraction. Add keys next to `settings.restart_backend` in CEP `en.json` when it lands.
-  Acceptance: Both actions ask for confirmation with a calm title, what will stop, and a labelled confirm button. Esc and the overlay dismiss without restarting.
-  Confidence: Verified
-  Effort: S
-
 ### P3
 
 - [ ] P3 — F380 — Generic "Error: {error}" / "Unknown error" copy still has no recovery path
