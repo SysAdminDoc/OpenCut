@@ -95,6 +95,7 @@ body.oc-disconnected .oc-connection .oc-conn-label {
 }
 
 html.theme-light .oc-tab.active {
+  border-color: var(--cc-accent-soft);
   color: #294eaa;
 }
 
