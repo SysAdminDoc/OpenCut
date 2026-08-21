@@ -150,7 +150,11 @@ def test_mcp_http_rejects_foreign_host(monkeypatch):
     monkeypatch.setattr(mcp_server, "dispatch_jsonrpc", lambda _body: {"ok": True})
     server = _new_loopback_mcp_http_server()
     try:
-        status, payload = _mcp_http_post(server, headers={"Host": "evil.example"})
+        status, payload = _mcp_http_post(
+            server,
+            headers={"Host": "evil.example"},
+            body=b"",
+        )
     finally:
         server.server_close()
 
@@ -166,7 +170,7 @@ def test_mcp_http_rejects_foreign_origin(monkeypatch):
             "Host": f"127.0.0.1:{server.server_port}",
             "Origin": "https://evil.example",
         }
-        status, payload = _mcp_http_post(server, headers=headers)
+        status, payload = _mcp_http_post(server, headers=headers, body=b"")
     finally:
         server.server_close()
 
