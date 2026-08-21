@@ -14,7 +14,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
-from opencut.jobs import _update_job, async_job
+from opencut.jobs import _is_cancelled, _update_job, async_job
 from opencut.security import require_csrf, safe_bool, safe_float, safe_int
 
 logger = logging.getLogger("opencut")
@@ -87,6 +87,7 @@ def route_shorts_variants(job_id, filepath, data):
         burn_captions=burn_captions,
         output_dir=output_dir,
         on_progress=_prog,
+        is_cancelled=lambda: _is_cancelled(job_id),
     )
     return {k: result[k] for k in result.keys()}
 

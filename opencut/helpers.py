@@ -346,18 +346,27 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0,
                job_id: str = "") -> str:
     """Run FFmpeg command, raise RuntimeError on failure. Returns stderr.
 
-    When ``job_id`` is supplied, the spawned process is registered with
-    the job subsystem via :func:`opencut.jobs._register_job_process` so
-    the standard cancel path (``POST /cancel/<job_id>``) kills the
-    child cleanly.  Previously, ``run_ffmpeg`` used a blocking
-    ``subprocess.run`` that couldn't be interrupted — a user cancel on
-    a 30-minute encode would mark the job cancelled while FFmpeg ran
-    to completion, pinning a worker slot indefinitely.
+    When ``job_id`` is supplied, or when the current thread is running
+    an ``@async_job`` worker (via :func:`opencut.jobs.get_current_job_id`),
+    the spawned process is registered with the job subsystem via
+    :func:`opencut.jobs._register_job_process` so the standard cancel
+    path (``POST /cancel/<job_id>``) kills the child cleanly.  Previously,
+    ``run_ffmpeg`` used a blocking ``subprocess.run`` that couldn't be
+    interrupted — a user cancel on a 30-minute encode would mark the job
+    cancelled while FFmpeg ran to completion, pinning a worker slot
+    indefinitely. Callers outside a job still get the blocking run path.
 
     Unregistration happens in the ``finally`` block regardless of
     whether the child exited normally, by timeout, or via cancel.
     """
     cmd = _guard_ffmpeg_command(cmd)
+    if not job_id:
+        try:
+            from opencut.jobs import get_current_job_id
+
+            job_id = get_current_job_id() or ""
+        except Exception:  # noqa: BLE001 - tracking is optional
+            job_id = ""
     request_id = _current_request_id()
     env_kwargs = _subprocess_env_kwargs(request_id)
 

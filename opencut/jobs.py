@@ -1099,12 +1099,25 @@ def async_job(job_type: str, *, filepath_required: bool = True,
             from opencut.workers import get_pool
             try:
                 future = get_pool().submit(job_id, _process)
-            except Exception:
+            except Exception as exc:
                 if acquired_rate_limit_key:
                     from opencut.security import rate_limit_release
 
                     rate_limit_release(acquired_rate_limit_key)
-                raise
+                _update_job(
+                    job_id,
+                    status="error",
+                    error="Could not start the worker for this job.",
+                    message="Could not start the worker for this job.",
+                    code="WORKER_UNAVAILABLE",
+                )
+                logger.exception("Failed to submit job %s to the worker pool: %s", job_id, exc)
+                return jsonify({
+                    "error": "Could not start the worker for this job.",
+                    "code": "WORKER_UNAVAILABLE",
+                    "suggestion": "Retry in a moment. If this keeps happening, restart OpenCut.",
+                    "job_id": job_id,
+                }), 503
             # Store future immediately (before returning) so cancel can find it
             with job_lock:
                 if job_id in jobs:

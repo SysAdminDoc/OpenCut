@@ -3,6 +3,28 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## Unreleased
+
+### Fixed - Cancel actually stops FFmpeg and queued work
+
+- `run_ffmpeg` now registers the worker thread's job when callers forget to
+  pass `job_id`, so Cancel kills the child instead of leaving it running
+  until the encode finishes.
+- Shorts A/B variants poll cancellation between renders and stop the rest of
+  the set rather than finishing every variant after the user hit Cancel.
+- A queue entry that hits the stuck-job timeout now cancels the child job
+  instead of marking the queue failed and leaving the worker occupied.
+- If the worker pool refuses a new job (for example during shutdown), the
+  job record is marked error immediately. It used to sit in `running` until
+  the two-hour stuck-job sweeper noticed.
+
+### Fixed - Third-party XML imports refuse DTDs
+
+- Final Draft `.fdx` and GPX tracks are size-capped and rejected if they
+  carry a DTD or entity declaration, matching the caption interchange
+  guard. A crafted file can no longer expand entities in the local server
+  process.
+
 ## 1.50.0 - Gates that mean something
 
 ### Changed - The UXP route gate says something again

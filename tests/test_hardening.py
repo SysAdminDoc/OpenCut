@@ -234,6 +234,62 @@ def test_queue_waits_past_30_minutes_before_starting_next_entry(monkeypatch):
     assert dispatches == ["first", "second"]
 
 
+def test_queue_timeout_cancels_the_child_job(monkeypatch):
+    """When the wait loop expires, cancel the worker instead of abandoning it."""
+    import opencut.jobs as jobs
+    import opencut.routes.jobs_routes as jobs_routes
+
+    cancelled = []
+    clock = [0.0]
+    finished = threading.Event()
+
+    def fake_time():
+        return clock[0]
+
+    def fake_sleep(_seconds):
+        clock[0] = 2.0
+
+    def fake_dispatch(entry, _app):
+        entry["status"] = "started"
+        entry["job_id"] = "job-slow"
+
+    def fake_get_job(job_id):
+        return {"id": job_id, "status": "running"}
+
+    def fake_cancel(job_id, *, message="Cancelled by user", persist_sync=False):
+        cancelled.append((job_id, message))
+        return {"id": job_id, "status": "cancelled"}, "cancelled"
+
+    monkeypatch.setattr(jobs, "_JOB_STUCK_TIMEOUT", 1)
+    monkeypatch.setattr(jobs_routes.time, "time", fake_time)
+    monkeypatch.setattr(jobs_routes.time, "sleep", fake_sleep)
+    monkeypatch.setattr(jobs_routes, "_dispatch_queue_entry", fake_dispatch)
+    monkeypatch.setattr(jobs_routes, "_get_job_copy", fake_get_job)
+    monkeypatch.setattr(jobs_routes, "_cancel_job", fake_cancel)
+    monkeypatch.setattr(jobs_routes, "_queue_persistence_enabled", False)
+
+    original_update = jobs_routes._update_queue_entry
+
+    def tracking_update(entry, status, **details):
+        original_update(entry, status, **details)
+        if details.get("code") == "QUEUE_JOB_TIMEOUT":
+            finished.set()
+
+    monkeypatch.setattr(jobs_routes, "_update_queue_entry", tracking_update)
+
+    with jobs_routes.job_queue_lock:
+        jobs_routes.job_queue[:] = [
+            {"id": "first", "endpoint": "/silence", "payload": {}, "status": "queued"},
+        ]
+        jobs_routes._queue_state["running"] = False
+
+    jobs_routes._process_queue(object())
+    assert finished.wait(timeout=2), "queue worker did not record a timeout"
+    assert cancelled == [
+        ("job-slow", "Queued job timed out after 1 seconds"),
+    ]
+
+
 def test_cancel_route_persists_terminal_state(client, csrf_token):
     from opencut.jobs import _new_job, job_lock, jobs
 

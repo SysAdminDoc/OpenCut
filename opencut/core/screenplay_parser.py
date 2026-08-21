@@ -8,9 +8,10 @@ assemble_from_screenplay() is a planned route-backed integration.
 from __future__ import annotations
 
 import re
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from typing import List
+
+from opencut.core.xml_safe import parse_xml_root
 
 INSTALL_HINT = "No install required for Fountain. Final Draft .fdx: pip install fdx (optional)"
 
@@ -76,8 +77,7 @@ def parse_fountain(path: str) -> List[Scene]:
 
 def parse_fdx(path: str) -> List[Scene]:
     """Parse Final Draft (.fdx) XML screenplay file into Scene list."""
-    tree = ET.parse(path)
-    root = tree.getroot()
+    root = parse_xml_root(path)
 
     def tag(el):
         return el.tag.split("}")[-1] if "}" in el.tag else el.tag

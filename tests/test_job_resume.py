@@ -308,3 +308,40 @@ def test_checkpointable_routes_are_marked_resumable():
                 all(match.get(name) == value for name, value in expected_kwargs.items())
                 for match in matches
             ), f"{rel_path} @async_job({job_type!r}) is missing {expected_kwargs!r}"
+
+
+class _DeadPool:
+    def submit(self, job_id, fn):
+        raise RuntimeError("WorkerPool is shut down")
+
+
+def test_async_job_submit_failure_marks_the_job_error(monkeypatch):
+    """A pool that refuses the work must not leave a running job behind."""
+    from flask import Flask
+
+    import opencut.jobs as jobs_mod
+    from opencut.jobs import async_job
+    from opencut.security import require_csrf
+
+    monkeypatch.setattr("opencut.workers.get_pool", lambda: _DeadPool())
+
+    app = Flask(__name__)
+    app.config["TESTING"] = True
+
+    @app.route("/submit-fail-audit", methods=["POST"])
+    @require_csrf
+    @async_job("submit_fail_audit", filepath_required=False)
+    def submit_fail(job_id, filepath, data):
+        return {"ok": True}
+
+    client = app.test_client()
+    response = client.post("/submit-fail-audit", json={}, headers=_headers())
+    assert response.status_code == 503
+    body = response.get_json()
+    assert body["code"] == "WORKER_UNAVAILABLE"
+    job_id = body["job_id"]
+    live = jobs_mod._get_job_copy(job_id)
+    assert live is not None
+    assert live["status"] == "error"
+    assert live["code"] == "WORKER_UNAVAILABLE"
+
