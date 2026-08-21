@@ -42,126 +42,22 @@
       "/jobs": "CEP job-status polling transport; UXP uses JobPoller internally."
     },
     "gate": {
-      "errors": [
-        "CEP routes without a UXP path or justified exclusion: /analyze/virality, /analyze/virality/rank, /assistant/dismiss, /assistant/suggest, /audio/beats, /audio/duck-video, /audio/effects/apply, /audio/gen/sfx, /audio/gen/tone, /audio/music-ai/generate, /audio/pro/apply, /audio/pro/deepfilter, /audio/pro/effects, /audio/pro/install, /audio/tts/generate, /audio/tts/install, /batch, /batch/create, /cancel, /caption-styles, /captions/burnin/segments, /captions/enhanced/capabilities, /captions/whisperx, /context/analyze, /deliverables, /export/presets, /export/thumbnails, /favorites, /favorites/save, /info, /interview-polish, /interview-polish/state, /jobs/history, /journal/clear, /journal/list, /llm/test, /models/list, /outputs/recent, /preflight, /presets, /presets/save, /queue/list, /queue/replay, /settings/auto-zoom, /settings/export, /settings/gist/pull, /settings/gist/push, /settings/import, /settings/loudness-target, /settings/onboarding, /shutdown, /silence/speed-up, /social/platforms, /status, /system/changelog/mark-seen, /system/demo/sample, /system/dependencies, /system/estimate-time, /system/gpu-recommend, /system/issue-report/bundle, /system/open-path, /system/qe-reflect, /system/status, /templates/apply, /templates/list, /templates/save, /timeline/batch-rename, /timeline/beat-cut, /timeline/smart-bins, /transcript, /transcript/export, /transcript/summarize, /video/ai/capabilities, /video/ai/denoise, /video/ai/install, /video/ai/interpolate, /video/ai/rembg, /video/auto-detect-watermark, /video/auto-edit, /video/blend, /video/chromakey, /video/color/correct, /video/cursor-zoom/resolve, /video/face/blur, /video/face/enhance, /video/face/install, /video/face/swap, /video/highlights, /video/lut/apply, /video/lut/generate-from-ref, /video/merge, /video/particles/apply, /video/pip, /video/reframe/face, /video/remove/watermark, /video/speed/ramp, /video/speed/reverse, /video/title/overlay, /video/title/render, /video/transitions/apply, /video/trim, /video/upscale/run, /video/watermark, /whisper/clear-cache, /whisper/reinstall, /whisper/settings, /workflow/approve, /workflow/compile, /workflow/presets, /workflow/run, /workflow/save, /workflows, /workflows/list"
-      ],
-      "missing_routes": [
-        "/analyze/virality",
-        "/analyze/virality/rank",
-        "/assistant/dismiss",
-        "/assistant/suggest",
-        "/audio/beats",
-        "/audio/duck-video",
-        "/audio/effects/apply",
-        "/audio/gen/sfx",
-        "/audio/gen/tone",
-        "/audio/music-ai/generate",
-        "/audio/pro/apply",
-        "/audio/pro/deepfilter",
-        "/audio/pro/effects",
-        "/audio/pro/install",
-        "/audio/tts/generate",
-        "/audio/tts/install",
-        "/batch",
-        "/batch/create",
-        "/cancel",
-        "/caption-styles",
-        "/captions/burnin/segments",
-        "/captions/enhanced/capabilities",
-        "/captions/whisperx",
-        "/context/analyze",
-        "/deliverables",
-        "/export/presets",
-        "/export/thumbnails",
-        "/favorites",
-        "/favorites/save",
-        "/info",
-        "/interview-polish",
-        "/interview-polish/state",
-        "/jobs/history",
-        "/journal/clear",
-        "/journal/list",
-        "/llm/test",
-        "/models/list",
-        "/outputs/recent",
-        "/preflight",
-        "/presets",
-        "/presets/save",
-        "/queue/list",
-        "/queue/replay",
-        "/settings/auto-zoom",
-        "/settings/export",
-        "/settings/gist/pull",
-        "/settings/gist/push",
-        "/settings/import",
-        "/settings/loudness-target",
-        "/settings/onboarding",
-        "/shutdown",
-        "/silence/speed-up",
-        "/social/platforms",
-        "/status",
-        "/system/changelog/mark-seen",
-        "/system/demo/sample",
-        "/system/dependencies",
-        "/system/estimate-time",
-        "/system/gpu-recommend",
-        "/system/issue-report/bundle",
-        "/system/open-path",
-        "/system/qe-reflect",
-        "/system/status",
-        "/templates/apply",
-        "/templates/list",
-        "/templates/save",
-        "/timeline/batch-rename",
-        "/timeline/beat-cut",
-        "/timeline/smart-bins",
-        "/transcript",
-        "/transcript/export",
-        "/transcript/summarize",
-        "/video/ai/capabilities",
-        "/video/ai/denoise",
-        "/video/ai/install",
-        "/video/ai/interpolate",
-        "/video/ai/rembg",
-        "/video/auto-detect-watermark",
-        "/video/auto-edit",
-        "/video/blend",
-        "/video/chromakey",
-        "/video/color/correct",
-        "/video/cursor-zoom/resolve",
-        "/video/face/blur",
-        "/video/face/enhance",
-        "/video/face/install",
-        "/video/face/swap",
-        "/video/highlights",
-        "/video/lut/apply",
-        "/video/lut/generate-from-ref",
-        "/video/merge",
-        "/video/particles/apply",
-        "/video/pip",
-        "/video/reframe/face",
-        "/video/remove/watermark",
-        "/video/speed/ramp",
-        "/video/speed/reverse",
-        "/video/title/overlay",
-        "/video/title/render",
-        "/video/transitions/apply",
-        "/video/trim",
-        "/video/upscale/run",
-        "/video/watermark",
-        "/whisper/clear-cache",
-        "/whisper/reinstall",
-        "/whisper/settings",
-        "/workflow/approve",
-        "/workflow/compile",
-        "/workflow/presets",
-        "/workflow/run",
-        "/workflow/save",
-        "/workflows",
-        "/workflows/list"
-      ],
-      "passes": false,
+      "errors": [],
+      "missing_routes": [],
+      "passes": true,
       "priority_missing": []
+    },
+    "pending_floor": 113,
+    "pending_reasons": {
+      "analysis": "Virality, assistant, and context analysis surfaces. Read-only scoring the UXP panel has no view for yet.",
+      "audio": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+      "automation": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+      "delivery": "Social platform metadata, export presets, and thumbnails. Blocked with the rest of the export surface on UXP encoder work.",
+      "plumbing": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+      "timeline": "Timeline organisation helpers (renaming, smart bins, beat cuts). Depend on host write paths still being validated on 26.3.",
+      "transcript": "Caption styling, burn-in segments, and alternate ASR backends. The core transcribe path is already covered; these are the extras.",
+      "video-effects": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+      "video-restore": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first."
     },
     "priority_routes": [
       "/install-whisper",
@@ -177,40 +73,44 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Virality, assistant, and context analysis surfaces. Read-only scoring the UXP panel has no view for yet.",
+        "pending_family": "analysis",
         "priority": false,
         "route": "/analyze/virality",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Virality, assistant, and context analysis surfaces. Read-only scoring the UXP panel has no view for yet.",
+        "pending_family": "analysis",
         "priority": false,
         "route": "/analyze/virality/rank",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Virality, assistant, and context analysis surfaces. Read-only scoring the UXP panel has no view for yet.",
+        "pending_family": "analysis",
         "priority": false,
         "route": "/assistant/dismiss",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Virality, assistant, and context analysis surfaces. Read-only scoring the UXP panel has no view for yet.",
+        "pending_family": "analysis",
         "priority": false,
         "route": "/assistant/suggest",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -218,6 +118,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/audio/beat-markers",
         "status": "covered",
@@ -229,10 +130,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+        "pending_family": "audio",
         "priority": false,
         "route": "/audio/beats",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -240,6 +142,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/audio/denoise",
         "status": "covered",
@@ -252,20 +155,22 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+        "pending_family": "audio",
         "priority": false,
         "route": "/audio/duck-video",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+        "pending_family": "audio",
         "priority": false,
         "route": "/audio/effects/apply",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -273,6 +178,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": true,
         "route": "/audio/enhance",
         "status": "covered",
@@ -285,20 +191,22 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+        "pending_family": "audio",
         "priority": false,
         "route": "/audio/gen/sfx",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+        "pending_family": "audio",
         "priority": false,
         "route": "/audio/gen/tone",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -306,6 +214,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/audio/loudness-match",
         "status": "covered",
@@ -317,10 +226,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+        "pending_family": "audio",
         "priority": false,
         "route": "/audio/music-ai/generate",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -328,6 +238,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/audio/normalize",
         "status": "covered",
@@ -340,40 +251,44 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+        "pending_family": "audio",
         "priority": false,
         "route": "/audio/pro/apply",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+        "pending_family": "audio",
         "priority": false,
         "route": "/audio/pro/deepfilter",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+        "pending_family": "audio",
         "priority": false,
         "route": "/audio/pro/effects",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+        "pending_family": "audio",
         "priority": false,
         "route": "/audio/pro/install",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -381,6 +296,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": true,
         "route": "/audio/separate",
         "status": "covered",
@@ -393,60 +309,66 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+        "pending_family": "audio",
         "priority": false,
         "route": "/audio/tts/generate",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
+        "pending_family": "audio",
         "priority": false,
         "route": "/audio/tts/install",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/batch",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/batch/create",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/cancel",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Caption styling, burn-in segments, and alternate ASR backends. The core transcribe path is already covered; these are the extras.",
+        "pending_family": "transcript",
         "priority": false,
         "route": "/caption-styles",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -454,6 +376,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/captions",
         "status": "covered",
@@ -467,6 +390,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": true,
         "route": "/captions/animated/render",
         "status": "covered",
@@ -478,10 +402,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Caption styling, burn-in segments, and alternate ASR backends. The core transcribe path is already covered; these are the extras.",
+        "pending_family": "transcript",
         "priority": false,
         "route": "/captions/burnin/segments",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -489,6 +414,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/captions/chapters",
         "status": "covered",
@@ -501,6 +427,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/captions/display-settings/preview",
         "status": "covered",
@@ -513,6 +440,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/captions/display-settings/tokens",
         "status": "covered",
@@ -524,10 +452,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Caption styling, burn-in segments, and alternate ASR backends. The core transcribe path is already covered; these are the extras.",
+        "pending_family": "transcript",
         "priority": false,
         "route": "/captions/enhanced/capabilities",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -535,6 +464,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/captions/enhanced/install",
         "status": "covered",
@@ -547,6 +477,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/captions/repeat-detect",
         "status": "covered",
@@ -559,6 +490,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": true,
         "route": "/captions/translate",
         "status": "covered",
@@ -570,10 +502,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Caption styling, burn-in segments, and alternate ASR backends. The core transcribe path is already covered; these are the extras.",
+        "pending_family": "transcript",
         "priority": false,
         "route": "/captions/whisperx",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -581,6 +514,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/cleanup/apply",
         "status": "covered",
@@ -593,6 +527,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/cleanup/preview",
         "status": "covered",
@@ -604,20 +539,22 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Virality, assistant, and context analysis surfaces. Read-only scoring the UXP panel has no view for yet.",
+        "pending_family": "analysis",
         "priority": false,
         "route": "/context/analyze",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/deliverables",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -625,6 +562,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/engines",
         "status": "covered",
@@ -637,6 +575,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/engines/preference",
         "status": "covered",
@@ -649,6 +588,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": true,
         "route": "/export/preset",
         "status": "covered",
@@ -661,40 +601,44 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Social platform metadata, export presets, and thumbnails. Blocked with the rest of the export surface on UXP encoder work.",
+        "pending_family": "delivery",
         "priority": false,
         "route": "/export/presets",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Social platform metadata, export presets, and thumbnails. Blocked with the rest of the export surface on UXP encoder work.",
+        "pending_family": "delivery",
         "priority": false,
         "route": "/export/thumbnails",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/favorites",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/favorites/save",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -702,6 +646,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/fillers",
         "status": "covered",
@@ -715,6 +660,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": true,
         "route": "/full",
         "status": "covered",
@@ -727,6 +673,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/health",
         "status": "covered",
@@ -738,10 +685,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/info",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -749,6 +697,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": true,
         "route": "/install-whisper",
         "status": "covered",
@@ -760,20 +709,22 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Virality, assistant, and context analysis surfaces. Read-only scoring the UXP panel has no view for yet.",
+        "pending_family": "analysis",
         "priority": false,
         "route": "/interview-polish",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Virality, assistant, and context analysis surfaces. Read-only scoring the UXP panel has no view for yet.",
+        "pending_family": "analysis",
         "priority": false,
         "route": "/interview-polish/state",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -781,6 +732,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "CEP job-status polling transport; UXP uses JobPoller internally.",
+        "pending_family": "",
         "priority": false,
         "route": "/jobs",
         "status": "excluded",
@@ -790,10 +742,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/jobs/history",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -801,6 +754,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/jobs/interrupted",
         "status": "covered",
@@ -813,6 +767,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/journal/checkpoints",
         "status": "covered",
@@ -824,40 +779,44 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/journal/clear",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/journal/list",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/llm/test",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/models/list",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -865,6 +824,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/nlp/command",
         "status": "covered",
@@ -876,10 +836,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/outputs/recent",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -887,6 +848,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/plugins/marketplace/install",
         "status": "covered",
@@ -899,6 +861,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/plugins/trust",
         "status": "covered",
@@ -910,30 +873,33 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/preflight",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/presets",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/presets/save",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -941,6 +907,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/project/media",
         "status": "covered",
@@ -952,20 +919,22 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/queue/list",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/queue/replay",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -973,6 +942,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/search/footage",
         "status": "covered",
@@ -985,6 +955,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/search/index",
         "status": "covered",
@@ -996,50 +967,55 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/settings/auto-zoom",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/settings/export",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/settings/gist/pull",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/settings/gist/push",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/settings/import",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1047,6 +1023,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/settings/llm",
         "status": "covered",
@@ -1058,30 +1035,33 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/settings/loudness-target",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/settings/onboarding",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/shutdown",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1089,6 +1069,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/silence",
         "status": "covered",
@@ -1101,10 +1082,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/silence/speed-up",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1112,6 +1094,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/social/auth-url",
         "status": "covered",
@@ -1123,10 +1106,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Social platform metadata, export presets, and thumbnails. Blocked with the rest of the export surface on UXP encoder work.",
+        "pending_family": "delivery",
         "priority": false,
         "route": "/social/platforms",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1134,6 +1118,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/social/upload",
         "status": "covered",
@@ -1145,10 +1130,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/status",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1156,6 +1142,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/styled-captions",
         "status": "covered",
@@ -1168,6 +1155,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/subtitle/resync",
         "status": "covered",
@@ -1179,140 +1167,154 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/system/changelog/mark-seen",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/system/demo/sample",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/system/dependencies",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/system/estimate-time",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/system/gpu-recommend",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/system/issue-report/bundle",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/system/open-path",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/system/qe-reflect",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
         "priority": false,
         "route": "/system/status",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/templates/apply",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/templates/list",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/templates/save",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Timeline organisation helpers (renaming, smart bins, beat cuts). Depend on host write paths still being validated on 26.3.",
+        "pending_family": "timeline",
         "priority": false,
         "route": "/timeline/batch-rename",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Timeline organisation helpers (renaming, smart bins, beat cuts). Depend on host write paths still being validated on 26.3.",
+        "pending_family": "timeline",
         "priority": false,
         "route": "/timeline/beat-cut",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1320,6 +1322,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/timeline/export-from-markers",
         "status": "covered",
@@ -1332,6 +1335,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/timeline/export-otio",
         "status": "covered",
@@ -1344,6 +1348,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/timeline/export-premiere-interchange",
         "status": "covered",
@@ -1356,6 +1361,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/timeline/index-status",
         "status": "covered",
@@ -1368,6 +1374,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/timeline/otio-capabilities",
         "status": "covered",
@@ -1379,10 +1386,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Timeline organisation helpers (renaming, smart bins, beat cuts). Depend on host write paths still being validated on 26.3.",
+        "pending_family": "timeline",
         "priority": false,
         "route": "/timeline/smart-bins",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1390,6 +1398,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/timeline/srt-to-captions",
         "status": "covered",
@@ -1401,80 +1410,88 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Caption styling, burn-in segments, and alternate ASR backends. The core transcribe path is already covered; these are the extras.",
+        "pending_family": "transcript",
         "priority": false,
         "route": "/transcript",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Caption styling, burn-in segments, and alternate ASR backends. The core transcribe path is already covered; these are the extras.",
+        "pending_family": "transcript",
         "priority": false,
         "route": "/transcript/export",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Caption styling, burn-in segments, and alternate ASR backends. The core transcribe path is already covered; these are the extras.",
+        "pending_family": "transcript",
         "priority": false,
         "route": "/transcript/summarize",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/ai/capabilities",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/ai/denoise",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/ai/install",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/ai/interpolate",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/ai/rembg",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1482,6 +1499,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/ai/upscale",
         "status": "covered",
@@ -1493,30 +1511,33 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/auto-detect-watermark",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/auto-edit",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/blend",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1524,6 +1545,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/broll-generate",
         "status": "covered",
@@ -1536,6 +1558,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/broll-plan",
         "status": "covered",
@@ -1547,30 +1570,33 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/chromakey",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/color/correct",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/cursor-zoom/resolve",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1578,6 +1604,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/emotion-highlights",
         "status": "covered",
@@ -1589,40 +1616,44 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/face/blur",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/face/enhance",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/face/install",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/face/swap",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1630,6 +1661,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/fx/apply",
         "status": "covered",
@@ -1641,30 +1673,33 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/highlights",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/lut/apply",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/lut/generate-from-ref",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1672,6 +1707,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/magic-clips/plan",
         "status": "covered",
@@ -1683,10 +1719,11 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/merge",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1694,6 +1731,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/multicam-cuts",
         "status": "covered",
@@ -1706,6 +1744,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/multimodal-diarize",
         "status": "covered",
@@ -1717,20 +1756,22 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/particles/apply",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/pip",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1738,6 +1779,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/reframe",
         "status": "covered",
@@ -1749,20 +1791,22 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/reframe/face",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/remove/watermark",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1770,6 +1814,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/scenes",
         "status": "covered",
@@ -1783,6 +1828,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/shorts-pipeline",
         "status": "covered",
@@ -1795,6 +1841,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/speed/change",
         "status": "covered",
@@ -1806,20 +1853,22 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/speed/ramp",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/speed/reverse",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1827,6 +1876,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/video/style/apply",
         "status": "covered",
@@ -1838,160 +1888,176 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/title/overlay",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/title/render",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/transitions/apply",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/trim",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Face, upscale, watermark, and interpolation models. Long-running model jobs that need the UXP durable-job surface first.",
+        "pending_family": "video-restore",
         "priority": false,
         "route": "/video/upscale/run",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Compositing, colour, titles, transitions, and speed. The largest single block and the least started on the UXP side.",
+        "pending_family": "video-effects",
         "priority": false,
         "route": "/video/watermark",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Caption styling, burn-in segments, and alternate ASR backends. The core transcribe path is already covered; these are the extras.",
+        "pending_family": "transcript",
         "priority": false,
         "route": "/whisper/clear-cache",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Caption styling, burn-in segments, and alternate ASR backends. The core transcribe path is already covered; these are the extras.",
+        "pending_family": "transcript",
         "priority": false,
         "route": "/whisper/reinstall",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Caption styling, burn-in segments, and alternate ASR backends. The core transcribe path is already covered; these are the extras.",
+        "pending_family": "transcript",
         "priority": false,
         "route": "/whisper/settings",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/workflow/approve",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/workflow/compile",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/workflow/presets",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/workflow/run",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/workflow/save",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/workflows",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
-        "justification": "",
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
         "priority": false,
         "route": "/workflows/list",
-        "status": "missing",
+        "status": "pending",
         "uxp_sources": []
       },
       {
@@ -1999,6 +2065,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/ws/start",
         "status": "covered",
@@ -2011,6 +2078,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/ws/status",
         "status": "covered",
@@ -2023,6 +2091,7 @@
           "extension/com.opencut.panel/client/main.js"
         ],
         "justification": "",
+        "pending_family": "",
         "priority": false,
         "route": "/ws/stop",
         "status": "covered",
@@ -2036,7 +2105,19 @@
       "coverage_percent": 34.7,
       "covered": 59,
       "excluded": 1,
-      "missing": 113,
+      "missing": 0,
+      "pending": 113,
+      "pending_by_family": {
+        "analysis": 7,
+        "audio": 12,
+        "automation": 17,
+        "delivery": 3,
+        "plumbing": 29,
+        "timeline": 3,
+        "transcript": 10,
+        "video-effects": 19,
+        "video-restore": 13
+      },
       "priority_count": 7,
       "priority_covered": 7,
       "priority_missing": 0,

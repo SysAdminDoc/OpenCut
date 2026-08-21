@@ -23,12 +23,3 @@ original acceptance criteria stay traceable.
   Complexity: M
 
 ### P2
-
-- [ ] P2 — F362 — Clear or justify the CEP routes failing the UXP route-level gate
-  Why: F337 delivered what it promised, dated verdicts and typed evidence for both high-risk CEP-only functions, but it opened by citing a failing route-level gate and that gate is still failing. `route_coverage.gate.passes` is false on a list of CEP routes with no UXP path and no recorded justification. The release does not block on it, which is why it has stayed red; that also means nothing will ever force it green, and the CEP horizon does not move because the gate is ignored.
-  Evidence: `opencut/_generated/uxp_migration_dashboard.json` → `route_coverage.gate.passes: false`, one error listing CEP routes without a UXP path or justified exclusion (`/analyze/virality`, `/assistant/suggest`, `/audio/beats`, `/audio/duck-video`, and others); `opencut/core/cep_uxp_parity.py:307,392` (the two cep_only entries, audited 2026-08-20 and correctly pinned)
-  Touches: `opencut/core/cep_uxp_parity.py`, `extension/com.opencut.uxp/main.js`, the `uxp_migration_dashboard` generator, `tests/`
-  Acceptance: Every route in the gate error either gains a UXP path or carries a written exclusion with a reason, on the same dated-verdict pattern F337 established for functions; the gate passes, or its remaining failures are reduced to a named set that a separate item owns; whichever it is, the gate becomes something whose colour means something.
-  Complexity: L
-
-### P3

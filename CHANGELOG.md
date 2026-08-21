@@ -3,6 +3,57 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## Unreleased
+
+### Changed - The UXP route gate says something again
+
+- The gate that checks CEP routes against the UXP panel had been failing on
+  113 routes for long enough that its colour carried no information. Calling
+  them exclusions would have turned it green by retiring work nobody decided
+  to drop, so they are now recorded as UXP-pending instead, grouped into nine
+  families with a written reason each. A CEP route that is in neither the
+  covered, excluded, nor pending set still fails the gate, so a new route
+  cannot ship unclassified, and a floor stops the pending list growing
+  without someone raising it on purpose. Porting a route lowers the count.
+
+### Fixed - A failing release gate now says why
+
+- `release_gate.py verify` held every step's captured output and raised with
+  the failing step's name alone, which is how an intermittent
+  `panel-rendered` failure went unattributable. The failed payload is written
+  to `build/release-failure.json` and the failing steps' output goes into the
+  error itself. It cannot be mistaken for a receipt: different filename,
+  `fail` status, and `validate_receipt` refuses it.
+
+### Fixed - Release notes state the tool count that shipped
+
+- The MCP catalogue was resynced from 88 to 98 tools inside the 1.49.0
+  window. The manifest and the generated documentation block both moved and
+  the release note did not, so it advertised a count that release never
+  shipped. A scoped check now compares the claim in the current version's
+  section against the registry.
+
+### Changed - The name reads clearly where people meet it first
+
+- The README title and the repository description now use **OpenCut for
+  Premiere Pro**. The naming section already settled that the product keeps
+  the name OpenCut and that the qualified form is used wherever a name has to
+  stand on its own, which is exactly what a page title and a search result
+  are.
+
+### Changed - Two promised measurements are now actually measured
+
+- The cut-boundary fade was covered by tests that checked the filter string
+  and never listened to the result. A tone is now rendered across a real cut
+  and the sample-level step at the join is measured: without the fade the
+  splice jumps further than the waveform ever moves on its own, with it the
+  join disappears into that motion.
+- Batched transcription was claimed to preserve word timestamps and segment
+  shape. Decoding the same speech both ways shows the words and their timings
+  agree while the segmentation does not, because the batched pipeline
+  re-windows the audio. The test pins the word-level contract captions
+  actually rest on and records the segment difference as expected.
+
 ## 1.49.0 - Local Qwen3-VL video scoring
 
 ### Added: Local Qwen3-VL video scoring
