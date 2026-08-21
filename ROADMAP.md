@@ -62,16 +62,6 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
 
 ### P3
 
-- [ ] P3 — F373 — One concept, many names: terminology drift across both panels
-  Category: ux
-  Where: exact keys per cluster — filler ops (`en.json:465, 510, 712, 934, 959`; `uxp:1043`), Auto Shorts/Magic Clips/Shorts Pipeline (`en.json:1216, 1822, 2154`; `uxp:1517, 1627-1628`), backend vs server (`uxp:46, 1146`; `index.html:146`), engine section names (`en.json:1401`; index.html:3915; `uxp:259`; uxp/index.html:1894), Clear Index vs Clear Library inside one confirm flow (`en.json:1639, 1641, 1649, 1656`), Burn-In vs Burn-in (`en.json:243` vs `600, 735, 1788, 2801`), Whisper model label casing CEP vs UXP (`en.json:309-319` vs `uxp:869-877`), RoFormer spellings (`uxp:1896-1897` vs uxp/index.html:644-645 vs `en.json:121, 125`), Real-ESRGAN vs RealESRGAN within `uxp:1500-1502`, Gist vs gist (`en.json:819-830, 2584-2585`), "Premiere connection required." odd one out (`en.json:2110` vs 196/1978/2111), min-clip-length label vs its own segment tooltip (`en.json:257-258`), faster-whisper install flow failing as "Whisper" (`uxp:1835-1864`)
-  Problem: The same object or action carries two to four names, sometimes inside a single dialog (Clear Index button → "Clear footage search library?" title → "Clear Library" confirm → "Footage index cleared" toast). Terminology drift is the strongest "several tools glued together" signal a user gets.
-  Evidence: Sweep with exact keys; each hit is one json lookup to confirm.
-  Fix: Pick one term per cluster (suggested: "Remove Filler Words", "Magic Clips" as the product name with "Auto Shorts" dropped, "backend", "Engine Routing", "footage index", "Burn-In Captions", upstream spellings "Mel-Band RoFormer"/"BS-RoFormer"/"Real-ESRGAN", "Gist" capitalized as proper noun) and sweep every listed key plus matching es.json entries in one change.
-  Acceptance: Each cluster resolves to a single term across en.json (both panels), the HTML fallbacks, and es.json; the Clear Index flow uses one noun end to end.
-  Confidence: Likely
-  Effort: M
-
 - [ ] P3 — F380 — Generic "Error: {error}" / "Unknown error" copy still has no recovery path
   Category: ux
   Where: nine bare "Error: {error}" keys (en.json:261, 1109, 1888, 1974, 2047; uxp:40, 1591, 1597, 1602), five "Unknown error" strings (en.json:237, 1331, 2166, 2818; uxp:1141). The named-ID leaks from F372 are done.

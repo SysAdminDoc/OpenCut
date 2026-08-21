@@ -9763,7 +9763,7 @@
         // ExtendScript-dispatch actions get a special pseudo-endpoint.
         if (fwd.endpoint === "__jsx_add_markers__") {
             if (!inPremiere) {
-                showAlert(t("toast.premiere_connection_required", "Premiere connection required."));
+                showAlert(t("toast.premiere_connection_required", "Premiere Pro connection required."));
                 return;
             }
             var markers = (fwd.payload && fwd.payload.markers) || [];
@@ -12271,7 +12271,7 @@
         case "silence":
             return t("favorites.op_silence", "Remove Silences");
         case "fillers":
-            return t("favorites.op_fillers", "Clean Fillers");
+            return t("favorites.op_fillers", "Remove Filler Words");
         case "styled_captions":
             return t("favorites.op_styled_captions", "Styled Captions");
         case "transcribe":
@@ -13911,7 +13911,7 @@
         { name: "Auto Zoom", displayName: function () { return t("palette.tool_auto_zoom", "Auto Zoom"); }, tab: "video",    sub: "vid-effects",    keywords: "auto zoom push in ken burns face zoom" },
         { name: "AI Command", displayName: function () { return t("palette.tool_ai_command", "AI Command"); }, tab: "nlp",      sub: "nlp-command",    keywords: "nlp ai command natural language instruction" },
         { name: "Deliverables", displayName: function () { return t("palette.tool_deliverables", "Deliverables"); }, tab: "export",   sub: "exp-deliverables", keywords: "deliverables vfx adr music cue sheet asset list" },
-        { name: "Auto Shorts", displayName: function () { return t("palette.tool_auto_shorts", "Auto Shorts"); }, tab: "export",   sub: "exp-shorts",       keywords: "shorts tiktok reels auto highlight clip vertical" },
+        { name: "Auto Shorts", displayName: function () { return t("palette.tool_auto_shorts", "Magic Clips"); }, tab: "export",   sub: "exp-shorts",       keywords: "shorts tiktok reels auto highlight clip vertical" },
         { name: "Workflow Presets", displayName: function () { return t("palette.tool_workflow_presets", "Workflow Presets"); }, tab: "export",   focusId: "workflowPreset", keywords: "workflow preset pipeline chain steps auto" },
         { name: "Project Templates", displayName: function () { return t("palette.tool_project_templates", "Project Templates"); }, tab: "settings", focusId: "templateSelect", keywords: "template project youtube podcast broadcast cinema preset" },
         { name: "Keyboard Shortcuts", displayName: function () { return t("palette.tool_keyboard_shortcuts", "Keyboard Shortcuts"); }, tab: "settings", focusId: "shortcutReference", keywords: "keyboard shortcut hotkey keybind" },
@@ -16431,10 +16431,10 @@
             return;
         }
         showPanelConfirm({
-            title: t("search.clear_title", "Clear footage search library?"),
-            message: t("search.clear_confirm", "This removes indexed transcript/search data for {count}. You can rebuild it anytime from project clips.")
+            title: t("search.clear_title", "Clear the footage index?"),
+            message: t("search.clear_confirm", "This removes indexed transcript and search data for {count}. You can rebuild the footage index anytime from project clips.")
                 .replace("{count}", formatSearchFilesIndexed(totalFiles)),
-            confirmLabel: t("search.clear_confirm_button", "Clear Library"),
+            confirmLabel: t("search.clear_confirm_button", "Clear Index"),
             confirmClass: "btn btn-secondary",
             tone: "warning"
         }, function (confirmed) {
@@ -16444,31 +16444,31 @@
                 btn.disabled = true;
                 setButtonText(btn, t("search.clearing_button", "Clearing…"));
             }
-            setStatusPill("searchIndexPill", t("search.clearing_pill", "Clearing"), "working", t("search.clearing_title", "Clearing indexed footage library."));
-            setStatusLine("searchStatus", t("search.clearing_status", "Clearing indexed footage and resetting search state…"), "working");
+            setStatusPill("searchIndexPill", t("search.clearing_pill", "Clearing"), "working", t("search.clearing_title", "Clearing the footage index."));
+            setStatusLine("searchStatus", t("search.clearing_status", "Clearing the footage index and resetting search state…"), "working");
             api("DELETE", "/search/index", null, function (err, data) {
                 if (btn) {
                     btn.disabled = false;
                     setButtonText(btn, originalBtnText);
                 }
                 if (err || (data && data.error)) {
-                    if (statsEl) setHintState(statsEl, t("search.clear_failed_hint", "Couldn't clear the footage library just now."), "error");
-                    setStatusLine("searchStatus", t("search.clear_failed_status", "Couldn't clear the footage library just now. Try again in a moment."), "error");
+                    if (statsEl) setHintState(statsEl, t("search.clear_failed_hint", "Couldn't clear the footage index just now."), "error");
+                    setStatusLine("searchStatus", t("search.clear_failed_status", "Couldn't clear the footage index just now. Try again in a moment."), "error");
                     showAlert(
-                        replaceTemplateValue(t("search.clear_failed_alert", "Failed to clear footage index: {error}"), "{error}", data ? data.error : t("search.network_error", "Network error"))
+                        replaceTemplateValue(t("search.clear_failed_alert", "Failed to clear the footage index: {error}"), "{error}", data ? data.error : t("search.network_error", "Network error"))
                     );
                     return;
                 }
                 renderSearchIndexStats({ total_files: 0, total_segments: 0 });
                 if (statsEl) {
-                    setHintState(statsEl, t("search.index_cleared_hint", "Search index cleared. Re-index project clips when you're ready to search again."), "success");
+                    setHintState(statsEl, t("search.index_cleared_hint", "Footage index cleared. Re-index project clips when you're ready to search again."), "success");
                 }
                 renderSearchResultsEmpty(
                     t("search.library_title", "Search the footage library"),
                     t("search.library_body", "Index project clips, then use descriptive queries to find the right sound bite or shot."),
                     "info"
                 );
-                setStatusLine("searchStatus", t("search.library_cleared_status", "Library index cleared. Re-index project clips to search again."), "success");
+                setStatusLine("searchStatus", t("search.library_cleared_status", "Footage index cleared. Re-index project clips to search again."), "success");
                 showToast(t("search.index_cleared_toast", "Footage index cleared"), "success");
             });
         });

@@ -5,6 +5,27 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Changed - One name per thing across both panels
+
+- The shorts feature is called Magic Clips wherever it appears. It used to be
+  "Auto Shorts" on the CEP tab, "Shorts Pipeline" in UXP, and "Magic Clips"
+  in the toasts both panels raise about it.
+- Filler cleanup is "Remove Filler Words" on both panels instead of "Clean
+  Filler Words", "Clean Fillers", and "Detect & Remove Fillers".
+- The Clear Index flow says "footage index" from the button through the
+  confirm dialog to the toast. The confirm used to be titled "Clear footage
+  search library?" with a "Clear Library" button and a "Footage index
+  cleared" toast.
+- The local service is the backend, not the server, in the two UXP strings
+  that still called it one.
+- Both settings cards for engine preferences are called Engine Routing.
+- Captions burn-in is "Burn-In" everywhere it is a label, and the Whisper
+  model dropdown in UXP uses the same readable labels as CEP instead of raw
+  model ids.
+- Model names match upstream: Mel-Band RoFormer, BS-RoFormer, Real-ESRGAN.
+- faster-whisper install failures name faster-whisper, matching the rest of
+  that flow.
+
 ### Fixed - Copy mechanics: one ellipsis, one FCC sentence, no stray placeholders
 
 - Both panels now write "…" everywhere instead of mixing it with "...". The

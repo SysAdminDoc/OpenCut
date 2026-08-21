@@ -171,7 +171,7 @@ def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
         if key.startswith(shared_prefixes) and key not in spanish
     ) == []
     assert spanish["uxp.guide.timeline_title"] == "Envia cambios aprobados de vuelta a Premiere con menos friccion."
-    assert spanish["uxp.runtime.invalid_https_authorization_url"] == "El servidor envio una URL de autorizacion HTTPS no valida."
+    assert spanish["uxp.runtime.invalid_https_authorization_url"] == "El backend envió una URL de autorización HTTPS no válida."
     assert spanish["uxp.status.workspace"] == "Espacio {workspace}"
     assert spanish["uxp.workspace.choose_source_title"] == "Elige un clip o pega una ruta para empezar"
     assert spanish["uxp.runtime.select_clip_first"] == "Selecciona primero un clip."
@@ -712,7 +712,7 @@ def test_uxp_settings_runtime_feedback_uses_locale_helpers():
     assert "throw new Error(`HTTP ${response.status}`);" not in combined
     assert '].filter(Boolean).join(" | ");' not in combined
     assert 'const summaryText = `${row.role || t("uxp.settings.host_action", "Host action")} ${row.replacement_plan || row.uxp_path || ""}`.trim();' not in combined
-    assert "Server reconnected" in _locale()["uxp.status.server_reconnected"]
+    assert "Backend reconnected" in _locale()["uxp.status.server_reconnected"]
     assert "{count} listeners" in _locale()["uxp.settings.listener_count_many"]
     assert "{name}" in _locale()["uxp.settings.engine_option_label"]
 
