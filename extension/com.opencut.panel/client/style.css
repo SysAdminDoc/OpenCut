@@ -88,6 +88,12 @@
     --border-focus: rgba(119, 167, 255, 0.82);
     --border-glow: rgba(143, 184, 255, 0.20);
 
+    /* Waveform canvas (drawWaveform reads these) */
+    --waveform-bg: rgba(0, 0, 0, 0.3);
+    --waveform-bar-loud: hsla(0, 80%, 60%, 0.8);
+    --waveform-bar-mid: hsla(60, 80%, 60%, 0.8);
+    --waveform-bar-quiet: hsla(180, 80%, 60%, 0.8);
+
     /* Glass */
     --glass: rgba(16, 24, 36, 0.86);
     --glass-border: rgba(220, 230, 244, 0.09);
@@ -17092,6 +17098,11 @@ html.theme-light {
 
     /* Glow intensity */
     --glow-opacity: 0.10;
+
+    --waveform-bg: rgba(15, 23, 42, 0.08);
+    --waveform-bar-loud: hsla(0, 72%, 42%, 0.9);
+    --waveform-bar-mid: hsla(38, 80%, 38%, 0.9);
+    --waveform-bar-quiet: hsla(210, 72%, 38%, 0.9);
 }
 
 /* ── Body & app shell ──────────────────────────────── */
@@ -17534,7 +17545,14 @@ html.theme-light ::-webkit-scrollbar-thumb:hover {
 html.theme-light ::-webkit-scrollbar-track {
     background: rgba(17, 24, 39, 0.04);
 }
-.app::before {
+
+/* ============================================================
+   Shared layout + dark-default chrome
+   LIGHT THEME ends above. Color rules in this stretch that would
+   leak into light theme are scoped with html:not(.theme-light).
+   Layout-only rules stay global.
+   ============================================================ */
+html:not(.theme-light) .app::before {
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 34%),
         linear-gradient(135deg, rgba(119, 167, 255, 0.055), transparent 42%),
@@ -17759,8 +17777,8 @@ button:disabled {
     background: rgba(255, 255, 255, 0.035);
 }
 
-.quick-action-icon,
-.workspace-stage-card-icon {
+html:not(.theme-light) .quick-action-icon,
+html:not(.theme-light) .workspace-stage-card-icon {
     border-radius: var(--r-md);
     background: rgba(119, 167, 255, 0.12);
     color: #bcd4ff;
@@ -18918,4 +18936,69 @@ kbd {
     .job-queue-bar .queue-actions {
         justify-content: flex-start;
     }
+}
+
+/* Light-theme survivors that the unprefixed chrome would otherwise keep dark. */
+html.theme-light .quick-action-icon,
+html.theme-light .workspace-stage-card-icon {
+    background: rgba(30, 79, 216, 0.10);
+    color: #1e4fd8;
+}
+
+html.theme-light .oc-feature-gated::after,
+html.theme-light .oc-feature-gated.oc-feature-state-missing_dependency::after {
+    background: rgba(194, 65, 12, 0.12);
+    color: #9a3412;
+    border-color: rgba(194, 65, 12, 0.28);
+}
+
+html.theme-light .oc-feature-gated.oc-feature-state-experimental::after {
+    background: rgba(30, 79, 216, 0.12);
+    color: #1e4fd8;
+    border-color: rgba(30, 79, 216, 0.28);
+}
+
+html.theme-light .oc-feature-gated.oc-feature-state-stub::after {
+    background: rgba(23, 32, 45, 0.08);
+    color: #526071;
+    border-color: rgba(23, 32, 45, 0.18);
+}
+
+html.theme-light .progress-track,
+html.theme-light .oc-progress-track {
+    background: rgba(23, 32, 45, 0.10);
+}
+
+html.theme-light .progress-fill,
+html.theme-light .oc-progress-fill {
+    background: linear-gradient(90deg, #466fd3, #047857);
+}
+
+html.theme-light .wizard-footer .checkbox-row:hover {
+    border-color: rgba(23, 32, 45, 0.14);
+    background: rgba(23, 32, 45, 0.04);
+}
+
+html.theme-light .wizard-footer .checkbox-row:focus-within {
+    border-color: rgba(30, 79, 216, 0.45);
+    box-shadow: 0 0 0 3px rgba(30, 79, 216, 0.16);
+}
+
+html.theme-light body .oc-status-line {
+    background: rgba(23, 32, 45, 0.04);
+}
+
+html.theme-light .footage-result-item.is-selected {
+    border-color: rgba(4, 120, 87, 0.35);
+    background: linear-gradient(180deg, rgba(4, 120, 87, 0.12), rgba(4, 120, 87, 0.04));
+    box-shadow:
+        0 10px 22px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+html.theme-light .footage-result-item.is-selected .footage-result-range,
+html.theme-light .footage-result-item.is-selected .footage-result-score {
+    border-color: rgba(4, 120, 87, 0.28);
+    background: rgba(4, 120, 87, 0.10);
+    color: #047857;
 }

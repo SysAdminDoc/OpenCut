@@ -2595,9 +2595,61 @@ html body .oc-icon-btn:disabled {
 /* Keep the legacy narrow-panel refinements from reintroducing dark-theme
    ink into the light UXP surface. */
 html.theme-light body #workspaceGuideKicker {
+  background: transparent;
+  border-color: transparent;
+  color: var(--cc-muted);
+}
+
+html.theme-light body .oc-workspace-guide[data-state="ready"] #workspaceGuideKicker {
+  background: rgba(13, 105, 64, 0.10);
+  border-color: rgba(13, 105, 64, 0.28);
+  color: var(--cc-success);
+}
+
+html.theme-light body .oc-workspace-guide[data-state="warning"] #workspaceGuideKicker {
+  background: rgba(128, 81, 0, 0.10);
+  border-color: rgba(128, 81, 0, 0.28);
+  color: var(--cc-warning, #805100);
+}
+
+html.theme-light body .oc-workspace-guide[data-state="error"] #workspaceGuideKicker {
   background: rgba(168, 63, 60, 0.08);
   border-color: rgba(168, 63, 60, 0.24);
   color: var(--cc-danger);
+}
+
+html.theme-light .oc-toast-title,
+html.theme-light .oc-toast-dismiss {
+  color: var(--cc-muted);
+}
+
+html.theme-light .oc-toast .oc-toast-msg {
+  color: var(--cc-text);
+}
+
+html.theme-light .oc-toast-detail {
+  color: var(--cc-muted);
+}
+
+html.theme-light .oc-onboarding-overlay {
+  background: rgba(15, 23, 42, 0.42);
+}
+
+html.theme-light .oc-onboarding-card {
+  border-color: var(--cc-border-strong);
+  background: var(--cc-surface-raised);
+  box-shadow: var(--cc-shadow-float);
+  color: var(--cc-text);
+}
+
+html.theme-light .oc-status-pill[data-state="unknown"],
+html.theme-light .oc-status-pill[data-state="idle"],
+html.theme-light .oc-status-pill[data-state="empty"] {
+  color: var(--cc-muted);
+}
+
+html.theme-light .oc-result-list-item-path {
+  color: var(--cc-muted);
 }
 
 html.theme-light body .oc-slider-row .oc-label,
