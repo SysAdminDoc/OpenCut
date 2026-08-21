@@ -89,12 +89,17 @@ def test_f260_route_gate_rejects_uncovered_routes_and_accepts_justified_exclusio
         "/export/preset",
         "/full",
     ]
+    # pending={} because this is a synthetic two-route inventory: leaving the
+    # default (real) pending map in place only ever passed while F375's rot
+    # checks did not exist, since all 113 production entries are "vanished"
+    # relative to this tiny CEP list.
     assert validate_route_coverage(
         ["/known", "/excluded", *priority_routes],
         ["/known", *priority_routes],
         {"/excluded": "legacy"},
+        {},
     ) == []
-    errors = validate_route_coverage(["/known", "/missing", *priority_routes], ["/known", *priority_routes], {})
+    errors = validate_route_coverage(["/known", "/missing", *priority_routes], ["/known", *priority_routes], {}, {})
     assert errors
     assert "/missing" in errors[0]
 
@@ -151,19 +156,65 @@ class TestF362PendingRoutesAreTrackedRatherThanExcluded:
         )
         assert any("no recorded reason" in error for error in errors)
 
-    def test_deleting_a_cep_route_lowers_the_count_it_charges(self):
-        """A stale allowance would let a new route slip in unnoticed."""
-        assert validate_route_coverage(
+    def test_deleting_a_cep_route_demands_the_map_entry_go_with_it(self):
+        """F375 superseded the original assertion here. It used to accept a
+        pending entry for a route absent from CEP, codifying the exact silent
+        rot F375 exists to flag: the entry stopped counting against the floor
+        without anyone deciding that. Removing the entry is now required, and
+        once it is removed the floor charge drops with it."""
+        with_rot = validate_route_coverage(
             [*self.PRIORITY],
             list(self.PRIORITY),
             {},
             {"/gone": "audio"},
+            pending_floor=0,
+        )
+        assert any("/gone" in error for error in with_rot)
+
+        assert validate_route_coverage(
+            [*self.PRIORITY],
+            list(self.PRIORITY),
+            {},
+            {},
             pending_floor=0,
         ) == []
 
     def test_the_shipped_floor_matches_the_shipped_pending_list(self):
         assert UXP_PENDING_FLOOR == len(ROUTE_UXP_PENDING)
         assert set(ROUTE_UXP_PENDING.values()) <= set(UXP_PENDING_REASONS)
+
+    def test_a_ported_route_still_in_the_pending_map_fails_the_gate(self):
+        """F375 — a ported route's entry would otherwise linger while its row
+        reads "covered", overstating the backlog."""
+        errors = validate_route_coverage(
+            ["/ported", *self.PRIORITY],
+            ["/ported", *self.PRIORITY],
+            {},
+            {"/ported": "audio"},
+            pending_floor=1,
+        )
+        assert errors, "a covered route left in the pending map must fail"
+        assert any("/ported" in error and "already have a UXP path" in error for error in errors)
+
+    def test_a_pending_entry_for_a_route_cep_no_longer_calls_fails_the_gate(self):
+        """F375 — a deleted CEP route's entry would otherwise silently stop
+        counting against the floor without anyone deciding that."""
+        errors = validate_route_coverage(
+            [*self.PRIORITY],
+            list(self.PRIORITY),
+            {},
+            {"/removed-from-cep": "audio"},
+            pending_floor=1,
+        )
+        assert errors, "a pending entry for a vanished CEP route must fail"
+        assert any(
+            "/removed-from-cep" in error and "no longer calls" in error for error in errors
+        )
+
+    def test_the_shipped_pending_map_has_no_rot(self):
+        """The live manifest must be clean under the two new checks."""
+        manifest = build_dashboard_manifest()["route_coverage"]
+        assert manifest["gate"]["passes"] is True, manifest["gate"]["errors"]
 
 
 def test_f260_generated_and_panel_dashboards_are_in_sync():

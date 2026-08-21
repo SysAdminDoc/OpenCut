@@ -104,16 +104,6 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
   Confidence: Likely
   Effort: S
 
-- [ ] P3 — F375 — The UXP-pending route map can rot silently
-  Category: maintainability
-  Where: `opencut/core/cep_uxp_parity.py` — `_route_gate_errors` (route-classification gate) and `ROUTE_UXP_PENDING`
-  Problem: F362 added the pending classification with a floor ratchet, but nothing flags a `ROUTE_UXP_PENDING` entry whose route has since gained a UXP path (rows classify it "covered" and the map entry lingers) or has been deleted from the CEP panel entirely (`live_pending = deferred & cep` silently drops it from the count while the dead entry remains). Both rots leave the map overstating the backlog and make the floor mushy — the "porting a route lowers the count" contract only holds if someone remembers to edit the map.
-  Evidence: Read of the shipped gate logic (this pass's own code, re-read with fresh intent): no error or manifest field surfaces `pending ∩ uxp` or `pending − cep`.
-  Fix: In `_route_gate_errors`, emit gate errors (or at minimum a `stale_pending` manifest field the dashboard shows) for pending entries that are now covered and for entries no longer present in the CEP inventory, so the map must be pruned in the same change that ports or removes a route. Extend `TestF362PendingRoutesAreTrackedRatherThanExcluded` in `tests/test_uxp_migration_dashboard.py` with both cases.
-  Acceptance: A pending entry for a route that is covered (or gone from CEP) fails the gate with a named route; the two new tests pass; regenerating the dashboard after a simulated port forces the map edit.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — F376 — Third-party XML parsed with stdlib parsers at import boundaries
   Category: security
   Where: import paths that accept files commonly obtained from third parties: `opencut/core/caption_interchange.py:703` (`fromstring`), `opencut/core/screenplay_parser.py:79` (`ElementTree.parse`), `opencut/core/iso_ingest.py:387`, `opencut/core/multicam_xml.py:24`, `opencut/core/multi_pov.py:303` (`minidom.parseString`), `opencut/core/standards_validators.py:172`, `opencut/core/flight_path_map.py:132`; generation-only sites (podcast_rss, fcpxml_export, premiere.py) are lower concern

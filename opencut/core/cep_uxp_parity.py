@@ -305,6 +305,22 @@ def _route_gate_errors(
             "pending routes name a family with no recorded reason: "
             + ", ".join(unknown_family)
         )
+    # The map must be pruned in the same change that ports or removes a route,
+    # or it overstates the backlog and turns the floor mushy: a ported route's
+    # entry would linger while the row reads "covered", and a deleted route's
+    # entry would silently stop counting without anyone deciding that.
+    ported = sorted(deferred & uxp)
+    if ported:
+        errors.append(
+            "pending routes that already have a UXP path; remove them from "
+            "ROUTE_UXP_PENDING and lower the floor: " + ", ".join(ported)
+        )
+    vanished = sorted(deferred - cep)
+    if vanished:
+        errors.append(
+            "pending routes the CEP panel no longer calls; remove them from "
+            "ROUTE_UXP_PENDING: " + ", ".join(vanished)
+        )
     # Only routes the CEP panel actually calls count against the floor, so
     # deleting a CEP route lowers it rather than leaving a stale allowance.
     live_pending = deferred & cep
