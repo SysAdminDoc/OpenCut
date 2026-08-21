@@ -60,7 +60,7 @@
         }
 
         function formatHttpStatusError(status) {
-            return translate("error.http_status", "HTTP {status}").replace("{status}", status);
+            return translate("error.http_status", "Request failed (HTTP {status}).").replace("{status}", status);
         }
 
         function refreshCsrfToken(callback, timeout) {

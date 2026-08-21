@@ -3126,9 +3126,9 @@ function updateTimelineReadiness() {
   setStatusPill("timelineSmartBinsPill", hostActionLabel, bridgeReady ? "success" : "warning", binsHostTitle);
   setTextAndTitle("timelineSmartBinsValue", smartBinsStrategy, smartBinsStrategy);
 
-  setTextAndTitle("timelineSrtValue", srtPath ? formatWorkspaceSource(srtPath) : t("uxp.timeline.choose_srt_file", "Choose .srt file"), srtPath || t("uxp.timeline.runtime.choose_srt_file_title", "Choose an .srt file to validate before the CEP ocAddNativeCaptionTrack bridge places it."));
+  setTextAndTitle("timelineSrtValue", srtPath ? formatWorkspaceSource(srtPath) : t("uxp.timeline.choose_srt_file", "Choose .srt file"), srtPath || t("uxp.timeline.runtime.choose_srt_file_title", "Choose an .srt file to validate before Premiere places it on a caption track."));
   const trackLabel = formatI18n("uxp.timeline.runtime.track_index", "Track {index}", { index: trackIndex });
-  setTextAndTitle("timelineSrtTrackValue", trackLabel, formatI18n("uxp.timeline.runtime.target_track_title", "Track {index} target for the CEP ocAddNativeCaptionTrack handoff.", { index: trackIndex }));
+  setTextAndTitle("timelineSrtTrackValue", trackLabel, formatI18n("uxp.timeline.runtime.target_track_title", "Track {index} is the Premiere caption-track target.", { index: trackIndex }));
 
   const hasCuts = Array.isArray(lastCuts) && lastCuts.length > 0;
   const hasMarkers = Array.isArray(lastMarkers) && lastMarkers.length > 0;
@@ -4529,7 +4529,7 @@ function showCaptionsResult(result) {
     statusMessage: result.srt
       ? t(
           "uxp.captions.runtime.transcript_srt_ready_status",
-          "Transcript ready. Copy the SRT or open Timeline > SRT Prep when you're ready to validate it for the CEP ocAddNativeCaptionTrack handoff."
+          "Transcript ready. Copy the SRT or open Timeline > SRT Prep when you're ready to place captions in Premiere."
         )
       : t(
           "uxp.captions.runtime.transcript_text_ready_status",
@@ -5801,7 +5801,7 @@ async function runSrtImport() {
       noteTimelineAction(
         t("uxp.timeline.runtime.srt_validated_title", "SRT validated"),
         "success",
-        formatI18n("uxp.timeline.runtime.srt_validation_ready_detail", "SRT validation is ready. Use the CEP ocAddNativeCaptionTrack bridge action to place {count} caption segment(s) on track {trackIndex}.", { count, trackIndex }),
+        formatI18n("uxp.timeline.runtime.srt_validation_ready_detail", "SRT validation is ready. Place {count} caption segment(s) on Premiere track {trackIndex}.", { count, trackIndex }),
         srtPath,
         formatI18n("uxp.timeline.runtime.caption_segments_parsed", "{count} caption segment(s) parsed", { count })
       );
@@ -6190,7 +6190,7 @@ async function runNlpCommand() {
 
   await JobPoller.start(
     "/nlp/command",
-    { command, llm_provider: provider },
+    { command, llm_provider: provider, filepath: getWorkspaceSource("search") },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.search.runtime.thinking", "Thinking...")); },
     (result) => {
       UIController.hideProcessing();
@@ -6204,6 +6204,30 @@ async function runNlpCommand() {
       UIController.setButtonLoading("runNlpBtn", false);
       UIController.showToast(formatI18n("uxp.search.runtime.nlp_error", "NLP error: {error}", { error: err }), "error");
     }
+  );
+}
+
+async function runMatchedNlpRoute(action) {
+  if (typeof action.route !== "string" || !/^\/[A-Za-z0-9/_-]+$/.test(action.route)) {
+    UIController.showToast(t("uxp.search.runtime.unknown_nlp_action", "That result doesn't include cuts, markers, or a command to run."), "warning");
+    return;
+  }
+  const clipPath = getWorkspaceSource("search") || document.getElementById("clipPathCut")?.value?.trim() || "";
+  const params = Object.assign({}, action.params || {});
+  if (clipPath && !params.filepath) params.filepath = clipPath;
+  UIController.setButtonLoading("applyNlpBtn", true);
+  UIController.showProcessing(t("uxp.search.runtime.running_matched_command", "Running the matched command..."));
+  const done = (err) => {
+    UIController.hideProcessing();
+    UIController.setButtonLoading("applyNlpBtn", false);
+    if (err) UIController.showToast(formatI18n("uxp.search.runtime.nlp_error", "NLP error: {error}", { error: err }), "error");
+    else UIController.showToast(t("uxp.search.runtime.nlp_command_ran", "Matched command finished."), "success");
+  };
+  await JobPoller.start(
+    action.route, params,
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    () => done(),
+    (err) => done(err)
   );
 }
 
@@ -6232,6 +6256,8 @@ function showNlpResult(result) {
         "uxp.search.runtime.markers_ready_many",
         "{count} markers ready"
       );
+    } else if (action?.route) {
+      summary.textContent = formatI18n("uxp.search.runtime.route_ready", "Matched {route}. Apply runs it on the current clip.", { route: String(action.route).replace(/^\//, "") });
     } else {
       summary.textContent = t("uxp.search.review_before_applying", "Review before applying");
     }
@@ -7079,7 +7105,7 @@ function bindEvents() {
     UIController.showToast(
       t(
         "uxp.captions.runtime.choose_saved_srt",
-        "Choose the saved .srt file, then validate it for the CEP ocAddNativeCaptionTrack bridge."
+        "Choose the saved .srt file, then validate it before placing captions in Premiere."
       ),
       "info"
     );
@@ -7252,7 +7278,8 @@ function bindEvents() {
       const action = JSON.parse(bodyEl.textContent);
       if (action.cuts)    await applyTimelineCuts(action.cuts);
       else if (action.markers) await addSequenceMarkers(action.markers, null);
-      else UIController.showToast(t("uxp.search.runtime.unknown_nlp_action", "Unknown NLP action type. Check result JSON."), "info");
+      else if (action.route) await runMatchedNlpRoute(action);
+      else UIController.showToast(t("uxp.search.runtime.unknown_nlp_action", "That result doesn't include cuts, markers, or a command to run."), "info");
     } catch (_) {
       UIController.showToast(t("uxp.search.runtime.nlp_json_parse_failed", "Could not parse NLP result as JSON."), "error");
     }
@@ -8251,7 +8278,7 @@ async function uxpLoadMigrationRisk() {
   try {
     const response = await fetch(`uxp-migration-dashboard.json?ts=${Date.now()}`, { cache: "no-store" });
     if (!response.ok) {
-      throw new Error(formatI18n("uxp.settings.migration_fetch_failed", "HTTP {status}", { status: response.status }));
+      throw new Error(formatI18n("uxp.settings.migration_fetch_failed", "Request failed (HTTP {status}).", { status: response.status }));
     }
     const manifest = await response.json();
     const summary = manifest.summary || {};
@@ -8300,7 +8327,7 @@ async function uxpLoadMigrationRisk() {
           <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.migration_dashboard_empty", "Migration data empty"))}</div>
           <p>${UIController.escapeHtml(t("uxp.settings.migration_dashboard_empty_hint", "The generated migration dashboard did not contain host-action rows."))}</p>
         </div>`;
-      setSettingsStatus("settingsMigrationStatus", t("uxp.settings.migration_dashboard_empty_status", "Migration dashboard is empty. Regenerate the F260 dashboard artifact."), "warning");
+      setSettingsStatus("settingsMigrationStatus", t("uxp.settings.migration_dashboard_empty_status", "Migration data isn't available in this build. Reinstall or update OpenCut."), "warning");
       return;
     }
 
@@ -8376,9 +8403,9 @@ async function uxpLoadMigrationRisk() {
   } catch (e) {
     setTextAndTitle("settingsMigrationDirectValue", t("uxp.settings.unavailable", "Unavailable"), t("uxp.settings.migration_direct_unavailable_title", "OpenCut could not load the generated UXP migration dashboard."));
     setTextAndTitle("settingsMigrationFallbackValue", t("uxp.settings.unavailable", "Unavailable"), t("uxp.settings.migration_fallback_unavailable_title", "OpenCut could not load CEP fallback count."));
-    setTextAndTitle("settingsMigrationRiskValue", t("uxp.settings.refresh_needed", "Refresh needed"), t("uxp.settings.migration_refresh_needed_title", "Refresh after regenerating or packaging the dashboard artifact."));
+    setTextAndTitle("settingsMigrationRiskValue", t("uxp.settings.refresh_needed", "Refresh needed"), t("uxp.settings.migration_refresh_needed_title", "Refresh after reinstalling or updating OpenCut."));
     setTextAndTitle("settingsMigrationRouteValue", t("uxp.settings.unavailable", "Unavailable"), t("uxp.settings.route_coverage_unavailable_title", "OpenCut could not load CEP and UXP route coverage."));
-    setSettingsStatus("settingsMigrationStatus", t("uxp.settings.migration_dashboard_unavailable_status", "Migration dashboard could not be loaded. Regenerate the F260 dashboard artifact, then refresh."), "error");
+    setSettingsStatus("settingsMigrationStatus", t("uxp.settings.migration_dashboard_unavailable_status", "Migration data couldn't be loaded. Reinstall or update OpenCut, then refresh."), "error");
     grid.innerHTML = `
       <div class="oc-empty-state oc-empty-state-inline">
         <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.migration_data_unavailable", "Migration data unavailable"))}</div>
@@ -8425,14 +8452,14 @@ function pluginTrustRowHtml(plugin, actions) {
   const route = actions?.uninstall?.route || "/plugins/uninstall";
   const contract = formatI18n(
     "uxp.settings.plugin_uninstall_contract",
-    "Uninstall previews {route}, then requires confirm_name and confirm_token before quarantine.",
+    "Uninstall previews {route}, then asks you to type the plugin name to confirm before quarantine.",
     { route }
   );
   const worker = plugin?.worker;
   const workerDetails = worker
     ? `<p class="oc-plugin-action-contract">${UIController.escapeHtml(formatI18n(
       "uxp.settings.plugin_worker_isolation",
-      "Worker: {state}; {crashes} crashes; last error: {error}. Supervised-process availability isolation, not an OS security sandbox.",
+      "Worker: {state}; {crashes} crashes; last error: {error}. This isolates crashes so one plugin cannot take the others down.",
       {
         state: worker.state || "unknown",
         crashes: Number(worker.crash_count || 0),
@@ -8461,7 +8488,7 @@ function pluginQuarantineRowHtml(entry, actions) {
   const deleteRoute = actions?.delete_quarantine?.route || "/plugins/quarantine/delete";
   const contract = formatI18n(
     "uxp.settings.plugin_quarantine_contract",
-    "Restore uses {restore}; permanent delete previews {delete}, then requires confirm_name and confirm_token.",
+    "Restore uses {restore}; permanent delete previews {delete}, then asks you to type the plugin name to confirm.",
     { restore: restoreRoute, delete: deleteRoute }
   );
   const created = entry?.created_at
@@ -8850,7 +8877,7 @@ function updateShortsReviewActionsUxp() {
     summary.textContent = ids.length
       ? formatI18n(
           "uxp.video.runtime.shorts_render_state_candidates",
-          "Render state: {count} approved candidate(s) will be sent to /video/shorts-pipeline.",
+          "Render state: {count} approved candidate(s) will be sent to the shorts renderer.",
           { count: ids.length },
         )
       : t("uxp.video.runtime.shorts_plan_state_approve_one", "Plan state: approve at least one candidate before rendering.");

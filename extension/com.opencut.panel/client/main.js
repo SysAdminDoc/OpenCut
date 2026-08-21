@@ -6078,7 +6078,7 @@
             ? messages.join(" ")
             : (plugin.description || t("settings.plugin_no_description", "No plugin description provided."));
         var routeText = actions && actions.uninstall
-            ? t("settings.plugin_uninstall_contract", "Uninstall previews {route}, then requires confirm_name and confirm_token before quarantine.")
+            ? t("settings.plugin_uninstall_contract", "Uninstall previews {route}, then asks you to type the plugin name to confirm before quarantine.")
                 .replace("{route}", actions.uninstall.route)
             : t("settings.plugin_uninstall_contract_fallback", "Uninstall requires typed confirmation before quarantine.");
         var worker = plugin && plugin.worker;
@@ -6086,7 +6086,7 @@
             ? '<div class="plugin-action-contract">' + esc(
                 replaceTemplateValue(t(
                     "settings.plugin_worker_isolation",
-                    "Worker: {state}; {crashes} crashes; last error: {error}. Supervised-process availability isolation, not an OS security sandbox."
+                    "Worker: {state}; {crashes} crashes; last error: {error}. This isolates crashes so one plugin cannot take the others down."
                 )
                     .replace("{state}", worker.state || "unknown")
                     .replace("{crashes}", Number(worker.crash_count || 0)), "{error}", worker.last_error || t("settings.plugin_worker_no_error", "none"))
@@ -6114,7 +6114,7 @@
         var deleteRoute = actions && actions.delete_quarantine ? actions.delete_quarantine.route : "/plugins/quarantine/delete";
         var contract = t(
             "settings.plugin_quarantine_contract",
-            "Restore uses {restore}; permanent delete previews {delete}, then requires confirm_name and confirm_token."
+            "Restore uses {restore}; permanent delete previews {delete}, then asks you to type the plugin name to confirm."
         ).replace("{restore}", restoreRoute).replace("{delete}", deleteRoute);
         return '<div class="plugin-trust-row is-quarantined">' +
             '<div class="engine-title-row plugin-trust-title-row">' +
@@ -11240,7 +11240,7 @@
 
             // Tab switching: 1-8 for main tabs (skip if focus is on interactive elements)
             if (e.key >= "1" && e.key <= "8" && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey
-                && e.target === document.body) {
+                && !(e.target && e.target.closest && e.target.closest("input, textarea, select, [contenteditable='true']"))) {
                 var tabBtns = document.querySelectorAll(".nav-tab");
                 var idx = parseInt(e.key) - 1;
                 if (tabBtns[idx]) {
@@ -12221,18 +12221,17 @@
         var w = canvas.width;
         var h = canvas.height;
         ctx.clearRect(0, 0, w, h);
-        // Background
-        ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+        var styles = window.getComputedStyle(document.documentElement);
+        ctx.fillStyle = (styles.getPropertyValue("--waveform-bg") || "rgba(0, 0, 0, 0.3)").trim();
         ctx.fillRect(0, 0, w, h);
-        // Draw bars
         var barW = w / peaks.length;
+        var loud = (styles.getPropertyValue("--waveform-bar-loud") || "hsla(0, 80%, 60%, 0.8)").trim();
+        var mid = (styles.getPropertyValue("--waveform-bar-mid") || "hsla(60, 80%, 60%, 0.8)").trim();
+        var quiet = (styles.getPropertyValue("--waveform-bar-quiet") || "hsla(180, 80%, 60%, 0.8)").trim();
         for (var i = 0; i < peaks.length; i++) {
             var val = peaks[i];
-            var barH = val * h;
-            // Color based on amplitude
-            var hue = val > 0.5 ? 0 : val > 0.2 ? 60 : 180;
-            ctx.fillStyle = "hsla(" + hue + ", 80%, 60%, 0.8)";
-            ctx.fillRect(i * barW, h - barH, Math.max(1, barW - 0.5), barH);
+            ctx.fillStyle = val > 0.5 ? loud : val > 0.2 ? mid : quiet;
+            ctx.fillRect(i * barW, h - val * h, Math.max(1, barW - 0.5), val * h);
         }
     }
 
@@ -15026,7 +15025,7 @@
         }
         if (el.shortsReviewSummary && shortsReviewPlan && !shortsReviewPlan.requires_analysis) {
             el.shortsReviewSummary.textContent = ids.length
-                ? t("export.shorts_review_render_state", "Render state: {count} approved candidate{plural} will be sent to /video/shorts-pipeline.")
+                ? t("export.shorts_review_render_state", "Render state: {count} approved candidate{plural} will be sent to the shorts renderer.")
                     .replace("{count}", ids.length)
                     .replace("{plural}", ids.length === 1 ? "" : "s")
                 : t("export.shorts_review_approve_prompt", "Plan state: approve at least one candidate before rendering.");

@@ -187,7 +187,7 @@ def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     assert spanish["uxp.agent.chat_conductor_f143"] == "Conductor de chat"
     assert spanish["uxp.agent.runtime.plan_ready"] == "Plan: {count} paso(s) via {source}. Sesion {session}."
     assert spanish["uxp.agent.runtime.sequence_index_built"].startswith("Informe creado:")
-    assert spanish["nav.feature_tabs"] == "Pestanas de funciones"
+    assert spanish["nav.feature_tabs"] == "Pestañas de funciones"
     assert sorted(key for key in english if key.startswith("uxp.deliverables.") and key not in spanish) == []
     assert spanish["uxp.deliverables.generate_deliverable_documents"] == "Generar documentos de entrega"
     assert spanish["uxp.deliverables.session_temp_folder"] == "Carpeta temporal de sesion"
@@ -618,6 +618,11 @@ def test_uxp_search_runtime_feedback_uses_locale_helpers():
     assert 'UIController.showToast("Unknown NLP action type.' not in combined
     assert "Searching for" in _locale()["uxp.search.runtime.searching_for_query"]
     assert "Loaded" in _locale()["uxp.search.runtime.loaded_match_toast"]
+    assert "async function runMatchedNlpRoute(action)" in js
+    assert "else if (action.route) await runMatchedNlpRoute(action)" in js
+    assert 'filepath: getWorkspaceSource("search")' in js
+    assert "{route}" in _locale()["uxp.search.runtime.route_ready"]
+    assert "Matched command finished." in _locale()["uxp.search.runtime.nlp_command_ran"]
 
 
 def test_uxp_deliverables_runtime_feedback_uses_locale_helpers():
