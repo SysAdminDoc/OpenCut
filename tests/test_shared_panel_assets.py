@@ -83,11 +83,15 @@ def test_the_gate_covers_every_duplicated_panel_asset():
     )
 
 
-def test_studio_workbench_light_theme_flips_clips_with_the_timeline():
+def test_studio_workbench_light_theme_repaints_the_live_shell():
     css = (CEP_DIR / "studio-workbench-v2.css").read_text(encoding="utf-8")
-    assert "html.theme-light .studio-clip" in css
-    assert "html.theme-light .studio-sequence-clip" in css
-    assert "html.theme-light .studio-result-thumb" in css
+    assert "html.theme-light {" in css
+    assert "--studio-surface: #ffffff" in css
+    assert "html.theme-light .favorites-bar" in css
+    assert "background-color: var(--studio-surface)" in css
+    assert ".studio-clip" not in css
+    assert ".studio-sequence-clip" not in css
+    assert ".studio-result-thumb" not in css
     assert ".studio-wave--slate" not in css
     assert "outline: 2px solid var(--studio-accent)" in css
     assert "box-shadow: 0 0 0 3px var(--studio-accent-soft)" not in css
