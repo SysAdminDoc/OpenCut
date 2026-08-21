@@ -39,6 +39,7 @@ const CLASSIC_SCRIPT_FILES = [
   "settings-diagnostics-controller.js",
   "navigation-controller.js",
   "collapsible-cards.js",
+  "disabled-reasons.js",
   "bootstrap.js",
   "main.js",
 ];

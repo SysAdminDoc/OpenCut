@@ -21,6 +21,7 @@ export default [
       "client/settings-diagnostics-controller.js",
       "client/navigation-controller.js",
       "client/collapsible-cards.js",
+      "client/disabled-reasons.js",
     ],
     languageOptions: {
       ecmaVersion: 2021,

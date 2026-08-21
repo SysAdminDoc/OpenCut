@@ -1716,6 +1716,38 @@ test("CEP confirms before restarting the backend or clearing the model cache", a
   expect(pageErrors).toEqual([]);
 });
 
+test("CEP disabled Timeline, Deliverables and Rename controls say why", async ({
+  page,
+}) => {
+  const { pageErrors } = await openSurface(page, "cep", "dark", 900);
+
+  // One of each family the F384 sweep covered.
+  const probes = [
+    ["#runMulticamBtn", "choose a clip"],
+    ["#genVfxSheetBtn", "load sequence info"],
+    ["#renameAllBtn", "load project items"],
+  ];
+  for (const [selector, phrase] of probes) {
+    const control = page.locator(selector);
+    await expect(control).toBeDisabled();
+    const title = await control.getAttribute("title");
+    expect(title, `${selector} has no why-disabled tooltip`).toBeTruthy();
+    expect(title.toLowerCase(), `${selector} title: ${title}`).toContain(phrase);
+  }
+
+  // Enabling a control puts its own tooltip back rather than leaving the
+  // precondition on a button that no longer has one.
+  await page.evaluate(() => {
+    const button = document.getElementById("renameAllBtn");
+    button.disabled = false;
+  });
+  await expect
+    .poll(() => page.locator("#renameAllBtn").getAttribute("title"))
+    .toBe(null);
+
+  expect(pageErrors).toEqual([]);
+});
+
 test("UXP keyboard tabs retain focus and selection", async ({ page }) => {
   const { surface, pageErrors } = await openSurface(page, "uxp", "dark", 520);
   const tabs = page.locator(surface.tabSelector);

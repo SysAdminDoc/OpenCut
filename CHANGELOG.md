@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Greyed-out controls say what they are waiting for
+
+- The Timeline, Deliverables and Rename actions ship disabled and, until now,
+  silent: no tooltip, nothing for a screen reader, no hint that the panel
+  wanted a clip or a loaded sequence. Each one now carries the precondition
+  it is actually waiting on, shown while it is disabled and replaced by its
+  own tooltip once it becomes usable.
+
 ### Fixed - The UXP progress bar is visible in the light theme
 
 - The progress track was a 7.5% white wash and the fill was the dark accent
