@@ -24,13 +24,6 @@ original acceptance criteria stay traceable.
 
 ### P2
 
-- [ ] P2 — F361 — Prove the batched ASR path on speed and timestamp fidelity
-  Why: F336's acceptance asked for a long fixture showing a measurable speedup and for word timestamps and segment shape to survive batching. The routing policy, the clamps, the opt-out, and the degrade-to-sequential path are all well covered, but nothing measures either promised property, so the 4x claim in the changelog rests on upstream's number rather than this project's. Timestamp fidelity is the half that can actually break a caption workflow, and it is currently unasserted.
-  Evidence: `tests/test_batched_asr.py` (policy, batch size, pipeline construction, duration probe; no timing and no segment comparison); `opencut/core/captions.py:1438` (`plan_batched_inference`), `:1456` (`_batched_pipeline`), `:1555` (`decode_mode` into provenance); CHANGELOG 1.49.0 batched-inference entry
-  Touches: `tests/test_batched_asr.py`, a long audio fixture or a generated one, `opencut/core/captions.py`
-  Acceptance: One fixture transcribes through both paths and the word-level timestamps and segment boundaries are compared within a stated tolerance, with the tolerance justified; the speed comparison is recorded as a measurement with its hardware noted, or the speed claim is dropped from user-facing copy if it cannot be measured here; the comparison runs somewhere it will not make the default suite slow.
-  Complexity: M
-
 - [ ] P2 — F362 — Clear or justify the CEP routes failing the UXP route-level gate
   Why: F337 delivered what it promised, dated verdicts and typed evidence for both high-risk CEP-only functions, but it opened by citing a failing route-level gate and that gate is still failing. `route_coverage.gate.passes` is false on a list of CEP routes with no UXP path and no recorded justification. The release does not block on it, which is why it has stayed red; that also means nothing will ever force it green, and the CEP horizon does not move because the gate is ignored.
   Evidence: `opencut/_generated/uxp_migration_dashboard.json` → `route_coverage.gate.passes: false`, one error listing CEP routes without a UXP path or justified exclusion (`/analyze/virality`, `/assistant/suggest`, `/audio/beats`, `/audio/duck-video`, and others); `opencut/core/cep_uxp_parity.py:307,392` (the two cep_only entries, audited 2026-08-20 and correctly pinned)
