@@ -13569,7 +13569,8 @@
             ["data-i18n-label", "label"],
             ["data-i18n-alt", "alt"],
             ["data-i18n-placeholder", "placeholder"],
-            ["data-i18n-aria-label", "aria-label"]
+            ["data-i18n-aria-label", "aria-label"],
+            ["data-i18n-disabled-title", "data-disabled-title"]
         ];
         for (var m = 0; m < attrMappings.length; m++) {
             var dataAttr = attrMappings[m][0];

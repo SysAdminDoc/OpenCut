@@ -3245,10 +3245,10 @@
                         </div>
                         <div class="oc-status-line mt-xs" id="deliverablesStatus" data-state="idle" role="status" aria-live="polite" data-i18n="deliverables.status_load_prompt">Load sequence info, choose a destination if needed, then generate the docs you need.</div>
                         <div class="btn-row gap-xs flex-wrap mt-xs">
-                            <button type="button" class="btn-sm btn-secondary" id="genVfxSheetBtn" disabled data-i18n="deliverables.vfx_sheet_csv">VFX Sheet (CSV)</button>
-                            <button type="button" class="btn-sm btn-secondary" id="genAdrListBtn" disabled data-i18n="deliverables.adr_list_csv">ADR List (CSV)</button>
-                            <button type="button" class="btn-sm btn-secondary" id="genMusicCueBtn" disabled data-i18n="deliverables.music_cue_sheet_csv">Music Cue Sheet (CSV)</button>
-                            <button type="button" class="btn-sm btn-secondary" id="genAssetListBtn" disabled data-i18n="deliverables.asset_list_csv">Asset List (CSV)</button>
+                            <button type="button" class="btn-sm btn-secondary" id="genVfxSheetBtn" disabled data-i18n="deliverables.vfx_sheet_csv" data-disabled-title="Connect the backend, open a Premiere sequence, and load sequence info first." data-i18n-disabled-title="deliverables.disabled_needs_sequence">VFX Sheet (CSV)</button>
+                            <button type="button" class="btn-sm btn-secondary" id="genAdrListBtn" disabled data-i18n="deliverables.adr_list_csv" data-disabled-title="Connect the backend, open a Premiere sequence, and load sequence info first." data-i18n-disabled-title="deliverables.disabled_needs_sequence">ADR List (CSV)</button>
+                            <button type="button" class="btn-sm btn-secondary" id="genMusicCueBtn" disabled data-i18n="deliverables.music_cue_sheet_csv" data-disabled-title="Connect the backend, open a Premiere sequence, and load sequence info first." data-i18n-disabled-title="deliverables.disabled_needs_sequence">Music Cue Sheet (CSV)</button>
+                            <button type="button" class="btn-sm btn-secondary" id="genAssetListBtn" disabled data-i18n="deliverables.asset_list_csv" data-disabled-title="Connect the backend, open a Premiere sequence, and load sequence info first." data-i18n-disabled-title="deliverables.disabled_needs_sequence">Asset List (CSV)</button>
                         </div>
                         <div class="result-area hidden mt-sm" id="deliverablesResult">
                             <div class="hint" id="deliverablesFilePath"></div>
@@ -3321,7 +3321,7 @@
                             <input type="checkbox" id="otioAcceptLossy">
                             <span data-i18n="timeline.otio_accept_lossy">Allow export when preflight reports downgrade data loss</span>
                         </label>
-                        <button type="button" class="btn-secondary" id="exportOtioBtn" disabled aria-label="Export OpenTimelineIO file" data-i18n="timeline.export_otio_file" data-i18n-aria-label="timeline.export_otio_file_aria">Export .otio File</button>
+                        <button type="button" class="btn-secondary" id="exportOtioBtn" disabled aria-label="Export OpenTimelineIO file" data-i18n="timeline.export_otio_file" data-i18n-aria-label="timeline.export_otio_file_aria" data-disabled-title="Choose a clip first. OTIO export also needs its optional dependency installed." data-i18n-disabled-title="timeline.disabled_needs_clip_otio">Export .otio File</button>
                         <div class="hint hidden" id="otioHint"><span data-i18n="timeline.otio_missing">OpenTimelineIO not installed.</span> <button type="button" class="btn-text btn-xs" id="installOtioBtn" data-i18n="timeline.install_otio">Install</button></div>
                         <div class="hint hidden mt-xs" id="otioResult"></div>
                     </section>
@@ -3341,7 +3341,7 @@
                                 <option value="8" data-i18n="timeline.subdivision_eighth_beats">8 (eighth beats)</option>
                             </select>
                         </div>
-                        <button type="button" class="btn-primary" id="runBeatMarkersBtn" disabled data-i18n="timeline.detect_beats">Detect Beats</button>
+                        <button type="button" class="btn-primary" id="runBeatMarkersBtn" disabled data-i18n="timeline.detect_beats" data-disabled-title="Connect the backend and choose a clip first." data-i18n-disabled-title="timeline.disabled_needs_clip">Detect Beats</button>
                         <div class="result-area hidden" id="beatMarkersResult">
                             <div class="hint" id="beatMarkersSummary"></div>
                             <button type="button" class="btn-sm btn-secondary mt-xs" id="addBeatMarkersBtn" data-i18n="timeline.add_markers_to_sequence">Add Markers to Sequence</button>
@@ -3360,7 +3360,7 @@
                                 <option value="accent_only" data-i18n="timeline.beat_cut_accent">Accents (downbeats)</option>
                             </select>
                         </div>
-                        <button type="button" class="btn-primary" id="runBeatCutBtn" disabled data-i18n="timeline.beat_cut_run">Detect Beat Cuts</button>
+                        <button type="button" class="btn-primary" id="runBeatCutBtn" disabled data-i18n="timeline.beat_cut_run" data-disabled-title="Connect the backend and choose a clip first." data-i18n-disabled-title="timeline.disabled_needs_clip">Detect Beat Cuts</button>
                     </section>
                 </div>
 
@@ -3381,7 +3381,7 @@
                             <label id="multicamTrackMapLabel" data-i18n="timeline.speaker_track_mapping">Speaker-to-Track Mapping</label>
                             <div id="multicamTrackMap" class="mt-xs" role="group" aria-labelledby="multicamTrackMapLabel"></div>
                         </div>
-                        <button type="button" class="btn-primary" id="runMulticamBtn" disabled data-i18n="timeline.multicam_generate">Generate Cuts</button>
+                        <button type="button" class="btn-primary" id="runMulticamBtn" disabled data-i18n="timeline.multicam_generate" data-disabled-title="Connect the backend and choose a clip first." data-i18n-disabled-title="timeline.disabled_needs_clip">Generate Cuts</button>
                         <div class="result-area hidden" id="multicamResult">
                             <div class="hint" id="multicamSummary"></div>
                             <button type="button" class="btn-sm btn-secondary mt-xs" id="applyMulticamCutsBtn" data-i18n="timeline.apply_cuts_to_sequence">Apply Cuts to Sequence</button>
@@ -3403,7 +3403,7 @@
                         </div>
                         <div class="btn-row gap-xs mt-xs">
                             <button type="button" class="btn-outline btn-sm" id="getSeqMarkersBtn" data-i18n="timeline.get_markers">Get Sequence Markers</button>
-                            <button type="button" class="btn-primary btn-sm" id="exportMarkedClipsBtn" disabled data-i18n="timeline.export_marked">Export All Marked Clips</button>
+                            <button type="button" class="btn-primary btn-sm" id="exportMarkedClipsBtn" disabled data-i18n="timeline.export_marked" data-disabled-title="Connect the backend, open a Premiere sequence, choose a clip, and load its markers first." data-i18n-disabled-title="timeline.disabled_needs_markers">Export All Marked Clips</button>
                         </div>
                         <div class="result-area hidden scrollable-sm mt-sm" id="markerExportList"></div>
                         <div class="result-area hidden mt-xs" id="markerExportResult">
@@ -3428,8 +3428,8 @@
                             <input type="text" id="renameReplaceText" class="text-input" placeholder="Replace with…" data-i18n-placeholder="timeline.replace_placeholder" autocomplete="off">
                         </div>
                         <div class="btn-row gap-xs">
-                            <button type="button" class="btn-sm btn-secondary" id="applyRenamePatternBtn" disabled data-i18n="timeline.apply_pattern">Apply Pattern</button>
-                            <button type="button" class="btn-primary btn-sm" id="renameAllBtn" disabled data-i18n="timeline.rename_all">Rename All</button>
+                            <button type="button" class="btn-sm btn-secondary" id="applyRenamePatternBtn" disabled data-i18n="timeline.apply_pattern" data-disabled-title="Load project items first." data-i18n-disabled-title="timeline.disabled_needs_project_items">Apply Pattern</button>
+                            <button type="button" class="btn-primary btn-sm" id="renameAllBtn" disabled data-i18n="timeline.rename_all" data-disabled-title="Connect the backend and load project items first." data-i18n-disabled-title="timeline.disabled_needs_backend_project_items">Rename All</button>
                         </div>
                     </section>
                 </div>
@@ -3441,7 +3441,7 @@
                         <p class="card-desc" data-i18n="timeline.smart_bins_desc">Automatically organise project items into bins based on custom rules.</p>
                         <div id="smartBinRules" class="mb-sm"></div>
                         <button type="button" class="btn-sm btn-outline" id="addBinRuleBtn" data-i18n="timeline.add_rule">+ Add Rule</button>
-                        <button type="button" class="btn-primary mt-md" id="createSmartBinsBtn" data-i18n="timeline.create_bins">Create Bins</button>
+                        <button type="button" class="btn-primary mt-md" id="createSmartBinsBtn" data-i18n="timeline.create_bins" data-disabled-title="Connect the backend and add at least one smart bin rule first." data-i18n-disabled-title="timeline.disabled_needs_bin_rules">Create Bins</button>
                     </section>
                 </div>
             </div>
@@ -4288,6 +4288,7 @@
     <script src="timeline-utils.js"></script>
     <script src="onboarding-state.js"></script>
     <script src="collapsible-cards.js"></script>
+    <script src="disabled-reasons.js"></script>
     <script src="update-controller.js"></script>
     <script src="results-controller.js"></script>
     <script src="settings-diagnostics-controller.js"></script>

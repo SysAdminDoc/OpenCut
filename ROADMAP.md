@@ -17,16 +17,6 @@ Roadmap_Blocked.md; the rest landed.
 
 ### P2
 
-- [ ] P2 — F384 — Disabled CEP controls do not say why they are disabled
-  Category: ux
-  Where: `extension/com.opencut.panel/client/index.html` — 109 `disabled` attributes; the ones with no `title`/`data-i18n-title` include `#polishInterviewBtn`, `#loadWaveformBtn`, and the Timeline, Deliverables and Rename action buttons
-  Problem: A disabled button with no tooltip gives a user nothing to act on. The three quick actions do carry a title, but it describes what the button does rather than what is missing (`#quickCleanInterview` says "Preview one reversible cleanup pass" while it is greyed out for want of a clip). Screen readers get `aria-disabled` and silence.
-  Repro: Open the panel with no clip selected. Tab to Timeline, Deliverables, or Rename; every action is disabled and nothing states the precondition. Compare with the Cut tab, which sets a status line.
-  Fix: Give each disabled family one `data-i18n-title` naming the precondition ("Choose a clip first", "Connect Premiere first"), set from the same state the disable is driven by. `feature-state.js` already owns the gating and is the natural home; CEP `main.js` has 2 lines of budget left, so the wiring has to land there or in a new module.
-  Acceptance: Every disabled control in Timeline, Deliverables and Rename has a title naming its precondition, and a rendered test asserts one of each.
-  Confidence: Verified
-  Effort: M
-
 ### P3
 
 - [ ] P3 — F385 — MCP extended tool catalogue is checked but never exercised

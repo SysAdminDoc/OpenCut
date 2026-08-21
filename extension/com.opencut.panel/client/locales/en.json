@@ -2895,5 +2895,12 @@
   "journal.restore": "Restore",
   "journal.restored_action": "Restored interrupted action: {action}",
   "journal.restoring": "Restoring…",
-  "journal.saved_settings": "Saved plan: {settings}"
+  "journal.saved_settings": "Saved plan: {settings}",
+  "timeline.disabled_needs_clip_otio": "Choose a clip first. OTIO export also needs its optional dependency installed.",
+  "timeline.disabled_needs_clip": "Connect the backend and choose a clip first.",
+  "timeline.disabled_needs_markers": "Connect the backend, open a Premiere sequence, choose a clip, and load its markers first.",
+  "timeline.disabled_needs_project_items": "Load project items first.",
+  "timeline.disabled_needs_backend_project_items": "Connect the backend and load project items first.",
+  "timeline.disabled_needs_bin_rules": "Connect the backend and add at least one smart bin rule first.",
+  "deliverables.disabled_needs_sequence": "Connect the backend, open a Premiere sequence, and load sequence info first."
 }

@@ -89,7 +89,7 @@ DEAD_KEY_BASELINE = 0
 # data-i18n-alt="…" /
 # data-i18n-placeholder="…" / data-i18n-aria-label="…"
 HTML_I18N_RE = re.compile(
-    r'data-i18n(?:-(?:title|label|alt|placeholder|aria-label))?="([^"]+)"'
+    r'data-i18n(?:-(?:disabled-title|title|label|alt|placeholder|aria-label))?="([^"]+)"'
 )
 
 # t("key") / translate("key") — key must look like an i18n key.
@@ -171,6 +171,9 @@ _VOID_TAGS = frozenset({
 
 #: data-i18n-<x> attribute -> the attribute it translates.
 _FALLBACK_ATTRS = {
+    # Why-disabled copy lands in a data attribute, which disabled-reasons.js
+    # then copies into `title` for as long as the control stays disabled.
+    "data-i18n-disabled-title": "data-disabled-title",
     "data-i18n-title": "title",
     "data-i18n-label": "label",
     "data-i18n-alt": "alt",
