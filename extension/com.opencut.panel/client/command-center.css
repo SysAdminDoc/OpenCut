@@ -571,7 +571,7 @@ select:hover,
     border: 1px solid var(--cc-border-strong);
     border-radius: 8px;
     background: var(--cc-surface-raised);
-    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.34);
+    box-shadow: var(--cc-shadow-float);
 }
 
 .custom-dropdown-menu.dropup {
@@ -636,7 +636,7 @@ select:hover,
     border: 1px solid var(--cc-border-strong);
     border-radius: 8px;
     background: var(--cc-surface-raised);
-    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
+    box-shadow: var(--cc-shadow-float);
     backdrop-filter: none;
     min-width: 220px;
 }
@@ -666,7 +666,7 @@ select:hover,
     border: 1px solid var(--cc-border-strong);
     border-radius: 8px;
     background: var(--cc-surface-raised);
-    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
+    box-shadow: var(--cc-shadow-float);
     backdrop-filter: none;
     top: calc(100% + 8px);
     width: min(360px, calc(100vw - 32px));
@@ -1181,13 +1181,13 @@ html.theme-light .workspace-stage {
     border-bottom: 0;
 }
 
-html body .oc-status-line {
+html.theme-light body .oc-status-line {
     min-height: 34px;
     padding: 8px 10px;
     border: 0;
     border-left: 2px solid var(--cc-border-strong);
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(23, 32, 45, 0.04);
 }
 
 .status-text,
@@ -1553,6 +1553,11 @@ html body .footer-toggle-btn:focus-visible {
     background: rgba(255, 255, 255, 0.035);
 }
 
+html.theme-light body .footer-toggle-btn:hover:not(:disabled),
+html.theme-light body .footer-toggle-btn:focus-visible {
+    background: rgba(23, 32, 45, 0.05);
+}
+
 @media (max-width: 700px) {
     html body .main {
         padding-inline: 12px;
@@ -1597,6 +1602,11 @@ html body .oc-wave-h-grid .oc-wave-h-btn:focus-visible {
     background: rgba(255, 255, 255, 0.035) !important;
     color: var(--cc-text);
     box-shadow: inset 0 -1px 0 var(--cc-border-strong) !important;
+}
+
+html.theme-light body .oc-wave-h-grid .oc-wave-h-btn:hover:not(:disabled),
+html.theme-light body .oc-wave-h-grid .oc-wave-h-btn:focus-visible {
+    background: rgba(23, 32, 45, 0.05) !important;
 }
 
 html body .oc-wave-h-note {

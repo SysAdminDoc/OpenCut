@@ -81,3 +81,35 @@ def test_the_gate_covers_every_duplicated_panel_asset():
         f"covers them: {unguarded}. Add each to SHARED_ASSETS if it is meant to "
         "be one asset, or to panel_specific if the panels genuinely differ."
     )
+
+
+def test_studio_workbench_light_theme_flips_clips_with_the_timeline():
+    css = (CEP_DIR / "studio-workbench-v2.css").read_text(encoding="utf-8")
+    assert "html.theme-light .studio-clip" in css
+    assert "html.theme-light .studio-sequence-clip" in css
+    assert "html.theme-light .studio-result-thumb" in css
+    assert ".studio-wave--slate" not in css
+    assert "outline: 2px solid var(--studio-accent)" in css
+    assert "box-shadow: 0 0 0 3px var(--studio-accent-soft)" not in css
+
+
+def test_cep_light_theme_section_no_longer_owns_the_dark_chrome_block():
+    css = (CEP_DIR / "style.css").read_text(encoding="utf-8")
+    js = (CEP_DIR / "main.js").read_text(encoding="utf-8")
+    cc = (CEP_DIR / "command-center.css").read_text(encoding="utf-8")
+    uxp_cc = (UXP_DIR / "uxp-command-center.css").read_text(encoding="utf-8")
+    assert "Shared layout + dark-default chrome" in css
+    assert "html:not(.theme-light) .quick-action-icon" in css
+    assert "html.theme-light .quick-action-icon" in css
+    assert "html.theme-light .progress-fill" in css
+    assert "#466fd3" in css
+    assert "html.theme-light .oc-feature-gated::after" in css
+    assert "html.theme-light .footage-result-item.is-selected" in css
+    assert "--waveform-bg:" in css
+    assert 'getPropertyValue("--waveform-bg")' in js
+    assert "e.target === document.body" not in js
+    assert 'e.target.closest("input, textarea, select, [contenteditable=\'true\']")' in js
+    assert "box-shadow: var(--cc-shadow-float)" in cc
+    assert "box-shadow: 0 14px 30px rgba(0, 0, 0, 0.34)" not in cc
+    assert "html.theme-light body .oc-workspace-guide[data-state=\"ready\"] #workspaceGuideKicker" in uxp_cc
+    assert "html.theme-light .oc-toast .oc-toast-msg" in uxp_cc
