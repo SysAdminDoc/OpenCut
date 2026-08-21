@@ -33,6 +33,7 @@ export default [
         OpenCutSettingsDiagnosticsController: "readonly",
         OpenCutNavigationController: "readonly",
         OpenCutHostWriteVerification: "readonly",
+        OpenCutPanelBootstrapToken: "readonly",
         SystemPath: "readonly",
         module: "readonly",
       },

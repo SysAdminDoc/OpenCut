@@ -84,16 +84,6 @@ one open GitHub issue (#5) is already tracked as F359 in Roadmap_Blocked.md.
 
 ### P3
 
-- [ ] P2 — F377 — The CEP panel lint gate fails at HEAD
-  Category: maintainability
-  Where: `extension/com.opencut.panel/package.json` `lint` script (`eslint --max-warnings 24 …`); the 25 warnings are all `no-unused-vars` in `extension/com.opencut.panel/client/main.js`
-  Problem: `npm run lint` exits 1 on a clean checkout because main.js carries 25 unused-variable warnings against a ceiling of 24. The gate has been red long enough that nobody reads it, so it cannot catch a real regression. Not caught by the 2026-08-20 audit, which ran ruff, pytest and vitest but not the panel lint script.
-  Evidence: measured this pass on clean HEAD (stashed working tree): `npm run lint` -> exit 1, `25 problems (0 errors, 25 warnings)`, `ESLint found too many warnings (maximum: 24)`. Identical count with F367's changes applied, so F367 did not cause it. Sample offenders: main.js:17953 `_wsAutoConnected`, :17954 `_origOnHealth`, :18714/:18717 `evt`, :18727 `res`.
-  Fix: Delete the genuinely unused bindings (most are assigned-never-read leftovers) rather than raising the ceiling; where a parameter must stay for signature reasons, prefix it `_` to match the config's ignore pattern. Then lower `--max-warnings` to the new count so the gate has teeth again.
-  Acceptance: `npm run lint` exits 0 on a clean tree, and `--max-warnings` equals the remaining warning count.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — F373 — One concept, many names: terminology drift across both panels
   Category: ux
   Where: exact keys per cluster — filler ops (`en.json:465, 510, 712, 934, 959`; `uxp:1043`), Auto Shorts/Magic Clips/Shorts Pipeline (`en.json:1216, 1822, 2154`; `uxp:1517, 1627-1628`), backend vs server (`uxp:46, 1146`; `index.html:146`), engine section names (`en.json:1401`; index.html:3915; `uxp:259`; uxp/index.html:1894), Clear Index vs Clear Library inside one confirm flow (`en.json:1639, 1641, 1649, 1656`), Burn-In vs Burn-in (`en.json:243` vs `600, 735, 1788, 2801`), Whisper model label casing CEP vs UXP (`en.json:309-319` vs `uxp:869-877`), RoFormer spellings (`uxp:1896-1897` vs uxp/index.html:644-645 vs `en.json:121, 125`), Real-ESRGAN vs RealESRGAN within `uxp:1500-1502`, Gist vs gist (`en.json:819-830, 2584-2585`), "Premiere connection required." odd one out (`en.json:2110` vs 196/1978/2111), min-clip-length label vs its own segment tooltip (`en.json:257-258`), faster-whisper install flow failing as "Whisper" (`uxp:1835-1864`)

@@ -687,7 +687,7 @@
 
                 if (!isOpen) toggleDropdown(e);
 
-                var items = dropdown.querySelectorAll('.custom-dropdown-item:not(.disabled)');
+                items = dropdown.querySelectorAll('.custom-dropdown-item:not(.disabled)');
                 for (var ti = 0; ti < items.length; ti++) {
                     if (items[ti].textContent.toLowerCase().indexOf(typeSearchBuffer) === 0) {
                         // Clear old focus
@@ -8096,12 +8096,12 @@
         }
         // Re-render segment textareas
         var textareas = el.transcriptSegments.querySelectorAll(".transcript-seg-text");
-        for (var i = 0; i < textareas.length && i < snap.length; i++) {
+        for (i = 0; i < textareas.length && i < snap.length; i++) {
             textareas[i].value = snap[i];
             autoResize(textareas[i]);
         }
         if (lastTranscriptSegments) {
-            for (var i = 0; i < snap.length && i < lastTranscriptSegments.length; i++) {
+            for (i = 0; i < snap.length && i < lastTranscriptSegments.length; i++) {
                 lastTranscriptSegments[i].text = snap[i];
             }
         }
@@ -8127,7 +8127,7 @@
         el.transcriptRedoBtn.disabled = transcriptHistoryIdx >= transcriptHistory.length - 1;
     }
 
-    var editDebounceTimer = null;
+    editDebounceTimer = null;
 
     function renderTranscriptEditor(data) {
         ensureTranscriptDelegation();
@@ -8180,7 +8180,7 @@
 
         // Auto-resize textareas
         var textareas = el.transcriptSegments.querySelectorAll(".transcript-seg-text");
-        for (var i = 0; i < textareas.length; i++) {
+        for (i = 0; i < textareas.length; i++) {
             autoResize(textareas[i]);
         }
 
@@ -8300,7 +8300,6 @@
 
     function renderLutGrid() {
         if (!el.lutGrid || !el.lutSelect) return;
-        var category = el.lutCategory ? el.lutCategory.value : "all";
         el.lutGrid.innerHTML = "";
         var frag = document.createDocumentFragment();
         var options = el.lutSelect.options;
@@ -9197,7 +9196,6 @@
     // Dismissal is persisted per-session; a new connect will re-show
     // only when new completed/interrupted jobs exist.
     var _sessionCtxLoaded = false;
-    var _sessionCtxDismissedAt = 0;
 
     function _sessionCtxRelativeTime(unixSec) {
         if (!unixSec) return "";
@@ -9459,7 +9457,6 @@
     function dismissSessionContext() {
         if (!el.sessionContext) return;
         el.sessionContext.classList.add("hidden");
-        _sessionCtxDismissedAt = Date.now();
     }
 
     // ================================================================
@@ -11339,11 +11336,11 @@
             if (selects[i].id) s["s_" + selects[i].id] = selects[i].value;
         }
         var ranges = document.querySelectorAll('input[type="range"]');
-        for (var i = 0; i < ranges.length; i++) {
+        for (i = 0; i < ranges.length; i++) {
             if (ranges[i].id) s["r_" + ranges[i].id] = ranges[i].value;
         }
         var checks = document.querySelectorAll('input[type="checkbox"]');
-        for (var i = 0; i < checks.length; i++) {
+        for (i = 0; i < checks.length; i++) {
             if (checks[i].id) s["c_" + checks[i].id] = checks[i].checked;
         }
         return s;
@@ -16362,7 +16359,6 @@
     // and template substitution over translated strings, not panel logic.
     var SearchCopy = OpenCutI18n.createSearchCopy(t);
     var formatSearchFilesIndexed = SearchCopy.filesIndexed,
-        formatSearchSegments = SearchCopy.segments,
         formatSearchProjectClips = SearchCopy.projectClips,
         formatSearchIndexCount = SearchCopy.indexCount,
         formatSearchIndexedAcross = SearchCopy.indexedAcross,
@@ -16858,7 +16854,7 @@
                 }
                 showToast(t("timeline.otio_exported", "OTIO exported: {name}")
                     .replace("{name}", (data.output_path || "").split(/[/\\]/).pop()), "success");
-                var otioRes = document.getElementById("otioResult");
+                otioRes = document.getElementById("otioResult");
                 var report = data.preflight || {};
                 setHintState(
                     otioRes,
@@ -17188,7 +17184,6 @@
     // ================================================================
     // Context Awareness (Phase 3.2)
     // ================================================================
-    var _lastContextResult = null;
 
     function analyzeClipContext(infoData, pathSnapshot) {
         if (!connected) return;
@@ -17204,13 +17199,12 @@
         api("POST", "/context/analyze", payload, function (err, data) {
             if (err || !data || data.error) return;
             if (pathSnapshot && pathSnapshot !== selectedPath) return;
-            _lastContextResult = data;
-            showContextGuidance(data.guidance, data.tab_scores);
+            showContextGuidance(data.guidance);
             highlightSuggestedTabs(data.features);
         });
     }
 
-    function showContextGuidance(guidance, tabScores) {
+    function showContextGuidance(guidance) {
         var banner = el.contextGuidanceBanner;
         var textEl = el.contextGuidanceText;
         if (!banner || !textEl) return;
@@ -17234,7 +17228,7 @@
         if (!features) return;
 
         // Highlight sub-tabs for top-scoring features (score >= 65)
-        for (var i = 0; i < features.length && i < 10; i++) {
+        for (i = 0; i < features.length && i < 10; i++) {
             var f = features[i];
             if (f.score < 65) break;
             var subTab = document.querySelector('.sub-tab[data-sub="' + f.id + '"]');
@@ -17261,7 +17255,7 @@
 
         // Group features by tab field
         var tabGroups = {};
-        for (var i = 0; i < features.length; i++) {
+        for (i = 0; i < features.length; i++) {
             var tab = features[i].tab;
             if (!tabGroups[tab]) tabGroups[tab] = [];
             tabGroups[tab].push(features[i]);
@@ -17287,7 +17281,7 @@
             // Build an array of {element, score, originalIndex} for sorting
             var items = [];
             var origOrder = _originalTabOrders[selectorKey];
-            for (var j = 0; j < buttons.length; j++) {
+            for (j = 0; j < buttons.length; j++) {
                 var btn = buttons[j];
                 var subId = btn.getAttribute("data-sub");
                 var score = (subId && scoreMap[subId] !== undefined) ? scoreMap[subId] : -1;
@@ -17308,29 +17302,12 @@
             });
 
             // Reappend in new order (DOM reorder)
-            for (var j = 0; j < items.length; j++) {
+            for (j = 0; j < items.length; j++) {
                 container.appendChild(items[j].el);
             }
         }
     }
 
-    function resetTabOrder() {
-        // Remove all context-suggested highlights
-        var allSubs = document.querySelectorAll(".sub-tab.context-suggested");
-        for (var i = 0; i < allSubs.length; i++) {
-            allSubs[i].classList.remove("context-suggested");
-        }
-        // Restore original tab order for each saved container
-        for (var selectorKey in _originalTabOrders) {
-            if (!_originalTabOrders.hasOwnProperty(selectorKey)) continue;
-            var container = document.querySelector(selectorKey);
-            if (!container) continue;
-            var origOrder = _originalTabOrders[selectorKey];
-            for (var i = 0; i < origOrder.length; i++) {
-                container.appendChild(origOrder[i]);
-            }
-        }
-    }
 
     // ================================================================
     // Init
@@ -17950,8 +17927,6 @@
 
         // Auto-connect WebSocket after first successful health check
         addJobDoneListener(function () {}); // no-op, WS auto-connect handled below
-        var _wsAutoConnected = false;
-        var _origOnHealth = null;
 
         // Cleanup SSE/WS connections and timers on panel close/navigation
         window.addEventListener("beforeunload", function () {
@@ -18711,10 +18686,10 @@
             function wireCsxsEvents() {
                 if (typeof cs === "undefined" || !cs || !cs.addEventListener) return;
                 try {
-                    cs.addEventListener("com.opencut.ping.ack", function (evt) {
+                    cs.addEventListener("com.opencut.ping.ack", function () {
                         showToast(t("toast.bridgetalk_async_ready", "BridgeTalk async ready"), "success");
                     });
-                    cs.addEventListener("com.opencut.job.progress", function (evt) {
+                    cs.addEventListener("com.opencut.job.progress", function () {
                         // Reserved for future host-driven progress updates.
                     });
                 } catch (e) {}
@@ -18724,7 +18699,7 @@
                 if (typeof cs === "undefined" || !cs || !cs.evalScript) return;
                 try {
                     cs.evalScript('ocEmitPingEvent("' + Date.now() + '")',
-                        function (res) { /* ack arrives via CSXS event */ });
+                        function () { /* ack arrives via CSXS event */ });
                 } catch (e) {}
             }
 
