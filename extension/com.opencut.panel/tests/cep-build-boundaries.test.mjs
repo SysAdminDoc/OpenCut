@@ -82,12 +82,11 @@ describe("panel controller budgets", () => {
   const budgets = [
     // F303 added the panel bootstrap wiring; the reader itself lives in
     // client/panel-bootstrap-token.js, so only the wiring counts here.
-    // F367 wired a poll failure budget into both CEP poll loops. The budget
-    // state machine and the terminal-record builder live in
-    // client/job-runtime.js, so only the two call sites count here; four
-    // duplicated onError-hook blocks were folded into one local helper in the
-    // same change, which paid most of it back.
-    ["client/main.js", 18830],
+    // F367 wired a poll failure budget into both CEP poll loops (the state
+    // machine itself lives in client/job-runtime.js). F377 then deleted the
+    // dead bindings behind the panel's 25 lint warnings, which paid for that
+    // wiring outright, so the original ceiling still holds.
+    ["client/main.js", 18815],
     ["client/update-controller.js", 300],
     ["client/results-controller.js", 300],
     ["client/settings-diagnostics-controller.js", 110],
