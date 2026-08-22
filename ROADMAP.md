@@ -69,16 +69,6 @@ It is correct today by inspection, not by enforcement.
   Confidence: Verified
   Effort: M
 
-- [ ] P2 — F401 — 552 of 769 async routes cannot be queued and nothing pins the intended exclusions
-  Category: ux
-  Where: `opencut/routes/jobs_routes.py:180` `_ALLOWED_QUEUE_ENDPOINTS` (217 entries, with the comment "Only processing-oriented routes may be invoked via the queue"), the coverage reporter at `:720-766` `queue_coverage()`, and `tests/test_queue_coverage.py`.
-  Problem: the allowlist has fallen roughly four-fold behind route growth. Routes that are unambiguously "processing-oriented" by the list's own stated criterion — `/video/repair`, `/video/relight`, `/video/proxy/generate`, `/adr/sync`, `/agent/auto-edit` — return `400 ENDPOINT_NOT_QUEUEABLE` from `POST /queue/add` while working fine when called directly. The reporter was built deliberately to surface the gap without pre-empting the curation decision (its docstring says so), but the decision has never been made, and no test pins the intentional exclusions, so a newly added async route falls out of the queue silently rather than visibly.
-  Evidence: `GET /queue/coverage` against a live server returns `async_post_routes: 769, queueable: 217, not_queueable: 552, coverage_percent: 28.2, allowlist_size: 217, stale_allowlist_entries: []`. `POST /queue/add` with a valid CSRF token → `/video/repair`, `/video/stabilize-advanced` and `/video/proxy/generate` all return 400 `ENDPOINT_NOT_QUEUEABLE`, while the allowlisted `/silence` returns 200 with a queue position. The two existing tests only check the reverse direction: `tests/test_hardening.py:725` asserts no phantom entries, and `tests/test_queue_coverage.py::test_missing_entries_carry_enough_context_to_act_on` returns early when `missing` is non-empty, so it passes at any coverage level.
-  Fix: make the curation decision the reporter was written to prompt, and encode it. Group the 552 by blueprint from the `/queue/coverage` output, add the processing-oriented ones to `_ALLOWED_QUEUE_ENDPOINTS`, and move the deliberate exclusions into a named `_QUEUE_EXCLUDED_ENDPOINTS` frozenset alongside it with a one-line reason per entry. Do not auto-derive the allowlist from the `_opencut_async_job` marker — that would make non-processing routes queueable and discards the criterion the list exists to express.
-  Acceptance: `tests/test_queue_coverage.py` gains `assert client.get("/queue/coverage").get_json()["missing"] == []`, and a second assertion that every entry in `_QUEUE_EXCLUDED_ENDPOINTS` still resolves to a live async POST route. Adding a new `@async_job` POST route without listing it in either set fails the suite.
-  Confidence: Verified
-  Effort: L
-
 ### P3
 
 - [ ] P3 — F407 — The stage session card is too dense to read at the panel's default width

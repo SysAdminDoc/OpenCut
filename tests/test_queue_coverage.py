@@ -14,7 +14,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from opencut.routes.jobs_routes import _ALLOWED_QUEUE_ENDPOINTS  # noqa: E402
+from opencut.routes.jobs_routes import (  # noqa: E402
+    _ALLOWED_QUEUE_ENDPOINTS,
+    _QUEUE_EXCLUDED_ENDPOINTS,
+)
 
 from .conftest import csrf_headers  # noqa: E402
 
@@ -24,7 +27,12 @@ class TestCoverageReport:
         report = client.get("/queue/coverage").get_json()
         assert report["async_post_routes"] == report["queueable"] + report["not_queueable"]
         assert report["async_post_routes"] > 0
-        assert len(report["missing"]) == report["not_queueable"]
+        # F401 split "not queueable" into a deliberate exclusion and an
+        # unclassified omission. `missing` now carries only the latter, so it
+        # no longer equals not_queueable whenever an exclusion exists. The
+        # invariant worth pinning is that the three buckets partition the set.
+        assert report["not_queueable"] == report["excluded"] + report["unclassified"]
+        assert len(report["missing"]) == report["unclassified"]
 
     def test_report_matches_the_live_allowlist(self, client):
         report = client.get("/queue/coverage").get_json()
@@ -46,6 +54,32 @@ class TestCoverageReport:
         """An allowlisted path with no live async route is unambiguously wrong."""
         report = client.get("/queue/coverage").get_json()
         assert report["stale_allowlist_entries"] == []
+
+    def test_no_stale_exclusion_entries(self, client):
+        """Same for the exclusions: a reason attached to a dead route is noise."""
+        report = client.get("/queue/coverage").get_json()
+        assert report["stale_excluded_entries"] == []
+
+    def test_every_async_post_route_is_classified(self, client):
+        """F401: a route in neither set is an omission, not a decision.
+
+        The allowlist had fallen roughly four-fold behind route growth, so 552
+        of 769 async routes rejected /queue/add with ENDPOINT_NOT_QUEUEABLE
+        while working when called directly. Nothing caught it because the two
+        existing checks only looked for phantom entries, and the report test
+        above returns early when `missing` is non-empty. Adding an @async_job
+        POST route now fails here until it is listed as queueable or excluded.
+        """
+        report = client.get("/queue/coverage").get_json()
+        assert report["missing"] == [], (
+            "async POST routes in neither _ALLOWED_QUEUE_ENDPOINTS nor "
+            "_QUEUE_EXCLUDED_ENDPOINTS: "
+            + ", ".join(entry["endpoint"] for entry in report["missing"])
+        )
+
+    def test_the_two_sets_do_not_overlap(self):
+        """A path cannot be both queueable and deliberately excluded."""
+        assert _ALLOWED_QUEUE_ENDPOINTS & _QUEUE_EXCLUDED_ENDPOINTS == frozenset()
 
     def test_coverage_percent_is_consistent(self, client):
         report = client.get("/queue/coverage").get_json()
