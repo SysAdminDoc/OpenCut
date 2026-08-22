@@ -12,7 +12,15 @@ from flask import Blueprint, jsonify, request
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
-from opencut.security import get_json_dict, require_csrf, safe_float, safe_int, validate_filepath, validate_path
+from opencut.security import (
+    get_json_dict,
+    require_csrf,
+    safe_bool,
+    safe_float,
+    safe_int,
+    validate_filepath,
+    validate_path,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -120,7 +128,7 @@ def cloud_nodes_add():
             port=safe_int(data.get("port", 9090), 9090, min_val=1, max_val=65535),
             capabilities=data.get("capabilities", ["cpu"]),
             max_concurrent=safe_int(data.get("max_concurrent", 2), 2, min_val=1, max_val=100),
-            enabled=data.get("enabled", True),
+            enabled=safe_bool(data.get("enabled", True), True),
             priority=safe_int(data.get("priority", 0), 0, min_val=0, max_val=100),
             auth_token=str(auth_token or ""),
         )
@@ -249,7 +257,7 @@ def fingerprint_generate(job_id, filepath, data):
     """Generate a content fingerprint for a media file."""
     from opencut.core.content_fingerprint import generate_fingerprint, index_fingerprint
 
-    auto_index = data.get("auto_index", True)
+    auto_index = safe_bool(data.get("auto_index", True), True)
 
     def _progress(pct):
         _update_job(job_id, progress=pct, message=f"Fingerprinting... {pct}%")
@@ -319,7 +327,7 @@ def farm_render_submit(job_id, filepath, data):
     output_file = data.get("output_file", "")
     if output_file:
         output_file = validate_path(output_file)
-    use_remote = data.get("use_remote", False)
+    use_remote = safe_bool(data.get("use_remote", False), False)
 
     if output_dir:
         output_dir = _resolve_output_dir(filepath, output_dir)

@@ -17,6 +17,7 @@ from flask import Blueprint
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
     require_csrf,
+    safe_bool,
     safe_float,
     safe_int,
     validate_filepath,
@@ -442,7 +443,7 @@ def instant_replay(job_id, filepath, data):
         overlay_text=data.get("overlay_text", "REPLAY"),
         font_size=safe_int(data.get("font_size", 72), 72, min_val=20, max_val=200),
         transition=data.get("transition", "flash").strip(),
-        include_original=data.get("include_original", True),
+        include_original=safe_bool(data.get("include_original", True), True),
     )
 
     output_path = data.get("output_path")
@@ -490,7 +491,7 @@ def instant_replay_batch(job_id, filepath, data):
         slow_factor=safe_float(data.get("slow_factor", 0.5), 0.5, min_val=0.1, max_val=1.0),
         overlay_text=data.get("overlay_text", "REPLAY"),
         transition=data.get("transition", "flash").strip(),
-        include_original=data.get("include_original", True),
+        include_original=safe_bool(data.get("include_original", True), True),
     )
 
     output_dir = data.get("output_dir", "")

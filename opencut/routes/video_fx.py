@@ -21,6 +21,7 @@ from opencut.jobs import (
 )
 from opencut.security import (
     require_csrf,
+    safe_bool,
     safe_float,
     safe_int,
     validate_filepath,
@@ -175,7 +176,7 @@ def speed_change_route(job_id, filepath, data):
     effective_dir = _resolve_output_dir(filepath, output_dir)
     out = change_speed(
         filepath, speed=speed, output_dir=effective_dir,
-        maintain_pitch=data.get("maintain_pitch", False),
+        maintain_pitch=safe_bool(data.get("maintain_pitch", False), False),
         on_progress=_on_progress,
     )
     return {"output_path": out, "speed": speed}
@@ -199,7 +200,7 @@ def speed_reverse_route(job_id, filepath, data):
     effective_dir = _resolve_output_dir(filepath, output_dir)
     out = reverse_video(
         filepath, output_dir=effective_dir,
-        reverse_audio=data.get("reverse_audio", True),
+        reverse_audio=safe_bool(data.get("reverse_audio", True), True),
         on_progress=_on_progress,
     )
     return {"output_path": out}

@@ -94,6 +94,56 @@ def test_routes_do_not_use_raw_bool_for_getters():
     assert not offenders, "Use opencut.security.safe_bool for route getter coercion:\n" + "\n".join(offenders)
 
 
+def test_routes_wrap_request_body_boolean_flags_in_safe_bool():
+    """Every request-body flag with a bool default must go through safe_bool.
+
+    F397: the check above only matches ``bool(<expr>.get(...))`` as one nested
+    expression. Two shapes evaded it — a flag assigned on one line and coerced
+    on the next, and (far more common) a flag never coerced at all, just handed
+    to an ``if`` or a boolean parameter. Raw truthiness turns the string
+    ``"false"`` into ``True``, so a client opting out of a behaviour gets it.
+
+    Only reads off the request body count. ``plugin.get("valid", False)`` and
+    friends read dicts the server built itself, which are not a trust boundary.
+    """
+    request_body_names = {"data", "config_data", "payload", "body"}
+    offenders = []
+
+    for path in sorted(Path("opencut/routes").rglob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(path))
+
+        guarded = set()
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id in ("safe_bool", "bool")
+            ):
+                guarded.update(id(child) for child in ast.walk(node))
+
+        for node in ast.walk(tree):
+            if not (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "get"
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id in request_body_names
+                and len(node.args) == 2
+            ):
+                continue
+            default = node.args[1]
+            if not (isinstance(default, ast.Constant) and isinstance(default.value, bool)):
+                continue
+            if id(node) in guarded:
+                continue
+            offenders.append(f"{path}:{node.lineno}: {ast.unparse(node)}")
+
+    assert not offenders, (
+        "Wrap request-body boolean flags in opencut.security.safe_bool:\n" + "\n".join(offenders)
+    )
+
+
 def poll_job(client, job_id, timeout=10):
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -236,3 +286,41 @@ def test_video_shorts_pipeline_string_false_flags_stay_false(client, csrf_token,
     assert job["status"] == "complete"
     assert captured["face_track"] is False
     assert captured["burn_captions"] is False
+
+
+def test_lip_sync_string_false_opts_out_of_the_external_model(client, csrf_token, tmp_path):
+    """F397: `use_external` was read raw and then passed through bool().
+
+    Splitting the read and the coercion across two lines hid it from the
+    single-expression check above, so a client sending "false" still got the
+    heavy Wav2Lip path.
+    """
+    from opencut.core.lip_sync import LipSyncResult
+
+    media = tmp_path / "clip.mp4"
+    media.write_bytes(b"fake-mp4")
+    audio = tmp_path / "vo.wav"
+    audio.write_bytes(b"RIFF-test")
+
+    captured = {}
+
+    def fake_lip_sync(**kwargs):
+        captured.update(kwargs)
+        kwargs["on_progress"](100)
+        return LipSyncResult(output_path=str(media))
+
+    with patch("opencut.core.lip_sync.apply_lip_sync", side_effect=fake_lip_sync):
+        resp = client.post(
+            "/api/video/lip-sync",
+            data=json.dumps({
+                "filepath": str(media),
+                "audio_path": str(audio),
+                "use_external": "false",
+            }),
+            headers=csrf_headers(csrf_token),
+        )
+        job = poll_job(client, resp.get_json()["job_id"])
+
+    assert resp.status_code == 200
+    assert job["status"] == "complete"
+    assert captured["use_external"] is False

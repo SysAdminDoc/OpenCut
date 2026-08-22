@@ -14,7 +14,7 @@ from flask import Blueprint
 
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, validate_path
+from opencut.security import require_csrf, safe_bool, safe_float, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -178,9 +178,7 @@ def enhance_low_light_route(job_id, filepath, data):
     if output_dir:
         output_dir = validate_path(output_dir)
     strength = safe_float(data.get("strength", 1.0), 1.0, min_val=0.0, max_val=2.0)
-    denoise = data.get("denoise", True)
-    if isinstance(denoise, str):
-        denoise = denoise.lower() in ("true", "1", "yes")
+    denoise = safe_bool(data.get("denoise", True), True)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -223,9 +221,7 @@ def enhance_low_light_preview_route(job_id, filepath, data):
     from opencut.helpers import get_ffmpeg_path, run_ffmpeg
 
     strength = safe_float(data.get("strength", 1.0), 1.0, min_val=0.0, max_val=2.0)
-    denoise = data.get("denoise", True)
-    if isinstance(denoise, str):
-        denoise = denoise.lower() in ("true", "1", "yes")
+    denoise = safe_bool(data.get("denoise", True), True)
     timestamp = safe_float(data.get("timestamp", 1.0), 1.0, min_val=0.0)
 
     def _progress(pct, msg=""):

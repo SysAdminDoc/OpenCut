@@ -13,7 +13,7 @@ import tempfile
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import get_json_dict, require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import get_json_dict, require_csrf, safe_bool, safe_float, safe_int, validate_filepath
 
 logger = logging.getLogger("opencut")
 
@@ -160,7 +160,7 @@ def multilang_import(job_id, filepath, data):
 
     content = str(data.get("content", "")).strip()
     fmt = str(data.get("format", "srt")).strip().lower()
-    align = data.get("align_to_timing", True)
+    align = safe_bool(data.get("align_to_timing", True), True)
 
     if not content:
         # Try reading from file path
@@ -359,13 +359,13 @@ def sdh_format(job_id, filepath, data):
     # Build config from request
     config_data = data.get("config", {})
     config = SDHConfig(
-        uppercase_speakers=config_data.get("uppercase_speakers", True),
+        uppercase_speakers=safe_bool(config_data.get("uppercase_speakers", True), True),
         bracket_style=str(config_data.get("bracket_style", "square")),
         music_symbol=str(config_data.get("music_symbol", "\u266a")),
         speaker_separator=str(config_data.get("speaker_separator", ":")),
-        include_sound_events=config_data.get("include_sound_events", True),
-        include_music_notation=config_data.get("include_music_notation", True),
-        include_tone_markers=config_data.get("include_tone_markers", True),
+        include_sound_events=safe_bool(config_data.get("include_sound_events", True), True),
+        include_music_notation=safe_bool(config_data.get("include_music_notation", True), True),
+        include_tone_markers=safe_bool(config_data.get("include_tone_markers", True), True),
         sound_event_position=str(
             config_data.get("sound_event_position", "before")
         ),

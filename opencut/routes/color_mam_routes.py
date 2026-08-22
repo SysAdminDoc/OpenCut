@@ -17,6 +17,7 @@ from opencut.jobs import _is_cancelled, _update_job, async_job
 from opencut.security import (
     get_json_dict,
     require_csrf,
+    safe_bool,
     safe_float,
     safe_int,
     validate_filepath,
@@ -472,7 +473,7 @@ def power_window_create():
             width=safe_float(data.get("width", 0.3), 0.3),
             height=safe_float(data.get("height", 0.3), 0.3),
             rotation=safe_float(data.get("rotation", 0), 0),
-            invert=data.get("invert", False),
+            invert=safe_bool(data.get("invert", False), False),
         )
         return jsonify(window.to_dict())
     except ValueError as e:

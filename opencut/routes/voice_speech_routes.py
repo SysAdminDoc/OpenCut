@@ -16,7 +16,7 @@ from flask import Blueprint, jsonify
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath
 
 logger = logging.getLogger("opencut")
 
@@ -278,14 +278,14 @@ def route_lip_sync(job_id, filepath, data):
         raise ValueError("Missing 'audio_path' field")
     validate_filepath(audio_path)
 
-    use_external = data.get("use_external", True)
+    use_external = safe_bool(data.get("use_external", True), True)
     blend_strength = safe_float(data.get("blend_strength", 0.7), 0.7, min_val=0.0, max_val=1.0)
     output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
 
     result = apply_lip_sync(
         video_path=filepath,
         audio_path=audio_path,
-        use_external=bool(use_external),
+        use_external=use_external,
         blend_strength=blend_strength,
         output_dir=output_dir,
         on_progress=lambda pct: _update_job(
@@ -342,7 +342,7 @@ def route_voice_convert(job_id, filepath, data):
     if pitch_shift is not None:
         pitch_shift = safe_float(pitch_shift, 0.0, min_val=-12.0, max_val=12.0)
 
-    use_rvc = data.get("use_rvc", True)
+    use_rvc = safe_bool(data.get("use_rvc", True), True)
     output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
 
     result = convert_voice(
@@ -350,7 +350,7 @@ def route_voice_convert(job_id, filepath, data):
         target_profile_path=target_profile_path,
         target_profile_name=target_profile_name,
         pitch_shift=pitch_shift,
-        use_rvc=bool(use_rvc),
+        use_rvc=use_rvc,
         output_dir=output_dir,
         on_progress=lambda pct: _update_job(
             job_id, progress=pct, message=f"Voice conversion: {pct}%",
