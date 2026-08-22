@@ -88,7 +88,11 @@ describe("panel controller budgets", () => {
     // machine itself lives in client/job-runtime.js). F377 then deleted the
     // dead bindings behind the panel's 25 lint warnings, which paid for that
     // wiring outright, so the original ceiling still holds.
-    ["client/main.js", 18815],
+    // F389 spends one line of that ceiling on `onBootstrapRefused`, the retry
+    // that lets a panel which loaded before the backend recover its CSRF
+    // token. The eager-capture fix it ships alongside is line-neutral:
+    // `evalScript: jsx` replaced a three-line ternary.
+    ["client/main.js", 18816],
     ["client/update-controller.js", 300],
     ["client/results-controller.js", 300],
     ["client/settings-diagnostics-controller.js", 110],

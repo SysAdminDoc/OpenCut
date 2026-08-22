@@ -465,6 +465,23 @@ describe("CEP shipped control wiring", () => {
     expect(host).toContain('JSON.stringify({ error: "No project open" })');
   });
 
+  it("hands the bootstrap loader a bridge resolved on call, not one captured at script eval", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const source = sourceBetween(
+      main,
+      "OpenCutPanelBootstrapToken.createBootstrapTokenLoader(",
+      "var api = backendClient.request;",
+    );
+
+    // F389: `cs` is null until initCSInterface() runs from the DOM-ready
+    // callback, so any expression evaluated here pins evalScript to null and
+    // the panel can never read the secret. jsx() re-checks `cs` per call.
+    expect(source).toContain("evalScript: jsx,");
+    expect(source).not.toContain("typeof cs.evalScript");
+    expect(source).toContain("onBootstrapRefused: bootstrapTokenLoader.reload,");
+    expect(main).toContain("function jsx(script, callback) {");
+  });
+
   it("previews silence with the same controls used by the run payload", () => {
     const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
     const source = sourceBetween(main, "function initAudioPreviewButtons()", "function renderAudioPreview(");

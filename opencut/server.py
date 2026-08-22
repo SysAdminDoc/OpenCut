@@ -406,7 +406,9 @@ def create_app(config=None, testing=False, introspection=False):
     # F303: host-embedded panels load from ``file://`` and so present
     # ``Origin: null``, which /health must refuse a CSRF token to. Publish a
     # 0600 secret the panel can read through ExtendScript to prove it is not a
-    # web page. Failure is non-fatal — the panel falls back to same-origin.
+    # web page. Startup survives a failure here, but the panel does not recover
+    # from one: a ``file://`` document has no same-origin fallback, so without
+    # this secret every mutating request it makes returns 403 CSRF_INVALID.
     try:
         from opencut.panel_bootstrap import ensure_bootstrap_secret
 
