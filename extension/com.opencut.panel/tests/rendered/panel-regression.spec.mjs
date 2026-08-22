@@ -1141,9 +1141,15 @@ const LIGHT_THEME_PROBES = {
       "#panel-settings .checkbox-row label",
       "#panel-settings .param-label",
       "#panel-settings #savePresetBtn",
-      "#pluginTrustList .hint-title",
-      "#pluginTrustList .hint-copy",
-      "#pluginTrustList .hint-kicker",
+      // Scoped to the Search tab's static empty state rather than a Settings
+      // card, because the fixture backend answers those cards with data and
+      // the .hint block never renders. Any instance outside .favorites-bar
+      // proves the fix: the dark literals are gone from the class rules
+      // themselves, and the favourites bar was the one place a light override
+      // already existed, which is why it passed while the rest were invisible.
+      "#footageSearchResults .hint-title",
+      "#footageSearchResults .hint-copy",
+      "#footageSearchResults .hint-kicker",
     ],
     // Surfaces that must repaint, not stay dark under a light parent.
     surfaces: [".content-header", ".workspace-stage", ".progress-track"],
