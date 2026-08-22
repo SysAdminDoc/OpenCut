@@ -211,8 +211,6 @@ body {
 html body .workspace-stage-actions,
 html body.is-disconnected .workspace-stage-actions,
 html body.has-clip .workspace-stage-actions {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
     margin-top: 8px;
 }
@@ -874,12 +872,6 @@ select:hover,
         display: none;
     }
 
-    html body .workspace-stage-actions,
-    html body.is-disconnected .workspace-stage-actions,
-    html body.has-clip .workspace-stage-actions {
-        grid-template-columns: 1fr;
-    }
-
     .quick-action-btn {
         min-height: 40px;
     }
@@ -1422,12 +1414,6 @@ label,
         display: none;
     }
 
-    html body .workspace-stage-actions,
-    html body.is-disconnected .workspace-stage-actions,
-    html body.has-clip .workspace-stage-actions {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .quick-action-btn + .quick-action-btn,
     .media-sidecar {
         border-left: 0;
@@ -1723,7 +1709,13 @@ html body .workspace-stage-session {
 
 html body .workspace-stage-session-item {
     min-height: 0;
-    grid-template-columns: minmax(74px, auto) minmax(0, 1fr);
+    /* F391: style.css leaves this box `display: flex`, which made the track
+       sizing below inert — the value never shrank, so the item overflowed and
+       clipped "Reconnect backend" to "Reconnect backer". Declare the grid the
+       tracks were written for, and let the label take only what it needs so
+       the value keeps the rest and ellipsises inside its own track. */
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
     align-items: baseline;
     gap: 12px;
     padding: 6px 0 6px 16px;
@@ -2074,8 +2066,6 @@ html body .footer-toggle-btn {
     html body .workspace-stage-actions,
     html body.is-disconnected .workspace-stage-actions,
     html body.has-clip .workspace-stage-actions {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) repeat(3, 34px);
         gap: 4px;
         margin-top: 10px;
     }
@@ -2131,19 +2121,29 @@ html body .footer-toggle-btn {
     }
 }
 
-/* Final composition overrides live last so legacy layout layers cannot reintroduce wrapping. */
+/* Final composition overrides live last so legacy layout layers cannot fight
+   them. F391: this row used to be nowrap + overflow:hidden, which silently
+   amputated "Browse File…" and "Use Timeline Selection" at every width from
+   701px (where the wrap rule stops applying) to 1269px — the panel's own
+   declared default is 900px. It wraps now, and a long label ellipsises
+   instead of pushing its neighbours out of the box. */
 html body .workspace-stage-actions,
 html body.is-disconnected .workspace-stage-actions,
 html body.has-clip .workspace-stage-actions {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 4px 12px;
-    overflow: hidden;
 }
 
 html body .workspace-stage-actions .stage-action {
-    flex: none;
+    flex: 0 1 auto;
+    min-width: 0;
     white-space: nowrap;
+}
+
+html body .workspace-stage-actions .stage-action .stage-action-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 html body .interview-polish-run {
@@ -2244,12 +2244,6 @@ html body #captionDisplaySettingsCard select:disabled {
 }
 
 @media (max-width: 700px) {
-    html body .workspace-stage-actions,
-    html body.is-disconnected .workspace-stage-actions,
-    html body.has-clip .workspace-stage-actions {
-        display: grid;
-        overflow: visible;
-    }
 
     html body .interview-polish-run {
         display: grid;

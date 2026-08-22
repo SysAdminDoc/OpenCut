@@ -1483,10 +1483,11 @@ body .oc-textarea:focus {
   box-shadow: none !important;
 }
 
-.workspace-stage-actions {
-  flex-wrap: nowrap !important;
-  white-space: nowrap !important;
-}
+/* F391 removed the `flex-wrap: nowrap !important` that used to sit here. It
+   forced the four stage actions onto one line at every width above 700px,
+   where the container is narrower than the row needs, so the last two were
+   clipped away with no scrollbar. The row wraps now; command-center.css owns
+   its flex behaviour. */
 
 #stageCommandPaletteBtn {
   flex: 0 0 34px !important;

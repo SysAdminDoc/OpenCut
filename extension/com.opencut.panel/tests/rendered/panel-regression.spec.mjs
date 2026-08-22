@@ -1126,7 +1126,25 @@ const LIGHT_THEME_PROBES = {
     // Icon ink that F369 found at ~1.6:1 on white.
     graphics: [".quick-action-icon", ".workspace-stage-card-icon"],
     // Text that has to stay readable on whatever paints behind it.
-    text: [".content-subtitle", ".quick-action-meta", ".card-desc"],
+    // F390 added the Settings-tab selectors: they carried dark-only literals
+    // that the light block never overrode, so they rendered at 1.01-1.35:1.
+    // They are scoped by id because the unscoped `.hint-*` classes match the
+    // favourites bar first, which already had a light override and passed
+    // while every other empty state was invisible. getComputedStyle resolves
+    // on a display:none tab, so these need no tab switch.
+    text: [
+      ".content-subtitle",
+      ".quick-action-meta",
+      ".card-desc",
+      "#panel-settings .shortcut-row kbd",
+      "#panel-settings .about-link",
+      "#panel-settings .checkbox-row label",
+      "#panel-settings .param-label",
+      "#panel-settings #savePresetBtn",
+      "#pluginTrustList .hint-title",
+      "#pluginTrustList .hint-copy",
+      "#pluginTrustList .hint-kicker",
+    ],
     // Surfaces that must repaint, not stay dark under a light parent.
     surfaces: [".content-header", ".workspace-stage", ".progress-track"],
   },
@@ -1923,6 +1941,42 @@ test("UXP wide shell keeps overflow controls hidden and expands offline details"
   expect(pageErrors).toEqual([]);
 });
 
+test("stage actions stay inside their box at every docked width", async ({ page }) => {
+  // F391: the row is 582px of buttons. Between the 700px wrap breakpoint and
+  // ~1270px the container is narrower than that, and the row used to be
+  // nowrap + overflow:hidden, so "Browse File…" and "Use Timeline Selection"
+  // were simply cut off — no scrollbar, no ellipsis, and no other visible
+  // control on the Cut tab reaches them. 900 is the panel's declared default
+  // size in CSXS/manifest.xml, so the shipped default sat inside the band.
+  const { pageErrors } = await openSurface(page, "cep", "dark", 900, { height: 800 });
+
+  for (const width of [701, 800, 900, 1000, 1100, 1200, 1400]) {
+    await page.setViewportSize({ width, height: 800 });
+    const geometry = await page.evaluate(() => {
+      const row = document.querySelector(".workspace-stage-actions");
+      if (!row) return null;
+      const box = row.getBoundingClientRect();
+      return {
+        overflow: row.scrollWidth - row.clientWidth,
+        // Read before any focus can auto-scroll the box into looking correct.
+        scrollLeft: row.scrollLeft,
+        outside: Array.from(row.children)
+          .map((child) => ({ id: child.id, rect: child.getBoundingClientRect() }))
+          .filter(({ rect }) => rect.width > 0
+            && (rect.right > box.right + 1 || rect.left < box.left - 1))
+          .map(({ id }) => id),
+      };
+    });
+
+    expect(geometry, `stage actions missing at ${width}px`).not.toBeNull();
+    expect(geometry.scrollLeft, `${width}px started scrolled`).toBe(0);
+    expect(geometry.overflow, `${width}px overflows its box`).toBeLessThanOrEqual(1);
+    expect(geometry.outside, `${width}px clips actions`).toEqual([]);
+  }
+
+  expect(pageErrors).toEqual([]);
+});
+
 test("wide command-center shells expose editorial rails and settings grids", async ({
   page,
 }) => {
@@ -1936,16 +1990,31 @@ test("wide command-center shells expose editorial rails and settings grids", asy
     const labelMarker = label ? getComputedStyle(label, "::before") : null;
     return {
       quickActionHeight: quickActions?.height || 0,
-      stageActionRowSpread: stageActions.length
-        ? Math.max(...stageActions.map((action) => action.top))
-          - Math.min(...stageActions.map((action) => action.top))
-        : 0,
+      // F391: this used to measure row spread and require < 2, i.e. it
+      // asserted the four actions stay on one line. That is the constraint
+      // that made the row overflow its container and clipped the last two
+      // buttons away at every width from 701px to 1269px, with no scrollbar.
+      // The honest property is containment, not line count.
+      stageActionsOutsideBox: (() => {
+        const row = document.querySelector(".workspace-stage-actions");
+        if (!row) return 0;
+        const box = row.getBoundingClientRect();
+        return stageActions.filter(
+          (action) => action.width > 0
+            && (action.right > box.right + 1 || action.left < box.left - 1),
+        ).length;
+      })(),
+      stageActionsOverflow: (() => {
+        const row = document.querySelector(".workspace-stage-actions");
+        return row ? row.scrollWidth - row.clientWidth : 0;
+      })(),
       labelLetterSpacing: labelStyle?.letterSpacing || "",
       labelMarkerDisplay: labelMarker?.display || "",
     };
   });
   expect(cepActionGrammar.quickActionHeight).toBeLessThanOrEqual(54);
-  expect(cepActionGrammar.stageActionRowSpread).toBeLessThan(2);
+  expect(cepActionGrammar.stageActionsOutsideBox).toBe(0);
+  expect(cepActionGrammar.stageActionsOverflow).toBeLessThanOrEqual(1);
   expect(["normal", "0px"]).toContain(cepActionGrammar.labelLetterSpacing);
   expect(cepActionGrammar.labelMarkerDisplay).toBe("none");
   await page.locator(".nav-tab[data-nav='settings']").click();
