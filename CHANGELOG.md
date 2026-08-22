@@ -1,7 +1,48 @@
 # Changelog
 
-Notable changes from the June 2026 hardening/audit pass. The authoritative
-record also lives in the git commit messages.
+Notable changes to OpenCut. The git history carries the detailed record.
+
+## 1.55.0: The workspace gets out of the way
+
+### Changed: hierarchy replaces decoration
+
+- CEP and UXP now share a quieter editorial system built from flat sections,
+  hairline dividers and one clear accent colour. Decorative card outlines,
+  shadows and rounded containers no longer compete with the work.
+- Body text and controls start at 14 pixels. Page titles, section labels,
+  supporting copy and metadata now have distinct sizes and weights.
+- The desktop header is 56 pixels tall, the navigation rail is 164 pixels wide
+  and standard controls are 34 pixels high with a 4 pixel corner radius.
+- Section spacing is tighter and more consistent. Labels align beside their
+  controls on wide panels, then stack cleanly when the panel narrows.
+
+### Changed: each page shows less, but says more
+
+- Duplicate descriptions, repeated connection summaries and ornamental status
+  pills are gone. Status text remains available where it affects the next
+  action.
+- Settings opens on the controls themselves instead of an overview card. Value
+  readouts and trust states use plain text rather than nested badges.
+- The Cut page keeps media selection in one compact row and gives the selected
+  source a larger preview area. Repeated media actions were consolidated.
+- Search, Deliverables, Agent and command-palette empty states now use short
+  prompts and quieter metadata instead of stacks of outlined boxes.
+
+### Fixed: responsive state still behaves like the application
+
+- Clip controls remain reachable before a clip is selected, so timeline and
+  file selection still work from a fresh panel.
+- Collapsible sections now honour their closed state even when the shared layout
+  assigns a grid display.
+- The current page title remains visible in narrow UXP panels.
+
+### Tested: every supported presentation state
+
+- Ten page references under `extension/design/quiet-editor-system-v2/` cover
+  Cut, Captions, Audio, Video, Timeline, Search, Deliverables, Agent, Settings
+  and Export.
+- The headless rendered suite checks CEP and UXP across wide and narrow sizes,
+  dark, light, automatic and forced-colours states. All 72 checks pass.
 
 ## 1.54.0: The panel can talk to its backend again
 
