@@ -49,20 +49,28 @@ describe("studio shell boundaries", () => {
   });
 
   it("writes the stage action row in one layout vocabulary", async () => {
-    // F396: studio-workbench-v2.css sets `display: flex !important` on
-    // .workspace-stage-actions, unconditionally, from the last stylesheet the
-    // panel loads. Every `grid-template-columns` written for that row in the
-    // earlier sheets was therefore inert — eleven declarations across
-    // style.css and command-center.css that read as a responsive collapse
-    // which never happened. Track lists and a flex container cannot both own
-    // this row; the flex rule wins, so nothing may declare grid tracks on it.
+    // F396: eleven `grid-template-columns` declarations across style.css and
+    // command-center.css were inert, because studio-workbench-v2.css made the
+    // row a flex container from the last stylesheet the panel loads. They read
+    // as a responsive collapse that never happened. Track lists and a flex
+    // container cannot both own this row.
+    //
+    // F403 then consolidated the row onto a single owner, so the `!important`
+    // this used to assert is gone: nothing competes with the owner any more,
+    // which was the point. The invariant that matters is unchanged — one sheet
+    // declares the formatting context, and no sheet declares grid tracks.
     const sheets = await Promise.all(
       ["../client/style.css", "../client/command-center.css", "../client/command-center-layout.css"]
         .map((relative) => readFile(new URL(relative, import.meta.url), "utf8")),
     );
     const shell = await readFile(cepStyleUrl, "utf8");
 
-    expect(shell).toMatch(/\.workspace-stage-actions[^{]*\{[^}]*display:\s*flex\s*!important/s);
+    expect(shell).toMatch(/\.workspace-stage-actions[^{]*\{[^}]*display:\s*flex/s);
+    for (const sheet of sheets) {
+      expect(sheet, "a second sheet declares the row's formatting context").not.toMatch(
+        /\.workspace-stage-actions[^{]*\{[^}]*display\s*:/s,
+      );
+    }
 
     for (const sheet of [...sheets, shell]) {
       // Every rule block whose selector list mentions the row.
