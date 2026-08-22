@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 
 const require = createRequire(import.meta.url);
 const theme = require("../client/cep-theme.js");
@@ -195,5 +196,53 @@ describe("createHostThemeSync", () => {
     expect(() => sync.start()).not.toThrow();
     expect(sync.isListening()).toBe(false);
     expect(warn).toHaveBeenCalled();
+  });
+});
+
+describe("shipped theme default", () => {
+  /* F405: the panel shipped with `selected` on the Dark option. resolveTheme
+   * short-circuits on an explicit dark/light preference and only consults the
+   * host when the preference is "auto", so on a fresh install none of the
+   * host-skin machinery this module exists for ever fired: a user running
+   * Premiere's light skin got a dark panel that clashed with the application
+   * until they found Settings and changed it themselves. */
+  const markup = readFileSync(new URL("../client/index.html", import.meta.url), "utf8");
+
+  function themeSelectOptions() {
+    const select = markup.slice(
+      markup.indexOf('<select id="settingsTheme">'),
+      markup.indexOf("</select>", markup.indexOf('<select id="settingsTheme">')),
+    );
+    return [...select.matchAll(/<option value="(\w+)"([^>]*)>/g)]
+      .map(([, value, attrs]) => ({ value, selected: attrs.includes("selected") }));
+  }
+
+  it("defaults the appearance control to following the host", () => {
+    const options = themeSelectOptions();
+    expect(options.map((option) => option.value)).toEqual(["auto", "dark", "light"]);
+    expect(options.filter((option) => option.selected).map((option) => option.value))
+      .toEqual(["auto"]);
+  });
+
+  it("follows the host skin under that default, in both directions", () => {
+    expect(theme.resolveTheme("auto", "light", false)).toMatchObject({
+      isLight: true,
+      source: "host",
+    });
+    expect(theme.resolveTheme("auto", "darkest", true)).toMatchObject({
+      isLight: false,
+      source: "host",
+    });
+  });
+
+  it("still lets an explicit choice outrank the host", () => {
+    expect(theme.resolveTheme("dark", "light", true)).toMatchObject({
+      isLight: false,
+      source: "user",
+    });
+    expect(theme.resolveTheme("light", "darkest", false)).toMatchObject({
+      isLight: true,
+      source: "user",
+    });
   });
 });
