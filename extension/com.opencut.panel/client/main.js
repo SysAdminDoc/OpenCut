@@ -2391,9 +2391,9 @@
     // ================================================================
     // F303: the panel is a file:// origin, so /health refuses it the CSRF token
     // until the host bridge proves it is not a web page. panel-bootstrap-token.js.
+    // F389: `cs` is null here; evalScript must be jsx(), which resolves on call.
     var bootstrapTokenLoader = OpenCutPanelBootstrapToken.createBootstrapTokenLoader({
-        evalScript: cs && typeof cs.evalScript === "function"
-            ? function (script, cb) { cs.evalScript(script, cb); } : null,
+        evalScript: jsx,
         onWarn: function (reason) { console.warn("OpenCut panel bootstrap:", reason); },
         onReady: function () { backendClient.refreshCsrfToken(function () {}); }
     });
@@ -2403,6 +2403,7 @@
         getToken: function () { return panelState.getCsrfToken(); },
         setToken: setCsrfToken,
         getBootstrapToken: function () { return bootstrapTokenLoader.get(); },
+        onBootstrapRefused: bootstrapTokenLoader.reload,
         translate: t
     });
     var api = backendClient.request;

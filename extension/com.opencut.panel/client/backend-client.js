@@ -16,9 +16,14 @@
         var createRequest = options.createRequest || function () { return new XMLHttpRequest(); };
         // F303: proves to /health that this is the host-embedded panel and not
         // a web page sharing its opaque `Origin: null`. Empty until the host
-        // bridge has read the local secret; the bootstrap simply falls back to
-        // the same-origin path until then.
+        // bridge has read the local secret; a `file://` panel has no
+        // same-origin fallback, so without it every mutation 403s.
         var getBootstrapToken = options.getBootstrapToken || function () { return ""; };
+        // F389: the secret is written by the backend at startup, so a panel
+        // that loaded first reads nothing and would stay broken for the whole
+        // session. Called once per refresh when /health refuses the bootstrap;
+        // it re-reads the secret and reports whether a retry is worth making.
+        var onBootstrapRefused = options.onBootstrapRefused || null;
         // F308: transport faults used to vanish here. Reporting is on by
         // default so a caller cannot silently opt out of diagnosability.
         var onTransportError = options.onTransportError || function (info) {
@@ -63,7 +68,7 @@
             return translate("error.http_status", "Request failed (HTTP {status}).").replace("{status}", status);
         }
 
-        function refreshCsrfToken(callback, timeout) {
+        function refreshCsrfToken(callback, timeout, retriedBootstrap) {
             callback = typeof callback === "function" ? callback : function () {};
             var xhr = createRequest();
             xhr.open("GET", getBaseUrl() + "/health", true);
@@ -90,6 +95,16 @@
                             : "Backend withheld the CSRF token and no panel bootstrap secret was available.",
                         { path: "/health", status: xhr.status }
                     );
+                    // F389: the backend writes the secret at startup, so a
+                    // panel that loaded first had nothing to read. Re-read once
+                    // and retry — otherwise the session never recovers.
+                    if (onBootstrapRefused && !retriedBootstrap) {
+                        onBootstrapRefused(function (readAgain) {
+                            if (!readAgain) { callback(false); return; }
+                            refreshCsrfToken(callback, timeout, true);
+                        });
+                        return;
+                    }
                 }
                 callback(false);
             };

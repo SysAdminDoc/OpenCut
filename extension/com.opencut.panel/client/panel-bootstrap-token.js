@@ -54,7 +54,19 @@
             }
         }
 
-        return { get: get, load: load };
+        /* F389: the backend writes the secret at startup, so a panel that
+         * loaded first read nothing and would stay tokenless for the whole
+         * session. Re-read on demand and report whether the retry actually has
+         * something new to present, so a caller cannot loop on a stale secret. */
+        function reload(done) {
+            done = typeof done === "function" ? done : function () {};
+            var had = token;
+            load(function (ok) {
+                done(!!ok && token !== had);
+            });
+        }
+
+        return { get: get, load: load, reload: reload };
     }
 
     return { createBootstrapTokenLoader: createBootstrapTokenLoader };
