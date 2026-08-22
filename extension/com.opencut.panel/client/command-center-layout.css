@@ -88,10 +88,6 @@ html.theme-light .nav-tab.active {
     color: #f3ca76;
 }
 
-.workspace-stage-actions {
-    grid-area: actions;
-}
-
 .workspace-stage-card-label {
     color: var(--cc-muted);
     font-size: 9px;

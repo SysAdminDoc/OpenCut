@@ -208,13 +208,6 @@ body {
     display: none;
 }
 
-html body .workspace-stage-actions,
-html body.is-disconnected .workspace-stage-actions,
-html body.has-clip .workspace-stage-actions {
-    gap: 8px;
-    margin-top: 8px;
-}
-
 .stage-action {
     min-height: 36px;
     border-color: var(--cc-border);
@@ -1741,15 +1734,6 @@ html body .workspace-stage-session-value {
     white-space: nowrap;
 }
 
-html body .workspace-stage-actions,
-html body.is-disconnected .workspace-stage-actions,
-html body.has-clip .workspace-stage-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px 16px;
-    margin-top: 6px;
-}
-
 html body .workspace-stage-actions .stage-action {
     width: auto;
     min-width: 0;
@@ -2063,13 +2047,6 @@ html body .footer-toggle-btn {
         font-size: 18px;
     }
 
-    html body .workspace-stage-actions,
-    html body.is-disconnected .workspace-stage-actions,
-    html body.has-clip .workspace-stage-actions {
-        gap: 4px;
-        margin-top: 10px;
-    }
-
     html body .workspace-stage-actions .stage-action {
         width: 34px;
         min-width: 34px;
@@ -2127,14 +2104,6 @@ html body .footer-toggle-btn {
    701px (where the wrap rule stops applying) to 1269px — the panel's own
    declared default is 900px. It wraps now, and a long label ellipsises
    instead of pushing its neighbours out of the box. */
-html body .workspace-stage-actions,
-html body.is-disconnected .workspace-stage-actions,
-html body.has-clip .workspace-stage-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 12px;
-}
-
 html body .workspace-stage-actions .stage-action {
     flex: 0 1 auto;
     min-width: 0;

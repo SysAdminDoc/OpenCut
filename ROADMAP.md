@@ -61,52 +61,13 @@ It is correct today by inspection, not by enforcement.
 
 ### P3
 
-- [ ] P3 — F407 — The stage session card is too dense to read at the panel's default width
-  Category: ux
-  Where: `extension/com.opencut.panel/client/command-center.css` — `html body .workspace-stage-session-item` (the grid declared for label/value) and the three-column `.workspace-stage-session` track list it sits inside.
-  Problem: at a 900px viewport the session card splits into three ~110px cells, so after the label and gap each value gets 33-47px. Every value ellipsises to two or three characters: "SOURCE Aw…", "SUITE Cut & …", "STATUS Rec…". The card technically fits and truncates honestly, but it conveys nothing.
-  Evidence: measured after F391 at vw=900 with the backend disconnected — item clientWidth 110 and scrollWidth 110 for all three (so no overflow), value widths 33 / 47 / 35 px, and `value.scrollWidth > value.clientWidth` true on all three. Screenshot of the Cut tab at 900x800 shows the three truncated values. Before F391 the same card read "Reconnect backer", clipped with no ellipsis; F391 made the truncation honest but did not make it readable.
-  Fix: stop forcing three columns at this width. Give `.workspace-stage-session` an `auto-fit` track list with a sensible minimum (`repeat(auto-fit, minmax(180px, 1fr))`) so the cells stack into one or two rows instead of shrinking below a legible width, or move the label above its value at narrow widths so the value gets the full cell.
-  Acceptance: at viewport widths 701, 900 and 1200 with the backend disconnected, no `.workspace-stage-session-value` has `scrollWidth > clientWidth` — every value renders in full — and the card still shows no overflow (`scrollWidth <= clientWidth`).
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — F408 — `scripts/` is outside the ruff gate and has drifted
-  Category: maintainability
-  Where: `scripts/fix_es_diacritics.py:5` (unused `sys` import) and `:178` (f-string with no placeholder); the gate is `scripts/release_smoke.py` `step_ruff`, which runs `ruff check opencut/`.
-  Problem: the release gate lints `opencut/` only, so the 28 files under `scripts/` — including the release gate itself, the version syncer and the i18n linter — are never checked. Three ruff findings have accumulated there unnoticed. None is a live defect, which is exactly why nothing surfaced them.
-  Evidence: `py -3.13 -m ruff check opencut/` passes; `py -3.13 -m ruff check scripts/` reports `Found 3 errors` (2 auto-fixable). Confirmed pre-existing: `git diff --stat scripts/fix_es_diacritics.py` is empty on a tree where the other `scripts/` files were edited.
-  Fix: clear the three findings, then widen `step_ruff` to `ruff check opencut/ scripts/` so the tooling holds the same bar as the package. Check `tests/test_release_smoke.py` for an assertion pinning the ruff argument list before changing it.
-  Acceptance: `py -3.13 -m ruff check opencut/ scripts/` exits 0, and `py -3.13 scripts/release_smoke.py --json --only ruff` fails when a new finding is introduced under `scripts/`.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — F403 — The panel stylesheet stack is an override war, and it is producing the visual bugs
-  Category: maintainability
-  Where: `extension/com.opencut.panel/client/index.html:8-12` loads five stylesheets in order — `style.css` (19,010 lines), `command-center-tokens.css` (52), `command-center-layout.css` (232), `command-center.css` (2,426), `studio-workbench-v2.css` (1,763).
-  Problem: the later sheets do not extend the earlier ones, they fight them. `studio-workbench-v2.css` uses `!important` 682 times across 1,763 lines, and `command-center.css` 71 times; `command-center.css:2134` is introduced by the comment "Final composition overrides live last so legacy layout layers cannot reintroduce wrapping", which is a description of the problem rather than a fix. `.workspace-stage-actions` alone matches 53 rules across three sheets and changes `display` twice. This is not a style preference — both P1 visual defects in this pass originate in exactly that layering: F391's clipping comes from a "final override" that removed wrapping without removing the clip, and F396's three dead `grid-template-columns` declarations are neutralised by a `display: flex !important` in a different file.
-  Evidence: `grep -c '!important'` per file — `style.css` 22, `command-center-tokens.css` 0, `command-center-layout.css` 0, `command-center.css` 71, `studio-workbench-v2.css` 682. `grep -c` for selector occurrences across all five sheets — `.workspace-stage-actions` 53, `.stage-action` 66, `.btn-primary` 63, `.card-title` 28. Runtime CSSOM inspection of `.workspace-stage-actions` shows six rules setting `flex-wrap` or `overflow`, three of which are unconditional and contradict each other.
-  Fix: take one component at a time rather than attempting a rewrite. For `.workspace-stage-actions` and `.stage-action`, collapse the 53 rules into a single owning block in `command-center.css` (the layout layer), delete the `!important` duplicates in `studio-workbench-v2.css`, and keep only genuinely conditional rules in media queries. Land it behind the rendered screenshot suite, which will show any unintended change. Record the component-by-component plan in `CLAUDE.md` so the next pass continues rather than restarts.
-  Acceptance: after the first component is consolidated, `.workspace-stage-actions` matches at most 6 rules across all sheets with no `!important`, the rendered suite passes with regenerated baselines, and F391's clipping assertion holds.
-  Confidence: Verified
-  Effort: L
-
-- [ ] P3 — F405 — The panel ships defaulting to Dark, so it ignores Premiere's skin out of the box
-  Category: ux
-  Where: `extension/com.opencut.panel/client/index.html:3780-3784` — the `#settingsTheme` select carries `selected` on `<option value="dark">`, not on `<option value="auto">`. The consumers are `main.js:8942` `_currentThemePref()`, `main.js:13672` `_applyTheme(_currentThemePref())` at init, and `extension/com.opencut.panel/client/cep-theme.js` `resolveTheme()`.
-  Problem: `cep-theme.js` exists to make the panel follow Premiere's skin — its module docstring says so, it classifies all four Premiere skins, and it subscribes to `THEME_COLOR_CHANGED`. But `resolveTheme(pref, ...)` short-circuits on an explicit `"dark"` or `"light"` preference and only consults the host when the preference is `"auto"`. On a fresh install there is no saved setting, so `_currentThemePref()` returns the markup default `"dark"`, `_applyTheme("dark")` runs at init, and none of the host-skin machinery ever fires. A user running Premiere's light skin gets a dark panel that clashes with the rest of the application until they find Settings → Appearance and pick Auto. The one control that would fix it is the same control that, today, walks them into F390.
-  Evidence: `index.html:3782` is `<option value="dark" selected data-i18n="settings.theme_dark">Dark</option>` while `:3781` is the unselected `auto`. `main.js:9019-9022` applies a theme only `if (settings.theme && ...)`, so a fresh `localStorage` leaves the markup default in force. `main.js:13672` calls `_applyTheme(_currentThemePref())` unconditionally at init. `cep-theme.js` `resolveTheme` returns `{isLight:false, premiereTheme:"dark", source:"user"}` for `pref === "dark"` before it looks at `hostTheme`.
-  Fix: move `selected` to the `auto` option at `index.html:3781` so a fresh install follows the host, which is what the rest of the theme system is built for. Land it after F390, F392 and F393 — until those are fixed, defaulting more users into light theme makes the contrast problem worse, not better.
-  Acceptance: with `localStorage` cleared and a host skin reporting light, the panel renders in light theme without the user touching Settings; with a dark host skin it renders dark; an explicit Light or Dark choice still overrides the host. A vitest over `resolveTheme` plus a rendered assertion on the default `#settingsTheme` value covers both halves.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — F406 — Unaudited surfaces from the 2026-08-22 pass
   Category: quality
   Where: listed below.
   Problem: these areas were not examined in the 2026-08-22 audit and carry no verdict either way. Recording them so the next pass starts from an honest map rather than assuming coverage.
   Evidence: the 2026-08-22 pass drove the CEP panel in a browser across all eight tabs in both themes, traced the CSRF/bootstrap path end to end, ran every gate listed in this section's baseline, and AST-scanned `opencut/routes/**` for boolean-flag and CSRF invariants. It did not touch the areas below.
-  Not audited: the UXP panel's own rendered light-theme contrast (the browser session repeatedly executed against the CEP document instead of the UXP one, so the single "clean" reading taken for UXP is not trustworthy and should be redone); the WPF installer under `installer/src` and `Install.ps1` / `OpenCut.iss` / `install.py`; the Docker and Flatpak/AppImage packaging lanes; `opencut/mcp_server.py` and the MCP tool surface; the plugin runtime and trust model in `opencut/core/plugins.py` and `plugin_runtime.py` beyond a read of the loader's shape; `opencut/core/**` (roughly 600 modules) except where a route traced into it; the CLI beyond `--help`, three error paths and exit codes; SSE and WebSocket streaming under load; and any behaviour that needs a live Premiere host, which is already tracked as F386 in `Roadmap_Blocked.md`.
+  Checked since this item was written: the UXP panel's rendered light-theme contrast. F399 made the axe gate walk the whole scroll container and resolve the results axe could not decide, and it runs over both surfaces at every tab, theme and width, so UXP light is now covered by `npx playwright test`. It found and fixed one real failure there (the FCC source link at 4.33:1).
+  Not audited: the WPF installer under `installer/src` and `Install.ps1` / `OpenCut.iss` / `install.py`; the Docker and Flatpak/AppImage packaging lanes; `opencut/mcp_server.py` and the MCP tool surface; the plugin runtime and trust model in `opencut/core/plugins.py` and `plugin_runtime.py` beyond a read of the loader's shape; `opencut/core/**` (roughly 600 modules) except where a route traced into it; the CLI beyond `--help`, three error paths and exit codes; SSE and WebSocket streaming under load; and any behaviour that needs a live Premiere host, which is already tracked as F386 in `Roadmap_Blocked.md`.
   Fix: pick one area per pass and give it the same treatment — run it, probe its error paths, and either log findings or record here that it was checked and is clean.
   Acceptance: each line above is either replaced by findings or moved to a "checked clean on <date>" note with the command that proved it.
   Confidence: Verified
