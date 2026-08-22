@@ -3870,7 +3870,7 @@ input[type="range"][title] {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0));
 }
 .command-palette-kicker {
-    color: rgba(220, 198, 147, 0.86);
+    color: var(--text-accent-control);
     font-size: 10px;
     font-weight: 800;
     letter-spacing: 0.22em;
@@ -5923,8 +5923,6 @@ body.has-clip .workspace-stage {
     }
 
     .workspace-stage-actions {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
     }
 
@@ -7024,7 +7022,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 .processing-msg {
     font-size: 12px;
     font-weight: 700;
-    color: rgba(232, 240, 247, 0.96);
+    color: var(--text-primary);
 }
 
 .processing-right {
@@ -7583,7 +7581,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 }
 
 .preview-label {
-    color: rgba(205, 213, 224, 0.76);
+    color: var(--text-secondary);
 }
 
 .preview-img {
@@ -7623,7 +7621,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 
 .waveform-label {
     padding: 8px 0 10px;
-    color: rgba(198, 206, 219, 0.74);
+    color: var(--text-secondary);
     font-size: 10.5px;
 }
 
@@ -9525,7 +9523,7 @@ textarea::placeholder,
     border: 1px solid rgba(236, 230, 218, 0.11);
     background:
         linear-gradient(180deg, rgba(34, 44, 58, 0.82), rgba(26, 34, 46, 0.88));
-    color: rgba(240, 244, 248, 0.88);
+    color: var(--text-primary);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
@@ -9758,7 +9756,7 @@ input[type="range"]::-moz-range-thumb {
 .progress-label {
     font-size: 11.5px;
     font-weight: 650;
-    color: rgba(219, 226, 236, 0.84);
+    color: var(--text-secondary);
 }
 
 .btn-cancel {
@@ -10007,7 +10005,7 @@ input[type="range"]::-moz-range-thumb {
 #panel-settings .checkbox-row label {
     font-size: 11.5px;
     font-weight: 650;
-    color: rgba(226, 232, 240, 0.86);
+    color: var(--text-primary);
     letter-spacing: 0.01em;
 }
 
@@ -10048,7 +10046,7 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(216, 184, 135, 0.2), rgba(160, 122, 72, 0.16));
-    color: rgba(248, 235, 209, 0.92);
+    color: var(--text-accent-control);
     font-size: 10px;
     font-weight: 760;
     letter-spacing: 0.08em;
@@ -10094,7 +10092,7 @@ input[type="range"]::-moz-range-thumb {
     font-weight: 760;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(191, 200, 213, 0.7);
+    color: var(--text-secondary);
 }
 
 #panel-settings .dep-grid {
@@ -10228,7 +10226,7 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 10px;
     border-color: rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.04);
-    color: rgba(242, 245, 249, 0.9);
+    color: var(--text-primary);
 }
 
 #panel-settings .about-links {
@@ -10247,7 +10245,7 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.04);
-    color: rgba(232, 238, 244, 0.84);
+    color: var(--text-primary);
 }
 
 #panel-settings .about-link:hover {
@@ -10358,7 +10356,7 @@ input[type="range"]::-moz-range-thumb {
     border: 1px solid rgba(236, 230, 218, 0.08);
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.045);
-    color: rgba(234, 239, 245, 0.86);
+    color: var(--text-primary);
     font-size: 9.5px;
     font-weight: 760;
     letter-spacing: 0.08em;
@@ -11062,13 +11060,13 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .multicam-track-label {
-    color: rgba(232, 238, 245, 0.88);
+    color: var(--text-primary);
     font-size: 11.5px;
     font-weight: 650;
 }
 
 .multicam-track-arrow {
-    color: rgba(193, 201, 214, 0.68);
+    color: var(--text-secondary);
     font-size: 10px;
     font-weight: 760;
     letter-spacing: 0.08em;
@@ -11349,14 +11347,14 @@ input[type="range"]::-moz-range-thumb {
 
 .hint-empty .hint-title {
     display: block;
-    color: rgba(244, 239, 229, 0.94);
+    color: var(--text-primary);
     font-size: 11px;
     font-weight: 760;
     letter-spacing: 0.01em;
 }
 
 .hint-empty .hint-copy {
-    color: rgba(210, 219, 230, 0.76);
+    color: var(--text-secondary);
     font-size: 10.5px;
     line-height: 1.58;
 }
@@ -11478,7 +11476,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .alert-eyebrow {
-    color: rgba(245, 232, 208, 0.86);
+    color: var(--text-accent-control);
     font-size: 9.5px;
     font-weight: 760;
     letter-spacing: 0.12em;
@@ -11853,7 +11851,7 @@ body:not(.has-clip) .media-sidecar .file-info {
 }
 
 .transcript-timeline-kicker {
-    color: rgba(228, 194, 138, 0.82);
+    color: var(--text-accent-control);
     font-size: 8.5px;
     font-weight: 800;
     letter-spacing: 0.16em;
@@ -11861,7 +11859,7 @@ body:not(.has-clip) .media-sidecar .file-info {
 }
 
 .transcript-timeline-heading {
-    color: rgba(242, 246, 251, 0.94);
+    color: var(--text-primary);
     font-size: 15px;
     font-weight: 720;
     letter-spacing: -0.02em;
@@ -11876,7 +11874,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.05);
-    color: rgba(214, 222, 232, 0.76);
+    color: var(--text-secondary);
     font-size: 9.5px;
     font-weight: 700;
     text-align: right;
@@ -12090,7 +12088,7 @@ body:not(.has-clip) .media-sidecar .file-info {
 
 .transcript-timeline-hint {
     margin: 0;
-    color: rgba(182, 194, 208, 0.62);
+    color: var(--text-secondary);
     font-size: 9.5px;
     line-height: 1.55;
 }
@@ -13894,13 +13892,13 @@ html.theme-light .panel-dialog-input {
     font-size: 15px;
     line-height: 1.15;
     letter-spacing: -0.02em;
-    color: #f5f7fa;
+    color: var(--text-primary);
 }
 
 .workspace-stage-card p {
     font-size: 12px;
     line-height: 1.6;
-    color: rgba(210, 220, 232, 0.78);
+    color: var(--text-secondary);
 }
 
 #clipSection,
@@ -14252,25 +14250,11 @@ body.has-clip .workspace-stage-session {
 }
 
 body.has-clip .workspace-stage-actions {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
     margin-top: 0;
 }
 
 body.has-clip .stage-action {
     width: 100%;
-}
-
-@media (max-width: 1100px) {
-    body.has-clip .workspace-stage-actions {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 720px) {
-    body.has-clip .workspace-stage-actions {
-        grid-template-columns: 1fr;
-    }
 }
 
 /* =========================================================
@@ -14527,7 +14511,7 @@ body[data-active-nav="settings"] {
     border-radius: 6px;
     border: 1px solid rgba(var(--workspace-accent-rgb), 0.18);
     background: rgba(var(--workspace-accent-rgb), 0.12);
-    color: rgba(236, 242, 249, 0.94);
+    color: var(--text-primary);
 }
 
 .sub-tabs {
@@ -14690,7 +14674,7 @@ textarea:focus-visible {
     border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.06);
     background: rgba(255, 255, 255, 0.045);
-    color: rgba(232, 238, 246, 0.76);
+    color: var(--text-secondary);
     font-size: 9px;
     font-weight: 760;
     letter-spacing: 0.12em;
@@ -15914,25 +15898,8 @@ body.is-disconnected .workspace-stage-primary {
     gap: 12px;
 }
 
-body.is-disconnected .workspace-stage-actions {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
 body.is-disconnected .workspace-stage-session {
     max-width: none;
-}
-
-@media (max-width: 1100px) {
-    body.is-disconnected .workspace-stage-actions {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 720px) {
-    body.is-disconnected .workspace-stage-actions {
-        grid-template-columns: 1fr;
-    }
 }
 
 .quick-action-btn,
@@ -17049,7 +17016,9 @@ html.theme-light {
     --text-on-primary: #ffffff;
     --text-primary:   #17202d;
     --text-secondary: #526071;
-    --text-muted:     #738094;
+    /* F393: #738094 was 4.00:1 on --bg-card and 3.70:1 on the page. Every
+       consumer is 9-13px body text, so both have to clear 4.5:1. */
+    --text-muted:     #5d6a7d;
     --text-faint:     #9ca3af;
     --text-disabled:  #d1d5db;
 
@@ -17288,7 +17257,10 @@ html.theme-light input[type="number"]::placeholder,
 html.theme-light input[type="password"]::placeholder,
 html.theme-light input[type="url"]::placeholder,
 html.theme-light textarea::placeholder {
-    color: rgba(55, 65, 81, 0.50);
+    /* F392: 0.50 composited to 2.63:1 on white. Placeholders here carry real
+       instructions ("One local media path per line"), so they need AA text
+       contrast, not a decorative-hint alpha. */
+    color: rgba(55, 65, 81, 0.78);
 }
 
 /* ── Sub-tabs ──────────────────────────────────────── */

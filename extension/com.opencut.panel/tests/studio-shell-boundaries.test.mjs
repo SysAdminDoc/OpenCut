@@ -47,4 +47,31 @@ describe("studio shell boundaries", () => {
     expect(style).toMatch(/\.content-header-copy\s*\{[^}]*display:\s*flex\s*!important/s);
     expect(style).toMatch(/\.oc-workspace-overview\s*\{[^}]*display:\s*grid\s*!important/s);
   });
+
+  it("writes the stage action row in one layout vocabulary", async () => {
+    // F396: studio-workbench-v2.css sets `display: flex !important` on
+    // .workspace-stage-actions, unconditionally, from the last stylesheet the
+    // panel loads. Every `grid-template-columns` written for that row in the
+    // earlier sheets was therefore inert — eleven declarations across
+    // style.css and command-center.css that read as a responsive collapse
+    // which never happened. Track lists and a flex container cannot both own
+    // this row; the flex rule wins, so nothing may declare grid tracks on it.
+    const sheets = await Promise.all(
+      ["../client/style.css", "../client/command-center.css", "../client/command-center-layout.css"]
+        .map((relative) => readFile(new URL(relative, import.meta.url), "utf8")),
+    );
+    const shell = await readFile(cepStyleUrl, "utf8");
+
+    expect(shell).toMatch(/\.workspace-stage-actions[^{]*\{[^}]*display:\s*flex\s*!important/s);
+
+    for (const sheet of [...sheets, shell]) {
+      // Every rule block whose selector list mentions the row.
+      const blocks = sheet.match(/[^{}]*\.workspace-stage-actions[^{}]*\{[^}]*\}/g) || [];
+      for (const block of blocks) {
+        expect(block, "stage action row declares grid tracks").not.toMatch(
+          /grid-template-columns\s*:/,
+        );
+      }
+    }
+  });
 });
