@@ -10,6 +10,79 @@ const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 // a documented, non-actionable host limitation.
 const WCAG_SUPPRESSIONS = [];
 
+// F399: axe parks findings it cannot decide in `incomplete`, and the gate used
+// to read only `violations`. A genuinely unreadable 1:1 pair lands there as
+// readily as a background axe could not sample, so discarding the bucket is
+// part of how invisible text stayed green.
+//
+// Every undecided colour-contrast result measured on this panel turned out to
+// be a sampling limit — an overlapped box, a zero-sized native <select> behind
+// a custom dropdown, a gradient — not a defect. An allow-list of those would
+// need a hand-measured entry per element and would churn with the markup, so
+// resolve them instead: compute the pair the same way the light-theme probes
+// do and fail only when the answer is actually below AA. That is stricter than
+// an allow-list and needs no maintenance.
+async function undecidedContrastFailures(page, incomplete) {
+  const targets = [...new Set(
+    incomplete
+      .filter((entry) => entry.id === "color-contrast")
+      .flatMap((entry) => entry.targets.flat().map(String)),
+  )];
+  if (!targets.length) return [];
+
+  return page.evaluate((selectors) => {
+    const parse = (value) => {
+      const match = value.match(/rgba?\(([^)]+)\)/);
+      if (!match) return null;
+      const parts = match[1].split(",").map(Number);
+      return { r: parts[0], g: parts[1], b: parts[2], a: parts.length > 3 ? parts[3] : 1 };
+    };
+    const linear = (channel) => {
+      const n = channel / 255;
+      return n <= 0.03928 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance = (c) => 0.2126 * linear(c.r) + 0.7152 * linear(c.g) + 0.0722 * linear(c.b);
+    const composite = (fg, bg) => (fg.a >= 1 ? fg : {
+      r: fg.r * fg.a + bg.r * (1 - fg.a),
+      g: fg.g * fg.a + bg.g * (1 - fg.a),
+      b: fg.b * fg.a + bg.b * (1 - fg.a),
+      a: 1,
+    });
+    const behind = (node) => {
+      let current = node;
+      while (current && current !== document.documentElement) {
+        const colour = parse(getComputedStyle(current).backgroundColor);
+        if (colour && colour.a > 0.95) return colour;
+        current = current.parentElement;
+      }
+      return { r: 255, g: 255, b: 255, a: 1 };
+    };
+
+    return selectors.flatMap((selector) => {
+      const node = document.querySelector(selector);
+      if (!node) return [];
+      const style = getComputedStyle(node);
+      const foreground = parse(style.color);
+      if (!foreground || foreground.a === 0) return [];
+      const background = behind(node);
+      const a = luminance(composite(foreground, background));
+      const b = luminance(background);
+      const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      const size = parseFloat(style.fontSize);
+      const large = size >= 24 || (size >= 18.66 && parseInt(style.fontWeight, 10) >= 700);
+      const required = large ? 3 : 4.5;
+      if (ratio >= required) return [];
+      return [{
+        selector,
+        ratio: Number(ratio.toFixed(2)),
+        required,
+        colour: style.color,
+        behind: `rgb(${Math.round(background.r)}, ${Math.round(background.g)}, ${Math.round(background.b)})`,
+      }];
+    });
+  }, targets);
+}
+
 function formatWcagViolations(violations) {
   return violations.map(({ id, impact, help, nodes }) => ({
     id,
@@ -19,15 +92,70 @@ function formatWcagViolations(violations) {
   }));
 }
 
+// F399: axe only analyses what is laid out in the scroll container's current
+// position. The panel's #mainContent is overflow-y:auto and runs to a
+// scrollHeight several times its clientHeight, so a single unscrolled pass saw
+// roughly the top tenth of the Settings page and reported zero violations
+// while 26 colour-contrast failures rendered below the fold. Walk the tallest
+// scroll container in viewport-sized steps and union the findings.
+async function scrollPositions(page) {
+  return page.evaluate(() => {
+    const containers = Array.from(document.querySelectorAll("*")).filter(
+      (node) => node.scrollHeight - node.clientHeight > 8
+        && ["auto", "scroll"].includes(getComputedStyle(node).overflowY),
+    );
+    if (!containers.length) return { selector: null, offsets: [0] };
+    const tallest = containers.reduce((a, b) =>
+      (b.scrollHeight - b.clientHeight > a.scrollHeight - a.clientHeight ? b : a));
+    if (!tallest.id) tallest.id = "opencut-a11y-scroll-target";
+    const step = Math.max(200, tallest.clientHeight - 40);
+    const offsets = [];
+    for (let top = 0; top < tallest.scrollHeight; top += step) offsets.push(top);
+    return { selector: `#${tallest.id}`, offsets };
+  });
+}
+
 async function assertWcagCompliance(page, stateName) {
-  let builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
-  for (const suppression of WCAG_SUPPRESSIONS) {
-    builder = builder.exclude(suppression.selector);
+  const { selector, offsets } = await scrollPositions(page);
+  const violations = new Map();
+  const undecided = new Map();
+  const unreadable = new Map();
+
+  for (const top of offsets) {
+    if (selector) {
+      await page.evaluate(
+        ([target, offset]) => { document.querySelector(target).scrollTop = offset; },
+        [selector, top],
+      );
+    }
+    let builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
+    for (const suppression of WCAG_SUPPRESSIONS) {
+      builder = builder.exclude(suppression.selector);
+    }
+    const results = await builder.analyze();
+    for (const entry of formatWcagViolations(results.violations)) {
+      violations.set(`${entry.id}:${JSON.stringify(entry.targets)}`, entry);
+    }
+    const stillUndecided = formatWcagViolations(results.incomplete || []);
+    for (const entry of stillUndecided) {
+      undecided.set(`${entry.id}:${JSON.stringify(entry.targets)}`, entry);
+    }
+    for (const failure of await undecidedContrastFailures(page, stillUndecided)) {
+      unreadable.set(failure.selector, failure);
+    }
   }
-  const results = await builder.analyze();
+
+  if (selector) {
+    await page.evaluate((target) => { document.querySelector(target).scrollTop = 0; }, selector);
+  }
+
   expect(
-    formatWcagViolations(results.violations),
+    [...violations.values()],
     `${stateName} WCAG 2.2 AA violations`,
+  ).toEqual([]);
+  expect(
+    [...unreadable.values()],
+    `${stateName} text axe could not sample and that measures below AA`,
   ).toEqual([]);
 }
 const BREAKPOINT_BOUNDARIES = {
