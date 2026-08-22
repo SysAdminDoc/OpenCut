@@ -3,7 +3,7 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
-## Unreleased
+## 1.54.0: The panel can talk to its backend again
 
 ### Fixed: the CEP panel can obtain a security token again
 

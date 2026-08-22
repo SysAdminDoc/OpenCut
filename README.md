@@ -1,6 +1,6 @@
 # OpenCut for Premiere Pro
 
-![Version](https://img.shields.io/badge/version-1.53.0-blue)
+![Version](https://img.shields.io/badge/version-1.54.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
