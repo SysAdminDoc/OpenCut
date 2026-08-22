@@ -72,12 +72,20 @@ class TestDocSizeRegex(unittest.TestCase):
         self.assertEqual(m.group(1), "1,523")
 
     def test_targets_only_live_docs(self):
+        """The checker may only read docs this repo actually maintains.
+
+        F404 widened this from README.md alone. CLAUDE.md is the first file an
+        agent reads and its panel size claims had drifted by as much as 83%
+        while nothing checked them. It is gitignored, so `_evaluate` skipping a
+        doc that does not exist is what keeps a fresh clone working. Anything
+        beyond these two is still a mistake.
+        """
         doc_names = {
             doc.name
             for target in self.mod.TARGETS
             for doc in target.docs
         }
-        self.assertEqual(doc_names, {"README.md"})
+        self.assertEqual(doc_names, {"README.md", "CLAUDE.md"})
 
 
 class TestDocSizeCLI(unittest.TestCase):

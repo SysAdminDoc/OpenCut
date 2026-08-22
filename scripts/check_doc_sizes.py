@@ -35,6 +35,11 @@ from typing import Callable
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
+# F404: CLAUDE.md is the first file an agent reads, and its panel sizes had
+# drifted by as much as 83% because only README.md was ever checked. It is
+# gitignored, so a fresh clone will not have it — _evaluate() skips a doc that
+# does not exist, which is what makes checking an untracked file safe here.
+CLAUDE_MD = ROOT / "CLAUDE.md"
 ROUTE_MANIFEST = ROOT / "opencut" / "_generated" / "route_manifest.json"
 
 DEFAULT_TOLERANCE_PCT = 15.0  # ±% drift permitted before --check fails
@@ -100,6 +105,55 @@ class DocClaim:
 
 # Each regex must capture the documented number as group 1 (or named "n").
 TARGETS: list[DocClaim] = [
+    DocClaim(
+        label="CLAUDE.md CEP panel main.js lines",
+        regex=re.compile(r"`extension/com\.opencut\.panel/client/main\.js`\s*\(~([\d,]+)\s+lines as of"),
+        live=lambda rel="extension/com.opencut.panel/client/main.js": _file_lines(rel),
+        docs=(CLAUDE_MD,),
+        unit="lines",
+    ),
+    DocClaim(
+        label="CLAUDE.md CEP panel index.html lines",
+        regex=re.compile(r"`extension/com\.opencut\.panel/client/index\.html`\s*\(~([\d,]+)\s+lines as of"),
+        live=lambda rel="extension/com.opencut.panel/client/index.html": _file_lines(rel),
+        docs=(CLAUDE_MD,),
+        unit="lines",
+    ),
+    DocClaim(
+        label="CLAUDE.md CEP panel style.css lines",
+        regex=re.compile(r"`extension/com\.opencut\.panel/client/style\.css`\s*\(~([\d,]+)\s+lines as of"),
+        live=lambda rel="extension/com.opencut.panel/client/style.css": _file_lines(rel),
+        docs=(CLAUDE_MD,),
+        unit="lines",
+    ),
+    DocClaim(
+        label="CLAUDE.md ExtendScript host lines",
+        regex=re.compile(r"`extension/com\.opencut\.panel/host/index\.jsx`\s*\(~([\d,]+)\s+lines as of"),
+        live=lambda rel="extension/com.opencut.panel/host/index.jsx": _file_lines(rel),
+        docs=(CLAUDE_MD,),
+        unit="lines",
+    ),
+    DocClaim(
+        label="CLAUDE.md UXP panel index.html lines",
+        regex=re.compile(r"`extension/com\.opencut\.uxp/index\.html`\s*\(~([\d,]+)\s+lines as of"),
+        live=lambda rel="extension/com.opencut.uxp/index.html": _file_lines(rel),
+        docs=(CLAUDE_MD,),
+        unit="lines",
+    ),
+    DocClaim(
+        label="CLAUDE.md UXP panel style.css lines",
+        regex=re.compile(r"`extension/com\.opencut\.uxp/style\.css`\s*\(~([\d,]+)\s+lines as of"),
+        live=lambda rel="extension/com.opencut.uxp/style.css": _file_lines(rel),
+        docs=(CLAUDE_MD,),
+        unit="lines",
+    ),
+    DocClaim(
+        label="CLAUDE.md UXP panel main.js lines",
+        regex=re.compile(r"`extension/com\.opencut\.uxp/main\.js`\s*\(~([\d,]+)\s+lines as of"),
+        live=lambda rel="extension/com.opencut.uxp/main.js": _file_lines(rel),
+        docs=(CLAUDE_MD,),
+        unit="lines",
+    ),
     DocClaim(
         label="README routes badge",
         regex=re.compile(r"API%20Routes-([\d,]+)-"),
