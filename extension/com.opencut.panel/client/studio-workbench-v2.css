@@ -1423,31 +1423,25 @@ body .oc-textarea:focus {
 
 @media (forced-colors: active) {
   .card,
-  .oc-card,
-  .oc-result-area,
   .oc-empty-state,
-  .workspace-stage,
-  .oc-workspace-overview {
+  .workspace-stage {
     border: 1px solid CanvasText !important;
     background: Canvas !important;
     color: CanvasText !important;
   }
 
-  .nav-tab.active,
-  .oc-tab-nav-shell .oc-tab.active {
+  .nav-tab.active {
     background: Highlight !important;
     color: HighlightText !important;
   }
 
-  .nav-tab.active::before,
-  .oc-tab-nav-shell .oc-tab.active::before {
+  .nav-tab.active::before {
     background: Highlight !important;
   }
 
   .header-btn,
   .studio-header-connect,
   .stage-action-primary,
-  .oc-btn-primary,
   .btn-primary {
     border: 1px solid ButtonText !important;
     background: ButtonFace !important;
