@@ -23,7 +23,8 @@ Steps (in order):
 13. ``ruff`` — lint the python package
 14. ``pytest-fast`` — focused test ids covering release gates
 15. ``pip-audit`` — Python dependency advisories for requirements, lockfile, and ``pyproject[all]``
-16. ``panel-unit`` — CEP/UXP panel Vitest utility tests
+16. ``jsx-mock`` — ExtendScript host harness for ``host/index.jsx``
+17. ``panel-unit`` — CEP/UXP panel Vitest utility tests
 17. ``panel-rendered`` — headless Chromium panel state, accessibility, and screenshot regression tests
 18. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
 19. ``panel-source`` — CEP panel source tree smoke
@@ -1465,6 +1466,46 @@ def step_panel_rendered(_args: argparse.Namespace) -> StepResult:
     return res
 
 
+def step_jsx_mock(_args: argparse.Namespace) -> StepResult:
+    """Run the ExtendScript host harness.
+
+    F394: this is the only automated coverage of ``host/index.jsx``, the code
+    that writes to a real Premiere sequence, and it sat red on a clean checkout
+    because nothing invoked it. README documented it as a test command; no gate
+    ran it.
+    """
+    start = time.time()
+    harness = REPO_ROOT / "tests" / "jsx_mock.js"
+    if not harness.exists():
+        return StepResult(
+            "jsx-mock",
+            "skipped",
+            skipped_reason="tests/jsx_mock.js missing",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    node = shutil.which("node")
+    if node is None:
+        return StepResult(
+            "jsx-mock",
+            "skipped",
+            skipped_reason="node not installed",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    result = _run([node, str(harness)], cwd=REPO_ROOT)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "jsx-mock",
+        status,
+        exit_code=result.returncode,
+        duration_ms=int((time.time() - start) * 1000),
+        message=(
+            "ExtendScript host harness passed"
+            if status == "ok"
+            else _tail(result.stdout or result.stderr)
+        ),
+    )
+
+
 def step_npm_advisory(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     script = PANEL_DIR / "scripts" / "check-advisories.mjs"
@@ -1786,6 +1827,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("media-conformance", step_media_conformance, "Run the synthetic media corpus against real FFmpeg"),
     StepDefinition("standards-conformance", step_standards_conformance, "Validate standards-labelled output with reference implementations"),
     StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt, requirements-lock.txt, and pyproject[all]"),
+    StepDefinition("jsx-mock", step_jsx_mock, "Run the ExtendScript host mock harness"),
     StepDefinition("panel-unit", step_panel_unit, "Run CEP/UXP panel Vitest utility tests"),
     StepDefinition("panel-rendered", step_panel_rendered, "Run headless CEP/UXP rendered regression tests"),
     StepDefinition("npm-advisory", step_npm_advisory, "Run npm advisory allow-list gate"),
@@ -1839,7 +1881,7 @@ def run_release_smoke(
 # Steps whose silent self-skip (missing tool/module) can mask a real release
 # gate. Under ``--strict`` a skip of any of these fails the run instead of
 # letting the matrix report "ok" without ever exercising them.
-CRITICAL_STEP_NAMES = frozenset({"ruff", "pip-audit", "panel-unit", "panel-rendered"})
+CRITICAL_STEP_NAMES = frozenset({"ruff", "pip-audit", "jsx-mock", "panel-unit", "panel-rendered"})
 
 
 def skipped_critical_steps(results: List[StepResult]) -> List[str]:
