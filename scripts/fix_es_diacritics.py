@@ -2,7 +2,6 @@
 """Fix missing Spanish diacritics in UXP es.json locale file."""
 import json
 import re
-import sys
 
 LOCALE_PATH = "extension/com.opencut.uxp/locales/es.json"
 
@@ -175,7 +174,7 @@ def main():
     counts = {c: full_text.count(c) for c in diacritic_chars if full_text.count(c) > 0}
 
     print(f"Keys modified: {changed}")
-    print(f"Diacritics introduced:")
+    print("Diacritics introduced:")
     for char, count in sorted(counts.items()):
         print(f"  {char}: {count}")
     print(f"Total diacritic characters: {sum(counts.values())}")
