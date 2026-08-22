@@ -1344,6 +1344,11 @@ body .oc-textarea:focus {
 .workspace-chip,
 .version,
 .status-pill,
+.settings-status-pill,
+.settings-inline-value,
+.settings-value,
+.feature-state-pill,
+.job-history-status-pill,
 .badge,
 .pill,
 .media-sidecar-pill,
@@ -2357,6 +2362,11 @@ body .oc-textarea:focus {
 
 .oc-status-pill,
 .status-pill,
+.settings-status-pill,
+.settings-inline-value,
+.settings-value,
+.feature-state-pill,
+.job-history-status-pill,
 .badge,
 .pill,
 .version,
@@ -2484,6 +2494,19 @@ html body .content-footer .toggle-count {
   font-size: 13px !important;
 }
 
+.command-palette-badge {
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.command-palette-badge.is-current {
+  display: none !important;
+}
+
 #journalList > .oc-empty-state,
 #tab-search .oc-empty-state {
   display: none !important;
@@ -2509,7 +2532,6 @@ html body #panel-settings .card .oc-inline-summary-grid {
   margin-right: 0 !important;
 }
 
-body:not(.has-clip) #clipSection,
 body[data-active-tab="settings"] .workspace-stage,
 body[data-active-tab="settings"] #clipSection,
 body[data-active-tab="settings"] .favorites-bar,
@@ -2519,6 +2541,57 @@ body[data-active-nav="settings"] .workspace-stage,
 body[data-active-nav="settings"] #clipSection,
 body[data-active-nav="settings"] .favorites-bar,
 body[data-active-nav="settings"] .quick-actions {
+  display: none !important;
+}
+
+#clipSection {
+  display: block !important;
+  margin: 0 !important;
+  padding: 8px 0 10px !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--quiet-rule) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#clipSection > .card-header,
+#clipSection .drop-zone,
+#clipSection .media-action-row,
+#clipSection .context-guidance,
+#clipSection .media-sidecar {
+  display: none !important;
+}
+
+#clipSection .media-intake-shell,
+#clipSection .media-intake-main {
+  display: flex !important;
+  width: 100% !important;
+  align-items: center !important;
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+#clipSection .media-intake-main > .custom-dropdown {
+  min-width: 0 !important;
+  flex: 1 1 320px !important;
+}
+
+#clipSection .recent-clips-row {
+  flex: 0 0 auto !important;
+  gap: 0 !important;
+  margin: 0 !important;
+}
+
+body [data-collapsible].collapsed ~ * {
   display: none !important;
 }
 
@@ -2546,6 +2619,16 @@ body[data-active-nav="settings"] .quick-actions {
   border-top: 1px solid var(--quiet-rule) !important;
   border-radius: 0 !important;
   background: transparent !important;
+}
+
+@media (max-width: 520px) {
+  #clipSection .media-intake-main {
+    flex-wrap: wrap !important;
+  }
+
+  #clipSection .media-intake-main > .custom-dropdown {
+    flex-basis: 100% !important;
+  }
 }
 
 .oc-wave-h-note {
