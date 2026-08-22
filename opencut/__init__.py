@@ -28,7 +28,7 @@ def _require_supported_python(version_info=None):
 
 _require_supported_python()
 
-__version__ = "1.52.0"
+__version__ = "1.53.0"
 __author__ = "OpenCut Contributors"
 __license__ = "MIT"
 

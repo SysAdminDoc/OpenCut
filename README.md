@@ -1,6 +1,6 @@
 # OpenCut for Premiere Pro
 
-![Version](https://img.shields.io/badge/version-1.52.0-blue)
+![Version](https://img.shields.io/badge/version-1.53.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
@@ -19,7 +19,7 @@
 > while **1,254 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
 > Generic `opencut route` and opt-in extended MCP remain available for deliberate route-level access.
 
-> **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited, reviewable silence-cut passes direct to timeline, cross-project media search, stem separation, voice cloning, 55-style animated captions with exportable artifacts, local LLM highlights, and multi-platform social export -- with no subscriptions, no usage caps, and no API keys required for core local features. Cloud providers, Edge-TTS, downloads, telemetry, and social uploads are optional, explicit network features.
+ > **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited, reviewable silence-cut passes direct to timeline, cross-project media search, stem separation, voice cloning, 55-style animated captions with exportable artifacts, local LLM highlights, and multi-platform social export, with no subscriptions, no usage caps, and no API keys required for core local features. Cloud providers, Edge-TTS, downloads, telemetry, and social uploads are optional, explicit network features.
 
 ---
 
@@ -74,7 +74,7 @@ is the one step that needs the maintainer's PyPI account.
 
 **Option A: Windows Installer (recommended for Windows):**
 
-The latest published Windows installer is [OpenCut v1.52.0](https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.52.0). Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python is needed for the packaged release.
+The latest published Windows installer is [OpenCut v1.53.0](https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.53.0). Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python is needed for the packaged release.
 
 Every assembled installer includes `release-composition.json`,
 `opencut-artifact-sbom.cyclonedx.json`, `THIRD-PARTY-NOTICES.txt`, and
@@ -108,7 +108,7 @@ Every release publishes `release-digests.json` listing the SHA-256 of each
 artifact. If the value you compute is not in that file, do not run the
 installer.
 
-**Option B -- Install.bat (recommended for Windows source installs):**
+**Option B: Install.bat (recommended for Windows source installs):**
 
 This is the easiest way to install from source on Windows. It handles FFmpeg, Python dependencies, the CEP extension, registry keys, and launcher creation in one step.
 
@@ -127,9 +127,9 @@ Then right-click `Install.bat` and select **Run as Administrator**. The installe
 7. Set the `PlayerDebugMode` registry key so unsigned extensions load
 8. Create `Start-OpenCut.bat` on your desktop to launch the backend server
 
-After the installer finishes, you are ready to use OpenCut -- see **Launch** below.
+After the installer finishes, you are ready to use OpenCut. See **Launch** below.
 
-**Option C -- From source (manual):**
+**Option C: From source (manual):**
 
 If you prefer manual control or are on macOS/Linux, follow these steps:
 
@@ -190,7 +190,7 @@ until onnxruntime publishes matching wheels. Validate all declared lanes with:
 python scripts/check_dependency_matrix.py --matrix
 ```
 
-**Option D -- Docker:**
+**Option D: Docker:**
 
 ```bash
 openssl rand -hex 32 > .opencut-auth-token
@@ -231,7 +231,7 @@ The release lane also carries a generated PEP 751 `pylock.toml`. Release smoke
 parses that file without contacting a package index and checks its package
 versions and artifact hashes against the universal release lock.
 
-**Option E -- Linux desktop package:**
+**Option E: Linux desktop package:**
 
 The repository includes Flatpak and AppImage packaging for local release builds,
 but no Flatpak or AppImage is currently published. See
@@ -257,12 +257,12 @@ flag always preserves user data.
 
 ### Launch
 
-1. **Start the backend server** -- this must be running before the panel can connect:
+1. **Start the backend server.** It must be running before the panel can connect:
    - Windows (installer): double-click `Start-OpenCut.bat` on your desktop or in the OpenCut folder
    - Windows (source): open a terminal in the OpenCut folder and run `python -m opencut.server`
    - macOS: run `./OpenCut-Server.command` or `python -m opencut.server`
    - Linux: run `./OpenCut-Server.sh` or `python -m opencut.server`
-   - You should see output like `Running on http://127.0.0.1:5679` -- **keep this terminal window open**
+   - You should see output like `Running on http://127.0.0.1:5679`. **Keep this terminal window open.**
 2. Open Premiere Pro and go to **Window > Extensions > OpenCut**.
    On **Premiere 2026 and later** the CEP panel is listed under
    **Window > Extensions (Legacy) > OpenCut** instead. Adobe moved CEP panels
@@ -278,7 +278,7 @@ The OpenCut panel connects to a backend server running on `http://127.0.0.1:5679
 - Make sure the backend server is running (step 1 above). You need a terminal window open with `python -m opencut.server` running.
 - Check the terminal for errors. Common issues: port 5679 already in use (change with `OPENCUT_PORT=5680`), missing Python packages (re-run `pip install -e ".[all]"`).
 - Check that your firewall is not blocking localhost connections on port 5679.
-- The "Live Updates Bridge" toggle in the Settings tab is an optional WebSocket feature for streaming progress updates. It is **not** required for the panel to work -- do not confuse it with the main server connection.
+- The "Live Updates Bridge" toggle in the Settings tab is an optional WebSocket feature for streaming progress updates. It is **not** required for the panel to work. Do not confuse it with the main server connection.
 
 **The OpenCut panel is not in the Extensions menu at all:**
 On Premiere 2026 and later, look under **Window > Extensions (Legacy)**. Adobe
@@ -292,15 +292,15 @@ is set, then restart Premiere.
 The panel connects and reports healthy, then every action fails with this
 message. The panel authorizes each action with a token it fetches from the
 server, and it has either never received one or is holding a stale one.
-Reconnect the panel first -- click the connection indicator, or close and
-reopen the OpenCut panel in Premiere -- which refetches the token. If it keeps
+Reconnect the panel first. Click the connection indicator, or close and
+reopen the OpenCut panel in Premiere. This refetches the token. If it keeps
 happening, restart the backend server and reopen the panel, in that order. The
 response now carries a `code` of `CSRF_INVALID` and a suggestion naming which
 of the two causes applied; `GET /system/audit-log` records refused bootstraps
 with the origin that asked.
 
 **"Module not found" errors for AI features:**
-Most AI features are optional dependencies. Open the **Settings** tab in the panel and scroll to the **Dependency Dashboard** -- it shows every optional package with its install status and the exact pip command to install missing ones. Or install all audited extras at once: `pip install -e ".[all]"`.
+Most AI features are optional dependencies. Open the **Settings** tab in the panel and scroll to the **Dependency Dashboard**. It shows every optional package with its install status and the exact pip command to install missing ones. Or install all audited extras at once: `pip install -e ".[all]"`.
 
 **FFmpeg missing or blocked:**
 The server requires FFmpeg 8.1.3+ (or a dated post-fix snapshot from 2026-07-06 onward) on your PATH. Run `python scripts/verify_ffmpeg_provenance.py` to see the detected version and reason. If missing or below the floor, install the current `ffmpeg-git-full` build from https://www.gyan.dev/ffmpeg/builds/ or build the checksum-verified upstream source snapshot. Restart the terminal and OpenCut server after upgrading. `Install.ps1 -SkipFFmpeg` skips automatic installation only; it cannot bypass this security check.
@@ -336,16 +336,16 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 
 ## Feature Overview
 
-OpenCut v1.52.0 includes **1,564 shipped API routes** (implemented or dependency-gated; 29 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,254 integration-only routes** are explicitly classified rather than presented as direct user workflows.
+OpenCut v1.53.0 includes **1,564 shipped API routes** (implemented or dependency-gated; 29 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,254 integration-only routes** are explicitly classified rather than presented as direct user workflows.
 
 ### Cut & Clean
 
 | Feature | Description | Engine |
 |---------|-------------|--------|
 | Silence Removal | Detect and stage silent segments with adjustable threshold or AI neural detection; review ranges before timeline write-back | FFmpeg / Silero VAD |
-| Silero VAD Mode | ML-based voice activity detection -- 87% TPR vs 50% for energy thresholds. Auto-fallback if PyTorch unavailable | Silero VAD (ONNX) |
+| Silero VAD Mode | ML-based voice activity detection, 87% TPR vs 50% for energy thresholds. Auto-fallback if PyTorch unavailable | Silero VAD (ONNX) |
 | Filler Word Detection | Detect and stage "um", "uh", "like", "you know" + custom words for reviewable cuts. Two backends: standard Whisper or CrisperWhisper (verbatim mode) | faster-whisper / CrisperWhisper |
-| CrisperWhisper Mode | Modified Whisper that transcribes verbatim with `[UH]`/`[UM]` markers -- #1 on OpenASR Leaderboard for filler detection | HuggingFace transformers |
+| CrisperWhisper Mode | Modified Whisper that transcribes verbatim with `[UH]`/`[UM]` markers. It ranks first on the OpenASR Leaderboard for filler detection | HuggingFace transformers |
 | Waveform Preview | Visual waveform with draggable threshold line synced to slider | FFmpeg PCM + Canvas |
 | Trim Tool | Set in/out points to extract a clip portion (stream copy or re-encode) | FFmpeg |
 | Full Pipeline | One reviewable local pass for silence/filler ranges, captions, and zoom | Multi-stage |
@@ -428,7 +428,7 @@ without returning transcript text.
 |---------|-------------|--------|
 | AI Upscaling | 3 tiers: Lanczos (fast), Real-ESRGAN (balanced), Video2x (premium) | FFmpeg / Real-ESRGAN |
 | Background Removal | Per-frame (rembg, 5 models) or temporal (Robust Video Matting, 2 models) | rembg / RVM |
-| Robust Video Matting | Recurrent neural network for temporally consistent matting -- no green screen needed | torch hub (RVM) |
+| Robust Video Matting | Recurrent neural network for temporally consistent matting. No green screen needed | torch hub (RVM) |
 | Depth Effects | Depth map estimation, depth-of-field bokeh simulation, 3D Ken Burns parallax zoom | Depth Anything V2 |
 | Frame Interpolation | Slow motion / frame rate conversion | FFmpeg / RIFE |
 | Face Enhancement | Restore and upscale faces with controllable fidelity slider | GFPGAN / CodeFormer |
@@ -491,7 +491,7 @@ without returning transcript text.
 |---------|-------------|
 | Footage Search | Index your entire media library across projects by spoken content, then query it through the panel, REST, MCP, or CLI |
 | FTS5 Database Search | SQLite full-text search index with auto-indexing and cleanup |
-| Natural Language Commands | Type in English -- OpenCut maps commands to API routes via keyword matching or LLM |
+| Natural Language Commands | Type in English. OpenCut maps commands to API routes via keyword matching or LLM |
 | Chat Editor | Multi-turn LLM-powered editing assistant with session memory and action parsing |
 | Post-Production Deliverables | Generate VFX sheets, ADR lists, music cue sheets, and asset inventories from sequence data |
 
@@ -556,15 +556,15 @@ without returning transcript text.
 
 A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 
-- **Modern JavaScript** -- ES modules, async/await, native `fetch()`
-- **Same Python backend** -- Connects to the same local server on port 5679
-- **Auto port detection** -- Scans ports 5679-5689 automatically
-- **9 tabs** -- Cut & Clean, Captions, Audio, Video, Timeline, Search, Deliverables, Agent, Settings
-- **Direct Premiere API** -- Uses the `premierepro` UXP module for sequence access
-- **Project media discovery** -- Scans project items via UXP API with datalist autocomplete
-- **OTIO export** -- Discover installed adapters, select a current or legacy
+- **Modern JavaScript:** ES modules, async/await, native `fetch()`
+- **Same Python backend:** Connects to the same local server on port 5679
+- **Auto port detection:** Scans ports 5679-5689 automatically
+- **9 tabs:** Cut & Clean, Captions, Audio, Video, Timeline, Search, Deliverables, Agent, Settings
+- **Direct Premiere API:** Uses the `premierepro` UXP module for sequence access
+- **Project media discovery:** Scans project items via UXP API with datalist autocomplete
+- **OTIO export:** Discover installed adapters, select a current or legacy
   schema target, and preflight downgrade loss before writing from either panel
-- **Connection-aware UI** -- Buttons disable when server is offline, re-enable on reconnect
+- **Connection-aware UI:** Buttons disable when server is offline, then re-enable on reconnect
 - **Near-complete feature parity** with CEP panel including depth effects, emotion highlights, B-roll, chat editor, social upload, engine preferences, and WebSocket bridge
 
 > **Premiere 26 compatibility:** Both CEP (`[13.0, 99.9]` host range) and UXP (`minVersion 25.6`) panels cover Premiere 26.x. [Adobe's November 2025 guidance](https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/ReadMe.md) plans dual support for a calendar year after Premiere Pro 25.6, implying an approximately November 2026 planning horizon rather than an announced removal date. OpenCut maintains CEP reliability and security while completing the UXP migration.
@@ -631,7 +631,7 @@ Engine preferences are configurable per-domain in the Settings tab and persist a
 
 ## Dependency Tiers
 
-Only the core tier is required -- everything else is optional and auto-detected at runtime.
+Only the core tier is required. Everything else is optional and auto-detected at runtime.
 
 ### Core (required, ~5MB)
 
@@ -832,7 +832,7 @@ provided.
 ## Security
 
 - **No `shell=True`** in any subprocess call
-- **Guarded dynamic execution** -- timeline expressions and the scripting
+- **Guarded dynamic execution:** timeline expressions and the scripting
   console validate ASTs, restrict globals/builtins, and enforce deadlines
   before their deliberate `eval`/`exec` calls; PyTorch checkpoints use the
   restricted `weights_only=True` loader and reject unsafe pickle payloads

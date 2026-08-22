@@ -3,6 +3,22 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## 1.53.0: A quieter editor shell
+
+### Changed: One visual system across every page
+
+- Simplified CEP and UXP typography, spacing, borders, and control grouping.
+- Reworked the rendered pages around a flat dark-first workspace with hairline
+  section rules, one clear primary action, and readable labels.
+- Added the quiet editor reference mockup at
+  `extension/design/quiet-editor-system-v1/cut.png`.
+
+### Tested: The shared shell stays aligned
+
+- CEP and UXP load byte-identical shared workbench styles.
+- Full headless rendering passed 69 checks with one documented forced-colors
+  skip.
+
 ## 1.52.0: The panels report what is actually happening
 
 ### Changed: The workspace opens on live state
