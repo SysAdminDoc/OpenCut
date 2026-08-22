@@ -1070,9 +1070,14 @@ async function assertPremiumControlContract(page, surfaceName) {
         const style = getComputedStyle(element);
         const rect = element.getBoundingClientRect();
         const radii = style.borderRadius.match(/[\d.]+/g)?.map(Number) || [0];
-        const hasText = Boolean(
-          (element.textContent || element.getAttribute("value") || "").trim(),
-        );
+        const textHosts = [element, ...element.querySelectorAll("*")]
+          .filter(visible)
+          .filter((node) => Array.from(node.childNodes).some(
+            (child) => child.nodeType === Node.TEXT_NODE && child.textContent.trim(),
+          ));
+        if (["INPUT", "SELECT", "TEXTAREA"].includes(element.tagName)) {
+          textHosts.push(element);
+        }
         const issues = [];
         if (
           radii.some((radius) => !allowedRadii.has(radius)) &&
@@ -1080,9 +1085,14 @@ async function assertPremiumControlContract(page, surfaceName) {
         ) {
           issues.push(`radius=${style.borderRadius}`);
         }
-        const fontSize = Number.parseFloat(style.fontSize);
-        if (hasText && fontSize > 0 && fontSize < 12) {
-          issues.push(`font=${style.fontSize}`);
+        const undersizedText = textHosts
+          .map((node) => getComputedStyle(node).fontSize)
+          .filter((font) => {
+            const size = Number.parseFloat(font);
+            return size > 0 && size < 13;
+          });
+        if (undersizedText.length) {
+          issues.push(`font=${[...new Set(undersizedText)].join(",")}`);
         }
         if (
           element.tagName !== "INPUT" ||
@@ -1236,7 +1246,12 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
         /^Outputs\s*\(0\)$/,
       );
     } else {
-      await expect(page.locator("#workspaceOverviewTitle")).toBeVisible();
+      await expect(page.locator("#workspaceOverviewTitle")).toHaveText(/\S/);
+      const semanticTitleBox = await page.locator("#workspaceOverviewTitle").boundingBox();
+      expect(semanticTitleBox?.width).toBeLessThanOrEqual(1);
+      expect(semanticTitleBox?.height).toBeLessThanOrEqual(1);
+      await expect(page.locator("[data-studio-workspace-title]")).toBeVisible();
+      await expect(page.locator("[data-studio-workspace-title]")).toHaveText(/\S/);
       await expect(page.locator("#uxpHeaderVersion")).toBeVisible();
       await expect(page.locator("#uxpHeaderVersion")).toHaveText(/^v\d+\.\d+\.\d+$/);
     }
@@ -1285,7 +1300,7 @@ const LIGHT_THEME_PROBES = {
   uxp: {
     graphics: [".oc-logo-mark path"],
     text: [".oc-workspace-subtitle", ".oc-workspace-meta-label", ".oc-hint"],
-    surfaces: [".oc-workspace-overview", ".oc-card", ".oc-progress-track"],
+    surfaces: [".oc-workspace-overview", ".oc-content", ".oc-progress-track"],
   },
 };
 
@@ -1994,10 +2009,12 @@ for (const width of [480, 520]) {
         const tab = tabs.nth(index);
         const tabName = await tab.getAttribute(surface.tabAttribute);
         await tab.click();
-        await expect(page.locator("#workspaceOverviewTitle")).toBeVisible();
         if (tabName === "settings") {
+          await expect(page.locator("#workspaceOverviewTitle")).toBeHidden();
+          await expect(page.locator("[data-studio-workspace-title]")).toBeVisible();
           await expect(page.locator("#workspaceGuide")).toBeHidden();
         } else {
+          await expect(page.locator("#workspaceOverviewTitle")).toBeVisible();
           await expect(page.locator("#workspaceGuide")).toBeVisible();
           await expect(page.locator("#workspaceGuideAction")).toBeVisible();
         }
@@ -2068,8 +2085,8 @@ test("UXP wide shell keeps overflow controls hidden and expands offline details"
   });
   expect(menuGeometry.detailRadius).toBe("8px");
   expect(menuGeometry.detailFontSize).toBeGreaterThanOrEqual(12);
-  expect(menuGeometry.selectRadius).toBe("6px");
-  expect(menuGeometry.selectHeight).toBeGreaterThanOrEqual(36);
+  expect(menuGeometry.selectRadius).toBe("4px");
+  expect(menuGeometry.selectHeight).toBeGreaterThanOrEqual(34);
   expect(menuGeometry.selectAppearance).toBe("none");
   expect(menuGeometry.selectArrow).toContain("data:image/svg+xml");
   expect(pageErrors).toEqual([]);
@@ -2141,7 +2158,7 @@ test("the stage session card renders its values in full", async ({ page }) => {
   expect(pageErrors).toEqual([]);
 });
 
-test("wide command-center shells expose editorial rails and settings grids", async ({
+test("wide workbench shells enforce quiet editorial density and settings grids", async ({
   page,
 }) => {
   const cep = await openSurface(page, "cep", "dark", 1200, { height: 800 });
@@ -2204,8 +2221,8 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   expect(cepGeometry.sidebarWidth).toBeGreaterThanOrEqual(160);
   expect(cepGeometry.cardColumns).toBeGreaterThan(200);
   expect(cepGeometry.bodyFontSize).toBeGreaterThanOrEqual(14);
-  expect(cepGeometry.brandMetaDisplay).toBe("block");
-  expect(cepGeometry.kickerDisplay).toBe("flex");
+  expect(cepGeometry.brandMetaDisplay).toBe("none");
+  expect(cepGeometry.kickerDisplay).toBe("none");
   expect(cepGeometry.cardShadow).toBe("none");
   expect(cepGeometry.cardRadius).toBe("0px");
   expect(cepGeometry.statusRadius).toBe("0px");
@@ -2255,12 +2272,11 @@ test("wide command-center shells expose editorial rails and settings grids", asy
         .map((title) => title.textContent?.trim()),
     };
   });
-  expect(uxpGeometry.railWidth).toBe(176);
+  expect(uxpGeometry.railWidth).toBe(164);
   expect(uxpGeometry.tabDirection).toBe("column");
-  expect(uxpGeometry.headerHeight).toBeGreaterThanOrEqual(70);
-  expect(uxpGeometry.headerHeight).toBeLessThanOrEqual(76);
-  expect(uxpGeometry.overviewHeight).toBeGreaterThanOrEqual(90);
-  expect(uxpGeometry.overviewHeight).toBeLessThanOrEqual(100);
+  expect(uxpGeometry.headerHeight).toBeGreaterThanOrEqual(52);
+  expect(uxpGeometry.headerHeight).toBeLessThanOrEqual(56);
+  expect(uxpGeometry.overviewHeight).toBe(0);
   expect(uxpGeometry.connectionRadius).toBe("0px");
   expect(uxpGeometry.connectionBackground).toBe("rgba(0, 0, 0, 0)");
   expect(uxpGeometry.settingsColumns).toBeGreaterThan(170);
@@ -2273,8 +2289,8 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   expect(uxpGeometry.statusPillRadius).toBe("0px");
   expect(uxpGeometry.statusPillBackground).toBe("rgba(0, 0, 0, 0)");
   expect(uxpGeometry.metaBackground).toBe("rgba(0, 0, 0, 0)");
-  expect(uxpGeometry.metaItemBackground).not.toBe("rgba(0, 0, 0, 0)");
-  expect(uxpGeometry.metaItemBorderTop).toBe("1px");
+  expect(uxpGeometry.metaItemBackground).toBe("rgba(0, 0, 0, 0)");
+  expect(uxpGeometry.metaItemBorderTop).toBe("0px");
   expect(uxpGeometry.commandBarInHeader).toBe(true);
   expect(uxpGeometry.guideDisplay).toBe("none");
   expect(uxpGeometry.groupTitles).toEqual(["Workspace"]);
@@ -2289,7 +2305,8 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   await page.locator(".oc-tab[data-tab='captions']").click();
   await expect(page.locator("#captionsPlanModel")).toHaveCount(0);
   const controlGrammar = await page.evaluate(() => {
-    const summaryItems = Array.from(document.querySelectorAll(".oc-inline-summary-grid--captions .oc-inline-stat"));
+    const summaryItems = Array.from(document.querySelectorAll(".oc-inline-summary-grid--captions .oc-inline-stat"))
+      .filter((item) => item.getBoundingClientRect().width > 0);
     const summaryTops = summaryItems.map((item) => item.getBoundingClientRect().top);
     const status = getComputedStyle(document.getElementById("captionsStatusLine"));
     return {
@@ -2301,7 +2318,7 @@ test("wide command-center shells expose editorial rails and settings grids", asy
       statusRadius: status.borderRadius,
     };
   });
-  expect(controlGrammar.summaryCount).toBe(3);
+  expect(controlGrammar.summaryCount).toBe(2);
   expect(controlGrammar.summaryRowSpread).toBeLessThan(1);
   expect(controlGrammar.statusBackground).toBe("rgba(0, 0, 0, 0)");
   expect(controlGrammar.statusRadius).toBe("0px");
@@ -2318,8 +2335,8 @@ test("wide command-center shells expose editorial rails and settings grids", asy
       selectBottom: select.borderBottomWidth,
     };
   });
-  expect(fieldGrammar.inputRadius).toBe("6px");
-  expect(fieldGrammar.selectRadius).toBe("6px");
+  expect(fieldGrammar.inputRadius).toBe("4px");
+  expect(fieldGrammar.selectRadius).toBe("4px");
   for (const width of [
     fieldGrammar.inputTop,
     fieldGrammar.inputBottom,
@@ -2358,7 +2375,7 @@ test("UXP hierarchy keeps tertiary actions, suggestions, and notices visually op
   expect(settingsGrammar).toEqual({
     footerCount: 0,
     actionBorder: "0px",
-    actionRadius: "0px",
+    actionRadius: "4px",
     actionBackground: "rgba(0, 0, 0, 0)",
   });
 
