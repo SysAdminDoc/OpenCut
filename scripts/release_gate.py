@@ -43,6 +43,9 @@ REQUIRED_STEPS = frozenset(
         "ruff",
         "pytest-fast",
         "pip-audit",
+        # F394: the only automated coverage of the ExtendScript host, which is
+        # what writes to a real Premiere sequence.
+        "jsx-mock",
         "panel-unit",
         "panel-rendered",
         "npm-advisory",

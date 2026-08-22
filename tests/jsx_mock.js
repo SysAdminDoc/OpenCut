@@ -425,26 +425,39 @@ describe("ocApplySequenceCuts", function () {
         assert(result.error.indexOf("reported success") !== -1, "no-op failure should be explicit");
     });
 
-    it("should handle multiple cuts sorted in reverse", function () {
+    // These two assert the removed/trimmed split rather than the combined
+    // `applied` total. They used to expect the pre-trim contract, in which a
+    // clip crossing a cut edge was left alone; _ocPlanClipCut now returns
+    // trim_head/trim_tail for those, and both counts land in `applied`. Reading
+    // the split means a future change to what counts as "applied" cannot
+    // silently re-break them.
+    it("should remove enclosed clips and trim the one that crosses a cut edge", function () {
         app = buildMockApp();
-        // cut1 removes 0-10, cut2 removes 20-30
+        // cut1 covers 0-10, cut2 covers 20-30
         var cuts = [
             { start: 0, end: 10 },
             { start: 20, end: 30 }
         ];
         var result = JSON.parse(ocApplySequenceCuts(JSON.stringify(cuts)));
         assert(!result.error, "should not error");
-        // Video: clip 0-10 removed by cut1, clip 20-30 removed by cut2 => 2 video
-        // Audio: clip 0-10 removed by cut1 => 1 audio
-        assertEqual(result.applied, 3, "should remove 3 clips total");
+        var after = result.host_write_verification.after_state;
+        // Removed: video 0-10, video 20-30, audio 0-10 are each fully covered.
+        assertEqual(after.removed, 3, "3 fully covered clips removed");
+        // Trimmed: audio 10-25 crosses the start of cut2, so it is pulled to 10-20.
+        assertEqual(after.trimmed, 1, "1 boundary-crossing clip trimmed");
+        assertEqual(result.applied, 4, "applied counts removals plus trims");
     });
 
-    it("should NOT remove clips that only partially overlap", function () {
+    it("should trim clips that overlap one cut edge without removing any", function () {
         app = buildMockApp();
-        // Cut range 5-15 partially overlaps clip 0-10 and 10-20, but neither is fully contained
+        // Cut range 5-15 crosses one edge of video 0-10, video 10-20,
+        // audio 0-10 and audio 10-25, and fully covers none of them.
         var cuts = [{ start: 5, end: 15 }];
         var result = JSON.parse(ocApplySequenceCuts(JSON.stringify(cuts)));
-        assertEqual(result.applied, 0, "no clips fully within 5-15");
+        var after = result.host_write_verification.after_state;
+        assertEqual(after.removed, 0, "no clip is fully within 5-15");
+        assertEqual(after.trimmed, 4, "4 clips trimmed back to the cut edge");
+        assertEqual(after.clip_count, 5, "trimming keeps every clip in the sequence");
     });
 
     it("should return error for no project", function () {
