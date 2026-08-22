@@ -2111,6 +2111,36 @@ test("stage actions stay inside their box at every docked width", async ({ page 
   expect(pageErrors).toEqual([]);
 });
 
+test("the stage session card renders its values in full", async ({ page }) => {
+  // F407: the card was three fixed columns, so at the panel's 900px default
+  // each cell was ~110px and every value ellipsised to two or three characters
+  // ("STATUS Rec…"). It fit and truncated honestly, and conveyed nothing.
+  const { pageErrors } = await openSurface(page, "cep", "dark", 900, { height: 800 });
+
+  for (const width of [701, 900, 1200]) {
+    await page.setViewportSize({ width, height: 800 });
+    const card = await page.evaluate(() => {
+      const items = Array.from(document.querySelectorAll(".workspace-stage-session-item"));
+      if (!items.length) return null;
+      return {
+        truncated: items
+          .map((item) => item.querySelector(".workspace-stage-session-value"))
+          .filter((value) => value && value.scrollWidth > value.clientWidth + 1)
+          .map((value) => value.textContent.trim()),
+        overflowing: items
+          .filter((item) => item.scrollWidth > item.clientWidth + 1)
+          .map((item) => item.textContent.trim()),
+      };
+    });
+
+    expect(card, `session card missing at ${width}px`).not.toBeNull();
+    expect(card.truncated, `${width}px truncates session values`).toEqual([]);
+    expect(card.overflowing, `${width}px overflows session items`).toEqual([]);
+  }
+
+  expect(pageErrors).toEqual([]);
+});
+
 test("wide command-center shells expose editorial rails and settings grids", async ({
   page,
 }) => {

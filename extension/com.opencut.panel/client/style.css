@@ -5611,13 +5611,6 @@ body.has-clip .workspace-stage {
     line-height: 1.65;
 }
 
-.workspace-stage-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 4px;
-}
-
 .stage-action {
     display: inline-flex;
     align-items: center;
@@ -5922,10 +5915,6 @@ body.has-clip .workspace-stage {
         display: none;
     }
 
-    .workspace-stage-actions {
-        gap: 8px;
-    }
-
     .stage-action {
         width: 100%;
         min-height: 40px;
@@ -5984,11 +5973,6 @@ body.has-clip .workspace-stage {
 
     .workspace-stage-title {
         font-size: 26px;
-    }
-
-    .workspace-stage-actions {
-        flex-direction: column;
-        align-items: stretch;
     }
 
     .stage-action {
@@ -8096,12 +8080,6 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     text-overflow: ellipsis;
 }
 
-.workspace-stage-actions {
-    order: 1;
-    gap: 10px;
-    margin-top: 2px;
-}
-
 .stage-action {
     justify-content: flex-start;
     gap: 10px;
@@ -8776,11 +8754,6 @@ body.has-clip .media-sidecar-empty {
 
 .workspace-stage-session-value {
     font-size: 12.5px;
-}
-
-.workspace-stage-actions {
-    gap: 12px;
-    margin-top: 4px;
 }
 
 .stage-action {
@@ -13819,10 +13792,6 @@ html.theme-light .panel-dialog-input {
     color: #f5f7fa;
 }
 
-.workspace-stage-actions {
-    gap: 10px;
-}
-
 .stage-action {
     min-height: 48px;
     padding: 0 16px;
@@ -14247,10 +14216,6 @@ body.has-clip .workspace-stage-grid {
 
 body.has-clip .workspace-stage-session {
     max-width: none;
-}
-
-body.has-clip .workspace-stage-actions {
-    margin-top: 0;
 }
 
 body.has-clip .stage-action {

@@ -1068,7 +1068,12 @@ body {
 .workspace-stage-session,
 .oc-workspace-meta {
   display: grid !important;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  /* F407: three fixed columns squeezed each cell to ~110px at the panel's
+     900px default, leaving 33-47px for the value after the label and gap, so
+     every one ellipsised to two or three characters ("STATUS Rec…"). auto-fit
+     drops to two columns, then one, instead of shrinking below a legible
+     width. */
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
   gap: 0 !important;
   margin-top: 16px !important;
   border-top: 1px solid var(--quiet-rule) !important;
@@ -1099,12 +1104,34 @@ body {
   font-weight: 600 !important;
 }
 
+/* F403: the single owner of this row's layout. Ten other rules across
+   style.css, command-center-layout.css and command-center.css used to set
+   the same properties and lose to the !important flags that used to be
+   here; they are gone, so the flags are not needed either. `order` and
+   `align-items` moved in from the rules that carried them. */
 .workspace-stage-actions,
 .oc-workspace-actions {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 8px !important;
-  margin-top: 14px !important;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  order: 1;
+}
+
+/* .workspace-stage-primary names this area in its grid-template-areas, so the
+   row has to claim it or the whole stage reflows around an auto-placed item. */
+.workspace-stage-actions {
+  grid-area: actions;
+}
+
+/* Below 640px the row stacks so a full-width label still fits. Only the
+   direction moves: align-items stays center, which is what won here before. */
+@media (max-width: 640px) {
+  .workspace-stage-actions,
+  .oc-workspace-actions {
+    flex-direction: column;
+  }
 }
 
 .stage-action,
@@ -1544,11 +1571,9 @@ body .stem-check {
 }
 
 @media (max-width: 700px) {
-  .workspace-stage-actions {
-    flex-wrap: wrap !important;
-    white-space: normal !important;
-  }
-
+  /* The row wraps at every width now, so the `flex-wrap: wrap !important` that
+     used to sit here is redundant, and `white-space` on the container never
+     did anything: the buttons set their own. */
   #stageCommandPaletteBtn {
     display: none !important;
   }
