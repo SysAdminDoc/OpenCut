@@ -1,6 +1,6 @@
 # OpenCut for Premiere Pro
 
-![Version](https://img.shields.io/badge/version-1.54.0-blue)
+![Version](https://img.shields.io/badge/version-1.55.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
@@ -336,7 +336,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 
 ## Feature Overview
 
-OpenCut v1.54.0 includes **1,564 shipped API routes** (implemented or dependency-gated; 29 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,254 integration-only routes** are explicitly classified rather than presented as direct user workflows.
+OpenCut v1.55.0 includes **1,564 shipped API routes** (implemented or dependency-gated; 29 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,254 integration-only routes** are explicitly classified rather than presented as direct user workflows.
 
 ### Cut & Clean
 
@@ -537,8 +537,8 @@ without returning transcript text.
 | Per-Operation Presets | Save/load settings per operation |
 | Settings Import/Export | Bundle all settings as JSON for backup or sharing |
 | Server Health Monitor | Auto-reconnect with exponential backoff when backend goes offline |
-| Studio Graphite UI | Single premium theme tuned for the CEP editing workspace |
-| Workspace Polish | Premium shell, command palette, history, and output surfaces |
+| Studio Graphite UI | Compact editorial workspace across dark, light, host-matched, and forced-colours modes |
+| Workspace Polish | Flat sections, readable type, compact controls, and restrained status treatment across CEP and UXP |
 | Toast Notifications | Non-intrusive slide-in alerts for job completion |
 | Keyboard Shortcuts | Configurable shortcuts with reference card (Ctrl+Shift+S for silence, etc.) |
 | Quick Action Buttons | One-click workflows on Cut, Captions, Audio, and Video tabs |
