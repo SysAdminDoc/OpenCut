@@ -47,6 +47,31 @@ record also lives in the git commit messages.
 - The Premiere-plugin half of the panel lint now fails on warnings instead of
   reporting success and moving on.
 
+
+### Changed: the panel matches Premiere's appearance by default
+
+- New installs now follow whether Premiere is running its light or dark skin,
+  instead of always opening dark. The setting is under Settings, Appearance,
+  and choosing Light or Dark explicitly still overrides the host.
+
+### Fixed: the connection summary reads properly at any panel width
+
+- The three-column summary beside the media buttons squeezed each value down to
+  two or three characters at the default panel size. It now uses as many
+  columns as actually fit.
+
+### Changed: more of the queue is usable
+
+- 552 of the 769 background operations were rejected by the job queue even
+  though they ran fine when started directly. All of them can be queued now,
+  apart from publishing, storage moves, plugin installs, agent planning and
+  live preview, which are listed with the reason each one is excluded.
+
+### Changed: quieter, plainer wording in the panel
+
+- Panel copy no longer uses dashes mid-sentence or reaches for "unlock" where a
+  plain verb reads better.
+
 ## 1.53.0: A quieter editor shell
 
 ### Changed: One visual system across every page
