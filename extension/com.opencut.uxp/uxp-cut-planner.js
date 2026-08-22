@@ -364,6 +364,7 @@ export function createCutExecutor({
     }
 
     const mediaType = ppro?.Constants?.MediaType?.ANY ?? 0;
+    // eslint-disable-next-line @adobe/premierepro/prefer-locked-access-wrapper -- run() is invoked inside lockedAccess() below whenever the host exposes it
     const run = () => Boolean(context.proj.executeTransaction((compoundAction) => {
       for (const trim of plan.trims) {
         const item = trim.item.item;
@@ -389,7 +390,6 @@ export function createCutExecutor({
     if (typeof context.proj.lockedAccess === "function") {
       context.proj.lockedAccess(() => { accepted = run(); });
     } else {
-      // eslint-disable-next-line @adobe/premierepro/prefer-locked-access-wrapper -- compatibility fallback when lockedAccess is absent
       accepted = run();
     }
     if (!accepted) {
@@ -434,6 +434,7 @@ export function createCutExecutor({
     if (!context?.proj?.executeTransaction) {
       return { ok: false, reason: "Project.executeTransaction is unavailable in this runtime." };
     }
+    // eslint-disable-next-line @adobe/premierepro/prefer-locked-access-wrapper -- run() is invoked inside lockedAccess() below whenever the host exposes it
     const run = () => Boolean(context.proj.executeTransaction((compoundAction) => {
       for (const entry of entries) compoundAction.addAction(entry.item.createSetDisabledAction(true));
     }, "OpenCut disable cut ranges"));
@@ -441,7 +442,6 @@ export function createCutExecutor({
     if (typeof context.proj.lockedAccess === "function") {
       context.proj.lockedAccess(() => { accepted = run(); });
     } else {
-      // eslint-disable-next-line @adobe/premierepro/prefer-locked-access-wrapper -- compatibility fallback when lockedAccess is absent
       accepted = run();
     }
     return { ok: accepted, reason: accepted ? "" : "executeTransaction rejected the set-disabled action." };

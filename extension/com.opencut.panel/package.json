@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint --max-warnings 0 client/main.js client/transcript-correction-controller.js client/gpu-selection-controller.js client/panel-state.js client/backend-client.js client/panel-bootstrap-token.js client/job-runtime.js client/job-lifecycle.js client/host-write-verification.js client/component-utils.js client/announce-utils.js client/cep-theme.js client/timeline-utils.js client/onboarding-state.js client/update-controller.js client/results-controller.js client/settings-diagnostics-controller.js client/navigation-controller.js client/collapsible-cards.js client/disabled-reasons.js client/bootstrap.js && npm run lint:premiere",
-    "lint:premiere": "cd ../com.opencut.uxp && eslint \"*.js\"",
+    "lint:premiere": "cd ../com.opencut.uxp && eslint --max-warnings 0 \"*.js\"",
     "pretest": "npm run build && npm run build:verify",
     "test": "vitest run --config vitest.config.mjs",
     "test:rendered": "playwright test --config playwright.config.mjs",
