@@ -221,8 +221,8 @@ def test_readme_uxp_tab_count_matches_source():
     assert "agent" in tabs, "UXP index.html should expose the Agent tab"
 
     readme = README.read_text(encoding="utf-8")
-    # The UXP feature bullet: "**N tabs** -- Cut & Clean, Captions, ...".
-    match = re.search(r"\*\*(\d+) tabs\*\* -- (.+)", readme)
+    # The UXP feature bullet: "**N tabs:** Cut & Clean, Captions, ...".
+    match = re.search(r"\*\*(\d+) tabs(?::\*\*|\*\*(?: --|:))\s+(.+)", readme)
     assert match, "README UXP tab bullet not found"
     stated = int(match.group(1))
     tab_list = match.group(2)
