@@ -2001,6 +2001,14 @@
       "uxp.video.runtime.shorts_approve_candidate_first"
     ]
   },
+  "shared.toast.update_available": {
+    "cep": [
+      "toast.update_available"
+    ],
+    "uxp": [
+      "uxp.status.update_available"
+    ]
+  },
   "shared.transcript.bulk_apply": {
     "cep": [
       "transcript.bulk_apply"

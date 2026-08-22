@@ -243,6 +243,7 @@
   "shared.toast.live_updates_connected": "Live updates connected",
   "shared.toast.select_clip_first": "Select a clip first.",
   "shared.toast.shorts_approve_candidate_first": "Approve at least one Magic Clips candidate first.",
+  "shared.toast.update_available": "OpenCut v{version} available. Visit GitHub to update.",
   "shared.transcript.bulk_apply": "Apply replacement",
   "shared.transcript.bulk_apply_failed": "Correction was not applied: {error}",
   "shared.transcript.bulk_apply_working": "Applying transcript correction…",
