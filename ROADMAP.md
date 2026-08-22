@@ -59,16 +59,6 @@ It is correct today by inspection, not by enforcement.
 
 ### P2
 
-- [ ] P2 — F398 — `tests/test_batched_asr.py` asserts word-for-word equality between sequential and batched Whisper and fails (pre-existing baseline)
-  Category: testing
-  Where: `tests/test_batched_asr.py:255-257`, in `TestBatchedDecodingKeepsTheTranscriptCaptionsAreBuiltFrom::test_words_survive_batching_even_though_segments_do_not` (class marked `@pytest.mark.slow` at `:217`).
-  Problem: the test asserts `[w.word for w in sequential] == [w.word for w in batched]`. Whisper's batched pipeline legitimately re-punctuates at re-segmentation boundaries, so this is an assertion about model determinism that the model does not offer. Because `pyproject.toml:275` sets `addopts = '-m "not integration and not slow"'`, the default suite never runs it, and it has rotted unnoticed.
-  Evidence: `py -3.13 -m pytest -q -m "integration or slow"` → `1 failed, 55 passed, 2 skipped, 11445 deselected in 57.51s`, exit 1. The failure is `AssertionError: batching must not change the words themselves ... At index 69 diff: ' second.' != ' second'`. Run context printed by the test itself: `[F361] 31.2s speech, CPU int8 Systran/faster-whisper-medium.en: sequential 12.6s / 8 segments, batched 10.6s / 2 segments`. The default suite is fully green on the same checkout (11401 passed, 0 failed), so this is only visible when the deselected markers are run.
-  Fix: assert the property the caption workflow actually depends on rather than byte equality — compare the concatenated transcripts after normalising trailing punctuation and whitespace, or require a token-level similarity above a stated threshold (the surrounding timing assertions at `:259-268` already use this shape with explicit tolerances and a comment explaining the measured numbers). Keep the exact-equality check only if it is narrowed to the alphabetic content of each word.
-  Acceptance: `py -3.13 -m pytest -q -m "integration or slow"` exits 0 on this machine, and the relaxed assertion still fails if a word is genuinely dropped or reordered (prove it with a unit-level fixture that deletes one word).
-  Confidence: Verified
-  Effort: S
-
 - [ ] P2 — F399 — Three separate reasons the contrast gates report green while 26 AA violations render
   Category: testing
   Where: `opencut/tools/contrast_audit.py` (`TOKEN_BLOCK_RE` at `:129-132`, `PANEL_PAIRS` at `:69-106`); `extension/com.opencut.panel/tests/rendered/panel-regression.spec.mjs` — `assertWcagCompliance()` at `:22-32`, `LIGHT_THEME_PROBES` at `:1124-1137`, and the light-theme probe loop at `:1192-1196`.

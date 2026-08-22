@@ -206,6 +206,24 @@ def _load_model():
         pytest.skip(f"cached model at {model_dir} would not load: {exc}")
 
 
+def _spoken(words):
+    """Reduce decoder output to the words themselves.
+
+    F398: this comparison used to be byte-exact, which asserted a
+    determinism the model does not offer. The batched pipeline
+    re-segments, and re-segmentation legitimately moves punctuation across
+    a boundary: a measured run differed only at index 69, " second." versus
+    " second". Captions do not depend on which side of a cue the full stop
+    lands on; they depend on the same words arriving in the same order.
+    Stripping to alphanumerics keeps a dropped, added, or reordered word a
+    failure while letting re-punctuation through.
+    """
+    return [
+        "".join(character for character in word.word.lower() if character.isalnum())
+        for word in words
+    ]
+
+
 def _words(model, path, **kwargs):
     started = time.time()
     segments, _info = model.transcribe(str(path), word_timestamps=True, **kwargs)
@@ -252,7 +270,7 @@ class TestBatchedDecodingKeepsTheTranscriptCaptionsAreBuiltFrom:
         )
 
         assert sequential, "sequential decode produced no words"
-        assert [w.word for w in sequential] == [w.word for w in batched], (
+        assert _spoken(sequential) == _spoken(batched), (
             "batching must not change the words themselves"
         )
 
@@ -268,3 +286,41 @@ class TestBatchedDecodingKeepsTheTranscriptCaptionsAreBuiltFrom:
         # property a caption workflow actually depends on.
         assert starts[-1] <= 0.5, f"a word moved {starts[-1]:.3f}s between decoders"
         assert ends[-1] <= 0.5, f"a word end moved {ends[-1]:.3f}s between decoders"
+
+
+class TestSpokenContentComparison:
+    """F398: the relaxed comparison must still catch a real transcript change.
+
+    These run in the default suite, unlike the decoder test they support, so a
+    future loosening of _spoken() is caught without a 30s model download.
+    """
+
+    class _Word:
+        def __init__(self, word):
+            self.word = word
+
+    def _words(self, *texts):
+        return [self._Word(text) for text in texts]
+
+    def test_repunctuation_at_a_segment_boundary_is_tolerated(self):
+        sequential = self._words(" The", " first", " second.")
+        batched = self._words(" The", " first", " second")
+        assert _spoken(sequential) == _spoken(batched)
+
+    def test_casing_and_surrounding_space_are_tolerated(self):
+        assert _spoken(self._words(" The", "quick ")) == _spoken(self._words("the", " Quick"))
+
+    def test_a_dropped_word_still_fails(self):
+        sequential = self._words(" The", " quick", " brown", " fox")
+        batched = self._words(" The", " quick", " fox")
+        assert _spoken(sequential) != _spoken(batched)
+
+    def test_a_reordered_word_still_fails(self):
+        sequential = self._words(" The", " quick", " brown")
+        batched = self._words(" The", " brown", " quick")
+        assert _spoken(sequential) != _spoken(batched)
+
+    def test_a_substituted_word_still_fails(self):
+        sequential = self._words(" ship", " sailed")
+        batched = self._words(" sheep", " sailed")
+        assert _spoken(sequential) != _spoken(batched)
