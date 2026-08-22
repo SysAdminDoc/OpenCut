@@ -3,6 +3,50 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## Unreleased
+
+### Fixed: the CEP panel can obtain a security token again
+
+- The panel built its bootstrap-secret reader with a host-bridge wrapper
+  captured at script-evaluation time, before the bridge existed, so the reader
+  was permanently inert. Every action then failed with "Invalid or missing CSRF
+  token". The reader now resolves the bridge when it is called.
+- A panel that starts before the backend has written its secret now re-reads it
+  and retries once when the server withholds the token, instead of staying
+  broken until the panel is reloaded.
+
+### Fixed: the light theme is readable again
+
+- Settings-tab text that carried dark-only colour values rendered on the light
+  background at contrast ratios near 1:1, which meant the Plugin Trust,
+  Dependency Health, model inventory and journal empty states showed as blank
+  space. They now use the theme's own text colours.
+- Input placeholders, muted body text, keyboard-shortcut chips, the About links
+  and the Settings checkbox labels all clear the AA contrast bar in light mode.
+
+### Fixed: the media buttons on the Cut tab are reachable at every panel width
+
+- "Browse File…" and "Use Timeline Selection" were cut off with no scrollbar at
+  any panel width between roughly 700 and 1270 pixels, which includes the size
+  the panel opens at by default. The row wraps now, so every button stays on
+  screen.
+- The connection summary beside it no longer truncates mid-word: "Reconnect
+  backend" was rendering as "Reconnect backer".
+
+### Fixed: flags sent as text are honoured
+
+- Turning an option off in a request that spelled the value as text was
+  ignored on 21 endpoints, so opting out of the heavy lip-sync and
+  voice-conversion models, or out of automatic fingerprint indexing, ran them
+  anyway.
+
+### Changed: two test gates that were passing while broken
+
+- The ExtendScript host harness now runs as part of the release gate. It had
+  been failing on a clean checkout with nothing to run it.
+- The Premiere-plugin half of the panel lint now fails on warnings instead of
+  reporting success and moving on.
+
 ## 1.53.0: A quieter editor shell
 
 ### Changed: One visual system across every page
