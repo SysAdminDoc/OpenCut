@@ -4,10 +4,10 @@
       "github_windows_installer": {
         "asset_pattern": "OpenCut-Setup-<version>.exe",
         "available": true,
-        "current": false,
+        "current": true,
         "install_command": null,
-        "published_version": "1.53.0",
-        "url": "https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.53.0"
+        "published_version": "1.55.0",
+        "url": "https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.55.0"
       },
       "homebrew": {
         "available": false,
