@@ -342,7 +342,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 367,
+          "line": 368,
           "symbol": "Project.executeTransaction"
         },
         {
@@ -352,7 +352,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 437,
+          "line": 438,
           "symbol": "Project.executeTransaction"
         }
       ],
@@ -389,22 +389,22 @@
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 389,
-          "symbol": "Project.lockedAccess"
-        },
-        {
-          "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
           "line": 390,
           "symbol": "Project.lockedAccess"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 441,
+          "line": 391,
           "symbol": "Project.lockedAccess"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
           "line": 442,
+          "symbol": "Project.lockedAccess"
+        },
+        {
+          "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
+          "line": 443,
           "symbol": "Project.lockedAccess"
         }
       ],
@@ -451,17 +451,12 @@
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 376,
-          "symbol": "CompoundAction.addAction"
-        },
-        {
-          "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
           "line": 377,
           "symbol": "CompoundAction.addAction"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 379,
+          "line": 378,
           "symbol": "CompoundAction.addAction"
         },
         {
@@ -471,12 +466,17 @@
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 384,
+          "line": 381,
           "symbol": "CompoundAction.addAction"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 438,
+          "line": 385,
+          "symbol": "CompoundAction.addAction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
+          "line": 439,
           "symbol": "CompoundAction.addAction"
         }
       ],
@@ -1432,7 +1432,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 438,
+          "line": 439,
           "symbol": "Object.createSetDisabledAction"
         }
       ],
@@ -1480,7 +1480,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 379,
+          "line": 380,
           "symbol": "Object.createSetStartAction"
         }
       ],
@@ -1507,7 +1507,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 376,
+          "line": 377,
           "symbol": "Object.createSetEndAction"
         }
       ],
@@ -1534,7 +1534,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 380,
+          "line": 381,
           "symbol": "Object.createSetInPointAction"
         }
       ],
@@ -1561,7 +1561,7 @@
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 377,
+          "line": 378,
           "symbol": "Object.createSetOutPointAction"
         }
       ],
@@ -3328,7 +3328,7 @@
     "live_host_checks": "blocked_separate",
     "undeclared_capabilities": []
   },
-  "generated_at": "2026-08-20T19:58:45Z",
+  "generated_at": "2026-08-22T16:23:44Z",
   "host_bands": [
     {
       "api_version": 2,
