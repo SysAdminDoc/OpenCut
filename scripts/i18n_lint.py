@@ -155,6 +155,53 @@ def _scan_js_consumers() -> set[str]:
     return _scan_js_consumers_from_source(_read_runtime_js())
 
 
+
+# ---------------------------------------------------------------------------
+# Dash usage in shipped copy
+# ---------------------------------------------------------------------------
+#: Dashes the panel's writing standard rules out of user-facing prose. They are
+#: the single most recognisable machine-writing tell, and the panel had 19 of
+#: them while the UXP and shared locales had none, so the inconsistency was
+#: internal as well.
+BANNED_DASHES = ("—", "–")
+
+
+def dash_offenders() -> list:
+    """Locale values containing an em or en dash, across every shipped locale."""
+    offenders = []
+    roots = [
+        ROOT / "extension" / "com.opencut.panel" / "client" / "locales" / "en.json",
+        ROOT / "extension" / "com.opencut.uxp" / "locales" / "en.json",
+        ROOT / "extension" / "com.opencut.uxp" / "locales" / "es.json",
+        ROOT / "extension" / "shared-locales" / "en.json",
+    ]
+    for path in sorted(roots):
+        if not path.exists():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        for key, value in sorted(_flatten_locale(data)):
+            for dash in BANNED_DASHES:
+                if dash in value:
+                    offenders.append({
+                        "file": path.relative_to(ROOT).as_posix(),
+                        "key": key,
+                        "value": value,
+                    })
+                    break
+    return offenders
+
+
+def _flatten_locale(node, prefix=""):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            name = f"{prefix}.{key}" if prefix else str(key)
+            yield from _flatten_locale(value, name)
+    elif isinstance(node, str):
+        yield prefix, node
+
 # ----------------------------------------------------------------------
 # data-i18n fallback drift
 # ----------------------------------------------------------------------
@@ -391,6 +438,7 @@ def evaluate() -> dict:
         "dead_over_baseline": max(0, len(dead) - DEAD_KEY_BASELINE),
         "fallback_drift_count": len(fallbacks),
         "fallback_drifts": fallbacks,
+        "dash_offenders": dash_offenders(),
         "js_fallback_drift_count": len(js_fallbacks),
         "js_fallback_drifts": js_fallbacks,
     }
@@ -407,6 +455,7 @@ def cmd_report(check: bool) -> int:
     print(f"  dead keys: {e['dead_count']} (baseline allowed: {e['baseline']})")
     print(f"  missing keys: {e['missing_count']}")
     print(f"  fallback drift: {e['fallback_drift_count']} HTML, {e['js_fallback_drift_count']} JS")
+    print(f"  banned dashes: {len(e['dash_offenders'])}")
     if e["fallback_drifts"]:
         print("\n  Fallback text that disagrees with en.json:")
         for drift in e["fallback_drifts"][:20]:
@@ -450,6 +499,16 @@ def cmd_report(check: bool) -> int:
                 print(f"    {drift['file']}:{drift['line']} {drift['key']}", file=sys.stderr)
                 print(f"      js     : {drift['js']}", file=sys.stderr)
                 print(f"      locale : {drift['locale']}", file=sys.stderr)
+            fail = True
+        if e["dash_offenders"]:
+            print(
+                f"\nFAIL: {len(e['dash_offenders'])} locale value(s) use an em or en dash. "
+                "Use a period, a comma, or parentheses instead:",
+                file=sys.stderr,
+            )
+            for offender in e["dash_offenders"][:20]:
+                print(f"    {offender['file']} {offender['key']}", file=sys.stderr)
+                print(f"      {offender['value']}", file=sys.stderr)
             fail = True
         if e["dead_over_baseline"] > 0:
             print(

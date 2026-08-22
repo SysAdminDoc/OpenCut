@@ -5391,7 +5391,7 @@
                 if (el.removeH) el.removeH.value = data.height;
                 setHintState(
                     resEl,
-                    t("video.watermark_detected_region", "Detected at ({x}, {y}) — {width}×{height} px ({method}, {confidence}% confidence)")
+                    t("video.watermark_detected_region", "Detected at ({x}, {y}), {width}x{height} px ({method}, {confidence}% confidence)")
                         .replace("{x}", data.x)
                         .replace("{y}", data.y)
                         .replace("{width}", data.width)
@@ -5400,7 +5400,7 @@
                         .replace("{confidence}", safeFixed((data.confidence || 0) * 100, 0)),
                     "success"
                 );
-                showToast(t("toast.watermark_region_autofilled", "Watermark detected — region auto-filled"), "success");
+                showToast(t("toast.watermark_region_autofilled", "Watermark detected. Region auto-filled."), "success");
             } else {
                 setHintState(resEl, t("video.watermark_not_detected", "No watermark detected. Try adjusting the prompt."), "warning");
             }
@@ -8730,7 +8730,7 @@
         if (el.whisperStatusText) {
             el.whisperStatusText.textContent = t("whisper.not_installed", "Not installed");
             el.whisperStatusText.setAttribute("data-state", "error");
-            el.whisperStatusText.title = t("whisper.install_status_title", "Install Whisper to unlock transcription workflows.");
+            el.whisperStatusText.title = t("whisper.install_status_title", "Install Whisper to transcribe.");
         }
         if (el.whisperDeviceText) {
             el.whisperDeviceText.textContent = t("whisper.install_required", "Install required");
@@ -9450,7 +9450,7 @@
 
     function _sessionCtxRerun(job) {
         if (!job.endpoint || !job.payload) {
-            showToast(t("toast.job_rerun_missing_params", "Nothing to re-run — this job wasn't recorded with parameters"), "warn");
+            showToast(t("toast.job_rerun_missing_params", "Nothing to re-run. This job wasn't recorded with parameters."), "warn");
             return;
         }
         dismissSessionContext();
@@ -9470,7 +9470,7 @@
     function _sessionCtxApplyToSelection(job) {
         if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
         if (!job.endpoint || !job.payload) {
-            showToast(t("toast.job_replay_missing_params", "Job params aren't recorded — can't replay."), "warn");
+            showToast(t("toast.job_replay_missing_params", "Job params aren't recorded, so this can't be replayed."), "warn");
             return;
         }
         var payload = JSON.parse(JSON.stringify(job.payload));
@@ -10337,7 +10337,7 @@
             var empty = document.createElement("div");
             empty.className = "assistant-empty";
             empty.textContent = emptyMsg ||
-                t("assistant.empty_good", "Your sequence looks good — no obvious next edits.");
+                t("assistant.empty_good", "Your sequence looks good. No obvious next edits.");
             el.assistantBody.appendChild(empty);
             return;
         }
@@ -16872,7 +16872,7 @@
                 var report = data.preflight || {};
                 setHintState(
                     otioRes,
-                    t("timeline.otio_saved", "Saved: {path} — {adapter}, {schema}")
+                    t("timeline.otio_saved", "Saved: {path} ({adapter}, {schema})")
                         .replace("{path}", data.output_path || "")
                         .replace("{adapter}", (report.adapter && report.adapter.name) || "otio_json")
                         .replace("{schema}", report.schema_target || "current"),
@@ -18004,7 +18004,7 @@
                     var top = data.unseen[0];
                     if (!top || !top.tag) return;
                     showToast(
-                        t("toast.changelog_released", "OpenCut {tag} released — see GitHub")
+                        t("toast.changelog_released", "OpenCut {tag} released. See GitHub.")
                             .replace("{tag}", top.tag),
                         "info"
                     );
@@ -18050,7 +18050,7 @@
                             } else if (typeof window !== "undefined" && window.open) {
                                 window.open(data.url, "_blank");
                             }
-                            showToast(t("toast.issue_report_opened", "Issue report opened — review before submitting"), "success");
+                            showToast(t("toast.issue_report_opened", "Issue report opened. Review it before submitting."), "success");
                         } catch (e) {
                             showAlert(t("alert.issue_bundle_url", "Issue bundle URL (copy manually):\n\n{url}").replace("{url}", data.url));
                         }
@@ -18077,7 +18077,7 @@
                     // Fall through to the existing selection flow.
                     try {
                         selectFile(data.path);
-                        showToast(t("toast.demo_loaded", "Loaded demo footage — try any tab"), "success");
+                        showToast(t("toast.demo_loaded", "Loaded demo footage. Try any tab."), "success");
                     } catch (e) {
                         showToast(t("toast.demo_fetch_failed", "Demo fetch failed"), "error");
                     }
@@ -18407,7 +18407,7 @@
                     setLocalOnboardingSeen(true);
                     closeOnboardingOverlay();
                     if (completed) {
-                        showToast(t("onboarding.ready", "Ready to go — explore any tab"), "success");
+                        showToast(t("onboarding.ready", "Ready to go. Explore any tab."), "success");
                     }
                 });
             }

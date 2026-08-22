@@ -285,7 +285,7 @@
                         <div class="media-sidecar-empty">
                             <div class="media-sidecar-kicker" data-i18n="media.current_source">Current Source</div>
                             <h3 class="media-sidecar-title" data-i18n="media.no_media_loaded">No media loaded yet.</h3>
-                            <p class="media-sidecar-copy" data-i18n="media.source_empty_copy">Choose a project clip, pull the active timeline selection, or browse a local file to unlock the full OpenCut workflow.</p>
+                            <p class="media-sidecar-copy" data-i18n="media.source_empty_copy">Choose a project clip, pull the active timeline selection, or browse a local file to start working.</p>
                             <div class="media-sidecar-pills" aria-hidden="true">
                                 <span class="media-sidecar-pill" data-i18n="media.project_media">Project media</span>
                                 <span class="media-sidecar-pill" data-i18n="media.timeline">Timeline</span>
@@ -389,7 +389,7 @@
                             <span data-i18n="interview.polish_batch_button">Polish batch</span> (<span id="polishBatchCount">0</span>)
                         </button>
                         <button type="button" class="btn btn-ghost btn-sm" id="polishClearCacheBtn" title="Force a fresh Whisper transcription on the next run" data-i18n="interview.retranscribe_next" data-i18n-title="interview.retranscribe_title">Re-transcribe next run</button>
-                        <span class="interview-polish-hint" id="interviewPolishHint" data-i18n="interview.source_required_hint">Choose a source clip to unlock the full polish pass.</span>
+                        <span class="interview-polish-hint" id="interviewPolishHint" data-i18n="interview.source_required_hint">Choose a source clip to run the full polish pass.</span>
                     </div>
                     <ul class="polish-steps hidden" id="polishSteps" aria-live="polite" aria-label="Pipeline progress" data-i18n-aria-label="interview.pipeline_progress">
                         <!-- populated by renderPolishSteps() -->
@@ -402,7 +402,7 @@
                     <div class="card-header">
                         <div class="card-title-group">
                             <div class="card-title" id="assistantCardTitle" data-i18n="assistant.sequence_title">Sequence Assistant</div>
-                            <div class="card-subtitle" data-i18n="assistant.sequence_subtitle">Scan the active sequence and surface the highest-leverage next move before you commit changes.</div>
+                            <div class="card-subtitle" data-i18n="assistant.sequence_subtitle">Scan the active sequence and surface the most useful next move before you commit changes.</div>
                         </div>
                         <button type="button" class="icon-btn" id="assistantRefreshBtn" title="Re-scan the current sequence" aria-label="Refresh assistant suggestions" data-i18n-title="assistant.refresh_title" data-i18n-aria-label="assistant.refresh_aria">
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
@@ -464,7 +464,7 @@
                         <div class="waveform-container hidden" id="waveformContainer">
                             <canvas id="waveformCanvas" class="waveform-canvas" width="500" height="100"></canvas>
                             <div class="waveform-threshold" id="waveformThreshold"></div>
-                            <div class="waveform-label" data-i18n="silence.waveform_label">Waveform &mdash; drag threshold line to adjust</div>
+                            <div class="waveform-label" data-i18n="silence.waveform_label">Waveform. Drag the threshold line to adjust.</div>
                         </div>
                         <div class="form-group">
                             <label for="silenceDetectMethod" data-i18n="cut.detection_method">Detection Method</label>
@@ -505,8 +505,8 @@
                         <div class="form-group">
                             <label for="fillerBackend" data-i18n="cut.filler_backend">Detection Backend</label>
                             <select id="fillerBackend" aria-label="Filler detection backend" data-i18n-aria-label="cut.filler_backend_aria">
-                                <option value="whisper" selected data-i18n="cut.filler_backend_whisper">Whisper (standard — fast)</option>
-                                <option value="crisper" data-i18n="cut.filler_backend_crisper">CrisperWhisper (verbatim — most accurate)</option>
+                                <option value="whisper" selected data-i18n="cut.filler_backend_whisper">Whisper (standard, fast)</option>
+                                <option value="crisper" data-i18n="cut.filler_backend_crisper">CrisperWhisper (verbatim, most accurate)</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -1485,7 +1485,7 @@
                                 <span data-i18n="audio.deepfilter_title">AI Noise Reduction (DeepFilterNet)</span>
                             </div>
                         </div>
-                        <p class="card-desc" data-i18n="audio.deepfilter_desc">Broadcast-grade AI speech cleanup. Ideal for podcasts and voiceover — runs in real-time on any machine.</p>
+                        <p class="card-desc" data-i18n="audio.deepfilter_desc">Broadcast-grade AI speech cleanup. Ideal for podcasts and voiceover, and it runs in real-time on any machine.</p>
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="deepFilterAutoImport" checked>
@@ -1557,7 +1557,7 @@
 
                 <div class="sub-panel" id="sub-aud-effects">
                     <section class="card">
-                        <p class="card-desc" data-i18n="audio.effects_desc">Quick audio effects — reverb, echo, pitch shift, bass boost, and creative voice transforms.</p>
+                        <p class="card-desc" data-i18n="audio.effects_desc">Quick audio effects: reverb, echo, pitch shift, bass boost, and creative voice transforms.</p>
                         <div class="form-group">
                             <label for="audioEffect" data-i18n="forms.effect">Effect</label>
                             <select id="audioEffect">
@@ -2174,7 +2174,7 @@
                                 <span data-i18n="subtabs.style">Style</span>
                             </div>
                         </div>
-                        <p class="card-desc" data-i18n="video.style_desc">Transform your video into a painting — Van Gogh, Munch, stained glass, and more. Models download automatically on first use.</p>
+                        <p class="card-desc" data-i18n="video.style_desc">Transform your video into a painting: Van Gogh, Munch, stained glass, and more. Models download automatically on first use.</p>
 
                         <div class="form-group">
                             <label for="styleModel" data-i18n="forms.style">Style</label>
@@ -3560,7 +3560,7 @@
                         <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHGistPull" data-i18n="wave_h.gist_pull">Import presets from a gist</button>
                         <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHVirality" data-i18n="wave_h.virality">Score virality (selected clip)</button>
                         <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHCursorZoom" data-i18n="wave_h.cursor_zoom">Detect cursor zoom (screen rec)</button>
-                        <button type="button" class="btn btn-ghost oc-wave-h-btn" id="ocWaveHSendLog" data-i18n="wave_h.send_log">Send log — open issue report</button>
+                        <button type="button" class="btn btn-ghost oc-wave-h-btn" id="ocWaveHSendLog" data-i18n="wave_h.send_log">Send log, open issue report</button>
                     </div>
                     <p class="oc-wave-h-note" data-i18n="wave_h.note">Gist export requires GITHUB_TOKEN. Issue reports scrub HOME paths.</p>
                     <div class="oc-wave-h-virality-controls">
@@ -3931,7 +3931,7 @@
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.ws_bridge">WebSocket Bridge</div>
                     </div>
-                    <p class="card-desc" data-i18n="ws.settings_desc">Optional WebSocket connection for streaming progress during longer jobs. Not required for the panel to work — the panel connects to the backend over HTTP automatically.</p>
+                    <p class="card-desc" data-i18n="ws.settings_desc">Optional WebSocket connection for streaming progress during longer jobs. The panel does not need it; it connects to the backend over HTTP automatically.</p>
                     <div class="settings-row settings-row-inline">
                         <span class="settings-label" data-i18n="ws.label_bridge">Bridge</span>
                         <span class="settings-value settings-status-pill" id="wsStatusText" data-state="unknown" data-i18n="ws.status_checking">Checking…</span>

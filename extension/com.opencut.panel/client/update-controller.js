@@ -211,7 +211,7 @@
                 latestUpdate = data;
                 render(data, false);
                 if (data.update_available && getDismissedVersion() !== String(data.latest_version)) {
-                    var template = t("toast.update_available", "OpenCut v{version} available — visit GitHub to update");
+                    var template = t("toast.update_available", "OpenCut v{version} available. Visit GitHub to update.");
                     showToast(template.replace("{version}", data.latest_version || ""), "info");
                 }
             }
