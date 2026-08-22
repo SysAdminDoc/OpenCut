@@ -14,7 +14,7 @@ import logging
 from flask import Blueprint, jsonify
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_path
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -318,10 +318,10 @@ def chapter_art_route(job_id, filepath, data):
     height = safe_int(data.get("height", 1080), 1080, min_val=64, max_val=4320)
     card_duration = safe_float(data.get("card_duration", 3.0), 3.0,
                                 min_val=0.5, max_val=30.0)
-    export_images = data.get("export_images", True)
-    export_video = data.get("export_video", False)
+    export_images = safe_bool(data.get("export_images", True), True)
+    export_video = safe_bool(data.get("export_video", False), False)
     title_prefix = data.get("title_prefix", "Chapter").strip()
-    auto_title = data.get("auto_title_from_transcript", True)
+    auto_title = safe_bool(data.get("auto_title_from_transcript", True), True)
     image_format = data.get("image_format", "png").strip()
     output_dir = data.get("output_dir", "").strip()
     if output_dir:

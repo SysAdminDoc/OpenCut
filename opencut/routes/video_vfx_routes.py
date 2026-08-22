@@ -15,6 +15,7 @@ from opencut.jobs import _update_job, async_job
 from opencut.security import (
     get_json_dict,
     require_csrf,
+    safe_bool,
     safe_float,
     safe_int,
     validate_filepath,
@@ -316,9 +317,7 @@ def clean_plate_route(job_id, filepath, data):
     from opencut.core.clean_plate import generate_clean_plate
 
     num_samples = safe_int(data.get("num_samples", 30), 30, min_val=3, max_val=300)
-    do_inpaint = data.get("inpaint", True)
-    if isinstance(do_inpaint, str):
-        do_inpaint = do_inpaint.lower() in ("true", "1", "yes")
+    do_inpaint = safe_bool(data.get("inpaint", True), True)
     inpaint_method = data.get("inpaint_method", "telea").strip()
     output_dir = data.get("output_dir", "")
     if output_dir:
