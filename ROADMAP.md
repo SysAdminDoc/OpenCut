@@ -71,13 +71,13 @@ It is correct today by inspection, not by enforcement.
   Confidence: Verified
   Effort: S
 
-- [ ] P3 — F402 — 19 em dashes and several banned words in user-facing CEP panel copy, with no gate
-  Category: docs
-  Where: `extension/com.opencut.panel/client/locales/en.json` — keys `audio.deepfilter_desc`, `audio.effects_desc`, `assistant.empty_good`, `cut.filler_backend_crisper`, `cut.filler_backend_whisper`, `onboarding.ready`, `silence.waveform_label`, `timeline.otio_saved`, `toast.changelog_released`, `toast.demo_loaded`, `toast.issue_report_opened`, `toast.job_replay_missing_params`, `toast.job_rerun_missing_params`, `toast.update_available`, `toast.watermark_region_autofilled`, `video.style_desc`, `video.watermark_detected_region`, `wave_h.send_log`, `ws.settings_desc`. Plus `assistant.sequence_subtitle` ("highest-leverage"), `interview.source_required_hint`, `media.source_empty_copy`, `whisper.install_status_title` (all "unlock").
-  Problem: this is text an end user reads inside the panel, and the project's writing standard for user-facing copy rules out em dashes and the "unlock / leverage" register. The CEP locale is the only file affected — `extension/com.opencut.uxp/locales/en.json`, `es.json` and `extension/shared-locales/en.json` all contain zero em or en dashes — so the inconsistency is also internal.
-  Evidence: a scan of all 2,904 strings in the CEP `en.json` finds 19 containing `—`, 0 containing `–`, 1 spaced-hyphen (`settings.plugin_publisher_identity`), and 7 hits on the banned-vocabulary list. The same scan over the other four locale files returns 0 dashes each. No gate covers it: `scripts/i18n_lint.py` checks dead keys, HTML fallback drift and `t(key, fallback)` drift, but not punctuation or register.
-  Fix: rewrite the 19 strings with a period, a comma, or parentheses in place of the em dash, and replace "unlock" and "highest-leverage" with plain verbs. Remember that `scripts/i18n_lint.py --check` will name the HTML `data-i18n` fallback text and the JS `t(key, fallback)` literals that must move with each value — change those in the same edit.
-  Acceptance: a new check in `scripts/i18n_lint.py` fails on any locale value containing `—` or `–`; `py -3.13 scripts/i18n_lint.py --check` passes after the rewrite, with no new fallback drift.
+- [ ] P3 — F408 — `scripts/` is outside the ruff gate and has drifted
+  Category: maintainability
+  Where: `scripts/fix_es_diacritics.py:5` (unused `sys` import) and `:178` (f-string with no placeholder); the gate is `scripts/release_smoke.py` `step_ruff`, which runs `ruff check opencut/`.
+  Problem: the release gate lints `opencut/` only, so the 28 files under `scripts/` — including the release gate itself, the version syncer and the i18n linter — are never checked. Three ruff findings have accumulated there unnoticed. None is a live defect, which is exactly why nothing surfaced them.
+  Evidence: `py -3.13 -m ruff check opencut/` passes; `py -3.13 -m ruff check scripts/` reports `Found 3 errors` (2 auto-fixable). Confirmed pre-existing: `git diff --stat scripts/fix_es_diacritics.py` is empty on a tree where the other `scripts/` files were edited.
+  Fix: clear the three findings, then widen `step_ruff` to `ruff check opencut/ scripts/` so the tooling holds the same bar as the package. Check `tests/test_release_smoke.py` for an assertion pinning the ruff argument list before changing it.
+  Acceptance: `py -3.13 -m ruff check opencut/ scripts/` exits 0, and `py -3.13 scripts/release_smoke.py --json --only ruff` fails when a new finding is introduced under `scripts/`.
   Confidence: Verified
   Effort: S
 
@@ -90,16 +90,6 @@ It is correct today by inspection, not by enforcement.
   Acceptance: after the first component is consolidated, `.workspace-stage-actions` matches at most 6 rules across all sheets with no `!important`, the rendered suite passes with regenerated baselines, and F391's clipping assertion holds.
   Confidence: Verified
   Effort: L
-
-- [ ] P3 — F404 — `CLAUDE.md`'s documented panel file sizes are stale and unchecked
-  Category: docs
-  Where: `CLAUDE.md` "Frontend (CEP Panel)" and "UXP Panel" sections; the checker is `scripts/check_doc_sizes.py`, whose targets cover `README.md` only.
-  Problem: `CLAUDE.md` is the file every agent reads first, and its size claims are the cheapest way to judge whether a note is current. They are all understated: `main.js` "~15263 lines as of 2026-05-25" is actually 18,814; `style.css` "~17870" is 19,010; `index.html` "~4061" is 4,302; `host/index.jsx` "~2736" is 4,128; UXP `main.js` "~5568" is 10,169 (an 83% understatement); UXP `style.css` "~3863" is 5,256; UXP `index.html` "~1466" is 2,134. `check_doc_sizes.py` verifies the same claims in `README.md` and reports them all within tolerance, so the drift is confined to the file that has no checker.
-  Evidence: `py -3.13 scripts/check_doc_sizes.py` → "All documented sizes within tolerance" for 13 README targets. `wc -l` on the seven panel files gives the actual numbers above.
-  Fix: refresh the seven numbers in `CLAUDE.md` and add the same targets to `scripts/check_doc_sizes.py` so it checks `CLAUDE.md` alongside `README.md`. The existing target model already carries a per-target tolerance, so this is a data addition rather than new logic.
-  Acceptance: `py -3.13 scripts/check_doc_sizes.py` reports the `CLAUDE.md` panel-size targets and fails when one drifts past its tolerance.
-  Confidence: Verified
-  Effort: S
 
 - [ ] P3 — F405 — The panel ships defaulting to Dark, so it ignores Premiere's skin out of the box
   Category: ux
