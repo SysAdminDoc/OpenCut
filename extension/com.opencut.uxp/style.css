@@ -4360,6 +4360,15 @@ textarea:hover {
   text-decoration: underline;
 }
 
+/* F399: --accent has no light-theme counterpart, so it resolves to a blue that
+   clears AA against a dark page but only reaches 4.33:1 against the light one.
+   That is fine for a button edge (3:1) and short of the 4.5:1 this 12px link
+   text needs. Deepen it here, the same shade CEP uses for light-theme accent
+   text; measured 4.33:1 before and 6.12:1 after, dark unchanged at 6.87:1. */
+html.theme-light #fccComplianceNotice a {
+  color: #1e4fd8;
+}
+
 /* =========================================================
    Final product-quality pass: compact premium state system.
    ========================================================= */
