@@ -177,8 +177,6 @@ def _scan_file(path: Path) -> list[Hit]:
                 if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     hits.extend(_check_function(sub, path))
     # Also catch module-level subprocess.run calls (no enclosing function).
-    seen_funcs = {id(n) for n in ast.walk(tree)
-                  if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue

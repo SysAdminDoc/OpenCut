@@ -1146,8 +1146,11 @@ def step_ruff(_args: argparse.Namespace) -> StepResult:
         )
     # Rule selection comes from [tool.ruff.lint] in pyproject.toml so the gate,
     # the pre-commit hook, and an editor cannot disagree about what is clean.
+    # F408: scripts/ was outside this for so long that three findings piled up
+    # there unnoticed, in the release gate and the linters themselves. The
+    # tooling holds the same bar as the package.
     result = _run(
-        ["ruff", "check", "opencut/"],
+        ["ruff", "check", "opencut/", "scripts/"],
         cwd=REPO_ROOT,
     )
     duration = int((time.time() - start) * 1000)
