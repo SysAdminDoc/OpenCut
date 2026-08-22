@@ -3118,12 +3118,23 @@ for (const surfaceName of Object.keys(SURFACES)) {
       // Compare like with like: two controls of the same class, one disabled.
       // Comparing across classes would prove nothing about the disabled cue.
       const klass = surfaceName === "cep" ? "quick-action-btn" : "oc-btn";
+
+      // F400: CEP opens on the backend-disconnected state, where all nine
+      // .quick-action-btn are disabled and none is enabled, so this test used
+      // to skip on every run — the CEP disabled cue under Windows High
+      // Contrast was never actually checked. Enable one so the pair exists.
+      // This still compares like with like: same class, one disabled, one not.
+      await page.evaluate((selector) => {
+        const buttons = Array.from(document.querySelectorAll(`button.${selector}`));
+        if (buttons.some((button) => !button.disabled)) return;
+        const spare = buttons.find((button) => button.disabled);
+        if (spare) spare.disabled = false;
+      }, klass);
+
       const disabled = page.locator(`button.${klass}:disabled`).first();
       const enabled = page.locator(`button.${klass}:not(:disabled)`).first();
-      test.skip(
-        (await disabled.count()) === 0 || (await enabled.count()) === 0,
-        `initial view has no enabled/disabled .${klass} pair`,
-      );
+      expect(await disabled.count(), `no disabled .${klass} to measure`).toBeGreaterThan(0);
+      expect(await enabled.count(), `no enabled .${klass} to measure`).toBeGreaterThan(0);
       const read = (locator) =>
         locator.evaluate((el) => {
           const s = getComputedStyle(el);

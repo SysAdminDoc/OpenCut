@@ -79,16 +79,6 @@ It is correct today by inspection, not by enforcement.
   Confidence: Verified
   Effort: M
 
-- [ ] P2 — F400 — The forced-colors "disabled controls" test can never run on CEP
-  Category: testing
-  Where: `extension/com.opencut.panel/tests/rendered/panel-regression.spec.mjs:3040-3066`, the `${surfaceName} distinguishes disabled controls without a tint` test, and its `test.skip(...)` guard at `:3048-3051`.
-  Problem: the test needs one enabled and one disabled `button.quick-action-btn` in the initial view to compare like with like, and skips when either is missing. In the CEP surface the initial view is the backend-disconnected state, where all nine quick-action buttons are disabled and none is enabled, so the guard fires every time. The result is a permanent skip, not a transient one: whether CEP disabled controls stay distinguishable under Windows High Contrast is simply unverified, while the UXP twin of the same test does run and passes.
-  Evidence: `npx playwright test --config playwright.config.mjs` → `69 passed, 1 skipped`, and the skipped entry is `- 64 [chromium] › panel-regression.spec.mjs:3040:5 › cep forced-colors › cep distinguishes disabled controls without a tint`. Measured in the rendered panel at that width: `document.querySelectorAll('button.quick-action-btn')` → 9 total, `:disabled` → 9, `:not(:disabled)` → 0.
-  Fix: give the CEP case a pair it can actually find. Either drive the surface into a connected state before the assertion using the existing `backendFixtures` mock in the same spec (the fixture server at `:237` already serves `/settings/onboarding`, so a health fixture that reports connected is in reach), or compare a disabled `.quick-action-btn` against an enabled control of the same class elsewhere in the document by explicitly enabling one in the page before measuring. Do not widen the class comparison — the test's own comment explains why comparing across classes proves nothing.
-  Acceptance: `npx playwright test` reports 70 passed and 0 skipped, and the CEP variant fails if the disabled cue is reduced to a background tint.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P2 — F401 — 552 of 769 async routes cannot be queued and nothing pins the intended exclusions
   Category: ux
   Where: `opencut/routes/jobs_routes.py:180` `_ALLOWED_QUEUE_ENDPOINTS` (217 entries, with the comment "Only processing-oriented routes may be invoked via the queue"), the coverage reporter at `:720-766` `queue_coverage()`, and `tests/test_queue_coverage.py`.
