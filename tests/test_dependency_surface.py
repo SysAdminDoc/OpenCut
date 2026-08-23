@@ -228,7 +228,7 @@ def test_optional_dependency_security_floor_pins():
 
     for extra in ("standard", "video", "all"):
         deps = _dep_names(extras[extra])
-        assert deps["opencv-python"] == "opencv-python>=5,<6"
+        assert deps["opencv-python"] == "opencv-python==4.14.0.94"
         assert deps["pillow"] == "Pillow>=12.3.0,<13"
 
     for extra in ("captions", "all"):
@@ -292,7 +292,7 @@ def test_requirements_txt_matches_security_floor():
     text = (REPO_ROOT / "requirements.txt").read_text(encoding="utf-8")
     required = [
         "flask-cors>=6.0,<7",
-        "opencv-python>=5,<6",
+        "opencv-python==4.14.0.94",
         "Pillow>=12.3.0,<13",
         "# onnxruntime-gpu>=1.26",
         "WhisperX is unsupported until it accepts torchvision >=0.25 / Torch >=2.10.",
@@ -315,7 +315,7 @@ def test_runtime_security_floors_cover_bootstrap_installers():
     assert runtime_security_requirement("Pillow") == expected
     assert runtime_security_requirement("Pillow>=10.0") == expected
     assert runtime_security_requirement("Pillow==12.2.0") == expected
-    assert OPENCV_RUNTIME_REQUIREMENT == "opencv-python>=5,<6"
+    assert OPENCV_RUNTIME_REQUIREMENT == "opencv-python==4.14.0.94"
     assert runtime_security_requirement("opencv-python") == OPENCV_RUNTIME_REQUIREMENT
     assert runtime_security_requirement("opencv-python-headless") == OPENCV_RUNTIME_REQUIREMENT
     with pytest.raises(RuntimeError, match="No safe OpenCut install lane"):

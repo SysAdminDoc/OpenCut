@@ -15,13 +15,6 @@ Roadmap_Blocked.md; the rest landed.
 
 ### P0
 
-- [ ] P0 — F409 — Reject release artifacts that contain a vulnerable OpenCV FFmpeg
-  Why: The release lock ships `opencv-python==5.0.0.93`; its 5.x Linux wheel recipe uses FFmpeg 8.1.1, which is affected by CVE-2026-8461, and OpenCut attests only its external FFmpeg binary.
-  Evidence: Verified: `requirements-release-lock.txt:867`, `opencut/core/ffmpeg_provenance.py:224`, https://github.com/opencv/opencv-python/pull/1255, and https://nvd.nist.gov/vuln/detail/CVE-2026-8461.
-  Touches: `pyproject.toml`, `requirements-release-lock.txt`, `scripts/release_smoke.py`, packaging scripts, `opencut/core/capability_profile.py`, and new artifact-provenance tests.
-  Acceptance: Every Windows, macOS, and Linux artifact inventories the external, OpenCV, and PyAV FFmpeg copies; the release gate rejects any copy missing the CVE-2026-8461 fix; the chosen patched OpenCV 5 wheel, controlled source build, or tested temporary 4.14.0.94 lane passes the media corpus; untrusted decoding cannot silently fall back to an unverified embedded decoder.
-  Complexity: L
-
 - [ ] P0 — F410 — Secure Hugging Face downloads and remote model code
   Why: The release lock pins `huggingface-hub==1.24.0`, while 1.26.0 fixes CVE-2026-15717 filename traversal, and eight model loaders enable unrestricted `trust_remote_code=True`.
   Evidence: Verified: `requirements-release-lock.txt:459`, `opencut/core/captions_enhanced.py:395`, `opencut/core/object_removal.py:484`, https://github.com/huggingface/huggingface_hub/releases/tag/v1.26.0, and https://nvd.nist.gov/vuln/detail/CVE-2026-15717.

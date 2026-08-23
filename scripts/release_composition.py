@@ -569,6 +569,19 @@ def validate_ffmpeg_provenance(path: Path) -> dict:
     return record
 
 
+def resolve_embedded_media_provenance(*, lane: str, artifact_paths: Sequence[Path]) -> dict:
+    try:
+        from opencut.core.embedded_media_provenance import build_release_inventory
+
+        inventory = build_release_inventory(lane=lane, artifact_paths=artifact_paths)
+    except Exception as exc:
+        raise CompositionError(f"embedded media provenance could not be collected: {exc}") from exc
+    if not inventory.get("ok"):
+        problems = inventory.get("errors") or ["unknown embedded decoder provenance failure"]
+        raise CompositionError("embedded media provenance failed:\n  - " + "\n  - ".join(problems))
+    return inventory
+
+
 def build_composition(
     *,
     lock_path: Path,
@@ -577,6 +590,7 @@ def build_composition(
     ffmpeg_provenance_path: Optional[Path],
     lane: str,
     build_lock_path: Optional[Path] = None,
+    embedded_media_inventory: Optional[dict] = None,
 ) -> dict:
     locked_entries = parse_hashed_lock(lock_path)
     entries = active_lock_entries(locked_entries)
@@ -588,6 +602,13 @@ def build_composition(
     bundled_components = []
     if ffmpeg_provenance_path is not None:
         bundled_components.append({"name": "ffmpeg", **validate_ffmpeg_provenance(ffmpeg_provenance_path)})
+    if embedded_media_inventory is None:
+        embedded_media_inventory = resolve_embedded_media_provenance(
+            lane=lane,
+            artifact_paths=artifact_paths,
+        )
+    elif not embedded_media_inventory.get("ok"):
+        raise CompositionError("embedded media provenance fixture is not secure")
     version = "0.0.0"
     init_path = REPO_ROOT / "opencut" / "__init__.py"
     match = re.search(r'^__version__\s*=\s*["\']([^"\']+)', init_path.read_text(encoding="utf-8"), re.MULTILINE)
@@ -616,6 +637,7 @@ def build_composition(
             "components": components,
         },
         "bundled_components": bundled_components,
+        "embedded_media": embedded_media_inventory,
         "artifacts": [tree_record(path) for path in artifact_paths],
     }
 
@@ -671,8 +693,13 @@ def write_release_outputs(composition: dict, output_dir: Path) -> dict[str, Path
     composition_path = output_dir / "release-composition.json"
     notices_path = output_dir / "THIRD-PARTY-NOTICES.txt"
     sbom_path = output_dir / "opencut-artifact-sbom.cyclonedx.json"
+    embedded_media_path = output_dir / "embedded-media-provenance.json"
     composition_path.write_text(json.dumps(composition, indent=2), encoding="utf-8")
     notices_path.write_text(render_notices(composition), encoding="utf-8")
+    embedded_media_path.write_text(
+        json.dumps(composition["embedded_media"], indent=2),
+        encoding="utf-8",
+    )
 
     scripts_dir = str(Path(__file__).resolve().parent)
     if scripts_dir not in sys.path:
@@ -681,7 +708,12 @@ def write_release_outputs(composition: dict, output_dir: Path) -> dict[str, Path
 
     resolved_sbom = sbom.build_resolved_sbom(composition)
     sbom_path.write_text(json.dumps(resolved_sbom, indent=2), encoding="utf-8")
-    return {"composition": composition_path, "notices": notices_path, "sbom": sbom_path}
+    return {
+        "composition": composition_path,
+        "notices": notices_path,
+        "sbom": sbom_path,
+        "embedded_media": embedded_media_path,
+    }
 
 
 def main(argv: Iterable[str] | None = None) -> int:

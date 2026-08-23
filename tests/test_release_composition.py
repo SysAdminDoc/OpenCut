@@ -67,6 +67,37 @@ def _composition_fixture() -> dict:
                 "artifacts": [{"path": "ffmpeg", "sha256": "8" * 64}],
             }
         ],
+        "embedded_media": {
+            "schema_version": 1,
+            "lane": "windows",
+            "ok": True,
+            "security": {"cve": "CVE-2026-8461", "fixed_ffmpeg": "8.1.2"},
+            "providers": {
+                "opencv": {
+                    "installed": True,
+                    "distribution": "opencv-python",
+                    "version": "4.14.0.94",
+                    "status": "disabled",
+                    "ok": True,
+                    "native_files": [],
+                },
+                "pyav": {
+                    "installed": True,
+                    "distribution": "av",
+                    "version": "18.1.0",
+                    "status": "verified",
+                    "ok": True,
+                    "libraries": {
+                        "avcodec": [62, 28, 102],
+                        "avformat": [62, 12, 102],
+                        "avutil": [60, 26, 102],
+                    },
+                    "native_files": [],
+                },
+            },
+            "artifact_files": [],
+            "errors": [],
+        },
         "artifacts": [
             {"path": "OpenCut-Server", "kind": "directory", "size": 10, "sha256": "9" * 64, "file_count": 2}
         ],
@@ -186,6 +217,8 @@ def test_resolved_sbom_contains_transitive_graph_and_bundled_hashes():
     assert properties["opencut:sbom:fidelity"] == "resolved-artifact"
     assert components["flask"]["hashes"] == [{"alg": "SHA-256", "content": "2" * 64}]
     assert components["ffmpeg"]["licenses"] == [{"license": {"name": "GPL-3.0-or-later"}}]
+    assert components["FFmpeg embedded by opencv"]["scope"] == "excluded"
+    assert components["FFmpeg embedded by pyav"]["scope"] == "required"
     assert dependencies["pkg:pypi/flask@3.1.3"] == ["pkg:pypi/werkzeug@3.1.8"]
 
 
@@ -195,6 +228,19 @@ def test_notices_include_exact_ffmpeg_source_and_package_license_text():
     assert "Flask license" in notices
     assert "https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz" in notices
     assert "download and verify" in notices
+
+
+def test_release_outputs_include_embedded_media_manifest(tmp_path):
+    outputs = _load_script("release_composition").write_release_outputs(
+        _composition_fixture(),
+        tmp_path,
+    )
+
+    manifest = outputs["embedded_media"]
+    assert manifest.name == "embedded-media-provenance.json"
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    assert payload["ok"] is True
+    assert payload["security"]["cve"] == "CVE-2026-8461"
 
 
 def test_license_gate_covers_every_direct_requirement():
@@ -222,3 +268,9 @@ def test_release_assembly_paths_require_resolved_evidence():
         REPO_ROOT / "installer" / "src" / "OpenCut.Installer" / "Services" / "InstallEngine.cs"
     ).read_text(encoding="utf-8")
     assert "release_composition.py" in linux
+    assert "embedded-media-provenance.json" in (
+        REPO_ROOT / "scripts" / "smoke_wpf_installer.ps1"
+    ).read_text(encoding="utf-8")
+    assert "embedded-media-provenance.json" in (
+        REPO_ROOT / "scripts" / "smoke_inno_installer.ps1"
+    ).read_text(encoding="utf-8")

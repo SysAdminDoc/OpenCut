@@ -150,6 +150,7 @@ try {
         "release-metadata\opencut-artifact-sbom.cyclonedx.json",
         "release-metadata\THIRD-PARTY-NOTICES.txt",
         "release-metadata\ffmpeg-provenance.json",
+        "release-metadata\embedded-media-provenance.json",
         "LICENSE",
         "OpenCut-Launcher.vbs",
         "extension\com.opencut.panel",
