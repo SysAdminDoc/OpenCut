@@ -937,6 +937,30 @@ def step_ffmpeg_provenance(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_embedded_media_provenance(_args: argparse.Namespace) -> StepResult:
+    script = REPO_ROOT / "scripts" / "verify_embedded_media_provenance.py"
+    if not script.exists():
+        return StepResult(
+            "embedded-media-provenance",
+            "fail",
+            skipped_reason="scripts/verify_embedded_media_provenance.py missing",
+        )
+    result = _run([sys.executable, str(script)], cwd=REPO_ROOT)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "embedded-media-provenance",
+        status,
+        exit_code=result.returncode,
+        message=(
+            "OpenCV and PyAV decoder copies meet the security policy"
+            if status == "ok"
+            else "embedded OpenCV/PyAV decoder provenance verification failed"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_doc_sizes(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     script = REPO_ROOT / "scripts" / "check_doc_sizes.py"
@@ -1818,6 +1842,11 @@ STEPS: List[StepDefinition] = [
     StepDefinition("license-gate", step_license_gate, "Gate model cards and hash-locked release requirements"),
     StepDefinition("release-lock", step_release_lock, "Check exact pins and SHA-256 hashes for release inputs"),
     StepDefinition("ffmpeg-provenance", step_ffmpeg_provenance, "Verify bundled FFmpeg provenance and security floor"),
+    StepDefinition(
+        "embedded-media-provenance",
+        step_embedded_media_provenance,
+        "Verify OpenCV and PyAV embedded FFmpeg provenance",
+    ),
     StepDefinition("dependency-matrix", step_dependency_matrix, "Check optional dependency support contract"),
     StepDefinition("installed-versions", step_installed_versions, "Check the tested stack matches the declared specifiers"),
     StepDefinition("roadmap-lint", step_roadmap_lint, "Lint ROADMAP source appendix"),

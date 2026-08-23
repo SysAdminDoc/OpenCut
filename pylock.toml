@@ -487,14 +487,14 @@ sha256 = "760021bca514d64a811837820d351a08a41741f16f8b4c26450da708fecf14e6"
 
 [[packages]]
 name = "opencv-python"
-version = "5.0.0.93"
+version = "4.14.0.94"
 
 [[packages.wheels]]
-name = "opencv_python-5.0.0.93-cp37-abi3-win_amd64.whl"
-url = "https://files.pythonhosted.org/packages/21/f0/9fa6e85cb10c8eb36a0222d27e50fe381b86ce49a55446bf39f491727564/opencv_python-5.0.0.93-cp37-abi3-win_amd64.whl"
+name = "opencv_python-4.14.0.94-cp37-abi3-win_amd64.whl"
+url = "https://files.pythonhosted.org/packages/08/f0/ebf59732b54b4dd8a9e23f3b453ad73e11ec2230faf25ff4b1befa191ce0/opencv_python-4.14.0.94-cp37-abi3-win_amd64.whl"
 
 [packages.wheels.hashes]
-sha256 = "f90ba04b8f73bc5c3814037699739f0156f597338a98f05956c684e7c3ca10d2"
+sha256 = "ace53616cdffc9643e17e075397b493e607c427d388c7508798ef7ad2ed577cc"
 
 [[packages]]
 name = "packaging"

@@ -1,7 +1,7 @@
 """F305 — face detection must survive the declared opencv-python 5 wheel.
 
 OpenCV 5 moved the Haar and HOG detectors into ``opencv_contrib``, which the
-declared ``opencv-python>=5,<6`` dependency does not ship. Thirteen modules
+standard OpenCV wheel does not ship. Thirteen modules
 called ``cv2.CascadeClassifier`` directly, so a manifest-faithful install
 raised ``AttributeError`` in auto-zoom, face blur, reframe, redaction, and
 thumbnail selection. These tests pin the compatibility contract, including a

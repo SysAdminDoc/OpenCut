@@ -479,6 +479,58 @@ def build_resolved_sbom(composition: Dict) -> Dict:
         components.append(component)
         dependency_rows.append({"ref": ref, "dependsOn": []})
 
+    embedded_refs: List[str] = []
+    embedded_media = composition.get("embedded_media") or {}
+    embedded_providers = embedded_media.get("providers") or {}
+    artifact_decoder_files = embedded_media.get("artifact_files") or []
+    dependency_by_ref = {row["ref"]: row for row in dependency_rows}
+    for provider_name in ("opencv", "pyav"):
+        provider = embedded_providers.get(provider_name) or {}
+        if not provider.get("installed"):
+            continue
+        status = str(provider.get("status") or "unknown")
+        ref = f"opencut:embedded-ffmpeg:{provider_name}:{status}"
+        embedded_refs.append(ref)
+        library_versions = provider.get("libraries") or {}
+        native_files = [
+            item
+            for item in artifact_decoder_files
+            if item.get("provider") == provider_name
+        ]
+        component = _make_component(
+            f"FFmpeg embedded by {provider_name}",
+            str((embedded_media.get("security") or {}).get("fixed_ffmpeg") or "unknown"),
+            scope="excluded" if status in {"disabled", "absent"} else "required",
+            component_type="library",
+            bom_ref=ref,
+            properties=[
+                {"name": "opencut:embedded-provider", "value": provider_name},
+                {"name": "opencut:embedded-status", "value": status},
+                {
+                    "name": "opencut:embedded-library-versions",
+                    "value": json.dumps(library_versions, sort_keys=True),
+                },
+                {
+                    "name": "opencut:security-advisory",
+                    "value": str((embedded_media.get("security") or {}).get("cve", "")),
+                },
+            ],
+        )
+        component["hashes"] = [
+            {"alg": "SHA-256", "content": str(item["sha256"])}
+            for item in native_files
+            if item.get("sha256")
+        ]
+        components.append(component)
+        dependency_rows.append({"ref": ref, "dependsOn": []})
+
+        distribution = _normalise_pypi_name(str(provider.get("distribution") or ""))
+        provider_ref = python_refs.get(distribution)
+        if provider_ref and provider_ref in dependency_by_ref:
+            dependency_by_ref[provider_ref]["dependsOn"] = sorted(
+                set(dependency_by_ref[provider_ref]["dependsOn"] + [ref])
+            )
+
     artifact_refs: List[str] = []
     for index, artifact in enumerate(composition.get("artifacts") or []):
         name = os.path.basename(str(artifact["path"]).rstrip("/\\")) or f"artifact-{index}"
@@ -534,7 +586,10 @@ def build_resolved_sbom(composition: Dict) -> Dict:
         },
         "components": components,
         "dependencies": [
-            {"ref": root_ref, "dependsOn": sorted(set(direct_refs + bundled_refs + artifact_refs))},
+            {
+                "ref": root_ref,
+                "dependsOn": sorted(set(direct_refs + bundled_refs + embedded_refs + artifact_refs)),
+            },
             *dependency_rows,
         ],
     }

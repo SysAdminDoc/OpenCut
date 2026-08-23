@@ -8,6 +8,7 @@ declared SBOM and FFmpeg provenance manifest beside the artifacts:
 python scripts/release_smoke.py --json
 python scripts/sbom.py --format json --output dist/opencut-declared-sbom.cyclonedx.json
 python scripts/verify_ffmpeg_provenance.py --manifest dist/ffmpeg-provenance.json
+python scripts/verify_embedded_media_provenance.py --artifact dist/OpenCut-Server --manifest dist/embedded-media-provenance.json
 ```
 
 Keep the generated manifest files with the server bundle, Linux packages, and
@@ -15,7 +16,28 @@ Windows installer that were built from the same commit. Use the local filenames
 when verifying hashes or attaching assets with `gh release create` /
 `gh release upload`.
 
-## Bundled FFmpeg — version + security patch level
+## Embedded media decoders
+
+OpenCV and PyAV each carry their own FFmpeg libraries. They are checked
+separately from the external `ffmpeg` and `ffprobe` executables. The release
+gate records the library versions, native filenames, sizes, and SHA-256 hashes
+in `embedded-media-provenance.json`.
+
+OpenCut pins OpenCV to the reviewed `4.14.0.94` wheel and PyAV to a reviewed
+18.x wheel. PyAV must report the FFmpeg 8.1.2 library floor on every platform.
+Linux and macOS require the same floor from OpenCV. The Windows OpenCV wheel
+still carries older FFmpeg libraries, so OpenCut disables that backend before
+`cv2` loads and removes its `opencv_videoio_ffmpeg` plugin from the packaged
+server. The release gate fails if that plugin reappears, if a decoder version
+cannot be read, or if an unattributed FFmpeg library enters an artifact.
+
+Run the lane-specific check against the assembled payload:
+
+```bash
+python scripts/verify_embedded_media_provenance.py --lane windows --artifact dist/OpenCut-Server --manifest dist/embedded-media-provenance.json
+```
+
+## Bundled FFmpeg version and security patch level
 
 The FFmpeg/ffprobe binaries are bundled by the installer (the `ffmpeg/` directory
 is gitignored and fetched at build time, not committed). The bundled build must

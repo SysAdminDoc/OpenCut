@@ -78,10 +78,11 @@ The latest published Windows installer is [OpenCut v1.55.0](https://github.com/S
 
 Every assembled installer includes `release-composition.json`,
 `opencut-artifact-sbom.cyclonedx.json`, `THIRD-PARTY-NOTICES.txt`, and
-`ffmpeg-provenance.json` beside the installed application. These records bind
-the direct and transitive Python packages, packaged payloads, and bundled
-FFmpeg binary to SHA-256 hashes and document the exact FFmpeg source and build
-provenance needed to reproduce the GPL-covered component.
+`ffmpeg-provenance.json` beside the installed application. It also includes
+`embedded-media-provenance.json`, which inventories the FFmpeg libraries carried
+by OpenCV and PyAV. These records bind the dependency set, packaged payloads,
+and media decoders to SHA-256 hashes and record the source and build evidence
+needed to reproduce the GPL-covered component.
 
 ### Installers are not code-signed
 

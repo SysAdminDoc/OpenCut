@@ -213,6 +213,8 @@ def test_pyinstaller_hidden_imports_are_source_derived():
     # The old list is gone; these were maintained by hand and had drifted.
     assert "'transnetv2'," not in spec
     assert "'resemble_enhance'," not in spec
+    assert "_is_opencv_ffmpeg_plugin" in spec
+    assert "opencv_videoio_ffmpeg" in spec
 
 
 def test_pyinstaller_spec_discovery_finds_real_backends():

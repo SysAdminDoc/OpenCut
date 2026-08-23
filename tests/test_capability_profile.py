@@ -100,7 +100,9 @@ def test_derive_findings_flags_low_vram_only_when_gpu_detected():
 def test_build_profile_returns_versioned_payload():
     payload = cp.build_profile()
     assert payload["version"] == 1
-    assert set(payload).issuperset({"python", "ffmpeg", "ffprobe", "gpu", "disk", "findings"})
+    assert set(payload).issuperset(
+        {"python", "ffmpeg", "ffprobe", "embedded_media", "gpu", "disk", "findings"}
+    )
 
 
 def test_route_returns_capability_payload(client):
@@ -108,5 +110,21 @@ def test_route_returns_capability_payload(client):
     assert resp.status_code == 200
     payload = resp.get_json()
     assert payload["version"] == 1
-    for required in ("python", "ffmpeg", "gpu", "disk", "findings"):
+    for required in ("python", "ffmpeg", "embedded_media", "gpu", "disk", "findings"):
         assert required in payload, f"missing field {required!r}"
+
+
+def test_derive_findings_reports_an_unverified_embedded_decoder():
+    profile = cp.CapabilityProfile(
+        ffmpeg={"available": True, "encoders": ["libx264", "h264_nvenc"], "hwaccel": []},
+        ffprobe={"available": True},
+        embedded_media={"ok": False, "errors": ["PyAV FFmpeg is stale"]},
+        gpu={"device": "cuda", "vram_total_mb": 16384},
+        disk={"temp": {"free_mb": 99999, "path": "/tmp"}},
+    )
+
+    findings = cp._derive_findings(profile)
+
+    embedded = next(item for item in findings if item.rule == "embedded_decoder_below_security_floor")
+    assert embedded.severity == "error"
+    assert "PyAV FFmpeg is stale" in embedded.message

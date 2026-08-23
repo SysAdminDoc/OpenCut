@@ -114,6 +114,17 @@ a = Analysis(
     noarchive=False,
 )
 
+# The Windows OpenCV wheel carries a prebuilt FFmpeg plugin whose ABI predates
+# the CVE-2026-8461 floor. OpenCut disables that backend before cv2 import and
+# omits the DLL from the frozen payload. Media Foundation remains available.
+def _is_opencv_ffmpeg_plugin(entry):
+    return any('opencv_videoio_ffmpeg' in str(value).lower() for value in entry[:2])
+
+
+if sys.platform == 'win32':
+    a.binaries = [entry for entry in a.binaries if not _is_opencv_ffmpeg_plugin(entry)]
+    a.datas = [entry for entry in a.datas if not _is_opencv_ffmpeg_plugin(entry)]
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(

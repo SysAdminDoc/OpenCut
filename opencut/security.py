@@ -381,7 +381,7 @@ def _find_system_python() -> Optional[str]:
 
 
 PILLOW_RUNTIME_REQUIREMENT = "Pillow>=12.3.0,<13"
-OPENCV_RUNTIME_REQUIREMENT = "opencv-python>=5,<6"
+OPENCV_RUNTIME_REQUIREMENT = "opencv-python==4.14.0.94"
 
 _SAFE_PACKAGE_RE = re.compile(
     r"^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?"

@@ -516,6 +516,13 @@ def test_media_conformance_runs_the_corpus_the_default_addopts_deselect():
     assert "tests/test_media_conformance.py" in body
 
 
+def test_release_smoke_gates_embedded_media_provenance():
+    source = (REPO_ROOT / "scripts" / "release_smoke.py").read_text(encoding="utf-8")
+
+    assert 'StepDefinition(\n        "embedded-media-provenance"' in source
+    assert "verify_embedded_media_provenance.py" in source
+
+
 def test_a_step_that_collected_nothing_says_so(monkeypatch):
     """Exit 5 is "no tests ran", which is a different problem from a failure."""
     module = load_module()

@@ -19,10 +19,20 @@ def test_release_provenance_docs_name_local_manifest_commands():
     assert "python scripts/release_smoke.py --json" in docs
     assert "python scripts/sbom.py --format json --output dist/opencut-declared-sbom.cyclonedx.json" in docs
     assert "python scripts/verify_ffmpeg_provenance.py --manifest dist/ffmpeg-provenance.json" in docs
+    assert "scripts/verify_embedded_media_provenance.py" in docs
+    assert "dist/embedded-media-provenance.json" in docs
     assert "gh release create" in docs
     assert "gh release upload" in docs
     assert ".github/workflows" not in docs
     assert "GitHub Actions" not in docs
+
+
+def test_release_provenance_docs_explain_embedded_decoder_policy():
+    docs = _read(RELEASE_PROVENANCE_DOC)
+
+    assert "OpenCV and PyAV each carry their own FFmpeg libraries" in docs
+    assert "opencv_videoio_ffmpeg" in docs
+    assert "FFmpeg 8.1.2 library floor" in docs
 
 
 def test_release_provenance_docs_include_bundled_ffmpeg_pin_and_hash():

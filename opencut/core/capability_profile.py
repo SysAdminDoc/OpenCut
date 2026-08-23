@@ -15,6 +15,7 @@ What we capture today:
 * ``gpu`` — derived from :mod:`opencut.gpu` (``cuda``, ``mps``,
   ``directml``, or ``cpu``) plus the existing ``check_vram`` helper.
 * ``ffprobe`` — presence + version.
+* ``embedded_media`` — OpenCV/PyAV FFmpeg ABI and runtime policy.
 * ``disk`` — free space on the temp + project directories.
 * ``python`` — implementation, version, platform.
 * ``advisory`` — string hints generated from the probe results
@@ -82,6 +83,7 @@ class CapabilityProfile:
     python: dict = field(default_factory=dict)
     ffmpeg: dict = field(default_factory=dict)
     ffprobe: dict = field(default_factory=dict)
+    embedded_media: dict = field(default_factory=dict)
     gpu: dict = field(default_factory=dict)
     disk: dict = field(default_factory=dict)
     findings: List[CapabilityFinding] = field(default_factory=list)
@@ -93,6 +95,7 @@ class CapabilityProfile:
             "python": self.python,
             "ffmpeg": self.ffmpeg,
             "ffprobe": self.ffprobe,
+            "embedded_media": self.embedded_media,
             "gpu": self.gpu,
             "disk": self.disk,
             "findings": [f.as_dict() for f in self.findings],
@@ -293,8 +296,39 @@ def _probe_python() -> dict:
     }
 
 
+def _probe_embedded_media() -> dict:
+    try:
+        from opencut.core.embedded_media_provenance import inspect_runtime
+
+        return inspect_runtime(required=False, include_hashes=False)
+    except Exception as exc:
+        logger.debug("capability_profile: embedded media provenance failed: %s", exc)
+        return {"ok": False, "errors": [str(exc)], "opencv": {}, "pyav": {}}
+
+
 def _derive_findings(profile: CapabilityProfile) -> List[CapabilityFinding]:
     findings: List[CapabilityFinding] = []
+    if not profile.embedded_media.get("ok", True):
+        findings.append(
+            CapabilityFinding(
+                severity="error",
+                rule="embedded_decoder_below_security_floor",
+                message="; ".join(profile.embedded_media.get("errors") or [
+                    "An embedded OpenCV or PyAV decoder is below the FFmpeg 8.1.2 security floor."
+                ]),
+            )
+        )
+    elif (profile.embedded_media.get("opencv") or {}).get("status") == "disabled":
+        findings.append(
+            CapabilityFinding(
+                severity="info",
+                rule="opencv_ffmpeg_disabled",
+                message=(
+                    "OpenCV's embedded FFmpeg backend is disabled by security policy; "
+                    "a verified platform decoder is used instead."
+                ),
+            )
+        )
     if not profile.ffmpeg.get("available"):
         security = profile.ffmpeg.get("security") or {}
         if profile.ffmpeg.get("detected") and not security.get("ok"):
@@ -398,6 +432,7 @@ def build_profile() -> dict:
     profile.python = _probe_python()
     profile.ffmpeg = _probe_ffmpeg()
     profile.ffprobe = _probe_ffprobe()
+    profile.embedded_media = _probe_embedded_media()
     profile.gpu = _probe_gpu()
     profile.disk = _probe_disk()
     profile.findings = _derive_findings(profile)

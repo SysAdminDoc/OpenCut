@@ -3,7 +3,8 @@
 OpenCV 5 moved the Haar and HOG detectors out of the core module into
 ``opencv_contrib`` (see the OpenCV 5 release notes: "Haar-based and HOG-based
 detectors have been moved to opencv_contrib"). ``pyproject.toml`` declares
-``opencv-python>=5,<6``, which does **not** ship contrib — so every direct
+``opencv-python==4.14.0.94``. OpenCV 5 also remains supported for source
+installs, but neither standard wheel ships contrib, so every direct
 ``cv2.CascadeClassifier(...)`` call raises ``AttributeError`` for anyone who
 installs the project as declared. That silently broke face-tracked auto-zoom,
 face blur, reframe, redaction, and thumbnail selection.

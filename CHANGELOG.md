@@ -2609,6 +2609,18 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ## [Unreleased]
 
+### Security - Block vulnerable embedded FFmpeg copies
+
+- Release checks now inventory and hash the separate FFmpeg libraries shipped
+  by OpenCV and PyAV. They reject unknown copies and any active decoder below
+  the FFmpeg 8.1.2 library floor required for CVE-2026-8461.
+- OpenCV is pinned to the reviewed 4.14.0.94 lane. Linux and macOS must prove
+  its patched ABI. On Windows, the older bundled backend is disabled before
+  `cv2` loads and its plugin is removed from packaged server artifacts. PyAV's
+  reviewed FFmpeg 8.1.2 libraries remain available for media processing.
+- Capability reports, release composition, SBOM output, installer metadata,
+  and local release smoke now carry the same embedded-decoder verdict.
+
 ### Security - Attest resolved release composition
 
 - Added SHA-256-locked runtime and build dependency lanes, and made source,
