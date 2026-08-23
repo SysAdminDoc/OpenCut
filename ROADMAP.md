@@ -13,11 +13,167 @@ each closed item against its own acceptance text rather than against the researc
 allocation before that audit: F358. F359 needed a maintainer's voice on a public issue and moved to
 Roadmap_Blocked.md; the rest landed.
 
+### P0
+
+- [ ] P0 — F409 — Reject release artifacts that contain a vulnerable OpenCV FFmpeg
+  Why: The release lock ships `opencv-python==5.0.0.93`; its 5.x Linux wheel recipe uses FFmpeg 8.1.1, which is affected by CVE-2026-8461, and OpenCut attests only its external FFmpeg binary.
+  Evidence: Verified: `requirements-release-lock.txt:867`, `opencut/core/ffmpeg_provenance.py:224`, https://github.com/opencv/opencv-python/pull/1255, and https://nvd.nist.gov/vuln/detail/CVE-2026-8461.
+  Touches: `pyproject.toml`, `requirements-release-lock.txt`, `scripts/release_smoke.py`, packaging scripts, `opencut/core/capability_profile.py`, and new artifact-provenance tests.
+  Acceptance: Every Windows, macOS, and Linux artifact inventories the external, OpenCV, and PyAV FFmpeg copies; the release gate rejects any copy missing the CVE-2026-8461 fix; the chosen patched OpenCV 5 wheel, controlled source build, or tested temporary 4.14.0.94 lane passes the media corpus; untrusted decoding cannot silently fall back to an unverified embedded decoder.
+  Complexity: L
+
+- [ ] P0 — F410 — Secure Hugging Face downloads and remote model code
+  Why: The release lock pins `huggingface-hub==1.24.0`, while 1.26.0 fixes CVE-2026-15717 filename traversal, and eight model loaders enable unrestricted `trust_remote_code=True`.
+  Evidence: Verified: `requirements-release-lock.txt:459`, `opencut/core/captions_enhanced.py:395`, `opencut/core/object_removal.py:484`, https://github.com/huggingface/huggingface_hub/releases/tag/v1.26.0, and https://nvd.nist.gov/vuln/detail/CVE-2026-15717.
+  Touches: `pyproject.toml`, all dependency locks, `opencut/core/model_safety.py`, `opencut/core/asr_provenance.py`, the eight remote-code model loaders, and hostile-model-repository fixtures.
+  Acceptance: Every resolving extra uses a fixed Hub release or is explicitly unavailable; absolute, UNC, drive-relative, and traversal filenames fail before disk mutation; every model download resolves one immutable revision; safetensors is preferred where supported; remote code runs only for reviewed model and revision pairs; tests fail on an unpinned revision or new unrestricted remote-code call.
+  Complexity: L
+
+- [ ] P0 — F411 — Make resolved feature readiness authoritative across every machine surface
+  Why: Eighteen generated readiness records disagree with terminal-stub resolution, and queue, extended MCP, and OpenAPI exposure can present operations that installing a dependency cannot make runnable.
+  Evidence: Verified: `opencut/registry.py:148`, `opencut/_generated/feature_readiness.json`, `opencut/routes/jobs_routes.py:184`, `opencut/mcp_extended_tools.py:138`, and `opencut/core/openapi_source.py:231`.
+  Touches: `opencut/registry.py`, readiness generators, `opencut/routes/jobs_routes.py`, `opencut/mcp_extended_tools.py`, `opencut/core/openapi_source.py`, install guidance, and catalogue tests.
+  Acceptance: One per-adapter resolved state distinguishes available, dependency-gated, and terminal-stub implementations; generated manifests equal runtime resolution; queue admission rejects terminal stubs before job creation; extended MCP hides or explicitly marks them; OpenAPI carries readiness metadata; a new declared/runtime disagreement fails the suite.
+  Complexity: L
+
+- [ ] P0 — F412 — Apply feature readiness to real CEP and UXP controls
+  Why: CEP's gating helper has no production `data-feature-id` bindings, UXP does not consume `/system/feature-state`, and UXP reconnect enables primary controls without restoring semantic prerequisites.
+  Evidence: Verified: `extension/com.opencut.panel/client/feature-state.js:224`, `extension/com.opencut.panel/client/index.html`, `extension/com.opencut.uxp/main.js:6819`, and `opencut/routes/system_diagnostics_routes.py:363`.
+  Touches: CEP and UXP markup and controllers, shared readiness data, `extension/com.opencut.panel/tests`, and rendered panel tests.
+  Acceptance: Every dependency-sensitive control has a canonical feature ID; unavailable controls are disabled with one actionable reason in both panels; a refresh re-enables a newly available feature; reconnect never enables a control whose dependency or selection prerequisite is still false; rendered tests cover disable, explanation, refresh, and re-enable in both themes.
+  Complexity: M
+
 ### P1
+
+- [ ] P1 — F413 — Derive release, dependency, and planning documentation from executable facts
+  Why: Passing documentation tests pin FFmpeg and Python-advisory statements that contradict executable policy, while the blocked-work ledger still describes release and queue work that has shipped.
+  Evidence: Verified: `docs/RELEASE_PROVENANCE.md:32`, `opencut/core/ffmpeg_provenance.py:59`, `docs/PYTHON_ADVISORIES.md:16`, `opencut/tools/pip_audit_extras.py:57`, `tests/test_release_provenance_attestation.py:31`, and `Roadmap_Blocked.md:104`.
+  Touches: `opencut/_generated/project_facts.json`, documentation generators and checks, `README.md`, `docs/RELEASE_PROVENANCE.md`, `docs/PYTHON_ADVISORIES.md`, `Roadmap_Blocked.md`, and provenance tests.
+  Acceptance: Public FFmpeg lanes, advisory waivers, dependency floors, release versions, counts, and blocked-item state are generated or compared against executable sources; literal tests no longer bless stale values; mutating any source fact without its generated documentation makes the release gate fail with the exact divergent field.
+  Complexity: M
+
+- [ ] P1 — F414 — Generate one runnable command catalog and count only real user surfaces
+  Why: The backend command catalog has 225 entries but only 43 runnable routes, 182 missing routes are accepted as speculative, and route accounting treats that backend list as direct user exposure.
+  Evidence: Verified: `opencut/core/command_palette.py:400`, `tests/test_ux_intelligence.py:68`, `opencut/tools/dump_route_manifest.py:390`, and `extension/com.opencut.panel/client/main.js:13888`.
+  Touches: `opencut/core/command_palette.py`, route and UX manifest generators, CEP and UXP command discovery, CLI and curated MCP registries, and surface-ratchet tests.
+  Acceptance: One generated catalog separates live and aspirational commands; every live entry has method, payload schema, prerequisites, navigation target, and invoker; missing-route entries never appear in user search; direct-surface counts include only literal panel, CLI, or curated MCP consumers; deleting an invoker lowers the count and fails the ratchet.
+  Complexity: L
+
+- [ ] P1 — F415 — Make WebSocket startup return the bound port and preserve bind failures
+  Why: CEP hardcodes port 5680, the backend reports start success before the socket binds, and status converts bind exceptions into a generic stopped state.
+  Evidence: Verified: `extension/com.opencut.panel/client/main.js:5562`, `extension/com.opencut.uxp/main.js:7615`, `opencut/routes/system_realtime_routes.py:91`, and `opencut/core/ws_bridge.py:90`.
+  Touches: `opencut/core/ws_bridge.py`, `opencut/routes/system_realtime_routes.py`, CEP and UXP realtime controllers, and WebSocket integration tests.
+  Acceptance: `/ws/start` returns success only after bind and includes the actual port; both panels connect to that value; `/ws/status` retains the last typed bind or start error; port-collision, delayed-bind, restart, disconnect, and cancellation fixtures pass without a false connected state.
+  Complexity: M
+
+- [ ] P1 — F416 — Unify visible media-library indexing behind one recursive incremental contract
+  Why: Visible folder indexing is nonrecursive, stops at 100 files, and retranscribes unchanged media, while JSON, SQLite, and federated indexes expose inconsistent status and clear behavior.
+  Evidence: Verified: `opencut/routes/search.py:71`, `opencut/routes/search.py:184`, `opencut/core/footage_search.py:314`, `opencut/core/footage_index_db.py`, and `opencut/core/federated_media_index.py`.
+  Touches: Search routes, all three index stores, saved footage settings, CEP and UXP indexing flows, migrations, and index integration tests.
+  Acceptance: A root-folder request recursively preflights file count, bytes, estimated transcription cost, and configured caps; unchanged media is skipped by signature; one versioned adapter supplies index, search, status, and clear semantics across stores; clear failures propagate; no nested lock is acquired; interruption resumes without duplicate work.
+  Complexity: L
+
+- [ ] P1 — F417 — Make every persisted editing setting authoritative or remove it with a migration
+  Why: Footage-index options are stored but unused, UXP hardcodes the base transcription model, chapter and multicam execution bypass saved defaults, and color-profile persistence has no production consumer.
+  Evidence: Verified: `opencut/user_data.py:815`, `opencut/user_data.py:860`, `opencut/user_data.py:875`, `extension/com.opencut.uxp/main.js:5956`, `opencut/routes/caption_analysis_routes.py:128`, and `opencut/routes/video_editing.py:636`.
+  Touches: `opencut/user_data.py`, settings routes, indexing, chapter and multicam routes, both panels, settings migration, and conformance tests.
+  Acceptance: Every persisted key has exactly one validated consumer or a documented removal migration; selected transcription model and language reach the job; chapter and multicam defaults affect execution; unknown and noncanonical keys are rejected; a generated settings-consumer test fails when a stored key is orphaned or bypassed.
+  Complexity: M
+
+- [ ] P1 — F418 — Issue a common validation receipt before any media output is published
+  Why: Smart render proves staged probing and atomic promotion, but many media producers stop at process success or file existence, and declarative compose trusts planned duration after rendering.
+  Evidence: Verified: `opencut/core/smart_render.py:430`, `opencut/core/delivery_validate.py`, `opencut/core/declarative_compose.py:493`, plus output-loss reports across LosslessCut, Kdenlive, Shotcut, and OpenShot trackers.
+  Touches: `opencut/helpers.py`, async job completion, `opencut/core/delivery_validate.py`, media-producing route metadata, output staging helpers, and golden-media tests.
+  Acceptance: Every media-producing route is classified against one output contract; completed jobs return a receipt covering expected streams, container and codec, duration tolerance, geometry, frame rate, audio layout, timestamp continuity, sampled beginning and end decode, and atomic promotion; an unclassified producer or injected corrupt, black, truncated, silent, or wrong-layout artifact fails before replacing an existing destination.
+  Complexity: L
+
+- [ ] P1 — F419 — Add a reviewed silent-failure budget and no-growth gate
+  Why: The source contains 1,817 broad Python catches across 457 files and 165 empty JavaScript or JSX catches, with no machine-readable distinction between compatibility probes and lost failures.
+  Evidence: Verified: repository-wide searches over `opencut/**/*.py`, `extension/**/*.js`, and `extension/**/*.jsx`; existing structured patterns live in `opencut/errors.py`, `opencut/checks.py`, and `opencut/core/pipeline_health.py`.
+  Touches: A static analysis script, `opencut/errors.py`, logging and diagnostics, CEP and UXP controllers, release smoke, and fault-injection tests.
+  Acceptance: Every retained broad or empty catch has an explicit reviewed suppression category; new unsuppressed catches fail the gate; host bridge, job, file I/O, output validation, and model-loading failures produce a typed user result plus structured log evidence; the committed baseline can only decrease unless an allowlist entry carries a reason and owner.
+  Complexity: L
+
+- [ ] P1 — F420 — Test agent-authored edits against executable editorial briefs
+  Why: The model evaluation system measures individual inference calls, but no gate executes an edit brief and checks the resulting timeline for safety, constraint compliance, or deterministic invariants.
+  Evidence: Verified: `opencut/core/ai_eval_harness.py:1`, `opencut/core/eval_datasets.py:56`, https://arxiv.org/abs/2509.10761, and https://arxiv.org/abs/2607.25300.
+  Touches: `opencut/core/ai_eval_harness.py`, agent planner and executor modules, declarative compose, timeline fixtures, and evaluation reports.
+  Acceptance: Fixture briefs cover source selection, duration, supported tools, duplicate clips, bounds, mid-word cuts, required and forbidden content, undo, and deterministic replay; injected violations fail the corresponding invariant; human or model preference scores are secondary and cannot override a deterministic failure; results record source hashes, plan, environment, and output receipt.
+  Complexity: M
+
+- [ ] P1 — F421 — Complete the backend-independent ASR integrity gate
+  Why: OpenCut flags repeated-phrase loops, but it does not gate dropped windows, regressing word times, unexplained coverage gaps, overlapping stitches, or long spans of low-confidence output before transcript-driven mutations.
+  Evidence: Verified for the local gap: `opencut/core/captions.py:1097`, `tests/test_asr_repetition_guard.py`, and `opencut/core/asr_provenance.py`; Likely demand from https://github.com/m-bain/whisperX/issues and https://github.com/SYSTRAN/faster-whisper/issues.
+  Touches: Caption engines, ASR provenance, transcript cache, transcript-edit routes, panel warnings, and long-form audio fixtures.
+  Acceptance: Every backend reports monotonic segment and word timing, decoded-audio coverage, gap and overlap anomalies, repetition, confidence distribution, and batch-window lineage; suspect spans are preserved and highlighted; transcript-driven cuts require review or an explicit recorded override; sequential and batched fixtures detect a deleted window, shifted timestamps, and a repeated tail.
+  Complexity: M
+
+- [ ] P1 — F422 — Combine transcript timing, waveform, shot boundaries, and live skip audition
+  Why: CEP renders editable transcript segments and a waveform in separate workflows, so editors cannot judge word boundaries, cuts, confidence, and visual transitions in one place.
+  Evidence: Verified: `extension/com.opencut.panel/client/index.html:466`, `extension/com.opencut.panel/client/main.js:7864`, `extension/com.opencut.panel/client/main.js:12159`, `opencut/core/transcript_timeline_edit.py`, and Subtitle Edit's waveform workflow.
+  Touches: CEP and UXP transcript surfaces, `opencut/core/waveform_timeline.py`, transcript mapping modules, shot and confidence data, host audition calls, and rendered accessibility tests.
+  Acceptance: One workbench aligns words, speakers, confidence, waveform, silence, shot boundaries, and proposed cuts; boundary drags snap without invalid ordering; selecting or deleting text auditions the kept result immediately without mutating Premiere; the final change set remains reviewable and reversible; keyboard, screen-reader, narrow-width, and reduced-motion tests pass.
+  Complexity: L
+
+- [ ] P1 — F423 — Audit caption accuracy, completeness, synchronization, and placement against source media
+  Why: Current caption QC checks format compliance, glyphs, overlaps, and reading rules, but not whether spoken content, speaker identity, or meaningful sounds are represented.
+  Evidence: Verified: `opencut/core/caption_qc.py:220`; standards: https://docs.fcc.gov/public/attachments/FCC-14-12A1_Rcd.pdf, https://www.section508.gov/create/captions-transcripts/, and https://www.w3.org/TR/WCAG22/.
+  Touches: Caption QC, ASR, diarization, audio-event detection, obstruction analysis, export preflight, panel diagnostics, and multilingual accessibility fixtures.
+  Acceptance: A report scores accuracy, completeness, synchronization, and placement; it identifies uncovered speech, unresolved speakers, missing meaningful sounds, timing drift, and obstruction; thresholds are language-aware and operator-overridable; uncertain findings remain advisory; export can fail only on configured deterministic rules; English and one non-English fixture prove coverage.
+  Complexity: L
+
+- [ ] P1 — F424 — Run dependency and packaging upgrades through one executable compatibility matrix
+  Why: PyInstaller 6.20.0 trails a security fix, ONNX Runtime 1.27.0 and PyAV 18.0.0 trail hardened releases, Werkzeug locks disagree, OTIO documents Python only through 3.12, and the Docker base is mutable.
+  Evidence: Verified: `requirements-build.txt:3`, `requirements-release-lock.txt:64`, `:841`, `:1381`, `requirements-lock.txt:30`, `Dockerfile`, https://github.com/pyinstaller/pyinstaller/security/advisories/GHSA-9fxf-4qw3-ghmr, https://github.com/microsoft/onnxruntime/releases/tag/v1.29.0, and https://github.com/PyAV-Org/PyAV/releases/tag/v18.1.0.
+  Touches: Dependency declarations and locks, `Dockerfile`, `opencut_server.spec`, release smoke, capability reporting, model and media corpora, and packaging tests.
+  Acceptance: PyInstaller is at least 6.22.2 and the canonical artifact is asserted onedir; Werkzeug locks converge; PyAV 18.1.0 and ONNX Runtime 1.29.0 pass CPU plus available GPU providers; Python 3.11.16, 3.12.14, 3.13.15, and 3.14.7 are exercised; free-threaded builds are explicitly excluded until green; the Docker base uses a patch tag and digest; OTIO is tested on 3.13 and 3.14 or reports unavailable with a reason; nonnative keyring backends fail closed for production secrets.
+  Complexity: XL
 
 ### P2
 
+- [ ] P2 — F425 — Carry unresolved review comments across cut versions with confidence
+  Why: Review comments are bound to immutable versions, so a recut strands unresolved feedback even when the same dialogue or shot survives at a new time.
+  Evidence: Verified local model: `opencut/core/review_links.py:35`, `tests/test_review_versions.py`; Likely demand: https://www.reddit.com/r/editors/comments/q419v1 and https://kitsu.cg-wire.com/review/.
+  Touches: Review versions, OTIO diffing, transcript anchors, content fingerprints, review portal and bundle UI, notifications, and review fixtures.
+  Acceptance: Creating a version proposes mappings using timeline diff, transcript anchors, time warps, and perceptual hashes; each proposal preserves the original anchor and exposes method plus confidence; high-confidence mappings can be accepted in bulk; low-confidence mappings remain quarantined; deleted material stays unresolved on its original version; shifted, split, deleted, and duplicate-shot fixtures pass.
+  Complexity: M
+
+- [ ] P2 — F426 — Query federated visual embeddings with explicit resource budgets
+  Why: Federated search imports visual sidecars but intentionally refuses text queries against them, while editor reports show uncontrolled background analysis can consume a workstation for hours.
+  Evidence: Verified local gap: `opencut/core/federated_media_index.py:1184`; Likely resource demand: https://www.reddit.com/r/AdobePremiere/comments/1vqw9mb/media_intelligence_analysis/ and https://www.reddit.com/r/premiere/comments/1qpqbzz/media_intelligence_analysis_question/.
+  Touches: Federated and multimodal indexes, embedding sidecars, scheduler and GPU semaphore, settings, search panels, and performance fixtures.
+  Acceptance: Text-to-visual search works across selected roots using versioned reusable sidecars; users choose scope, schedule, CPU or GPU budget, and pause or resume; unchanged media is not re-embedded; foreground jobs preempt background indexing; results expose model revision and matched frames; a large-library fixture proves bounded memory and no duplicate indexing.
+  Complexity: L
+
+- [ ] P2 — F427 — Rank audio-repair variants with quality evidence and require audition
+  Why: OpenCut has several repair engines, but choosing a model by name gives no evidence that denoising preserved speech or avoided new artifacts.
+  Evidence: Verified local engine breadth: `opencut/core/audio_enhance.py`, `opencut/core/ab_compare.py`; research: https://github.com/microsoft/DNS-Challenge/blob/master/DNSMOS/README.md, https://github.com/microsoft/Distill-MOS, and https://arxiv.org/abs/2603.04710.
+  Touches: Audio enhancement, damaged-region detection, A/B comparison, ASR stability, loudness and artifact metrics, panel audition, and audio fixtures.
+  Acceptance: The system renders conservative variants only for detected damaged regions; ranks them by no-reference speech quality, ASR stability, loudness, clipping, and artifact checks; explains every score; never auto-commits the winner; an A/B audition preserves the original and selected variant; fixtures include speech where the cleanest-sounding output has worse recognition.
+  Complexity: M
+
+- [ ] P2 — F428 — Exchange review notes and drawings through ORI OTIO annotations
+  Why: Review bundles encode comments as ordinary OTIO markers and drawings as OpenCut SVG assets, so other review systems cannot recover standardized annotation semantics.
+  Evidence: Verified local format: `opencut/core/review_bundle.py:368`; specification: https://lf-aswf.atlassian.net/wiki/spaces/PRWG/pages/605814827/OTIO%2B2D-Annotations%2BInterchange%2Bspecification.
+  Touches: Review bundle import and export, OTIO and OTIOZ adapters, drawing assets, marker metadata, version migrations, and round-trip fixtures.
+  Acceptance: OpenCut imports and exports ORI `ANNOTATION_1.0` notes and drawings in OTIOZ while retaining current marker and SVG compatibility; unsupported fields survive in namespaced metadata; version and schema validation fail clearly; standardized and legacy bundles round-trip without losing time range, author, status, text, color, or drawing geometry.
+  Complexity: M
+
+- [ ] P2 — F429 — Add stable asset identity and ASC MHL fixity to relink and provenance
+  Why: Path-based media breaks across machines, NAS moves, proxies, and archives, while OpenCut already computes hashes separately for deduplication, sidecars, and C2PA ingredients.
+  Evidence: Verified local seams: `opencut/core/content_fingerprint.py`, `opencut/core/federated_media_index.py`, and `opencut/core/c2pa_sidecar.py`; standards: https://github.com/OpenAssetIO/OpenAssetIO and https://github.com/ascmitc/mhl-specification.
+  Touches: Ingest, asset identity and resolver adapters, proxy lineage, relink, federated index, C2PA ingredients, review and interchange manifests, and migration tests.
+  Acceptance: An optional adapter assigns a stable asset ID independent of path, resolves current location and version, imports and exports ASC MHL records, reuses verified hashes instead of recomputing them, links proxies to originals, and feeds verified transfer history into C2PA ingredients; missing adapters fall back to existing paths; moved, renamed, proxy, tampered, and offline fixtures pass.
+  Complexity: L
+
 ### P3
+
+- [ ] P3 — F430 — Import bitmap subtitles through OCR and a reviewable typesetting lane
+  Why: OpenCut supports broad text-caption import and export but has no PGS, VobSub, or burned-subtitle OCR workflow, while professional subtitle tools treat image-subtitle recovery as a standard ingest need.
+  Evidence: Verified local absence: no bitmap-subtitle route or surface outside FFmpeg advisory text; competitor evidence: https://github.com/SubtitleEdit/subtitleedit/releases and https://github.com/TypesettingTools/Aegisub.
+  Touches: Subtitle stream extraction, OCR adapters, caption confidence and timing, ASS style mapping, transcript workbench, export preflight, and hostile-subtitle fixtures.
+  Acceptance: PGS and VobSub streams can be extracted without trusting a vulnerable embedded decoder; sampled burned captions can be detected and OCRed; each cue retains source image, timing, language, text confidence, and style hints; low-confidence cues require review; edited results export to SRT, WebVTT, and ASS; duplicate, overlapping, vertical, and forced-caption fixtures pass.
+  Complexity: L
 
 
 ## Audit Findings — 2026-08-22
