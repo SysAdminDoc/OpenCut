@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-08-21T02:29:07Z",
+  "generated_at": "2026-08-23T11:51:27Z",
   "source": "opencut/_generated/route_manifest.json",
   "total_records": 74,
   "total_routes": 101,
@@ -729,7 +729,7 @@
       "label": "NLLB-200 distilled caption translation",
       "category": "captions",
       "state": "available",
-      "install_hint": "pip install ctranslate2 sentencepiece huggingface-hub",
+      "install_hint": "pip install ctranslate2 sentencepiece 'huggingface-hub>=1.26,<2'",
       "docs": "docs/MODELS.md",
       "routes": [
         "/captions/enhanced/capabilities"
@@ -1339,7 +1339,7 @@
         "/video/watermark"
       ],
       "check_name": "check_watermark_available",
-      "impl_module": "workflow",
+      "impl_module": "model_safety,workflow",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",

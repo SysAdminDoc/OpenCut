@@ -63,8 +63,11 @@ def nemo_toolkit_version() -> str:
 
 def nemo_runtime_status(platform_name: Optional[str] = None) -> dict[str, Any]:
     """Describe the conservative, officially supported OpenCut NeMo lane."""
+    from opencut.dependency_support import extra_support
+
     selected_platform = str(platform_name or sys.platform).lower()
     platform_supported = selected_platform.startswith("linux")
+    dependency_lane = extra_support("nemo-asr", platform_name=selected_platform)
     version = nemo_toolkit_version()
     parsed = _version_tuple(version)
     version_supported = bool(parsed) and (2, 7, 3) <= parsed < (2, 8)
@@ -83,18 +86,25 @@ def nemo_runtime_status(platform_name: Optional[str] = None) -> dict[str, Any]:
             gpu_available = False
 
     reason = ""
-    if not platform_supported:
+    if not dependency_lane["supported"]:
+        reason = dependency_lane["reason"]
+    elif not platform_supported:
         reason = (
             "NeMo 2.7.3 does not publish a supported Windows runtime; "
             "OpenCut enables these adapters on Linux only."
         )
     elif not import_available:
-        reason = 'Install the Linux-only source extra: python -m pip install -e ".[nemo-asr]"'
+        reason = "The NeMo source extra is not available in the safe dependency matrix."
     elif not version_supported:
         reason = f"NeMo {version} is outside OpenCut's supported >=2.7.3,<2.8 range."
 
     return {
-        "available": bool(platform_supported and import_available and version_supported),
+        "available": bool(
+            dependency_lane["supported"]
+            and platform_supported
+            and import_available
+            and version_supported
+        ),
         "installed": import_available,
         "version": version,
         "version_supported": version_supported,
@@ -178,15 +188,22 @@ def resolve_checkpoint(
         if candidate and os.path.isfile(candidate):
             return verify_checkpoint(candidate, spec)
 
+    if allow_download:
+        from opencut.dependency_support import extra_support
+
+        support = extra_support("nemo-asr", platform_name=sys.platform)
+        if not support["supported"]:
+            raise RuntimeError(support["reason"])
+
     try:
-        from huggingface_hub import hf_hub_download
+        from opencut.core.model_safety import safe_hf_hub_download
     except ImportError as exc:
         raise RuntimeError(
-            'huggingface-hub is required. Install python -m pip install -e ".[nemo-asr]"'
+            "The NeMo download lane is unavailable until it supports huggingface-hub>=1.26."
         ) from exc
 
     try:
-        downloaded = hf_hub_download(
+        downloaded = safe_hf_hub_download(
             repo_id=spec.model_id,
             filename=spec.filename,
             revision=spec.revision,

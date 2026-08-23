@@ -263,12 +263,11 @@ def test_optional_dependency_security_floor_pins():
     for extra in ("ai", "ai-gpu", "depth", "torch-stack"):
         assert _dep_names(extras[extra])["picklescan"] == "picklescan>=1.0.3"
 
-    nemo = _dep_names(extras["nemo-asr"])
-    assert nemo["picklescan"] == "picklescan>=1.0.3; sys_platform == 'linux'"
-    assert nemo["nemo_toolkit"] == "nemo_toolkit[asr]>=2.7.3,<2.8; sys_platform == 'linux'"
-    assert nemo["torch"] == "torch>=2.10.0; sys_platform == 'linux'"
-    assert nemo["huggingface-hub"] == "huggingface-hub>=0.36,<1; sys_platform == 'linux'"
+    assert extras["nemo-asr"] == []
     assert "nemo_toolkit" not in _dep_names(extras["all"])
+
+    core = _dep_names(_pyproject()["project"]["dependencies"])
+    assert core["huggingface-hub"] == "huggingface-hub>=1.26,<2"
 
 
 def test_transformers_security_floor_covers_every_declared_extra():
@@ -318,6 +317,8 @@ def test_runtime_security_floors_cover_bootstrap_installers():
     assert OPENCV_RUNTIME_REQUIREMENT == "opencv-python==4.14.0.94"
     assert runtime_security_requirement("opencv-python") == OPENCV_RUNTIME_REQUIREMENT
     assert runtime_security_requirement("opencv-python-headless") == OPENCV_RUNTIME_REQUIREMENT
+    assert runtime_security_requirement("huggingface-hub") == "huggingface-hub>=1.26,<2"
+    assert runtime_security_requirement("huggingface-hub==1.24.0") == "huggingface-hub>=1.26,<2"
     with pytest.raises(RuntimeError, match="No safe OpenCut install lane"):
         runtime_security_requirement("whisperx")
     assert runtime_security_requirement("numpy>=1.24") == "numpy>=1.24"

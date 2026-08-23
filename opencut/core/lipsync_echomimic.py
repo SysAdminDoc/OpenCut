@@ -152,18 +152,21 @@ def _animate_via_diffusers(
             for f in os.listdir(model_dir)
         ):
             pipe = DiffusionPipeline.from_pretrained(
-                model_dir, torch_dtype=dtype, trust_remote_code=True
+                model_dir,
+                torch_dtype=dtype,
             )
             logger.info("EchoMimic: loaded from local %s", model_dir)
         else:
             raise FileNotFoundError("No local weights")
     except Exception:
         logger.info("EchoMimic: downloading from HuggingFace %s", _ECHOMIMIC_HF_REPO)
+        from opencut.core.model_safety import reviewed_remote_code_kwargs
+
         pipe = DiffusionPipeline.from_pretrained(
             _ECHOMIMIC_HF_REPO,
             torch_dtype=dtype,
             cache_dir=model_dir,
-            trust_remote_code=True,
+            **reviewed_remote_code_kwargs(_ECHOMIMIC_HF_REPO),
         )
 
     pipe = pipe.to(device)

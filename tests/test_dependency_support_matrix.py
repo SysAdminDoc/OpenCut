@@ -51,14 +51,15 @@ def test_platform_specific_gpu_support_is_explicit():
     assert "win32, linux" in mac["reason"]
 
 
-def test_nemo_asr_support_is_explicitly_linux_only():
+def test_nemo_asr_support_is_explicitly_unavailable_until_hub_conflict_clears():
     linux = dependency_support.extra_support("nemo-asr", platform_name="linux")
-    assert linux["supported"] is True
-    assert linux["install_hint"] == 'python -m pip install -e ".[nemo-asr]"'
+    assert linux["supported"] is False
+    assert "huggingface-hub<1" in linux["reason"]
+    assert "CVE-2026-15717" in linux["reason"]
     for platform_name in ("win32", "darwin"):
         status = dependency_support.extra_support("nemo-asr", platform_name=platform_name)
         assert status["supported"] is False
-        assert "supports linux" in status["reason"]
+        assert status["reason"] == linux["reason"]
 
 
 def test_macos_python_314_caption_wheel_gap_is_explicit():
@@ -103,15 +104,15 @@ def test_python_ceiling_rejects_unverified_future_runtime():
 
 def test_versioned_requirement_hits_the_same_platform_gate_as_bare_name():
     """A spec like nemo_toolkit[asr]>=2.7.3,<2.8 (as passed by
-    security.runtime_security_requirement) must not bypass the Linux-only
-    gate that applies to bare nemo_toolkit."""
+    security.runtime_security_requirement) must not bypass the security hold
+    that applies to bare nemo_toolkit."""
     versioned = dependency_support.dependency_support("nemo_toolkit[asr]>=2.7.3,<2.8")
     bare = dependency_support.dependency_support("nemo_toolkit")
 
     assert versioned == bare
     if dependency_support.normalise_platform() != "linux":
         assert versioned["supported"] is False
-        assert "supports linux" in versioned["reason"]
+        assert "CVE-2026-15717" in versioned["reason"]
 
 
 def test_whisperx_conflict_never_emits_an_install_command():
@@ -152,6 +153,17 @@ def test_matrix_script_reports_machine_readable_contract(capsys):
     assert exit_code == 0
     assert payload["status"] == "ok"
     assert payload["results"] == [{"extra": "standard", "reason": "", "status": "supported"}]
+
+
+def test_matrix_script_reports_security_blocked_extra_as_unavailable(capsys):
+    module = _load_matrix_script()
+
+    exit_code = module.main(["--json", "--extra", "nemo-asr"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["results"][0]["status"] == "unsupported"
+    assert "CVE-2026-15717" in payload["results"][0]["reason"]
 
 
 def test_local_matrix_covers_every_os_and_python_lane():

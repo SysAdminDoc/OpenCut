@@ -392,6 +392,7 @@ _SAFE_PACKAGE_RE = re.compile(
 
 _RUNTIME_SECURITY_REQUIREMENTS = {
     "pillow": PILLOW_RUNTIME_REQUIREMENT,
+    "huggingface-hub": "huggingface-hub>=1.26,<2",
     "opencv-python-headless": OPENCV_RUNTIME_REQUIREMENT,
     # Both distributions export ``cv2`` and cannot safely coexist.  Normalize
     # legacy feature bootstraps to the GUI-capable provider required by

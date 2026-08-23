@@ -172,8 +172,12 @@ def _infer_torch_hf(preprocessed, model_name: str):
     import torch
     from transformers import AutoModelForImageSegmentation
 
+    from opencut.core.model_safety import reviewed_remote_code_kwargs
+
     model = AutoModelForImageSegmentation.from_pretrained(
-        model_name, trust_remote_code=True
+        model_name,
+        use_safetensors=True,
+        **reviewed_remote_code_kwargs(model_name),
     )
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device).eval()

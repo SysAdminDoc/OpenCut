@@ -15,13 +15,6 @@ Roadmap_Blocked.md; the rest landed.
 
 ### P0
 
-- [ ] P0 — F410 — Secure Hugging Face downloads and remote model code
-  Why: The release lock pins `huggingface-hub==1.24.0`, while 1.26.0 fixes CVE-2026-15717 filename traversal, and eight model loaders enable unrestricted `trust_remote_code=True`.
-  Evidence: Verified: `requirements-release-lock.txt:459`, `opencut/core/captions_enhanced.py:395`, `opencut/core/object_removal.py:484`, https://github.com/huggingface/huggingface_hub/releases/tag/v1.26.0, and https://nvd.nist.gov/vuln/detail/CVE-2026-15717.
-  Touches: `pyproject.toml`, all dependency locks, `opencut/core/model_safety.py`, `opencut/core/asr_provenance.py`, the eight remote-code model loaders, and hostile-model-repository fixtures.
-  Acceptance: Every resolving extra uses a fixed Hub release or is explicitly unavailable; absolute, UNC, drive-relative, and traversal filenames fail before disk mutation; every model download resolves one immutable revision; safetensors is preferred where supported; remote code runs only for reviewed model and revision pairs; tests fail on an unpinned revision or new unrestricted remote-code call.
-  Complexity: L
-
 - [ ] P0 — F411 — Make resolved feature readiness authoritative across every machine surface
   Why: Eighteen generated readiness records disagree with terminal-stub resolution, and queue, extended MCP, and OpenAPI exposure can present operations that installing a dependency cannot make runnable.
   Evidence: Verified: `opencut/registry.py:148`, `opencut/_generated/feature_readiness.json`, `opencut/routes/jobs_routes.py:184`, `opencut/mcp_extended_tools.py:138`, and `opencut/core/openapi_source.py:231`.

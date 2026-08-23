@@ -18,6 +18,16 @@ def test_generated_feature_readiness_matches_committed_json():
     assert dump_feature_readiness.diff_manifests(committed, payload) == []
 
 
+def test_feature_readiness_writer_uses_repository_lf_endings(tmp_path):
+    output = tmp_path / "feature-readiness.json"
+
+    dump_feature_readiness.write_manifest({"records": []}, output)
+
+    encoded = output.read_bytes()
+    assert encoded.endswith(b"\n")
+    assert b"\r\n" not in encoded
+
+
 def test_generated_feature_readiness_has_no_dead_roadmap_anchors():
     payload = dump_feature_readiness.build_manifest()
     encoded = json.dumps(payload, ensure_ascii=False)

@@ -91,15 +91,23 @@ def model_identity(
     normalized_engine = normalize_engine(engine)
     if normalized_engine in {"parakeet-tdt", "canary-1b-flash"}:
         from opencut.core.asr_nemo_models import CANARY_SPEC, PARAKEET_SPEC
+        from opencut.core.model_safety import require_immutable_hf_revision
 
         spec = PARAKEET_SPEC if normalized_engine == "parakeet-tdt" else CANARY_SPEC
-        return spec.model_id, str(requested_revision or spec.revision)
+        revision = require_immutable_hf_revision(requested_revision or spec.revision)
+        if revision != spec.revision:
+            raise ValueError(f"{spec.model_id} is pinned to revision {spec.revision}")
+        return spec.model_id, revision
     if normalized_engine in {"faster-whisper", "whisperx"}:
-        model_id, pinned = FASTER_WHISPER_MODELS.get(
-            model_value,
-            (model_value, "operator-supplied"),
-        )
-        return model_id, str(requested_revision or pinned)
+        from opencut.core.model_safety import require_immutable_hf_revision
+
+        known_model = FASTER_WHISPER_MODELS.get(model_value)
+        if known_model:
+            model_id, pinned = known_model
+            return model_id, require_immutable_hf_revision(requested_revision or pinned)
+        if not requested_revision:
+            require_immutable_hf_revision("")
+        return model_value, require_immutable_hf_revision(requested_revision)
     if normalized_engine == "openai-whisper":
         revision = str(requested_revision or "")
         if not revision:

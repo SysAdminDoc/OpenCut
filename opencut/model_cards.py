@@ -202,7 +202,7 @@ CARDS: List[ModelCard] = [
         license="CC-BY-NC-4.0",
         upstream="https://huggingface.co/facebook/nllb-200-distilled-600M",
         hardware="cpu/gpu",
-        install_hint="pip install ctranslate2 sentencepiece huggingface-hub",
+        install_hint="pip install ctranslate2 sentencepiece 'huggingface-hub>=1.26,<2'",
         privacy="local-only (model downloads only)",
         latency="seconds per caption batch on CPU/GPU depending on model size",
         advisory_notes=[
@@ -258,11 +258,11 @@ CARDS: List[ModelCard] = [
         license="Apache-2.0 (toolkit; model terms vary)",
         upstream="https://github.com/NVIDIA/NeMo",
         hardware="cpu/gpu",
-        install_hint='pip install "nemo_toolkit[asr]"',
+        install_hint="Unavailable until NeMo supports huggingface-hub>=1.26",
         privacy="local-only (model downloads only)",
         latency="unbenchmarked by OpenCut; NVIDIA GPU recommended",
         advisory_notes=[
-            "Parakeet and Canary are selectable ASR engines; verify each downloaded model card before redistributing weights.",
+            "The supported install lane is paused because NeMo requires a Hub release below the filename-containment fix.",
         ],
     ),
     ModelCard(
@@ -273,7 +273,7 @@ CARDS: List[ModelCard] = [
         license="Apache-2.0 (NeMo toolkit; model terms vary)",
         upstream="https://github.com/NVIDIA/NeMo",
         hardware="gpu",
-        install_hint='pip install "nemo_toolkit[asr]"',
+        install_hint="Unavailable until NeMo supports huggingface-hub>=1.26",
         privacy="local-only (model downloads only)",
         latency="~1x realtime depending on GPU",
         advisory_notes=[
