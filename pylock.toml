@@ -256,14 +256,14 @@ sha256 = "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad"
 
 [[packages]]
 name = "huggingface-hub"
-version = "1.24.0"
+version = "1.28.0"
 
 [[packages.wheels]]
-name = "huggingface_hub-1.24.0-py3-none-any.whl"
-url = "https://files.pythonhosted.org/packages/5f/c3/aeaaf3911d2529614be18d1c8b5496afc185560e76568063d517283318af/huggingface_hub-1.24.0-py3-none-any.whl"
+name = "huggingface_hub-1.28.0-py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/51/0e/eafef18f1a75e125e68395db21131db0cf868a128ecd2fce69b4df6c584b/huggingface_hub-1.28.0-py3-none-any.whl"
 
 [packages.wheels.hashes]
-sha256 = "6ed4120a84a6beec900640aa7e346bd766a6b7341e41526fef5dc8bd81fb7d59"
+sha256 = "58a8bacb03072edfc38067065e9dc24bbb34805410fcd36a1632de0b329660bb"
 
 [[packages]]
 name = "idna"

@@ -52,26 +52,31 @@ def test_builtin_faster_whisper_identity_is_immutable():
     assert revision == "0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf"
 
 
+def test_custom_faster_whisper_repo_requires_an_immutable_revision():
+    from opencut.core.asr_provenance import model_identity
+
+    with pytest.raises(ValueError, match="full 40-character commit"):
+        model_identity("faster-whisper", "operator/custom-model")
+
+    model_id, revision = model_identity(
+        "faster-whisper",
+        "operator/custom-model",
+        "b" * 40,
+    )
+    assert model_id == "operator/custom-model"
+    assert revision == "b" * 40
+
+
 def test_corrupt_cache_recovery_downloads_the_pinned_revision(monkeypatch):
     import opencut.core.captions as captions
+    import opencut.core.model_safety as model_safety
 
     captured = {}
 
-    monkeypatch.setitem(
-        sys.modules,
-        "huggingface_hub",
-        type(
-            "Hub",
-            (),
-            {
-                "snapshot_download": staticmethod(
-                    lambda repo_id, **kwargs: captured.update(
-                        repo_id=repo_id,
-                        **kwargs,
-                    )
-                )
-            },
-        )(),
+    monkeypatch.setattr(
+        model_safety,
+        "safe_snapshot_download",
+        lambda repo_id, **kwargs: captured.update(repo_id=repo_id, **kwargs),
     )
 
     captions._download_model("base")
@@ -79,6 +84,41 @@ def test_corrupt_cache_recovery_downloads_the_pinned_revision(monkeypatch):
     assert captured["repo_id"] == "Systran/faster-whisper-base"
     assert captured["revision"] == "ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66"
     assert captured["force_download"] is True
+
+
+def test_installer_download_verifies_the_pinned_snapshot_path(monkeypatch, tmp_path):
+    from opencut import server
+    from opencut.core import model_safety
+
+    captured = {"lists": [], "downloads": [], "loads": []}
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+
+    monkeypatch.setattr(
+        model_safety,
+        "safe_list_repo_files",
+        lambda repo_id, **kwargs: captured["lists"].append((repo_id, kwargs)) or ["config.json"],
+    )
+    monkeypatch.setattr(
+        model_safety,
+        "safe_snapshot_download",
+        lambda repo_id, **kwargs: captured["downloads"].append((repo_id, kwargs)) or str(snapshot),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "faster_whisper",
+        SimpleNamespace(
+            WhisperModel=lambda model_path, **kwargs: captured["loads"].append(
+                (model_path, kwargs)
+            )
+        ),
+    )
+
+    assert server.download_models("base") == 0
+    expected_revision = "ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66"
+    assert captured["lists"][0][1]["revision"] == expected_revision
+    assert captured["downloads"][0][1]["revision"] == expected_revision
+    assert captured["loads"] == [(str(snapshot), {"device": "cpu", "compute_type": "int8"})]
 
 
 def test_engine_override_is_strict_and_normalizes_aliases(monkeypatch):

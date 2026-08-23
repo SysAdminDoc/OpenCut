@@ -451,7 +451,7 @@ def captions_enhanced_install(job_id, filepath, data):
     packages = {
         "whisperx": ["whisperx"],
         "pysubs2": ["pysubs2"],
-        "nllb": ["ctranslate2", "sentencepiece", "huggingface-hub"],
+        "nllb": ["ctranslate2", "sentencepiece", "huggingface-hub>=1.26,<2"],
         "seamless": ["transformers", "torch", "sentencepiece"],
     }
 

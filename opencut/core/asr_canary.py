@@ -16,7 +16,7 @@ from opencut.core.asr_nemo import (
 from opencut.core.asr_nemo_models import CANARY_SPEC
 from opencut.core.captions import TranscriptionResult, transcription_result_to_dict
 
-INSTALL_HINT = 'python -m pip install -e ".[nemo-asr]"  # Linux only'
+INSTALL_HINT = "Unavailable until NeMo supports huggingface-hub>=1.26"
 SUPPORTED_LANGUAGES = frozenset({"de", "en", "es", "fr"})
 
 

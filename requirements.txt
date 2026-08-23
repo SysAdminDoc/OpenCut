@@ -21,6 +21,8 @@ cryptography>=50.0.0,<51
 # Jinja2 CVE-2025-27516 fixed 3.1.6).
 Werkzeug>=3.1.6
 Jinja2>=3.1.6
+# CVE-2026-15717: cross-platform local_dir filename containment.
+huggingface-hub>=1.26,<2
 
 # === STANDARD (recommended) ===
 faster-whisper>=1.1,<2

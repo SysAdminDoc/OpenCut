@@ -18,6 +18,7 @@ import logging
 import os
 from typing import Callable, Dict, List, Optional, Tuple
 
+from opencut.core.model_safety import PINNED_HF_MODELS, safe_snapshot_download
 from opencut.helpers import ensure_package
 
 logger = logging.getLogger("opencut")
@@ -43,7 +44,7 @@ TRANSLATION_BACKENDS = {
         "opt_in_required": True,
         "privacy": "local-only after model download",
         "install_component": "nllb",
-        "install_hint": "pip install ctranslate2 sentencepiece huggingface-hub",
+        "install_hint": "pip install ctranslate2 sentencepiece 'huggingface-hub>=1.26,<2'",
         "model_id": "JustFrederik/nllb-200-distilled-600M-ct2-float16",
         "upstream": "https://huggingface.co/facebook/nllb-200-distilled-600M",
         "redistribution": (
@@ -389,11 +390,15 @@ def translate_text(
     if not os.path.isdir(model_dir):
         if on_progress:
             on_progress(10, "Downloading NLLB translation model (~1.2GB)...")
-        if not ensure_package("huggingface_hub", "huggingface-hub", on_progress):
-            raise RuntimeError("Failed to install huggingface-hub. Install manually: pip install huggingface-hub")
-        from huggingface_hub import snapshot_download
-        snapshot_download(
-            "JustFrederik/nllb-200-distilled-600M-ct2-float16",
+        if not ensure_package("huggingface_hub", "huggingface-hub>=1.26,<2", on_progress):
+            raise RuntimeError(
+                "Failed to install a safe huggingface-hub release. "
+                "Install manually: pip install 'huggingface-hub>=1.26,<2'"
+            )
+        model_id = "JustFrederik/nllb-200-distilled-600M-ct2-float16"
+        safe_snapshot_download(
+            model_id,
+            revision=PINNED_HF_MODELS[model_id],
             local_dir=model_dir,
         )
 
@@ -470,11 +475,15 @@ def translate_segments(
     if not os.path.isdir(model_dir):
         if on_progress:
             on_progress(10, "Downloading NLLB model (~1.2GB)...")
-        if not ensure_package("huggingface_hub", "huggingface-hub", on_progress):
-            raise RuntimeError("Failed to install huggingface-hub. Install manually: pip install huggingface-hub")
-        from huggingface_hub import snapshot_download
-        snapshot_download(
-            "JustFrederik/nllb-200-distilled-600M-ct2-float16",
+        if not ensure_package("huggingface_hub", "huggingface-hub>=1.26,<2", on_progress):
+            raise RuntimeError(
+                "Failed to install a safe huggingface-hub release. "
+                "Install manually: pip install 'huggingface-hub>=1.26,<2'"
+            )
+        model_id = "JustFrederik/nllb-200-distilled-600M-ct2-float16"
+        safe_snapshot_download(
+            model_id,
+            revision=PINNED_HF_MODELS[model_id],
             local_dir=model_dir,
         )
 
@@ -569,9 +578,14 @@ def translate_text_seamless(
 
         activate_selected_gpu(torch_module=torch)
     model_id = "facebook/seamless-m4t-v2-large"
+    revision = PINNED_HF_MODELS[model_id]
 
-    processor = AutoProcessor.from_pretrained(model_id)
-    model = SeamlessM4Tv2ForTextToText.from_pretrained(model_id).to(device)
+    processor = AutoProcessor.from_pretrained(model_id, revision=revision)
+    model = SeamlessM4Tv2ForTextToText.from_pretrained(
+        model_id,
+        revision=revision,
+        use_safetensors=True,
+    ).to(device)
 
     if on_progress:
         on_progress(50, "Translating...")
@@ -636,9 +650,14 @@ def translate_segments_auto(
 
             activate_selected_gpu(torch_module=torch)
         model_id = "facebook/seamless-m4t-v2-large"
+        revision = PINNED_HF_MODELS[model_id]
 
-        processor = AutoProcessor.from_pretrained(model_id)
-        model = SeamlessM4Tv2ForTextToText.from_pretrained(model_id).to(device)
+        processor = AutoProcessor.from_pretrained(model_id, revision=revision)
+        model = SeamlessM4Tv2ForTextToText.from_pretrained(
+            model_id,
+            revision=revision,
+            use_safetensors=True,
+        ).to(device)
 
         try:
             translated_segments = []

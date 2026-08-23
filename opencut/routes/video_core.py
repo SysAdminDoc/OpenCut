@@ -154,17 +154,23 @@ def video_watermark(job_id, filepath, data):
         # Load Florence-2 model for detection
         _update_job(job_id, progress=15, message=f"Loading Florence-2 model ({device})...")
 
-        # Use bundled model path if available
+        # Custom repository code is allowed only from the reviewed Hub commit.
         if FLORENCE_MODEL_DIR and os.path.isdir(FLORENCE_MODEL_DIR):
-            model_id = FLORENCE_MODEL_DIR
-            logger.info(f"Using bundled Florence model: {model_id}")
-        else:
-            model_id = "microsoft/Florence-2-base"
+            raise RuntimeError(
+                "OPENCUT_FLORENCE_DIR cannot supply executable model code. "
+                "Use the reviewed Florence-2 Hub snapshot cache instead."
+            )
+        model_id = "microsoft/Florence-2-base"
+        from opencut.core.model_safety import reviewed_remote_code_kwargs
+
+        remote_code = reviewed_remote_code_kwargs(model_id)
 
         florence_model = AutoModelForCausalLM.from_pretrained(
-            model_id, trust_remote_code=True
+            model_id,
+            use_safetensors=True,
+            **remote_code,
         ).to(device)
-        florence_processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
+        florence_processor = AutoProcessor.from_pretrained(model_id, **remote_code)
 
         # Load LaMA model for inpainting
         _update_job(job_id, progress=25, message="Loading LaMA inpainting model...")

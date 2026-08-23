@@ -2609,6 +2609,18 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ## [Unreleased]
 
+### Security - Contain remote model downloads
+
+- Hugging Face downloads now resolve a reviewed 40-character commit before any
+  file is accepted. Absolute paths, UNC names, drive-relative names, and parent
+  traversal are rejected before a destination is created.
+- Remote model code is limited to exact reviewed repository and revision pairs.
+  Florence 2 and BiRefNet prefer safetensors, and repository tests reject new
+  unrestricted remote-code calls or downloads that bypass the safety layer.
+- The Hub floor is 1.26.0, which contains the filename-validation fix for
+  CVE-2026-15717. NeMo is temporarily unavailable because its current release
+  requires an older Hub version; cached checkpoints remain readable.
+
 ### Security - Block vulnerable embedded FFmpeg copies
 
 - Release checks now inventory and hash the separate FFmpeg libraries shipped

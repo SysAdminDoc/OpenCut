@@ -822,12 +822,10 @@ def download_models(model_size="base"):
     }
     size_str = model_sizes.get(model_size, "unknown size")
 
-    # Resolve model name to HF repo ID
-    try:
-        from faster_whisper.utils import _MODELS
-        repo_id = _MODELS.get(model_size, model_size)
-    except Exception:
-        repo_id = f"Systran/faster-whisper-{model_size}"
+    # Resolve model name to the immutable repository revision used at runtime.
+    from opencut.core.asr_provenance import model_identity
+
+    repo_id, revision = model_identity("faster-whisper", model_size)
 
     print("")
     print("  OpenCut Model Downloader")
@@ -840,10 +838,10 @@ def download_models(model_size="base"):
 
     # Step 1: Download model files with progress
     try:
-        from huggingface_hub import list_repo_files, snapshot_download
+        from opencut.core.model_safety import safe_list_repo_files, safe_snapshot_download
 
         print("  Fetching file list...")
-        files = list_repo_files(repo_id)
+        files = safe_list_repo_files(repo_id, revision=revision)
         total_files = len(files)
         print(f"  Found {total_files} files to download.")
         print("")
@@ -876,7 +874,11 @@ def download_models(model_size="base"):
         try:
             print("  Downloading from Hugging Face...")
             print("")
-            snapshot_download(repo_id, local_files_only=False)
+            snapshot_path = safe_snapshot_download(
+                repo_id,
+                revision=revision,
+                local_files_only=False,
+            )
             print("")
         finally:
             # Always restore tqdm even if download fails
@@ -894,7 +896,7 @@ def download_models(model_size="base"):
     print("  Verifying model...")
     try:
         from faster_whisper import WhisperModel
-        model = WhisperModel(model_size, device="cpu", compute_type="int8")
+        model = WhisperModel(snapshot_path, device="cpu", compute_type="int8")
         del model
         print(f"  [OK] Whisper '{model_size}' model downloaded and verified!")
     except Exception as e:

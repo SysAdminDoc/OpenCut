@@ -65,11 +65,17 @@ def identify(video_path: str, max_head_frames: int = 60) -> SlateInfo:
 
         model_name = "microsoft/Florence-2-base"
         if "processor" not in _florence_cache:
+            from opencut.core.model_safety import reviewed_remote_code_kwargs
+
+            remote_code = reviewed_remote_code_kwargs(model_name)
             _florence_cache["processor"] = AutoProcessor.from_pretrained(
-                model_name, trust_remote_code=True
+                model_name,
+                **remote_code,
             )
             _florence_cache["model"] = AutoModelForCausalLM.from_pretrained(
-                model_name, trust_remote_code=True
+                model_name,
+                use_safetensors=True,
+                **remote_code,
             )
         processor = _florence_cache["processor"]
         model = _florence_cache["model"]

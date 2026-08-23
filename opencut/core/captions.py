@@ -1060,9 +1060,10 @@ def _download_model(model_name: str, requested_revision: Optional[str] = None):
         requested_revision,
     )
     try:
-        from huggingface_hub import snapshot_download
+        from opencut.core.model_safety import safe_snapshot_download
+
         logger.info(f"Downloading model '{repo_id}' from HuggingFace Hub...")
-        snapshot_download(repo_id, revision=revision, force_download=True)
+        safe_snapshot_download(repo_id, revision=revision, force_download=True)
         logger.info(f"Model '{repo_id}' downloaded successfully.")
     except ImportError:
         # huggingface_hub not available — faster-whisper will download on load

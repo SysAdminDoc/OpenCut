@@ -165,10 +165,16 @@ def main(argv: list[str] | None = None) -> int:
         elif args.resolve:
             results = resolve_extras(selected)
         else:
-            results = [
-            {"extra": name, "status": "supported", "reason": ""}
-            for name in selected
-            ]
+            results = []
+            for name in selected:
+                support = extra_support(name)
+                results.append(
+                    {
+                        "extra": name,
+                        "status": "supported" if support["supported"] else "unsupported",
+                        "reason": support["reason"],
+                    }
+                )
         payload = {
             "status": "ok",
             "python": f"{sys.version_info.major}.{sys.version_info.minor}",

@@ -480,10 +480,16 @@ def detect_watermark_region(
 
     model_id = "microsoft/Florence-2-base"
     try:
+        from opencut.core.model_safety import reviewed_remote_code_kwargs
+
+        remote_code = reviewed_remote_code_kwargs(model_id)
         model = AutoModelForCausalLM.from_pretrained(
-            model_id, torch_dtype=torch_dtype, trust_remote_code=True,
+            model_id,
+            torch_dtype=torch_dtype,
+            use_safetensors=True,
+            **remote_code,
         ).to(device)
-        processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
+        processor = AutoProcessor.from_pretrained(model_id, **remote_code)
     except Exception as e:
         logger.warning("Florence-2 model load failed: %s", e)
         return _fallback_watermark_detection(frame, on_progress)

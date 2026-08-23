@@ -39,9 +39,9 @@ Total optional AI/model surfaces: **69**. Each row carries license, hardware, in
 | [CrisperWhisper](https://github.com/nyrahealth/CrisperWhisper) | Apache-2.0 | gpu | local-only | `pip install ctranslate2 + crisper-whisper` |
 | [Moonshine ASR (CPU-optimized STT)](https://github.com/usefulsensors/moonshine) | MIT (English models) | cpu | local-only | `pip install moonshine` |
 | [Multimodal diarisation pipeline](https://github.com/m-bain/whisperX) | MIT | gpu | local-only (HF token used for weights download only) | `pip install whisperx + pyannote.audio (HF token required)` |
-| [NLLB-200 distilled caption translation](https://huggingface.co/facebook/nllb-200-distilled-600M) | CC-BY-NC-4.0 | cpu/gpu | local-only (model downloads only) | `pip install ctranslate2 sentencepiece huggingface-hub` |
-| [NVIDIA NeMo ASR (Parakeet / Canary)](https://github.com/NVIDIA/NeMo) | Apache-2.0 (toolkit; model terms vary) | cpu/gpu | local-only (model downloads only) | `pip install "nemo_toolkit[asr]"` |
-| [NVIDIA Sortformer diarization](https://github.com/NVIDIA/NeMo) | Apache-2.0 (NeMo toolkit; model terms vary) | gpu | local-only (model downloads only) | `pip install "nemo_toolkit[asr]"` |
+| [NLLB-200 distilled caption translation](https://huggingface.co/facebook/nllb-200-distilled-600M) | CC-BY-NC-4.0 | cpu/gpu | local-only (model downloads only) | `pip install ctranslate2 sentencepiece 'huggingface-hub>=1.26,<2'` |
+| [NVIDIA NeMo ASR (Parakeet / Canary)](https://github.com/NVIDIA/NeMo) | Apache-2.0 (toolkit; model terms vary) | cpu/gpu | local-only (model downloads only) | `Unavailable until NeMo supports huggingface-hub>=1.26` |
+| [NVIDIA Sortformer diarization](https://github.com/NVIDIA/NeMo) | Apache-2.0 (NeMo toolkit; model terms vary) | gpu | local-only (model downloads only) | `Unavailable until NeMo supports huggingface-hub>=1.26` |
 | [pyannote speaker diarization](https://huggingface.co/pyannote/speaker-diarization-community-1) | CC-BY-4.0 (community-1; legacy model terms vary) | cpu/gpu | local-only (HF token used for gated weight download only) | `pip install pyannote.audio` |
 | [pyonfx ASS karaoke](https://github.com/CoffeeStraw/PyonFX) | LGPL-3.0 | cpu | local-only | `pip install pyonfx` |
 | [SeamlessM4T v2 caption translation](https://huggingface.co/facebook/seamless-m4t-v2-large) | CC-BY-NC-4.0 | gpu (recommended) | local-only (model downloads only) | `pip install transformers torch sentencepiece` |
@@ -50,7 +50,7 @@ Total optional AI/model surfaces: **69**. Each row carries license, hardware, in
 - *pyannote speaker diarization* — The community-1 pipeline is the default; pyannote 4 exclusive_speaker_diarization output is used for multicam boundaries when available and the boundary source is reported. Legacy pyannote 3.1 remains a fallback and may require accepting gated Hugging Face terms.
 - *Moonshine ASR (CPU-optimized STT)* — Multilingual models use a community (non-commercial) license and are gated separately.
 - *Multimodal diarisation pipeline* — pyannote checkpoints are gated by Hugging Face acceptance — set HUGGINGFACE_HUB_TOKEN.
-- *NVIDIA NeMo ASR (Parakeet / Canary)* — Parakeet and Canary are selectable ASR engines; verify each downloaded model card before redistributing weights.
+- *NVIDIA NeMo ASR (Parakeet / Canary)* — The supported install lane is paused because NeMo requires a Hub release below the filename-containment fix.
 - *NLLB-200 distilled caption translation* — Non-commercial model license: never auto-selected by /captions/translate and not bundled with OpenCut.
 - *NLLB-200 distilled caption translation* — Operators must pass accept_restricted_license=true before download/use.
 - *pyonfx ASS karaoke* — LGPL — using as a library inside a proprietary distribution requires legal review.

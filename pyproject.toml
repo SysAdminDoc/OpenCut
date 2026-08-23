@@ -68,6 +68,9 @@ dependencies = [
     # 3.1.6), and Jinja2 CVE-2025-27516 (sandbox breakout, fixed 3.1.6).
     "Werkzeug>=3.1.6",
     "Jinja2>=3.1.6",
+    # 1.26 rejects absolute, UNC, drive-relative, and traversal filenames on
+    # every platform before local_dir download paths are created (CVE-2026-15717).
+    "huggingface-hub>=1.26,<2",
 ]
 
 [project.optional-dependencies]
@@ -136,12 +139,9 @@ diarize = [
     "pyannote.audio>=4.0,<5",
 ]
 nemo-asr = [
-    # NeMo 2.7.3 publishes Linux as its supported OpenCut runtime lane.
-    # Keep this heavyweight/model-loading stack separate from [all].
-    "nemo_toolkit[asr]>=2.7.3,<2.8; sys_platform == 'linux'",
-    "torch>=2.10.0; sys_platform == 'linux'",
-    "huggingface-hub>=0.36,<1; sys_platform == 'linux'",
-    "picklescan>=1.0.3; sys_platform == 'linux'",
+    # Security hold: NeMo 2.7.3 requires huggingface-hub<1, but filename
+    # containment is fixed only in Hub 1.26+. Keep the named extra empty and
+    # report it as unavailable until NVIDIA publishes a compatible lane.
 ]
 auto-edit = [
     # LEGACY ONLY. Upstream rewrote auto-editor in Nim and stopped publishing
@@ -196,7 +196,6 @@ depth = [
     # >=5.10 clears CVE-2026-9856 (save_pretrained path traversal via
     # chat_template keys, affects through 5.9.x). OpenCut never calls
     # save_pretrained, so this is hygiene for transitive callers; it does
-    # not resolve the separate huggingface-hub<1 conflict tracked as blocked.
     "transformers>=5.10",
 ]
 torch-stack = [
@@ -215,7 +214,6 @@ torch-stack = [
     # >=5.10 clears CVE-2026-9856 (save_pretrained path traversal via
     # chat_template keys, affects through 5.9.x). OpenCut never calls
     # save_pretrained, so this is hygiene for transitive callers; it does
-    # not resolve the separate huggingface-hub<1 conflict tracked as blocked.
     "transformers>=5.10",
 ]
 all = [

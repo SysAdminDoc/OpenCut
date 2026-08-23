@@ -59,6 +59,14 @@ EXTRA_UNSUPPORTED_LANES: Mapping[tuple[str, str, str], str] = {
     },
 }
 
+EXTRA_UNAVAILABLE: Mapping[str, str] = {
+    "nemo-asr": (
+        "The NeMo 2.7.3 lane requires huggingface-hub<1, which does not contain "
+        "the CVE-2026-15717 filename-containment fix. OpenCut will restore this "
+        "extra when NVIDIA supports huggingface-hub>=1.26."
+    ),
+}
+
 UNSUPPORTED_DEPENDENCIES: Mapping[str, str] = {
     "whisperx": (
         "WhisperX 3.8.x requires torchvision <0.24, but OpenCut requires "
@@ -188,6 +196,8 @@ def extra_support(
     contract = EXTRA_SUPPORT.get(extra)
     if contract is None:
         return {"supported": False, "reason": f"Unknown OpenCut extra: {extra}", "extra": extra}
+    if extra in EXTRA_UNAVAILABLE:
+        return {"supported": False, "reason": EXTRA_UNAVAILABLE[extra], "extra": extra}
     py_version = python_version_text(version)
     target_platform = normalise_platform(platform_name)
     if py_version not in contract["python"]:

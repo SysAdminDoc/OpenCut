@@ -664,27 +664,26 @@ For the larger Torch-backed stack, install the explicit extra or narrower featur
 ```bash
 python -m pip install -e ".[all,torch-stack]"
 python -m pip install -e ".[diarize]"  # pyannote speaker diarization
-python -m pip install -e ".[nemo-asr]"  # Parakeet/Canary ASR; Linux only
 ```
 
 `torch-stack` includes Demucs, RealESRGAN/GFPGAN, pyannote.audio, TransNetV2,
-PyTorch 2.10+, torchvision 0.25+, and Transformers 5.3+. WhisperX,
+PyTorch 2.10+, torchvision 0.25+, and Transformers 5.10+. WhisperX,
 AudioCraft/MusicGen, and Resemble Enhance are not advertised install lanes:
 their published releases require obsolete Torch families below OpenCut's
 security floor.
 
-The NeMo lane pins toolkit 2.7.3 and immutable Parakeet/Canary checkpoint
-revisions. OpenCut verifies each multi-gigabyte checkpoint with SHA-256 and
-`picklescan` before loading it. NVIDIA does not support this NeMo release on
-Windows or macOS, so cached NeMo transcripts remain readable there but new
-inference is Linux-only.
+The `nemo-asr` extra is temporarily unavailable. NeMo 2.7.3 requires
+`huggingface-hub<1`, while OpenCut requires Hub 1.26 or newer for the
+CVE-2026-15717 filename-containment fix. Existing transcript records remain
+readable. OpenCut will restore new Parakeet and Canary downloads when NVIDIA
+publishes a compatible dependency lane.
 
 | Platform | Python | CPU extras | `ai-gpu` | `nemo-asr` |
 |----------|--------|------------|----------|------------|
-| Windows | 3.11-3.14 | Supported | Supported | Not supported |
-| Linux | 3.11-3.14 | Supported | Supported | Supported; NVIDIA GPU recommended |
-| macOS | 3.11-3.13 | Supported except `ai` and `all` | Not supported | Not supported |
-| macOS | 3.14 | Supported except `standard`, `captions`, `ai`, and `all` | Not supported | Not supported |
+| Windows | 3.11-3.14 | Supported | Supported | Temporarily unavailable |
+| Linux | 3.11-3.14 | Supported | Supported | Temporarily unavailable |
+| macOS | 3.11-3.13 | Supported except `ai` and `all` | Not supported | Temporarily unavailable |
+| macOS | 3.14 | Supported except `standard`, `captions`, `ai`, and `all` | Not supported | Temporarily unavailable |
 
 ### GPU Acceleration
 
