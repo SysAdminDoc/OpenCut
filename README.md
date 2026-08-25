@@ -1,12 +1,12 @@
 # OpenCut for Premiere Pro
 
-![Version](https://img.shields.io/badge/version-1.55.0-blue)
+![Version](https://img.shields.io/badge/version-1.55.1-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1564-orange)
-![Tests](https://img.shields.io/badge/Tests-14400+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-14500+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only. Each route is tagged
@@ -74,7 +74,7 @@ is the one step that needs the maintainer's PyPI account.
 
 **Option A: Windows Installer (recommended for Windows):**
 
-The latest published Windows installer is [OpenCut v1.55.0](https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.55.0). Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python is needed for the packaged release.
+The latest published Windows installer is [OpenCut v1.55.0](https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.55.0). It predates the current source tree, so if you need something that landed after that release, install from source instead. Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python is needed for the packaged release.
 
 Every assembled installer includes `release-composition.json`,
 `opencut-artifact-sbom.cyclonedx.json`, `THIRD-PARTY-NOTICES.txt`, and
@@ -337,7 +337,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 
 ## Feature Overview
 
-OpenCut v1.55.0 includes **1,564 shipped API routes** (implemented or dependency-gated; 29 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,254 integration-only routes** are explicitly classified rather than presented as direct user workflows.
+OpenCut v1.55.1 includes **1,564 shipped API routes** (implemented or dependency-gated; 29 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **310** have literal first-party panel, palette, CLI, and curated MCP references; **1,254 integration-only routes** are explicitly classified rather than presented as direct user workflows.
 
 ### Cut & Clean
 
@@ -948,7 +948,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-14,400+ estimated tests across 361 root test files covering route smoke tests,
+14,500+ estimated tests across 363 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -1017,7 +1017,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (14,400+ estimated tests, 361 root test files)
+tests/               # pytest test suite (14,500+ estimated tests, 363 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/
