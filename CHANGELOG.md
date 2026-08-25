@@ -2,6 +2,18 @@
 
 Notable changes to OpenCut. The git history carries the detailed record.
 
+## 1.55.1: Installer crash fix
+
+### Fixed: setup no longer dies on the Options page
+
+- Clicking Next on the License page could kill the installer with an unhandled
+  NullReferenceException before the Options page ever drew. WPF raises change
+  events while a page is still being constructed, and the disk-space estimate
+  ran against controls that didn't exist yet. Reported in issue #6.
+- The Complete page carried the same latent pattern on its launch checkbox.
+  Every state-change handler in the setup pages now waits until the page has
+  finished building, and a test keeps it that way.
+
 ## 1.55.0: The workspace gets out of the way
 
 ### Changed: hierarchy replaces decoration

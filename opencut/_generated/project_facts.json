@@ -4,7 +4,7 @@
       "github_windows_installer": {
         "asset_pattern": "OpenCut-Setup-<version>.exe",
         "available": true,
-        "current": true,
+        "current": false,
         "install_command": null,
         "published_version": "1.55.0",
         "url": "https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.55.0"
@@ -43,7 +43,7 @@
   "project": {
     "distribution_name": "opencut-ppro",
     "name": "OpenCut",
-    "version": "1.55.0"
+    "version": "1.55.1"
   },
   "routes": {
     "blueprints": 107,
