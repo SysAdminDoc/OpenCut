@@ -11,11 +11,17 @@ public partial class CompletePage : Page
 {
     private readonly MainWindow _mainWindow;
 
+    // LaunchCheck ships IsChecked="True" in XAML, so its Checked handler fires
+    // inside InitializeComponent before FinishButton exists. Bail out until
+    // construction has finished; OnLoaded refreshes the button label.
+    private readonly bool _initialized;
+
     public CompletePage(MainWindow mainWindow)
     {
         InitializeComponent();
         _mainWindow = mainWindow;
         Loaded += OnLoaded;
+        _initialized = true;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -51,6 +57,7 @@ public partial class CompletePage : Page
 
     private void LaunchCheck_Changed(object sender, RoutedEventArgs e)
     {
+        if (!_initialized) return;
         UpdateFinishButtonLabel();
     }
 

@@ -9,11 +9,16 @@ public partial class LicensePage : Page
 {
     private readonly MainWindow _mainWindow;
 
+    // Guard against change events raised while InitializeComponent is still
+    // constructing the page (BAML fires handlers as attribute values apply).
+    private readonly bool _initialized;
+
     public LicensePage(MainWindow mainWindow)
     {
         InitializeComponent();
         _mainWindow = mainWindow;
         Loaded += OnLoaded;
+        _initialized = true;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -51,6 +56,7 @@ public partial class LicensePage : Page
 
     private void AcceptCheck_Changed(object sender, RoutedEventArgs e)
     {
+        if (!_initialized) return;
         NextBtn.IsEnabled = AcceptCheck.IsChecked == true;
     }
 

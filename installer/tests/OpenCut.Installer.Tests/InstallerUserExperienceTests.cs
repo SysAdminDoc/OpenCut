@@ -96,6 +96,57 @@ public class InstallerUserExperienceTests
         Assert.DoesNotContain("#40FFFFFF", progress);
     }
 
+    // Regression for issue #6: BAML connects event handlers before it applies
+    // attribute values, so a Text="..." or IsChecked="True" set in XAML raises
+    // TextChanged/Checked inside InitializeComponent while later-declared
+    // controls are still null. OptionsPage crashed with a
+    // NullReferenceException in GetEstimatedInstallSizeLabel this way. Every
+    // state-change handler wired in page XAML must bail out until the
+    // constructor has finished.
+    [Fact]
+    public void PageStateChangeHandlersGuardAgainstPartialInitialization()
+    {
+        var pagesDir = Path.Combine(InstallerRoot, "Pages");
+        var wiringPattern = new System.Text.RegularExpressions.Regex(
+            "(?<![A-Za-z])(?:TextChanged|Checked|Unchecked|SelectionChanged)=\\\"(?<handler>[A-Za-z0-9_]+)\\\"");
+
+        var checkedAnything = false;
+
+        foreach (var xamlFile in Directory.EnumerateFiles(pagesDir, "*.xaml"))
+        {
+            var handlers = wiringPattern.Matches(File.ReadAllText(xamlFile))
+                .Select(m => m.Groups["handler"].Value)
+                .Distinct()
+                .ToList();
+
+            if (handlers.Count == 0)
+            {
+                continue;
+            }
+
+            checkedAnything = true;
+            var codeBehind = File.ReadAllText(xamlFile + ".cs");
+            var relative = Path.GetRelativePath(RepoRoot, xamlFile);
+
+            Assert.True(
+                codeBehind.Contains("private readonly bool _initialized;"),
+                $"{relative}.cs wires state-change handlers in XAML but declares no _initialized guard field.");
+
+            foreach (var handler in handlers)
+            {
+                var guarded = System.Text.RegularExpressions.Regex.IsMatch(
+                    codeBehind,
+                    $"void {System.Text.RegularExpressions.Regex.Escape(handler)}\\(object sender, [A-Za-z]*EventArgs e\\)\\s*\\{{\\s*if \\(!_initialized\\) return;");
+
+                Assert.True(
+                    guarded,
+                    $"{relative}: handler '{handler}' can fire during InitializeComponent but does not start with 'if (!_initialized) return;'.");
+            }
+        }
+
+        Assert.True(checkedAnything, "Expected at least one page to wire state-change handlers in XAML.");
+    }
+
     private static string ReadSource(params string[] parts)
     {
         var pathParts = new string[parts.Length + 1];

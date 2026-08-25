@@ -9,12 +9,20 @@ public partial class OptionsPage : Page
 {
     private readonly MainWindow _mainWindow;
 
+    // BAML applies XAML attribute values (PathBox Text, IsChecked="True")
+    // after event handlers are already connected, so change handlers can fire
+    // inside InitializeComponent while later-declared controls are still null.
+    // Handlers bail out until construction has finished; OnLoaded recomputes
+    // every derived value afterwards.
+    private readonly bool _initialized;
+
     public OptionsPage(MainWindow mainWindow)
     {
         InitializeComponent();
         _mainWindow = mainWindow;
         PathBox.Text = _mainWindow.Config.InstallPath;
         Loaded += OnLoaded;
+        _initialized = true;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -42,32 +50,36 @@ public partial class OptionsPage : Page
 
     private void PathBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (PathValidationPanel != null)
-            PathValidationPanel.Visibility = Visibility.Collapsed;
+        if (!_initialized) return;
+        PathValidationPanel.Visibility = Visibility.Collapsed;
         UpdateDiskSpace();
         UpdateSelectionSummary();
     }
 
     private void WhisperCheck_Changed(object sender, RoutedEventArgs e)
     {
+        if (!_initialized) return;
         UpdateFormState();
         UpdateSelectionSummary();
     }
 
     private void OptionalDepsCheck_Changed(object sender, RoutedEventArgs e)
     {
+        if (!_initialized) return;
         UpdateFormState();
         UpdateSelectionSummary();
     }
 
     private void CepCheck_Changed(object sender, RoutedEventArgs e)
     {
+        if (!_initialized) return;
         UpdateFormState();
         UpdateSelectionSummary();
     }
 
     private void AnyOptionChanged(object sender, RoutedEventArgs e)
     {
+        if (!_initialized) return;
         UpdateSelectionSummary();
     }
 
