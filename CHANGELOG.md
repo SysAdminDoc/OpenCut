@@ -17,6 +17,19 @@ Notable changes to OpenCut. The git history carries the detailed record.
   startup instead of degrading in silence. A test compares the built artifact
   against the source tree.
 
+### Fixed: the plugin registry pointed at a namespace the project does not own
+
+- The marketplace fetched its index from `raw.githubusercontent.com/opencut/...`.
+  That GitHub organisation exists and belongs to someone else, and the
+  repository did not exist at all, so whoever created it would have become the
+  plugin index for every OpenCut install.
+- The default now sits in a namespace the maintainer controls, and the index
+  itself has to carry a signature from a key shipped with the release before a
+  single entry is read. An index that fails to verify is refused and does not
+  replace the last one that passed. Since each entry supplies its own publisher
+  key, and publisher trust is granted on first use, nothing installs from an
+  index that was not authenticated.
+
 ### Fixed: a packaged server no longer borrows another Python's packages
 
 - The frozen build used to run the first `python` it found on PATH and import

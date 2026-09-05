@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "_comment": "Ed25519 public keys trusted to sign the OpenCut plugin registry index. An empty 'keys' object means registry distribution is not enabled for this build: the marketplace refuses to fetch rather than trusting an index it cannot authenticate. Add an entry as \"<key-id>\": \"<base64 32-byte public key>\" when a registry is published. The private half never belongs in this repository.",
+  "keys": {}
+}

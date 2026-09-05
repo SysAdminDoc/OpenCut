@@ -231,13 +231,6 @@ Not re-queued because they shipped since 2026-08-23: embedded-decoder attestatio
 
 ### P0
 
-- [ ] P0 — F435 — Move the plugin registry to a controlled namespace and sign the registry document
-  Why: The registry URL points into a GitHub organization this project does not own, at a repository that does not yet exist, so a third party can create it and become the authoritative plugin index for every installation; the registry document itself is unsigned, and publisher trust is first-use, so a hostile index can introduce a new publisher and have its key pinned silently.
-  Evidence: Verified 2026-09-04: `opencut/core/plugin_marketplace.py:39` targets `https://raw.githubusercontent.com/opencut/plugin-registry/main/registry.json`; the `opencut` GitHub organization exists (created 2022-12-03) and is not `SysAdminDoc`; `opencut/plugin-registry` returns 404; TOFU pinning at `opencut/core/plugin_installation.py:253-273`.
-  Touches: `opencut/core/plugin_marketplace.py`, registry cache handling, `opencut/core/plugin_installation.py`, trust store migration, plugin CLI and routes, marketplace tests.
-  Acceptance: The default registry URL resolves inside a namespace the maintainer controls; the registry document carries a detached signature verified against a key shipped with the release before any entry is parsed; an unsigned or mis-signed registry is refused with a typed error and the cached copy is not replaced; first-use publisher pinning requires the registry signature to have verified; a fixture serving a substituted registry with a new publisher key is rejected without writing to the trust store.
-  Complexity: M
-
 - [ ] P0 — F436 — Make the UXP panel installable from every distribution lane
   Why: Adobe's ExtendScript support in Premiere Pro is scheduled to end in September 2026 and the CEP panel routes every host mutation through a 167 KB ExtendScript file, yet no shipped installer can deploy the UXP panel that the README advertises.
   Evidence: Verified: `Install.ps1`, `OpenCut.iss`, `install.py` and `installer/src` contain zero UXP references while carrying 41, 23 and 28 CEP references respectively; `extension/com.opencut.panel/CSXS/manifest.xml:30` declares the ExtendScript `ScriptPath`; 27 `evalScript` call sites in `extension/com.opencut.panel/client/main.js`; `README.md:70` and `README.md:558` advertise the UXP panel; ExtendScript cutoff per https://community.adobe.com/questions-729/extendscript-to-uxp-for-premiere-pro-1553924 and https://github.com/ismael-joffroy-chandoutis/open-source-cinema/blob/master/Agent-Driven-Editing-2026.md. Related blocked work: F252 and F386 cover live-host evidence, which this item does not require.
