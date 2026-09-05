@@ -17,6 +17,19 @@ Notable changes to OpenCut. The git history carries the detailed record.
   startup instead of degrading in silence. A test compares the built artifact
   against the source tree.
 
+### Fixed: the release provenance document described a policy the code had abandoned
+
+- It told readers a tagged FFmpeg release `>= 8.1.1` was acceptable on an open
+  release lane. The code had closed that lane outright, raised the floor to
+  8.1.3, moved the snapshot floor to 2026-07-06, and the installers had moved to
+  a 2026-08-03 git snapshot. Four statements, all wrong, and the test guarding
+  the document asserted the stale strings literally so it kept passing.
+- The document now states the real policy, and
+  `python -m opencut.tools.check_provenance_docs --check` compares it against
+  the code on every release. Changing a floor, a lane, or a bundled pin without
+  updating the document fails the gate and names the field. The same check
+  covers advisory waivers and the recorded dependency floor raises.
+
 ### Fixed: the console no longer warns about a production deployment
 
 - A loopback server printed "WARNING: This is a development server. Do not use

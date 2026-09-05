@@ -36,14 +36,49 @@ def test_release_provenance_docs_explain_embedded_decoder_policy():
 
 
 def test_release_provenance_docs_include_bundled_ffmpeg_pin_and_hash():
-    docs = _read(RELEASE_PROVENANCE_DOC)
+    """The document must state the pin the installers actually fetch.
 
-    assert "8.1.2-essentials_build-www.gyan.dev" in docs
-    assert "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" in docs
-    assert "db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec" in docs
-    assert "Release lane" in docs
-    assert ">= 8.1.1" in docs
-    assert ">= 2026-06-10" in docs
+    This used to assert the literal strings ``8.1.2-essentials_build-www.gyan.dev``,
+    ``>= 8.1.1`` and ``>= 2026-06-10``. Every one of them had gone stale: the
+    installers fetch a 2026-08-03 git snapshot, ``RELEASE_FLOOR`` is 8.1.3, the
+    release lane is closed outright, and ``SNAPSHOT_FLOOR_DATE`` moved to
+    2026-07-06. Because the assertions named the old values rather than reading
+    the current ones, they kept passing while the public document became wrong
+    in four places. Read the facts from the code instead.
+    """
+    from opencut.tools.check_provenance_docs import find_divergences
+
+    divergences = find_divergences()
+    assert not divergences, "\n".join(
+        f"{item['document']}: {item['field']} -- {item['problem']}, "
+        f"expected {item['expected']!r}"
+        for item in divergences
+    )
+
+
+def test_release_provenance_docs_do_not_advertise_a_closed_lane():
+    """A closed release lane must not read as an option."""
+    from opencut.core import ffmpeg_provenance as provenance
+
+    docs = _read(RELEASE_PROVENANCE_DOC)
+    if not provenance.RELEASE_LANE_OPEN:
+        assert "Release lane is closed" in docs
+        assert "acceptable on **either** lane" not in docs, (
+            "the document offers a release lane the code refuses"
+        )
+
+
+def test_provenance_doc_guard_can_actually_fail(tmp_path, monkeypatch):
+    """Positive control: point the checker at a document that omits a fact."""
+    from opencut.tools import check_provenance_docs
+
+    empty = tmp_path / "RELEASE_PROVENANCE.md"
+    empty.write_text("nothing useful here\n", encoding="utf-8")
+    monkeypatch.setattr(check_provenance_docs, "RELEASE_PROVENANCE_DOC", empty)
+
+    divergences = check_provenance_docs.find_divergences()
+    assert divergences, "the guard passed against a document stating none of the facts"
+    assert any("ffmpeg_provenance" in item["field"] for item in divergences)
 
 
 def test_release_smoke_runs_release_provenance_guard():

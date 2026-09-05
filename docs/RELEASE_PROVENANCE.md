@@ -48,25 +48,27 @@ crafted media, which is the first untrusted-input path a media tool hits. Those
 fixes landed as post-release master commits, so an `8.1.x` *release tag* can
 predate them.
 
-`opencut/core/ffmpeg_provenance.py` is the single source of truth. A bundled build
-is acceptable on **either** lane:
+`opencut/core/ffmpeg_provenance.py` is the single source of truth, and
+`python -m opencut.tools.check_provenance_docs --check` fails the release gate if
+anything below drifts from it. There are two lanes, and only one of them is open:
 
-- **Release lane** — a tagged release `>= 8.1.1` (gyan.dev's current stable point
-  release; point releases carry the backported security branch). This satisfies the
-  D3D12VA/Vulkan encoder routes that expect `8.1.x`.
-- **Snapshot lane** — a gyan.dev / BtbN git-master snapshot dated `>= 2026-06-10`.
-  The recorded reference snapshot is gyan.dev `git-full` **commit `b29bdd3715`**
-  (`2026-06-10`), the guaranteed-clean fallback if a release tag is ever found to
-  predate a specific June-2026 fix.
+- **Release lane is closed.** `RELEASE_LANE_OPEN` is `False`. No published FFmpeg
+  release clears the advisory matrix: 8.1.2 is affected by the July 2026 batch,
+  the 8.1.3 that would carry the fix was never published, and the 9.0 series was
+  branched on 2026-06-26, before those fixes landed on master. `RELEASE_FLOOR` is
+  `8.1.3` because that is where a qualifying release would have to appear, not
+  because such a build exists. A higher version number is not evidence; the
+  branch point is.
+- **Snapshot lane** is the only way through. A gyan.dev or BtbN git-master
+  snapshot dated `2026-07-06` or later, which is `SNAPSHOT_FLOOR_DATE`.
 
-The current bundled release pin is
-`8.1.2-essentials_build-www.gyan.dev` from
-<https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip>
-(updated `2026-06-27`, SHA256
-`db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec`).
-The version pin is mirrored in
-`installer/src/OpenCut.Installer/Models/AppConstants.cs` and `OpenCut.iss`, and both
-installers record `bundled_ffmpeg_security_floor` into `~/.opencut/installer.json`.
+The bundled build is therefore a snapshot, not a release:
+`2026-08-03-git-01a25f74cc-full_build-www.gyan.dev` from
+<https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2026-08-03-git-01a25f74cc-full_build.7z>
+(SHA256 `8c32ed9800ff421bbcfda96beb0a66783a64a7cd98869b87ec1b494d3c855fcc`).
+That pin lives in `installer/src/OpenCut.Installer/Models/AppConstants.cs` and
+`OpenCut.iss`, and both installers record `bundled_ffmpeg_security_floor` into
+`~/.opencut/installer.json`.
 
 ### Verify at build / release time
 
