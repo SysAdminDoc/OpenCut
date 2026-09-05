@@ -49,6 +49,10 @@ JUSTIFICATIONS: Dict[str, str] = {}
 
 
 def load_manifest(path: Path = MANIFEST_PATH) -> dict:
+    if not path.is_file():
+        from opencut._generated import GeneratedManifestMissing
+
+        raise GeneratedManifestMissing(path.name, path.parent)
     return json.loads(path.read_text(encoding="utf-8"))
 
 

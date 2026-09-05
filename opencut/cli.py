@@ -121,6 +121,11 @@ def _load_cli_route_manifest(path: Path = ROUTE_MANIFEST_PATH) -> Mapping[str, A
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
+        if not path.is_file():
+            raise click.ClickException(
+                f"Route manifest missing at {path}. This build was packaged without "
+                "opencut/_generated; reinstall OpenCut."
+            ) from exc
         raise click.ClickException(f"Cannot load route manifest: {exc}") from exc
     routes = manifest.get("routes")
     if not isinstance(routes, list):
