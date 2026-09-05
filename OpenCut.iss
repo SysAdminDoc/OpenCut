@@ -469,6 +469,29 @@ end;
 // leaves newer Premiere builds with nothing. Signed .ccx distribution needs an
 // Adobe identity; this is the developer-mode sideload path Adobe documents.
 // Premiere ignores the plugin until Settings > Plugins > Developer Mode is on.
+// Delete every com.opencut.uxp_* folder under the External plugins directory.
+// Used on install to clear superseded versions, and on uninstall so the
+// [UninstallDelete] entry is not pinned to whichever version was current.
+procedure RemoveUXPVersions(UXPParent: string);
+var
+  FindRec: TFindRec;
+begin
+  if not DirExists(UXPParent) then
+    exit;
+  if FindFirst(UXPParent + '\com.opencut.uxp_*', FindRec) then
+  begin
+    try
+      repeat
+        if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+          DelTree(UXPParent + '\' + FindRec.Name, True, True, True);
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+end;
+
+
 procedure InstallUXPExtension();
 var
   UXPSrc, UXPDest, UXPParent: string;
@@ -484,6 +507,12 @@ begin
 
   if not DirExists(UXPParent) then
     ForceDirectories(UXPParent);
+
+  // Clear every previously installed version, not only this one. The folder
+  // name carries the plugin version, so an upgrade would otherwise leave
+  // com.opencut.uxp_<old> beside the new one and Premiere in Developer Mode
+  // would load both.
+  RemoveUXPVersions(UXPParent);
 
   if DirExists(UXPDest) then
     DelTree(UXPDest, True, True, True);
@@ -674,6 +703,11 @@ begin
     ExtPath := ExpandConstant('{userappdata}\Adobe\CEP\extensions\com.opencut.panel');
     if DirExists(ExtPath) then
       DelTree(ExtPath, True, True, True);
+
+    // Remove every installed UXP panel version. The [UninstallDelete] entry
+    // below names only the version this installer was built with, so any
+    // folder left by an earlier build would survive an uninstall.
+    RemoveUXPVersions(ExpandConstant('{userappdata}\Adobe\UXP\Plugins\External'));
 
     // Remove FFmpeg from user PATH
     RemoveFromPath(ExpandConstant('{app}\ffmpeg'));

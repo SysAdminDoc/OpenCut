@@ -172,7 +172,18 @@ def install_uxp_extension():
         return
 
     try:
-        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        parent = os.path.dirname(dest)
+        os.makedirs(parent, exist_ok=True)
+        # Clear every previously installed version, not just this one. The
+        # folder name carries the plugin version, so an upgrade otherwise
+        # leaves the old copy beside the new one and Premiere in Developer
+        # Mode loads both.
+        prefix = manifest["id"] + "_"
+        for name in os.listdir(parent):
+            stale = os.path.join(parent, name)
+            if name.startswith(prefix) and stale != dest and os.path.isdir(stale):
+                shutil.rmtree(stale, ignore_errors=True)
+                print(f"  [OK] Removed superseded UXP panel: {name}")
         if os.path.exists(dest):
             shutil.rmtree(dest)
             print("  [OK] Removed previous UXP panel install")
