@@ -136,7 +136,7 @@
     var _alertTimer = null;
     var _wsReconnectTimer = null;
     var _wsManualDisconnect = false;
-    var _wsBridgePort = null; // Reported by /ws/status or /ws/start; beats the default.
+    var _wsBridgePort = OpenCutWsBridgePort.createBridgePortTracker();
     var _navScrollPersistTimer = null;
     var _overlayStack = [];
     var _overlayFocusManagementBound = false;
@@ -5563,15 +5563,15 @@
         // /ws/start walks 5680-5689 for a free port, so 5680 is only a guess.
         // On a fresh panel load nothing has told us the real one yet, so ask
         // before dialling rather than connecting to a socket nobody holds.
-        if (_wsBridgePort === null) {
+        if (_wsBridgePort.needsResolve()) {
             api("GET", "/ws/status", null, function (err, r) {
-                if (!err) rememberWsBridgePort(r);
-                if (_wsBridgePort === null) _wsBridgePort = 5680;
+                if (!err) _wsBridgePort.remember(r);
+                if (_wsBridgePort.needsResolve()) _wsBridgePort.remember({ port: OpenCutWsBridgePort.DEFAULT_PORT });
                 wsConnect();
             });
             return;
         }
-        var port = _wsBridgePort;
+        var port = _wsBridgePort.effective();
         var url = "ws://127.0.0.1:" + port;
         try {
             _ws = new WebSocket(url);
@@ -5684,7 +5684,7 @@
         );
         // Also fetch server-side status
         api("GET", "/ws/status", null, function (err, r) {
-            if (!err) rememberWsBridgePort(r);
+            if (!err) _wsBridgePort.remember(r);
             if (err) {
                 var readFailed = t(
                     "ws.status_read_failed",
@@ -5789,18 +5789,13 @@
         });
     }
 
-    function rememberWsBridgePort(payload) {
-        var port = Number(payload && payload.port);
-        if (Number.isInteger(port) && port >= 1024 && port <= 65535) _wsBridgePort = port;
-    }
-
     function wsStartBridge() {
         api("POST", "/ws/start", {}, function (err, r) {
             // A failed bind now answers 503, and backend-client turns any 4xx/5xx
             // into err with the body's `error` as its message, so the real bind
             // reason arrives here rather than in a success-shaped payload.
             if (err) { showAlert(replaceTemplateValue(t("toast.ws_start_error", "WS start error: {error}"), "{error}", err.message)); return; }
-            rememberWsBridgePort(r);
+            _wsBridgePort.remember(r);
             if (r && r.success) {
                 showToast(t("toast.live_updates_bridge_started", "Live-updates bridge started"), "success");
                 setTimeout(function () { wsConnect(); }, 500);
