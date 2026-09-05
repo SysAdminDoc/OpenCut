@@ -65,13 +65,22 @@ def _select_ws_bridge_port(preferred: int) -> int:
     raise RuntimeError("No available WebSocket bridge port in 5680-5689")
 
 
-def _ws_bridge_payload(*, running: bool, clients: int, port: int = WS_BRIDGE_DEFAULT_PORT) -> dict:
+def _ws_bridge_payload(
+    *,
+    running: bool,
+    clients: int,
+    port: int = WS_BRIDGE_DEFAULT_PORT,
+    error: str | None = None,
+) -> dict:
     return {
         "running": bool(running),
         "clients": int(clients),
         "host": WS_BRIDGE_HOST,
         "port": int(port),
         "url": _ws_bridge_url(port),
+        # Retained so a port collision is distinguishable from a bridge nobody
+        # started. Both used to report running=False and nothing else.
+        "error": error,
     }
 
 
@@ -82,12 +91,18 @@ def ws_status():
         from opencut.core.ws_bridge import get_bridge
         bridge = get_bridge()
         if bridge and bridge.is_running:
+            bind = bridge.bind_result()
             return jsonify(_ws_bridge_payload(
                 running=True,
                 clients=bridge.client_count,
-                port=bridge.port,
+                port=bind.get("port", bridge.port),
             ))
-        return jsonify(_ws_bridge_payload(running=False, clients=0))
+        return jsonify(_ws_bridge_payload(
+            running=False,
+            clients=0,
+            port=bridge.port if bridge else WS_BRIDGE_DEFAULT_PORT,
+            error=bridge.last_error if bridge else None,
+        ))
     except Exception:
         return jsonify(_ws_bridge_payload(running=False, clients=0))
 
@@ -102,18 +117,33 @@ def ws_start():
             return jsonify({"error": "websockets package not installed. pip install websockets"}), 400
         bridge = get_bridge()
         if bridge and bridge.is_running:
+            live_port = bridge.bind_result().get("port", bridge.port)
             return jsonify(_ws_bridge_payload(
                 running=True,
                 clients=bridge.client_count,
-                port=bridge.port,
-            ) | {"success": True, "message": f"WebSocket bridge already running on port {bridge.port}"})
+                port=live_port,
+            ) | {"success": True, "message": f"WebSocket bridge already running on port {live_port}"})
         data = get_json_dict() if request.is_json else {}
         requested_port = safe_int(data.get("port", WS_BRIDGE_DEFAULT_PORT), WS_BRIDGE_DEFAULT_PORT, min_val=1024, max_val=65535)
         port = _select_ws_bridge_port(requested_port)
-        init_bridge(port=port)
-        return jsonify(_ws_bridge_payload(running=True, clients=0, port=port) | {
+        bridge = init_bridge(port=port)
+        bind = bridge.bind_result()
+        if not bind.get("bound"):
+            # Reporting success before the socket bound is what let the panel
+            # sit on a bridge that had already failed with an OSError.
+            return jsonify(_ws_bridge_payload(
+                running=False,
+                clients=0,
+                port=port,
+                error=bind.get("error") or "WebSocket bridge did not bind.",
+            ) | {
+                "success": False,
+                "message": bind.get("error") or "WebSocket bridge did not bind.",
+            }), 503
+        bound_port = bind["port"]
+        return jsonify(_ws_bridge_payload(running=True, clients=0, port=bound_port) | {
             "success": True,
-            "message": f"WebSocket bridge started on port {port}",
+            "message": f"WebSocket bridge started on port {bound_port}",
         })
     except Exception as e:
         return safe_error(e, "ws_start")

@@ -92,7 +92,12 @@ describe("panel controller budgets", () => {
     // that lets a panel which loaded before the backend recover its CSRF
     // token. The eager-capture fix it ships alongside is line-neutral:
     // `evalScript: jsx` replaced a three-line ternary.
-    ["client/main.js", 18816],
+    // F415 raises the ceiling by ten for the live-updates bridge port. The
+    // panel dialled a hardcoded 5680 while /ws/start walks 5680-5689 for a
+    // free port and skips the HTTP port, so it opened a socket to nothing
+    // whenever the first choice was taken. The ten lines are `_wsBridgePort`,
+    // `rememberWsBridgePort` and its two call sites, and three comments.
+    ["client/main.js", 18826],
     ["client/update-controller.js", 300],
     ["client/results-controller.js", 300],
     ["client/settings-diagnostics-controller.js", 110],
