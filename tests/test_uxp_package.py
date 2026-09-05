@@ -152,3 +152,94 @@ def test_uxp_source_is_not_referenced_by_the_cep_constant():
     source = (REPO_ROOT / "install.py").read_text(encoding="utf-8")
     assert 'CEP_EXT = "com.opencut.panel"' in source
     assert str(UXP_SOURCE_DIR.name) == "com.opencut.uxp"
+
+
+# ---------------------------------------------------------------------------
+# Every lane must agree on the folder name, and clear superseded versions
+# ---------------------------------------------------------------------------
+
+def _lane_sources() -> dict[str, str]:
+    return {
+        "Install.ps1": (REPO_ROOT / "Install.ps1").read_text(encoding="utf-8", errors="replace"),
+        "OpenCut.iss": (REPO_ROOT / "OpenCut.iss").read_text(encoding="utf-8", errors="replace"),
+        "install.py": (REPO_ROOT / "install.py").read_text(encoding="utf-8", errors="replace"),
+        "CepInstaller.cs": (
+            REPO_ROOT / "installer" / "src" / "OpenCut.Installer" / "Services" / "CepInstaller.cs"
+        ).read_text(encoding="utf-8", errors="replace"),
+    }
+
+
+def test_every_lane_places_the_uxp_panel():
+    """Three of the four lanes shipped CEP only."""
+    for name, source in _lane_sources().items():
+        assert "com.opencut.uxp" in source, f"{name} does not place the UXP panel"
+
+
+def test_every_lane_targets_the_external_plugins_directory():
+    """Either the lane names the path, or it delegates to the one that does."""
+    for name, source in _lane_sources().items():
+        names_path = "UXP" in source and "External" in source
+        delegates = "sideload_target" in source
+        assert names_path or delegates, (
+            f"{name} does not target the UXP/Plugins/External directory Premiere reads"
+        )
+
+
+def test_every_lane_clears_superseded_versions_on_install():
+    """The folder name carries the version, so an upgrade orphans the old one.
+
+    Premiere in Developer Mode loads every plugin under External, so leaving
+    com.opencut.uxp_<old> beside the new one means two copies of the panel.
+    """
+    sources = _lane_sources()
+    # Each lane must match by prefix somewhere, not only delete the exact
+    # current folder name.
+    assert 'Filter "$uxpId`_*"' in sources["Install.ps1"] or 'com.opencut.uxp_*' in sources["Install.ps1"]
+    assert "RemoveUXPVersions" in sources["OpenCut.iss"]
+    assert 'UxpExtensionId + "_*"' in sources["CepInstaller.cs"]
+
+
+def test_the_windows_lanes_remove_every_version_on_uninstall():
+    sources = _lane_sources()
+    # Install.ps1's uninstall branch and the WPF RemoveExtension both prefix-match.
+    assert sources["Install.ps1"].count("com.opencut.uxp_*") >= 1
+    assert "RemoveUXPVersions" in sources["OpenCut.iss"]
+    assert 'UxpExtensionId + "_*"' in sources["CepInstaller.cs"]
+
+
+def test_the_inno_uninstall_is_not_pinned_to_one_version_alone():
+    """[UninstallDelete] names one version; code must sweep the rest."""
+    source = (REPO_ROOT / "OpenCut.iss").read_text(encoding="utf-8", errors="replace")
+    uninstall_block = source.split("procedure CurUninstallStepChanged", 1)[1][:2000]
+    assert "RemoveUXPVersions" in uninstall_block, (
+        "the Inno uninstall only removes the version it was built with"
+    )
+
+
+def test_the_folder_name_matches_across_every_lane():
+    """Four lanes derive <id>_<version> four ways; they must agree.
+
+    Install.ps1 and install.py read manifest.json; OpenCut.iss uses
+    MyAppVersion and the WPF installer uses AppConstants.AppVersion. They line
+    up only because sync_version.py rewrites all of them, and nothing checked.
+    """
+    import re
+
+    manifest = read_uxp_manifest()
+    expected = plugin_folder_name(manifest)
+
+    iss = (REPO_ROOT / "OpenCut.iss").read_text(encoding="utf-8", errors="replace")
+    iss_version = re.search(r'#define MyAppVersion "([^"]+)"', iss)
+    assert iss_version, "OpenCut.iss no longer defines MyAppVersion"
+    assert f"{manifest['id']}_{iss_version.group(1)}" == expected, (
+        "OpenCut.iss would create a folder Premiere does not look for"
+    )
+
+    constants = (
+        REPO_ROOT / "installer" / "src" / "OpenCut.Installer" / "Models" / "AppConstants.cs"
+    ).read_text(encoding="utf-8", errors="replace")
+    cs_version = re.search(r'AppVersion\s*=\s*"([^"]+)"', constants)
+    assert cs_version, "AppConstants no longer defines AppVersion"
+    assert f"{manifest['id']}_{cs_version.group(1)}" == expected, (
+        "the Windows installer would create a folder Premiere does not look for"
+    )

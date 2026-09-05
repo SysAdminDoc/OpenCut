@@ -747,6 +747,13 @@ if (-not $SkipExtension) {
             if (-not (Test-Path $uxpRoot)) {
                 New-Item -Path $uxpRoot -ItemType Directory -Force | Out-Null
             }
+            # Remove every previously installed version, not just this one.
+            # The folder name carries the plugin version, so an upgrade
+            # otherwise leaves com.opencut.uxp_<old> beside the new one and
+            # Premiere in Developer Mode loads both.
+            Get-ChildItem -LiteralPath $uxpRoot -Directory -Filter "$uxpId`_*" -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -ne $uxpTarget } |
+                ForEach-Object { Remove-OpenCutArtifact -Path $_.FullName -Label "superseded UXP panel" | Out-Null }
             $uxpReady = Remove-OpenCutArtifact -Path $uxpTarget -Label "existing UXP panel"
             if ($uxpReady) {
                 Copy-Item $uxpSrc $uxpTarget -Recurse -Force

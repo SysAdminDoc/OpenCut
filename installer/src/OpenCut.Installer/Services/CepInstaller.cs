@@ -64,17 +64,25 @@ public class CepInstaller
         if (parentDir != null)
             Directory.CreateDirectory(parentDir);
 
-        if (Directory.Exists(target))
+        // Clear every previously installed version, not just this one. The
+        // folder name carries the plugin version, so an upgrade would otherwise
+        // leave com.opencut.uxp_<old> in place and Premiere in Developer Mode
+        // would load both copies.
+        if (parentDir != null && Directory.Exists(parentDir))
         {
-            try
+            foreach (var dir in Directory.GetDirectories(parentDir, AppConstants.UxpExtensionId + "_*"))
             {
-                Directory.Delete(target, recursive: true);
-                Report(progress, step, totalSteps, stepName, "Removed existing UXP panel.", LogLevel.Debug);
-            }
-            catch (Exception ex)
-            {
-                Report(progress, step, totalSteps, stepName,
-                    $"Warning: Could not remove old UXP panel: {ex.Message}", LogLevel.Warning);
+                try
+                {
+                    Directory.Delete(dir, recursive: true);
+                    Report(progress, step, totalSteps, stepName,
+                        $"Removed previous UXP panel: {Path.GetFileName(dir)}", LogLevel.Debug);
+                }
+                catch (Exception ex)
+                {
+                    Report(progress, step, totalSteps, stepName,
+                        $"Warning: Could not remove old UXP panel: {ex.Message}", LogLevel.Warning);
+                }
             }
         }
 
