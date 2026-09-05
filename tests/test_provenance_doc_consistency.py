@@ -178,3 +178,93 @@ def test_advisory_facts_cover_aliases():
     assert any(field.endswith(".alias") for field in fields), (
         "GHSA aliases are how most tools name an advisory; they must be documented too"
     )
+
+
+# ---------------------------------------------------------------------------
+# Regressions found by adversarial review
+# ---------------------------------------------------------------------------
+
+def test_a_document_that_states_both_values_is_caught(tmp_path, monkeypatch):
+    """Presence alone passed a doc carrying the fact AND its superseded twin."""
+    from opencut.tools import check_provenance_docs as module
+
+    good = RELEASE_PROVENANCE_DOC.read_text(encoding="utf-8")
+    contradicted = tmp_path / "RELEASE_PROVENANCE.md"
+    contradicted.write_text(
+        good + "\n\nA bundled build is acceptable on either lane.\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(module, "RELEASE_PROVENANCE_DOC", contradicted)
+
+    problems = module.find_divergences()
+    assert any("superseded" in item["problem"] for item in problems), (
+        "the gate still cannot see a contradiction, only an omission"
+    )
+
+
+def test_an_older_bundled_pin_is_reported(tmp_path, monkeypatch):
+    from opencut.tools import check_provenance_docs as module
+
+    good = RELEASE_PROVENANCE_DOC.read_text(encoding="utf-8")
+    stale = tmp_path / "RELEASE_PROVENANCE.md"
+    stale.write_text(good + "\n8.1.2-essentials_build-www.gyan.dev\n", encoding="utf-8")
+    monkeypatch.setattr(module, "RELEASE_PROVENANCE_DOC", stale)
+
+    problems = module.find_divergences()
+    assert any("bundled build the installers do not fetch" in item["problem"] for item in problems)
+
+
+def test_the_current_pin_alone_is_not_reported():
+    """Positive control: the real document names exactly one pin."""
+    from opencut.tools.check_provenance_docs import contradicting_bundled_pins
+
+    text = RELEASE_PROVENANCE_DOC.read_text(encoding="utf-8")
+    assert contradicting_bundled_pins(text) == []
+
+
+def test_a_longer_version_does_not_satisfy_a_shorter_floor():
+    """">= 8.1.30" must not count as stating ">= 8.1.3"."""
+    from opencut.tools.check_provenance_docs import _states
+
+    assert _states("the floor is >= 8.1.3 today", ">= 8.1.3")
+    assert not _states("the floor is >= 8.1.30 today", ">= 8.1.3")
+    assert not _states("dated 2026-07-061", "2026-07-06")
+    assert _states("dated 2026-07-06.", "2026-07-06")
+
+
+def test_multi_package_floor_rows_are_checked():
+    """The two rows carrying the torch and onnxruntime remediation were skipped."""
+    rows = dict(documented_floor_raises(PYTHON_ADVISORIES_DOC.read_text(encoding="utf-8")))
+    for package in ("torch", "torchvision", "onnxruntime", "onnxruntime-gpu"):
+        assert package in rows, f"{package} floor row is not parsed, so it is never checked"
+    assert rows["torch"].startswith(">=2.")
+    assert rows["torchvision"].startswith(">=0.")
+
+
+def test_single_package_rows_still_parse_alongside_them():
+    rows = dict(documented_floor_raises(PYTHON_ADVISORIES_DOC.read_text(encoding="utf-8")))
+    for package in ("click", "urllib3", "cryptography", "huggingface-hub"):
+        assert package in rows
+
+
+def test_a_multi_package_row_with_one_floor_applies_it_to_each():
+    text = (
+        "## Floor raises\n\n"
+        "| Package | Old floor | New floor |\n|---|---|---|\n"
+        "| `alpha` / `beta` | `>=1` | `>=2.0,<3` |\n"
+    )
+    assert dict(documented_floor_raises(text)) == {"alpha": ">=2.0,<3", "beta": ">=2.0,<3"}
+
+
+def test_paired_packages_and_floors_line_up():
+    text = (
+        "## Floor raises\n\n"
+        "| Package | Old floor | New floor |\n|---|---|---|\n"
+        "| `alpha` / `beta` | `>=1` / `>=1` | `>=2.0` / `>=3.0` |\n"
+    )
+    assert dict(documented_floor_raises(text)) == {"alpha": ">=2.0", "beta": ">=3.0"}
+
+
+def test_a_version_extended_by_a_dotted_component_does_not_satisfy_it():
+    from opencut.tools.check_provenance_docs import _states
+
+    assert not _states("the floor is >= 8.1.3.1 today", ">= 8.1.3")

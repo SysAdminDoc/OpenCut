@@ -41,10 +41,32 @@ class DocFact:
     document: Path
     #: How the fact should read in prose, when the raw value is not searchable.
     rendered: Optional[str] = None
+    #: Statements that must NOT survive alongside this fact. Presence alone
+    #: cannot catch a document that states the current value and a superseded
+    #: one in the next sentence, which is exactly how this drifted.
+    forbidden: tuple[str, ...] = ()
 
     @property
     def needle(self) -> str:
         return self.rendered if self.rendered is not None else self.value
+
+
+def _states(text: str, needle: str) -> bool:
+    """True when ``text`` states ``needle`` and not merely a longer token.
+
+    Plain ``in`` let a document claiming ">= 8.1.30" satisfy a floor of
+    ">= 8.1.3".
+    """
+    for match in re.finditer(re.escape(needle), text):
+        tail = text[match.end():match.end() + 2]
+        if needle[-1].isdigit():
+            # A digit straight after extends the number (8.1.3 -> 8.1.30), and
+            # so does a dot followed by one (8.1.3 -> 8.1.3.1). A dot that ends
+            # a sentence does not.
+            if tail[:1].isdigit() or (tail[:1] == "." and tail[1:2].isdigit()):
+                continue
+        return True
+    return False
 
 
 def _display_path(path: Path) -> str:
@@ -98,6 +120,13 @@ def collect_release_provenance_facts() -> list[DocFact]:
                 "closed",
                 RELEASE_PROVENANCE_DOC,
                 rendered="Release lane is closed",
+                # The wording that offered the lane the code refuses. Stating
+                # the new fact while leaving the old sentence in place is the
+                # failure a presence-only check cannot see.
+                forbidden=(
+                    "acceptable on **either** lane",
+                    "acceptable on either lane",
+                ),
             )
         )
 
@@ -139,10 +168,9 @@ def collect_advisory_facts() -> list[DocFact]:
 #: Rows in the "Floor raises" table whose new floor must match the real pin.
 #: Only single-package rows are checked; rows naming several packages or an
 #: extras-only lane state their scope in prose and are left to review.
-_FLOOR_ROW_RE = re.compile(
-    r"^\|\s*`([A-Za-z0-9_.\-]+)`\s*\|[^|]*\|\s*`([^`]+)`",
-    re.MULTILINE,
-)
+_BACKTICKED = re.compile(r"`([^`]+)`")
+_PACKAGE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*$")
+_SPECIFIER = re.compile(r"^[<>=!~]")
 
 
 def documented_floor_raises(doc_text: str) -> list[tuple[str, str]]:
@@ -150,12 +178,35 @@ def documented_floor_raises(doc_text: str) -> list[tuple[str, str]]:
     if "## Floor raises" not in doc_text:
         return []
     table = doc_text.split("## Floor raises", 1)[1].split("\n## ", 1)[0]
-    rows = []
-    for package, new_floor in _FLOOR_ROW_RE.findall(table):
-        # "transitive, lock 1.24.0" style cells are prose, not a specifier.
-        if not re.match(r"^[<>=!~]", new_floor.strip()):
+    rows: list[tuple[str, str]] = []
+    for line in table.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|") or set(stripped) <= set("|-: "):
             continue
-        rows.append((package, new_floor.strip()))
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if len(cells) < 3:
+            continue
+        # Column 1 names one or more packages; column 3 is the new floor. Cells
+        # carry prose around the backticks ("`>=8.3.3,<9` (lock `8.4.1`)"), so
+        # take the backticked tokens and keep the ones that look like what they
+        # should be. A single regex over the whole row could not do both this
+        # and the multi-package rows.
+        packages = [
+            value for value in _BACKTICKED.findall(cells[0]) if _PACKAGE_NAME.match(value)
+        ]
+        floors = [
+            value for value in _BACKTICKED.findall(cells[2]) if _SPECIFIER.match(value)
+        ]
+        if not packages or not floors:
+            continue
+        if len(packages) == len(floors):
+            # "`torch` / `torchvision` ... `>=2.10.0` / `>=0.25.0`" pairs up.
+            rows.extend(zip(packages, floors))
+        else:
+            # One floor covering several packages, as onnxruntime does. Where
+            # the counts disagree some other way, apply the first floor to each
+            # package rather than skipping the row unchecked.
+            rows.extend((package, floors[0]) for package in packages)
     return rows
 
 
@@ -181,6 +232,37 @@ def floor_divergences(doc_text: str) -> list[dict]:
                 "problem": "documented floor raise is not the declared dependency",
             })
     return problems
+
+
+#: Any gyan.dev build token, release or snapshot flavoured.
+_BUNDLED_PIN_RE = re.compile(
+    r"\b(?:\d+\.\d+\.\d+|\d{4}-\d{2}-\d{2}-git-[0-9a-f]+)-[A-Za-z_]+_build-www\.gyan\.dev\b"
+)
+
+
+def contradicting_bundled_pins(doc_text: str) -> list[dict]:
+    """Report any bundled FFmpeg pin other than the one the installers fetch.
+
+    Presence checks cannot see a document that states the current pin and, two
+    paragraphs later, an older one. This is how the release-provenance document
+    ended up naming an 8.1.2 release while the installers fetched a 2026-08-03
+    snapshot: both statements were in the file.
+    """
+    if not APP_CONSTANTS.is_file():
+        return []
+    current = _csharp_const(APP_CONSTANTS.read_text(encoding="utf-8", errors="replace"), "BundledFfmpegVersion")
+    if not current:
+        return []
+    others = sorted(set(_BUNDLED_PIN_RE.findall(doc_text)) - {current})
+    return [
+        {
+            "field": "docs/RELEASE_PROVENANCE.md bundled FFmpeg pin",
+            "expected": f"{stale!r} removed; the installers fetch {current!r}",
+            "document": "docs/RELEASE_PROVENANCE.md",
+            "problem": "document names a bundled build the installers do not fetch",
+        }
+        for stale in others
+    ]
 
 
 def undocumented_waivers(doc_text: str) -> list[str]:
@@ -232,19 +314,33 @@ def find_divergences() -> list[dict]:
                     "problem": "document is missing",
                 })
                 continue
-            if fact.needle not in text:
+            if not _states(text, fact.needle):
                 problems.append({
                     "field": fact.field,
                     "expected": fact.needle,
                     "document": _display_path(fact.document),
                     "problem": "not stated in the document",
                 })
+            for stale in fact.forbidden:
+                if stale in text:
+                    problems.append({
+                        "field": fact.field,
+                        "expected": f"{stale!r} removed",
+                        "document": _display_path(fact.document),
+                        "problem": "document still states a superseded value",
+                    })
 
     advisories_text = cache.get(PYTHON_ADVISORIES_DOC) or (
         PYTHON_ADVISORIES_DOC.read_text(encoding="utf-8", errors="replace")
         if PYTHON_ADVISORIES_DOC.is_file()
         else ""
     )
+    provenance_text = cache.get(RELEASE_PROVENANCE_DOC) or (
+        RELEASE_PROVENANCE_DOC.read_text(encoding="utf-8", errors="replace")
+        if RELEASE_PROVENANCE_DOC.is_file()
+        else ""
+    )
+    problems.extend(contradicting_bundled_pins(provenance_text))
     problems.extend(floor_divergences(advisories_text))
 
     for stale in undocumented_waivers(advisories_text):
