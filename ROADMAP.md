@@ -146,6 +146,20 @@ Roadmap_Blocked.md; the rest landed.
   Complexity: L
 
 ### P3
+- [ ] P3 — F443 — Give `chapter_defaults.naming_style` a consumer or drop it with a migration
+  Why: `load_chapter_defaults` persists `naming_style` ("descriptive" / "numbered" / "timecode") and the settings API serves it, but `generate_chapters` has no parameter for it, so the value cannot reach chapter titles by any path. It is the one key left in a file whose other two keys are now applied.
+  Evidence: Verified 2026-09-05: `opencut/user_data.py:925` declares it; `opencut/core/chapter_gen.py:244-249` takes only `segments`, `llm_config`, `max_chapters` and `min_chapter_duration`; `opencut/routes/caption_analysis_routes.py` reads the defaults and deliberately skips this key.
+  Touches: `opencut/core/chapter_gen.py`, `opencut/routes/caption_analysis_routes.py`, `opencut/core/settings_registry.py`, `tests/test_settings_consumers.py`.
+  Acceptance: Either `generate_chapters` accepts a naming style and the three documented values produce visibly different chapter titles under test, or the key is removed from the saved defaults with a migration and the registry records why; the settings-consumer test covers whichever was chosen at key level rather than file level.
+  Complexity: S
+
+- [ ] P3 — F444 — Retire the colour-profile and auto-zoom settings surfaces
+  Why: `color_profiles.json` and `auto_zoom_presets.json` are written, served by REST, and read by nothing: no backend module, and zero references in either panel. `opencut/core/settings_registry.py` already classifies them as removed and `migrate_removed_settings` deletes them, but the loaders and endpoints are still live, so the migration cannot be enabled without deleting what a user had just saved.
+  Evidence: Verified 2026-09-05: zero readers of either filename outside `user_data.py` and `routes/settings.py`; zero matches for `color-profiles` or `auto-zoom-presets` in `extension/com.opencut.panel/client/main.js` and `extension/com.opencut.uxp/main.js`; endpoints at `opencut/routes/settings.py:1005` and `:1014`, plus the colour-profile loader at `opencut/user_data.py:860`.
+  Touches: `opencut/user_data.py`, `opencut/routes/settings.py`, `opencut/core/settings_registry.py`, server startup, and the generated route, readiness and extended-MCP manifests.
+  Acceptance: The loaders, save functions and REST endpoints are gone; `migrate_removed_settings` runs once at startup and is covered by a test that plants both files and asserts they are deleted while a live setting survives; the generated manifests, route counts and README badges are regenerated in the same commit and the surface ratchet passes.
+  Complexity: M
+
 
 - [ ] P3 — F430 — Import bitmap subtitles through OCR and a reviewable typesetting lane
   Why: OpenCut supports broad text-caption import and export but has no PGS, VobSub, or burned-subtitle OCR workflow, while professional subtitle tools treat image-subtitle recovery as a standard ingest need.
