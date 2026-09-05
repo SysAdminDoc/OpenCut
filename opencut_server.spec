@@ -82,7 +82,32 @@ for mod in external_hiddenimports:
 all_hiddenimports = opencut_hiddenimports + valid_imports
 
 # Collect runtime JSON data and native DLLs for optional backends.
-extra_datas = collect_data_files('opencut.data')
+#
+# ``collect_data_files`` is per-subpackage, so naming ``opencut.data`` alone
+# silently shipped a build with no ``opencut/_generated`` at all: no build
+# error, no import error, a green suite (which only ever runs against the
+# source tree), and sixteen manifests missing from the artifact users install.
+# Derive the data-bearing subpackages from the source instead, the same way
+# the hidden-import list above is derived, so a new one cannot be forgotten.
+def _opencut_data_subpackages():
+    # The spec is built from the repo root (pathex=['.'], server.py is joined
+    # relative), so resolve 'opencut' the same way the rest of this file does.
+    root = os.path.abspath('opencut')
+    found = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d != '__pycache__']
+        if '__init__.py' not in filenames:
+            continue
+        if not any(not name.endswith(('.py', '.pyc')) for name in filenames):
+            continue
+        rel = os.path.relpath(dirpath, os.path.dirname(root))
+        found.append(rel.replace(os.sep, '.'))
+    return sorted(found)
+
+
+extra_datas = []
+for _pkg in _opencut_data_subpackages():
+    extra_datas += collect_data_files(_pkg)
 for pkg in ['ctranslate2', 'faster_whisper']:
     try:
         extra_datas += collect_data_files(pkg)

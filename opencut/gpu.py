@@ -34,14 +34,71 @@ class GPUSelectionError(ValueError):
             f"GPU index {requested!r} is not available. Available CUDA devices: {available}."
         )
 
+    @property
+    def suggestion(self) -> str:
+        return "Choose one of the listed device indexes or select Auto."
+
     def to_dict(self) -> dict:
         return {
             "error": str(self),
             "code": self.code,
             "requested_index": self.requested,
             "available_devices": self.available_devices,
-            "suggestion": "Choose one of the listed device indexes or select Auto.",
+            "suggestion": self.suggestion,
         }
+
+
+class GPUUnsupportedBuildError(GPUSelectionError):
+    """The adapter exists, but the installed runtime cannot execute on it.
+
+    Reported separately because the two failures need opposite responses.
+    "Index 0 is not available" told the reporter of issue #7 to pick a
+    different device while listing index 0 as available -- the adapter was
+    fine, the installed PyTorch build simply carried no kernel image for it.
+    """
+
+    code = "GPU_BUILD_UNSUPPORTED"
+
+    def __init__(self, requested, devices, *, reason: str = "", required_build: str = "", cause=None):
+        # Deliberately skip GPUSelectionError.__init__: its message asserts an
+        # availability claim that is false here.
+        ValueError.__init__(self)
+        self.requested = requested
+        self.available_devices = [dict(device) for device in (devices or [])]
+        self.reason = reason or "the installed runtime has no kernel image for this adapter"
+        self.required_build = required_build
+        self.cause = str(cause) if cause is not None else ""
+        device = next(
+            (d for d in self.available_devices if d.get("index") == requested),
+            None,
+        )
+        name = (device or {}).get("name") or "the selected CUDA device"
+        capability = _capability_label((device or {}).get("compute_capability"))
+        detail = f" (compute capability {capability})" if capability else ""
+        message = (
+            f"GPU index {requested!r} ({name}{detail}) is present but this build cannot run on it: "
+            f"{self.reason}."
+        )
+        if self.required_build:
+            message += f" {self.required_build}"
+        if self.cause:
+            message += f" Underlying error: {self.cause}"
+        self.args = (message,)
+
+    @property
+    def suggestion(self) -> str:
+        if self.required_build:
+            return self.required_build
+        return "Install a runtime build that supports this adapter, or select CPU."
+
+    def to_dict(self) -> dict:
+        body = super().to_dict()
+        body.update({
+            "reason": self.reason,
+            "required_build": self.required_build,
+            "underlying_error": self.cause,
+        })
+        return body
 
 
 def _normalise_gpu_index(value, *, allow_auto: bool = True):
@@ -96,6 +153,114 @@ def _safe_float(value) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _parse_capability(value) -> tuple[int, int] | None:
+    """Return ``(major, minor)`` from a capability in any of its shapes."""
+    if isinstance(value, (tuple, list)) and value:
+        value = ".".join(str(part) for part in value[:2])
+    match = re.search(r"(\d+)(?:\.(\d+))?", str(value or ""))
+    if not match:
+        return None
+    return int(match.group(1)), int(match.group(2) or 0)
+
+
+def _capability_label(value) -> str:
+    parsed = _parse_capability(value)
+    return f"{parsed[0]}.{parsed[1]}" if parsed else ""
+
+
+def torch_supported_capabilities(torch_module=None) -> set[tuple[int, int]]:
+    """Return the compute capabilities this PyTorch build carries kernels for.
+
+    ``torch.cuda.get_arch_list()`` reports entries like ``sm_90`` (a compiled
+    kernel image) and ``compute_90`` (PTX that can JIT forward). Only the
+    ``sm_`` entries are counted: PTX JIT is what fails on Blackwell in the
+    field, so treating it as support would restore the bug this replaces.
+    """
+    module = torch_module if torch_module is not None else torch
+    if module is None:
+        return set()
+    try:
+        arches = list(module.cuda.get_arch_list())
+    except (AttributeError, RuntimeError, TypeError, ValueError) as exc:
+        logger.debug("torch.cuda.get_arch_list() unavailable: %s", exc)
+        return set()
+    supported: set[tuple[int, int]] = set()
+    for arch in arches:
+        # The minor version is always the final digit: sm_86 is 8.6, sm_90 is
+        # 9.0, and sm_120 is 12.0 (not 1.20 -- getting this backwards makes a
+        # cu128 build look like it cannot run the Blackwell card it was built
+        # for). The first group is greedy so it absorbs the extra digit.
+        match = re.fullmatch(r"sm_(\d+)(\d)", str(arch).strip())
+        if match:
+            supported.add((int(match.group(1)), int(match.group(2))))
+    return supported
+
+
+#: A build that cannot run an adapter needs a different wheel, not a different
+#: device. Keyed by capability major so the advice names a real download.
+_REQUIRED_BUILD_HINTS = {
+    12: (
+        "RTX 50-series/Blackwell (sm_120) needs a CUDA 12.8 or newer PyTorch build: "
+        "pip install torch --index-url https://download.pytorch.org/whl/cu128"
+    ),
+    10: (
+        "This adapter needs a CUDA 12.8 or newer PyTorch build: "
+        "pip install torch --index-url https://download.pytorch.org/whl/cu128"
+    ),
+}
+
+GPU_SUPPORT_USABLE = "usable"
+GPU_SUPPORT_UNSUPPORTED = "unsupported-build"
+GPU_SUPPORT_UNKNOWN = "unknown"
+
+
+def gpu_runtime_support(device: dict | None, *, torch_module=None) -> dict:
+    """Resolve whether the installed runtime can actually execute on ``device``.
+
+    ``nvidia-smi`` reports every adapter that is physically present, which is a
+    different question from whether the installed PyTorch build has kernels for
+    it. Conflating the two is why Settings showed an RTX 5070 as healthy while
+    every job failed (issue #7).
+    """
+    device = device if isinstance(device, dict) else {}
+    capability = _parse_capability(device.get("compute_capability", device.get("compute_cap")))
+    supported = torch_supported_capabilities(torch_module)
+    if capability is None or not supported:
+        return {
+            "state": GPU_SUPPORT_UNKNOWN,
+            "compute_capability": _capability_label(capability),
+            "supported_capabilities": sorted(f"{a}.{b}" for a, b in supported),
+            "reason": (
+                "" if supported else
+                "the installed runtime does not report a compiled architecture list"
+            ),
+            "required_build": "",
+        }
+    if capability in supported:
+        return {
+            "state": GPU_SUPPORT_USABLE,
+            "compute_capability": _capability_label(capability),
+            "supported_capabilities": sorted(f"{a}.{b}" for a, b in supported),
+            "reason": "",
+            "required_build": "",
+        }
+    label = _capability_label(capability)
+    highest = max(supported)
+    return {
+        "state": GPU_SUPPORT_UNSUPPORTED,
+        "compute_capability": label,
+        "supported_capabilities": sorted(f"{a}.{b}" for a, b in supported),
+        "reason": (
+            f"the installed PyTorch build has no kernel image for compute capability {label} "
+            f"(it was built for up to {highest[0]}.{highest[1]})"
+        ),
+        "required_build": _REQUIRED_BUILD_HINTS.get(
+            capability[0],
+            "Install a PyTorch build compiled for this adapter's compute capability, or select CPU.",
+        ),
+    }
 
 
 def gpu_architecture(device: dict | None) -> str:
@@ -167,6 +332,9 @@ def _annotate_gpu_device(device: dict) -> dict:
     recommendation = faster_whisper_compute_recommendation(annotated)
     annotated["architecture"] = recommendation["architecture"]
     annotated["faster_whisper"] = recommendation
+    support = gpu_runtime_support(annotated)
+    annotated["runtime_support"] = support
+    annotated["usable"] = support["state"] != GPU_SUPPORT_UNSUPPORTED
     return annotated
 
 
@@ -174,42 +342,50 @@ def list_gpu_devices() -> list[dict]:
     """Return all visible NVIDIA CUDA adapters with stable integer indexes."""
     nvidia_smi = shutil.which("nvidia-smi")
     if nvidia_smi:
-        try:
-            result = subprocess.run(
-                [
-                    nvidia_smi,
-                    "--query-gpu=index,name,memory.total,memory.free,driver_version",
-                    "--format=csv,noheader,nounits",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False,
-            )
-            if result.returncode == 0:
-                devices = []
-                for line in (result.stdout or "").splitlines():
-                    parts = [part.strip() for part in line.split(",")]
-                    if len(parts) < 5:
-                        continue
-                    try:
-                        index = int(parts[0])
-                    except (TypeError, ValueError):
-                        continue
-                    # GPU names can contain commas; the final three fields are
-                    # always memory total, memory free, and driver version.
-                    name = ",".join(parts[1:-3]).strip()
-                    devices.append(_annotate_gpu_device({
-                        "index": index,
-                        "name": name,
-                        "memory_total_mb": _safe_float(parts[-3]),
-                        "memory_free_mb": _safe_float(parts[-2]),
-                        "driver_version": parts[-1],
-                    }))
-                if devices:
-                    return sorted(devices, key=lambda device: device["index"])
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            logger.debug("nvidia-smi GPU query failed: %s", exc)
+        # compute_cap is what tells us whether the installed torch build can
+        # execute on an adapter; without it every device looked equally fine
+        # (issue #7). Drivers older than 510 do not know the field, so fall
+        # back to the original query rather than losing the listing entirely.
+        for fields, has_capability in (
+            ("index,name,memory.total,memory.free,driver_version,compute_cap", True),
+            ("index,name,memory.total,memory.free,driver_version", False),
+        ):
+            try:
+                result = subprocess.run(
+                    [nvidia_smi, f"--query-gpu={fields}", "--format=csv,noheader,nounits"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=False,
+                )
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                logger.debug("nvidia-smi GPU query failed: %s", exc)
+                break
+            if result.returncode != 0:
+                continue
+            trailing = 4 if has_capability else 3
+            devices = []
+            for line in (result.stdout or "").splitlines():
+                parts = [part.strip() for part in line.split(",")]
+                if len(parts) < trailing + 2:
+                    continue
+                try:
+                    index = int(parts[0])
+                except (TypeError, ValueError):
+                    continue
+                # GPU names can contain commas; the trailing fields are fixed.
+                record = {
+                    "index": index,
+                    "name": ",".join(parts[1:-trailing]).strip(),
+                    "memory_total_mb": _safe_float(parts[-trailing]),
+                    "memory_free_mb": _safe_float(parts[-trailing + 1]),
+                    "driver_version": parts[-trailing + 2],
+                }
+                if has_capability:
+                    record["compute_capability"] = parts[-1]
+                devices.append(_annotate_gpu_device(record))
+            if devices:
+                return sorted(devices, key=lambda device: device["index"])
 
     if not _HAS_TORCH:
         return []
@@ -259,6 +435,16 @@ def gpu_selection_status(devices: list[dict] | None = None) -> dict:
         (device for device in devices if device.get("index") == selected),
         None,
     )
+    # Surface an unrunnable adapter here, where Settings reads it, rather than
+    # letting the first job discover it (issue #7).
+    support = gpu_runtime_support(selected_device)
+    if error is None and support["state"] == GPU_SUPPORT_UNSUPPORTED:
+        error = GPUUnsupportedBuildError(
+            selected,
+            devices,
+            reason=support["reason"],
+            required_build=support["required_build"],
+        ).to_dict()
     return {
         "configured_index": configured,
         "selected_index": selected,
@@ -266,6 +452,7 @@ def gpu_selection_status(devices: list[dict] | None = None) -> dict:
         "device": f"cuda:{selected}" if selected is not None else "cpu",
         "devices": devices,
         "selection_error": error,
+        "runtime_support": support,
         "faster_whisper": faster_whisper_compute_recommendation(selected_device),
     }
 
@@ -329,9 +516,34 @@ def activate_selected_gpu(*, torch_module=None, devices: list[dict] | None = Non
             count = 0
         if index < 0 or index >= count:
             raise GPUSelectionError(index, devices)
+    else:
+        # The adapter is present. Refuse before touching CUDA when the build
+        # has no kernels for it, so the message names the real problem rather
+        # than denying an index it is simultaneously listing (issue #7).
+        device = next((d for d in devices if d.get("index") == index), None)
+        support = gpu_runtime_support(device, torch_module=module)
+        if support["state"] == GPU_SUPPORT_UNSUPPORTED:
+            raise GPUUnsupportedBuildError(
+                index,
+                devices,
+                reason=support["reason"],
+                required_build=support["required_build"],
+            )
     try:
         module.cuda.set_device(index)
     except (AttributeError, RuntimeError, TypeError, ValueError) as exc:
+        # set_device failed on an adapter we listed as present. That is a build
+        # or driver problem, never "pick a different index".
+        device = next((d for d in devices if d.get("index") == index), None)
+        if device is not None:
+            support = gpu_runtime_support(device, torch_module=module)
+            raise GPUUnsupportedBuildError(
+                index,
+                devices,
+                reason=support["reason"] or "CUDA refused to select this adapter",
+                required_build=support["required_build"],
+                cause=exc,
+            ) from exc
         raise GPUSelectionError(index, devices) from exc
     return index
 
@@ -365,10 +577,28 @@ def selected_onnx_providers() -> list:
         # Keep ONNX Runtime's provider probing behaviour when no CUDA device
         # metadata is available (for example, a vendor runtime without torch).
         return ["CUDAExecutionProvider", "CPUExecutionProvider"]
+    if not onnx_cuda_provider_available():
+        # The CPU-only onnxruntime wheel can never satisfy CUDAExecutionProvider.
+        # Asking for it anyway produced a warning and a silent CPU fallback that
+        # looked like the GPU selection had been ignored (issue #7).
+        return ["CPUExecutionProvider"]
     return [
         ("CUDAExecutionProvider", {"device_id": index}),
         "CPUExecutionProvider",
     ]
+
+
+def onnx_cuda_provider_available() -> bool:
+    """Return True when the installed onnxruntime build offers CUDA."""
+    try:
+        import onnxruntime
+    except ImportError:
+        return False
+    try:
+        return "CUDAExecutionProvider" in set(onnxruntime.get_available_providers())
+    except (AttributeError, RuntimeError, TypeError, ValueError) as exc:
+        logger.debug("onnxruntime provider probe failed: %s", exc)
+        return False
 
 # ---------------------------------------------------------------------------
 # Optional torch import
