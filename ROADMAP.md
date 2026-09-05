@@ -231,13 +231,6 @@ Not re-queued because they shipped since 2026-08-23: embedded-decoder attestatio
 
 ### P0
 
-- [ ] P0 — F432 — Stop adopting a foreign interpreter's site-packages in frozen builds
-  Why: The packaged server executes the first `python`/`python3`/`py` found on PATH and appends its site-packages to `sys.path`, so native modules built for an unrelated CPython minor version become importable and any writable PATH directory containing `python.exe` is executed at startup.
-  Evidence: Verified: `opencut/server.py:158-201`; issue #8 shows a frozen v1.55.1 build adopting `C:\Python312` and then dying with no traceback; contradicts the ingress posture in `opencut/trusted_hosts.py` and `opencut/network_policy.py`.
-  Touches: `opencut/server.py`, optional-dependency discovery, `opencut/dependency_support.py`, capability reporting, packaging smoke tests.
-  Acceptance: The frozen build never executes an interpreter discovered from PATH; optional dependencies resolve only from the bundled runtime and `~/.opencut/packages`; if an external interpreter is used at all it is opt-in, its `sys.version_info` minor version must equal the bundled runtime's, and the decision plus the rejected candidates are logged; a fixture placing a mismatched-ABI package on PATH leaves the packaged server's `sys.path` unchanged and the server running.
-  Complexity: M
-
 - [ ] P0 — F435 — Move the plugin registry to a controlled namespace and sign the registry document
   Why: The registry URL points into a GitHub organization this project does not own, at a repository that does not yet exist, so a third party can create it and become the authoritative plugin index for every installation; the registry document itself is unsigned, and publisher trust is first-use, so a hostile index can introduce a new publisher and have its key pinned silently.
   Evidence: Verified 2026-09-04: `opencut/core/plugin_marketplace.py:39` targets `https://raw.githubusercontent.com/opencut/plugin-registry/main/registry.json`; the `opencut` GitHub organization exists (created 2022-12-03) and is not `SysAdminDoc`; `opencut/plugin-registry` returns 404; TOFU pinning at `opencut/core/plugin_installation.py:253-273`.
@@ -254,19 +247,6 @@ Not re-queued because they shipped since 2026-08-23: embedded-decoder attestatio
 
 ### P1
 
-- [ ] P1 — F437 — Capture native crashes so a dying server leaves evidence
-  Why: The server can terminate without writing a traceback, which is exactly the failure users report and exactly the failure an ABI-mismatched import produces, and nothing in the tree records it.
-  Evidence: Verified: issue #8's log ends mid-session with no exception; zero repo-wide hits for `faulthandler`, `sys.excepthook` or `threading.excepthook`; `opencut/server.py:653-670` registers only `atexit` cleanup. Distinct from F419, which covers broad Python catches; a native crash raises no Python exception at all.
-  Touches: `opencut/server.py`, logging setup, a `~/.opencut` crash directory, the issue-report template and panel diagnostics, crash fixtures.
-  Acceptance: `faulthandler` is enabled to a persistent file at startup and `sys.excepthook` plus `threading.excepthook` write a structured record naming the exception, thread, loaded optional dependencies and `sys.path` provenance; abnormal termination leaves a timestamped crash file under `~/.opencut`; the panel's issue reporter attaches the most recent crash file; a fixture that raises in a worker thread and one that aborts the process both produce a readable record.
-  Complexity: S
-
-- [ ] P1 — F438 — Correct the GPU install guidance so it names a CUDA build that supports current hardware
-  Why: The documented GPU install command points at the CUDA 12.1 wheel index, which carries no `sm_120` kernels, so every RTX 50-series user who follows the README lands in the failure reported in issue #7.
-  Evidence: Verified: `requirements.txt:3` names the cu121 index; `pyproject.toml:191` pins `torch>=2.10.0`; Blackwell requires cu128 or newer per https://github.com/pytorch/pytorch/issues/159207 and https://github.com/pytorch/pytorch/issues/164342. Complements F424, whose acceptance covers locks and packaging but not the GPU wheel index.
-  Touches: `requirements.txt`, `pyproject.toml` extras, the README GPU section, installer optional-GPU prompts, `docs/MODELS.md`, capability reporting.
-  Acceptance: Every documented GPU install path names a CUDA index whose wheels include the compute capabilities of currently shipping NVIDIA consumer hardware, with the supported range stated; the guidance is generated from one source consumed by README, requirements and the installer, so they cannot diverge; a check fails when the documented index and the declared supported capability range disagree; following the documented command on an sm_120 adapter yields a working transcription job or an explicit unsupported verdict from F434.
-  Complexity: S
 
 ### P2
 

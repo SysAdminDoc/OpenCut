@@ -198,16 +198,55 @@ def torch_supported_capabilities(torch_module=None) -> set[tuple[int, int]]:
     return supported
 
 
+# ---------------------------------------------------------------------------
+# The documented GPU install lane
+#
+# One source for the CUDA wheel index, because it was previously restated in
+# README.md, requirements.txt, install.py and upscale_flashvsr.py, all naming
+# cu121 -- an index with no sm_120 kernels. Every RTX 50-series user who
+# followed the documentation landed in the failure reported as issue #7.
+# ---------------------------------------------------------------------------
+
+#: Highest compute capability each PyTorch CUDA wheel index carries kernels for.
+CUDA_INDEX_MAX_CAPABILITY = {
+    "cu118": (9, 0),
+    "cu121": (9, 0),
+    "cu124": (9, 0),
+    "cu126": (9, 0),
+    "cu128": (12, 0),
+    "cu129": (12, 0),
+}
+
+#: The index OpenCut documents. Must cover NEWEST_CONSUMER_CAPABILITY.
+CUDA_WHEEL_INDEX = "cu128"
+
+#: The newest NVIDIA consumer architecture OpenCut claims to support.
+#: RTX 50-series (Blackwell) is sm_120.
+NEWEST_CONSUMER_CAPABILITY = (12, 0)
+
+CUDA_WHEEL_INDEX_URL = f"https://download.pytorch.org/whl/{CUDA_WHEEL_INDEX}"
+
+#: The exact command the documentation tells users to run.
+TORCH_GPU_INSTALL_COMMAND = (
+    f'pip install "torch>=2.10" "torchvision>=0.25" torchaudio --index-url {CUDA_WHEEL_INDEX_URL}'
+)
+
+
+def supported_capability_range() -> tuple[tuple[int, int], tuple[int, int]]:
+    """Return ``(oldest, newest)`` compute capability the documented lane covers."""
+    return (7, 5), CUDA_INDEX_MAX_CAPABILITY[CUDA_WHEEL_INDEX]
+
+
 #: A build that cannot run an adapter needs a different wheel, not a different
 #: device. Keyed by capability major so the advice names a real download.
 _REQUIRED_BUILD_HINTS = {
     12: (
-        "RTX 50-series/Blackwell (sm_120) needs a CUDA 12.8 or newer PyTorch build: "
-        "pip install torch --index-url https://download.pytorch.org/whl/cu128"
+        f"RTX 50-series/Blackwell (sm_120) needs a CUDA 12.8 or newer PyTorch build: "
+        f"pip install torch --index-url {CUDA_WHEEL_INDEX_URL}"
     ),
     10: (
-        "This adapter needs a CUDA 12.8 or newer PyTorch build: "
-        "pip install torch --index-url https://download.pytorch.org/whl/cu128"
+        f"This adapter needs a CUDA 12.8 or newer PyTorch build: "
+        f"pip install torch --index-url {CUDA_WHEEL_INDEX_URL}"
     ),
 }
 

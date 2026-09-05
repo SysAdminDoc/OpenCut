@@ -17,6 +17,34 @@ Notable changes to OpenCut. The git history carries the detailed record.
   startup instead of degrading in silence. A test compares the built artifact
   against the source tree.
 
+### Fixed: a packaged server no longer borrows another Python's packages
+
+- The frozen build used to run the first `python` it found on PATH and import
+  whatever site-packages that interpreter reported. When the versions did not
+  match, a native module compiled for the wrong Python aborted the process with
+  no traceback, which is how the server "just stopped" in issue #8. It also
+  meant any writable folder on PATH containing a python.exe got executed at
+  startup.
+- Optional dependencies now come from the bundled runtime and
+  `~/.opencut/packages`. Borrowing an external interpreter is opt-in through
+  `OPENCUT_EXTERNAL_SITE_PACKAGES`, and even then its Python version has to
+  match the build's.
+
+### Added: crash records
+
+- `~/.opencut/crash.log` was read by the crash packet, the issue reporter and
+  the crash-log download, and written by nothing. An unhandled exception in any
+  thread now leaves a record there, and a native crash leaves a faulthandler
+  traceback, both with the loaded paths that would explain a bad import.
+
+### Fixed: GPU install instructions named a CUDA build too old for current cards
+
+- The README, requirements.txt, the source installer and the FlashVSR hint each
+  pointed at the CUDA 12.1 wheel index, which has no kernels for RTX 50-series
+  cards, so following the documentation produced the exact failure in issue #7.
+  All four now come from one place and name a build that covers current
+  hardware, with a test that fails if they drift apart again.
+
 ### Fixed: two servers could bind the same port on Windows
 
 - The port check set `SO_REUSEADDR` before binding, which on Windows also
