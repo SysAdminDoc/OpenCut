@@ -96,7 +96,17 @@ def test_an_unparseable_timestamp_is_not_silently_accepted():
     assert check_snapshot_freshness(_snapshot(1, recorded_at="whenever"), now=NOW)["state"] == "undated"
 
 
-def test_a_missing_snapshot_is_reported():
+def test_a_missing_snapshot_is_reported(tmp_path, monkeypatch):
+    """Point at a path that really is absent.
+
+    This originally called the checker without controlling SNAPSHOT_PATH, so it
+    only passed while "missing" was the single verdict for a None snapshot. It
+    is not: a file that exists but will not parse also yields None, and calling
+    that "missing" sends the reader looking for a file that is right there.
+    """
+    from opencut.tools import adobe_premierepro_versions as module
+
+    monkeypatch.setattr(module, "SNAPSHOT_PATH", tmp_path / "absent.json")
     verdict = check_snapshot_freshness(None, now=NOW)
     assert verdict["state"] == "missing"
     assert verdict["ok"] is False
@@ -164,3 +174,41 @@ def test_the_committed_snapshot_is_currently_fresh():
 
     verdict = check_snapshot_freshness(load_committed_snapshot())
     assert verdict["ok"], verdict["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Regressions found by adversarial review
+# ---------------------------------------------------------------------------
+
+def test_a_future_dated_snapshot_is_refused():
+    """A stamp in the future makes the age test unsatisfiable forever."""
+    verdict = check_snapshot_freshness(_snapshot(-3000), now=NOW)
+    assert verdict["ok"] is False
+    assert verdict["state"] == "future_dated"
+    assert "future" in verdict["detail"]
+
+
+def test_a_snapshot_written_moments_ago_is_not_treated_as_future_dated():
+    """Second-level clock jitter must not trip the guard."""
+    assert check_snapshot_freshness(_snapshot(-0.0001), now=NOW)["ok"] is True
+
+
+def test_a_corrupt_snapshot_is_not_reported_as_missing(tmp_path, monkeypatch):
+    """The file is there; saying it is absent sends you looking in the wrong place."""
+    from opencut.tools import adobe_premierepro_versions as module
+
+    corrupt = tmp_path / "snapshot.json"
+    corrupt.write_text("{ not json", encoding="utf-8")
+    monkeypatch.setattr(module, "SNAPSHOT_PATH", corrupt)
+
+    assert module.load_committed_snapshot(corrupt) is None
+    verdict = module.check_snapshot_freshness(None, now=NOW)
+    assert verdict["state"] == "unreadable"
+    assert "could not be parsed" in verdict["detail"]
+
+
+def test_a_genuinely_absent_snapshot_still_reports_missing(tmp_path, monkeypatch):
+    from opencut.tools import adobe_premierepro_versions as module
+
+    monkeypatch.setattr(module, "SNAPSHOT_PATH", tmp_path / "nope.json")
+    assert module.check_snapshot_freshness(None, now=NOW)["state"] == "missing"

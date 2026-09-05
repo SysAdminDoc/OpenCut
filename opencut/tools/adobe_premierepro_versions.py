@@ -97,12 +97,20 @@ def check_snapshot_freshness(
     different responses.
     """
     if snapshot is None:
+        # load_committed_snapshot() returns None for both an absent file and an
+        # unreadable one, so say which. "No committed snapshot" is a false
+        # statement about a file that is sitting right there, corrupt.
+        exists = SNAPSHOT_PATH.is_file()
         return {
-            "state": "missing",
+            "state": "unreadable" if exists else "missing",
             "ok": False,
             "age_days": None,
             "max_age_days": max_age_days,
-            "detail": f"No committed snapshot at {SNAPSHOT_PATH}.",
+            "detail": (
+                f"{SNAPSHOT_PATH} exists but could not be parsed as JSON."
+                if exists
+                else f"No committed snapshot at {SNAPSHOT_PATH}."
+            ),
         }
 
     status = str(snapshot.get("status") or "").strip().lower()
@@ -128,6 +136,22 @@ def check_snapshot_freshness(
             "age_days": None,
             "max_age_days": max_age_days,
             "detail": "Snapshot carries no usable recorded_at, so its age cannot be judged.",
+        }
+
+    if age < -1:
+        # A stamp in the future permanently disables the gate: no elapsed time
+        # ever exceeds the limit. Clock skew or a hand-edited file produces it,
+        # and both are reasons to refuse the snapshot rather than trust it.
+        return {
+            "state": "future_dated",
+            "ok": False,
+            "age_days": age,
+            "max_age_days": max_age_days,
+            "detail": (
+                f"{SNAPSHOT_PATH.name} is dated {abs(age):.0f} days in the future, so its "
+                "age cannot be trusted. Refresh it with "
+                "`python -m opencut.tools.adobe_premierepro_versions`."
+            ),
         }
 
     if age > max_age_days:

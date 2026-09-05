@@ -10,6 +10,7 @@ exactly like a bridge nobody had started. The CEP panel then dialled a hardcoded
 
 from __future__ import annotations
 
+import asyncio
 import socket
 import threading
 import time
@@ -125,7 +126,7 @@ def test_a_missing_websockets_package_is_reported_not_silently_stopped(bridge, m
 def test_start_does_not_hang_forever_when_the_thread_never_settles(bridge, monkeypatch):
     """A bind that never resolves must time out with a stated reason."""
     instance = bridge(_free_port())
-    monkeypatch.setattr(instance, "_run_server", lambda: time.sleep(30))
+    monkeypatch.setattr(instance, "_run_server", lambda generation=0: time.sleep(30))
 
     started = time.time()
     result = instance.start(timeout=0.5)
@@ -258,8 +259,8 @@ def test_ws_start_route_reports_failure_instead_of_a_false_success(monkeypatch):
 
 
 def test_ws_status_route_retains_the_bind_error(monkeypatch):
-    from opencut.routes import system_realtime_routes as routes  # noqa: F401
     import opencut.core.ws_bridge as ws_bridge
+    from opencut.routes import system_realtime_routes as routes  # noqa: F401
 
     class _FailedBridge:
         port = 5681
@@ -282,3 +283,89 @@ def test_ws_status_route_retains_the_bind_error(monkeypatch):
     assert "address in use" in (body.get("error") or ""), (
         "a port collision is still indistinguishable from a bridge nobody started"
     )
+
+
+# ---------------------------------------------------------------------------
+# Cancellation and disconnect: the false-connected cases
+# ---------------------------------------------------------------------------
+
+def test_a_cancelled_serve_task_does_not_keep_reporting_bound(bridge):
+    """A dead bridge must never answer "connected".
+
+    asyncio.CancelledError derives from BaseException, so `except Exception`
+    never saw it. The serve task died, the thread exited, and `_running` plus
+    `_bound_port` stayed exactly as the successful bind had left them, so
+    /ws/status and /ws/start both answered running=True on a corpse and both
+    panels dialled a port nobody was listening on.
+    """
+    instance = bridge(_free_port())
+    result = instance.start(timeout=10)
+    assert result["bound"] is True
+    port = result["port"]
+
+    # Kill the serve task the way a cancelled event loop would.
+    loop = getattr(instance, "_loop", None)
+    assert loop is not None, "the bridge exposes no loop to cancel"
+    for task in asyncio.all_tasks(loop) if loop.is_running() else []:
+        loop.call_soon_threadsafe(task.cancel)
+    loop.call_soon_threadsafe(loop.stop)
+
+    deadline = time.time() + 10
+    while instance._thread.is_alive() and time.time() < deadline:
+        time.sleep(0.1)
+
+    assert not instance._thread.is_alive(), "the serving thread survived cancellation"
+    assert instance.is_running is False, "a dead bridge still reports itself running"
+    assert instance.bind_result()["bound"] is False, "a dead bridge still reports bound"
+    assert instance.last_error, "the cancellation was not recorded as a reason"
+
+    # Deliberately not asserting the socket is refused here: Windows can leave
+    # a cancelled listener accepting into a backlog for a moment after the loop
+    # closes, and the bridge does not control that. What matters, and what was
+    # broken, is that the bridge stops telling the panels it is connected.
+    assert isinstance(port, int)
+
+
+def test_a_late_binding_thread_does_not_erase_the_timeout_error(bridge, monkeypatch):
+    """The delayed-bind case named in the acceptance.
+
+    start() timed out and recorded the reason; the orphan thread then bound
+    anyway and cleared `_bind_error` unconditionally, putting /ws/status back
+    to the generic stopped state with no reason at all.
+    """
+    instance = bridge(_free_port())
+    real_run = instance._run_server
+
+    def _slow(generation=0):
+        time.sleep(1.5)
+        real_run(generation)
+
+    monkeypatch.setattr(instance, "_run_server", _slow)
+
+    result = instance.start(timeout=0.3)
+    assert result["bound"] is False
+    assert "within" in (result["error"] or "")
+
+    # Let the orphan finish its work, then check the error survived.
+    time.sleep(3)
+    assert instance.last_error, "the retained start error was erased by the late thread"
+    assert instance.bind_result()["bound"] is False
+
+
+def test_a_client_disconnect_leaves_the_bridge_serving(bridge):
+    """A dropped client must not take the bridge down with it."""
+    websockets = pytest.importorskip("websockets.sync.client")
+
+    instance = bridge(_free_port())
+    port = instance.start(timeout=10)["port"]
+
+    connection = websockets.connect(f"ws://{HOST}:{port}", open_timeout=10)
+    connection.close()
+
+    time.sleep(0.5)
+    assert instance.is_running is True, "a client disconnect stopped the bridge"
+    assert instance.bind_result()["bound"] is True
+
+    # A second client can still connect afterwards.
+    again = websockets.connect(f"ws://{HOST}:{port}", open_timeout=10)
+    again.close()

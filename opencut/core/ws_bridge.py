@@ -59,9 +59,13 @@ class WebSocketBridge:
         self._handlers: Dict[str, Callable] = {}
         self._event_listeners: Dict[str, List[Callable]] = {}
         # Bind outcome, so start() can report it and status can retain it.
+        self._start_lock = threading.Lock()
+        self._state_lock = threading.Lock()
         self._bind_settled = threading.Event()
         self._bind_error: Optional[str] = None
         self._bound_port: Optional[int] = None
+        #: Bumped by every start(); a stale thread's outcome is discarded.
+        self._generation = 0
 
         # Register built-in handlers
         self._register_builtin_handlers()
@@ -94,36 +98,77 @@ class WebSocketBridge:
         now gets the bind outcome and, on success, the port that was actually
         bound rather than the one that was requested.
         """
-        if self._running:
+        # One attempt at a time. Without this, concurrent callers each bumped
+        # the generation and spawned a thread, and two of the three lost the
+        # bind to WSAEADDRINUSE against their own sibling.
+        with self._start_lock:
+            return self._start_locked(timeout=timeout)
+
+    def _start_locked(self, *, timeout: float) -> dict:
+        if self.is_running:
             logger.warning("WebSocket bridge already running")
             return self.bind_result()
 
-        self._bind_error = None
-        self._bound_port = None
-        self._bind_settled.clear()
-        self._running = True
-        self._thread = threading.Thread(target=self._run_server, daemon=True, name="ws-bridge")
-        self._thread.start()
+        with self._state_lock:
+            # Every attempt gets its own generation. A thread left over from a
+            # previous start (one whose join timed out, or that outlived a
+            # timeout) must not write its outcome into this attempt's state, or
+            # it settles the new wait instantly and wipes the error we just
+            # recorded.
+            self._generation += 1
+            generation = self._generation
+            self._bind_error = None
+            self._bound_port = None
+            self._bind_settled = threading.Event()
+            settled = self._bind_settled
+            self._running = True
+            self._thread = threading.Thread(
+                target=self._run_server, args=(generation,), daemon=True, name="ws-bridge"
+            )
+            thread = self._thread
+        thread.start()
         logger.info("WebSocket bridge starting on ws://%s:%d", self.host, self.port)
 
-        if not self._bind_settled.wait(timeout):
-            self._bind_error = (
-                f"WebSocket bridge did not finish binding {self.host}:{self.port} "
-                f"within {timeout:g}s."
-            )
-            self._running = False
-            logger.error(self._bind_error)
+        if not settled.wait(timeout):
+            with self._state_lock:
+                if self._generation == generation:
+                    # Retire this generation as well as recording the reason.
+                    # Without that the thread we gave up on binds a moment
+                    # later, claims success, and clears the error we just
+                    # wrote, putting status back to a bare "stopped".
+                    self._generation += 1
+                    self._bind_error = (
+                        f"WebSocket bridge did not finish binding {self.host}:{self.port} "
+                        f"within {timeout:g}s."
+                    )
+                    self._running = False
+                    logger.error(self._bind_error)
         return self.bind_result()
 
     def bind_result(self) -> dict:
         """Describe the last bind attempt, success or failure."""
-        return {
-            "bound": self._bound_port is not None and self._running,
-            "port": self._bound_port if self._bound_port is not None else self.port,
-            "requested_port": self.port,
-            "host": self.host,
-            "error": self._bind_error,
-        }
+        with self._state_lock:
+            return {
+                "bound": self._is_running_locked(),
+                "port": self._bound_port if self._bound_port is not None else self.port,
+                "requested_port": self.port,
+                "host": self.host,
+                "error": self._bind_error,
+            }
+
+    def _is_running_locked(self) -> bool:
+        """True only when the serving thread is alive and holding a port.
+
+        ``_running`` alone was not enough: a cancelled or crashed serve task
+        left the flag set and the port recorded, so a dead bridge reported
+        itself connected and both panels dialled a socket nobody was listening
+        on. ``asyncio.CancelledError`` derives from ``BaseException``, so it
+        never reached the handler that would have cleared the flag.
+        """
+        if not self._running or self._bound_port is None:
+            return False
+        thread = self._thread
+        return bool(thread is None or thread.is_alive())
 
     @property
     def last_error(self) -> Optional[str]:
@@ -143,8 +188,12 @@ class WebSocketBridge:
         self._bound_port = None
         logger.info("WebSocket bridge stopped")
 
-    def _run_server(self):
-        """Run the WebSocket server (blocking, called in thread)."""
+    def _run_server(self, generation: int = 0):
+        """Run the WebSocket server (blocking, called in thread).
+
+        ``generation`` identifies the ``start()`` that spawned this thread.
+        A thread from an earlier attempt must not write into current state.
+        """
         try:
             import asyncio
 
@@ -190,11 +239,11 @@ class WebSocketBridge:
                     # Read the port back off the listening socket: with port 0,
                     # or any future retry, the bound port is not the requested
                     # one, and the panels need the value they can connect to.
-                    self._bound_port = self._read_bound_port(server) or self.port
-                    self._bind_error = None
-                    self._bind_settled.set()
+                    bound = self._read_bound_port(server) or self.port
+                    if not self._claim(generation, port=bound, error=None):
+                        return
                     logger.info(
-                        "WebSocket bridge listening on ws://%s:%d", self.host, self._bound_port
+                        "WebSocket bridge listening on ws://%s:%d", self.host, bound
                     )
                     # Run until stopped
                     while self._running:
@@ -210,30 +259,55 @@ class WebSocketBridge:
                 loop.close()
 
         except ImportError:
-            self._running = False
-            self._bind_error = (
-                "websockets package not installed. Install with: pip install websockets"
+            self._fail(
+                generation,
+                "websockets package not installed. Install with: pip install websockets",
             )
             logger.warning(
                 "websockets package not installed. WebSocket bridge disabled.\n"
                 "Install with: pip install websockets"
             )
         except OSError as e:
-            self._running = False
             # Keep the reason. This used to be logged and dropped, so /ws/status
             # reported a generic "stopped" and a port collision was
             # indistinguishable from a bridge nobody had started.
-            self._bind_error = f"Cannot bind {self.host}:{self.port}: {e}"
+            self._fail(generation, f"Cannot bind {self.host}:{self.port}: {e}")
             logger.error("WebSocket bridge failed to start: %s", e)
-        except Exception as e:
-            was_running = self._running
-            self._running = False
-            if was_running:
-                self._bind_error = f"WebSocket bridge error: {e}"
-                logger.error("WebSocket bridge error: %s", e)
+        except BaseException as e:
+            # BaseException, not Exception: asyncio.CancelledError does not
+            # derive from Exception, so a cancelled serve task used to leave
+            # _running set and _bound_port populated. The bridge was dead and
+            # reported itself connected, which is the false state this whole
+            # change exists to prevent.
+            self._fail(generation, f"WebSocket bridge stopped: {e!r}")
+            logger.error("WebSocket bridge stopped: %r", e)
+            raise
         finally:
             # Always release start(): a failure that never settles would other-
             # wise be reported as a timeout instead of its real cause.
+            with self._state_lock:
+                if self._generation == generation:
+                    self._running = False
+                    self._bind_settled.set()
+
+    def _claim(self, generation: int, *, port: Optional[int], error: Optional[str]) -> bool:
+        """Record a bind outcome, unless a newer start() has superseded us."""
+        with self._state_lock:
+            if self._generation != generation:
+                return False
+            self._bound_port = port
+            self._bind_error = error
+            self._bind_settled.set()
+            return True
+
+    def _fail(self, generation: int, message: str) -> None:
+        """Record a bind failure for this generation only."""
+        with self._state_lock:
+            if self._generation != generation:
+                return
+            self._running = False
+            self._bound_port = None
+            self._bind_error = message
             self._bind_settled.set()
 
     @staticmethod
@@ -380,7 +454,8 @@ class WebSocketBridge:
 
     @property
     def is_running(self) -> bool:
-        return self._running
+        with self._state_lock:
+            return self._is_running_locked()
 
     # -----------------------------------------------------------------------
     # Built-in command handlers
