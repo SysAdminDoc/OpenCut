@@ -7698,6 +7698,10 @@ async function uxpWsConnect({ reconnect = false } = {}) {
   socket.onclose = () => {
     _uxpWsConnected = false;
     if (_uxpWs === socket) _uxpWs = null;
+    // Drop the cached endpoint so the reconnect re-reads /ws/status. Keeping it
+    // meant a bridge that came back on a different port was never found again:
+    // every reconnect for the life of the panel dialled the old one.
+    _uxpWsEndpoint = "";
     uxpUpdateWsStatus();
     uxpWsScheduleReconnect();
   };

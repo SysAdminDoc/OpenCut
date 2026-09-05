@@ -97,7 +97,11 @@ describe("panel controller budgets", () => {
     // free port and skips the HTTP port, so it opened a socket to nothing
     // whenever the first choice was taken. The ten lines are `_wsBridgePort`,
     // `rememberWsBridgePort` and its two call sites, and three comments.
-    ["client/main.js", 18826],
+    // A review then found that recording the port was not enough: `wsConnect`
+    // read `_wsBridgePort` synchronously, so the very first connect after a
+    // panel load still used 5680 because nothing had answered yet. Twelve more
+    // lines resolve the port before dialling and explain why.
+    ["client/main.js", 18838],
     ["client/update-controller.js", 300],
     ["client/results-controller.js", 300],
     ["client/settings-diagnostics-controller.js", 110],
