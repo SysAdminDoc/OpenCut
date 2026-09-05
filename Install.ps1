@@ -265,6 +265,14 @@ if ($Uninstall) {
         Remove-OpenCutArtifact -Path $p -Label "CEP extension"
     }
 
+    # Remove UXP panel. The folder carries the plugin version, so match by
+    # prefix rather than assuming the version this uninstaller was built with.
+    $uxpRoot = Join-Path $env:APPDATA "Adobe\UXP\Plugins\External"
+    if (Test-Path $uxpRoot) {
+        Get-ChildItem -LiteralPath $uxpRoot -Directory -Filter "com.opencut.uxp_*" -ErrorAction SilentlyContinue |
+            ForEach-Object { Remove-OpenCutArtifact -Path $_.FullName -Label "UXP panel" }
+    }
+
     # Remove pip packages
     Write-Step "Removing Python packages..."
     if ($pythonCmd) {
@@ -712,6 +720,43 @@ if (-not $SkipExtension) {
             } else {
                 Write-Err "System CEP extension was not replaced; close Premiere Pro and retry."
             }
+        }
+    }
+
+    # UXP panel. Adobe ends ExtendScript support in Premiere Pro in September
+    # 2026 and the CEP panel above drives every host mutation through it, so
+    # shipping only CEP leaves newer Premiere builds with nothing. Signed .ccx
+    # distribution needs an Adobe identity; this is the developer-mode sideload
+    # path Adobe documents, and Premiere ignores it until the user enables
+    # Settings > Plugins > Developer Mode.
+    $uxpSrc = Join-Path $script:InstallDir "extension\com.opencut.uxp"
+    $uxpManifest = Join-Path $uxpSrc "manifest.json"
+    if (-not (Test-Path $uxpManifest)) {
+        Write-Warn "UXP panel source not found: $uxpSrc"
+    } else {
+        try {
+            $uxpInfo = Get-Content -Raw -LiteralPath $uxpManifest | ConvertFrom-Json
+            $uxpId = [string]$uxpInfo.id
+            $uxpVersion = [string]$uxpInfo.version
+            if ([string]::IsNullOrWhiteSpace($uxpId) -or [string]::IsNullOrWhiteSpace($uxpVersion)) {
+                throw "manifest.json is missing id or version"
+            }
+            # Premiere requires the folder to be "<id>_<version>" exactly.
+            $uxpRoot = Join-Path $env:APPDATA "Adobe\UXP\Plugins\External"
+            $uxpTarget = Join-Path $uxpRoot ("{0}_{1}" -f $uxpId, $uxpVersion)
+            if (-not (Test-Path $uxpRoot)) {
+                New-Item -Path $uxpRoot -ItemType Directory -Force | Out-Null
+            }
+            $uxpReady = Remove-OpenCutArtifact -Path $uxpTarget -Label "existing UXP panel"
+            if ($uxpReady) {
+                Copy-Item $uxpSrc $uxpTarget -Recurse -Force
+                Write-Ok "UXP panel installed to: $uxpTarget"
+                Write-Host "    Premiere 25.6+: enable Settings > Plugins > Developer Mode, then restart." -ForegroundColor DarkGray
+            } else {
+                Write-Err "UXP panel was not replaced; close Premiere Pro and retry."
+            }
+        } catch {
+            Write-Warn "Could not install the UXP panel: $($_.Exception.Message)"
         }
     }
 

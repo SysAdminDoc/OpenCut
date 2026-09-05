@@ -31,6 +31,15 @@ public class InstallConfig
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "Adobe", "CEP", "extensions", AppConstants.CepExtensionId);
 
+    public string UxpExtensionPath => Path.Combine(InstallPath, "extension", AppConstants.UxpExtensionId);
+
+    // Premiere will not load a sideloaded plugin from a differently named
+    // folder: it must be "<manifest id>_<manifest version>".
+    public string UxpTargetPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "Adobe", "UXP", "Plugins", "External",
+        $"{AppConstants.UxpExtensionId}_{AppConstants.AppVersion}");
+
     private static string GetDefaultUserDataBackupDirectory()
     {
         var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);

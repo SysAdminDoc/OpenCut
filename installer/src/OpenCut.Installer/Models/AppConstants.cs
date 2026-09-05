@@ -33,6 +33,11 @@ public static class AppConstants
     public const int ServerPort = 5679;
 
     public const string CepExtensionId = "com.opencut.panel";
+
+    // Adobe ends ExtendScript support in Premiere Pro in September 2026, and the
+    // CEP panel drives every host mutation through it, so the UXP panel has to
+    // ship too. Premiere requires the sideload folder to be "<id>_<version>".
+    public const string UxpExtensionId = "com.opencut.uxp";
     public const string PayloadMagic = "OCPAYLOAD";
     public const int PayloadMagicLength = 9;
     public const int PayloadSizeLength = 8;

@@ -87,6 +87,13 @@ public class InstallEngine
                 _fileInstaller.CopyDirectory(extSrc, _config.ExtensionPath,
                     "Copying extension", progress, step, totalSteps);
 
+            var uxpSrc = Path.Combine(tempDir, "extension", AppConstants.UxpExtensionId);
+            if (!Directory.Exists(uxpSrc))
+                uxpSrc = Path.Combine(tempDir, AppConstants.UxpExtensionId);
+            if (Directory.Exists(uxpSrc))
+                _fileInstaller.CopyDirectory(uxpSrc, _config.UxpExtensionPath,
+                    "Copying extension", progress, step, totalSteps);
+
             // Step 6: Copy launcher VBS + logo.ico
             step = 6;
             Report(progress, step, totalSteps, "Copying launcher", "Installing launcher...");
@@ -141,6 +148,11 @@ public class InstallEngine
                 _cepInstaller.InstallExtension(_config, progress, step, totalSteps);
             else
                 Report(progress, step, totalSteps, "CEP extension", "Skipped (not selected).", LogLevel.Debug);
+
+            // The same checkbox covers both panels: CEP for Premiere up to 25.5,
+            // UXP for 25.6+, which is what survives the ExtendScript cutoff.
+            if (_config.InstallCepExtension)
+                _cepInstaller.InstallUxpExtension(_config, progress, step, totalSteps);
 
             // Step 11: Write install path to registry
             step = 11;

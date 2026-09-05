@@ -17,6 +17,20 @@ Notable changes to OpenCut. The git history carries the detailed record.
   startup instead of degrading in silence. A test compares the built artifact
   against the source tree.
 
+### Added: the UXP panel now installs
+
+- Every installer shipped only the CEP panel while the README advertised a UXP
+  one for Premiere 25.6+. Adobe ends ExtendScript support in Premiere Pro in
+  September 2026 and the CEP panel routes every host mutation through it, so the
+  only installable panel was the one being retired.
+- `install.py`, `Install.ps1`, the Inno Setup script and the Windows installer
+  all place the UXP panel now, and all of them remove it again on uninstall.
+  `python -m opencut.tools.build_uxp_ccx` builds a distributable package.
+- Premiere ignores a plugin installed this way until you enable Settings >
+  Plugins > Developer Mode, which is a preference no installer can set. The
+  README says so. Signed `.ccx` distribution through Creative Cloud needs an
+  Adobe identity this project does not have yet.
+
 ### Fixed: the plugin registry pointed at a namespace the project does not own
 
 - The marketplace fetched its index from `raw.githubusercontent.com/opencut/...`.
