@@ -215,3 +215,92 @@ It is correct today by inspection, not by enforcement.
   Acceptance: each line above is either replaced by findings or moved to a "checked clean on <date>" note with the command that proved it.
   Confidence: Verified
   Effort: L
+
+## Research-Driven Additions — 2026-09-04
+
+Added 2026-09-04 from the research pass recorded in `RESEARCH.md`. IDs continue the F-number scheme;
+highest prior allocation across `ROADMAP.md`, `Roadmap_Blocked.md`, `CHANGELOG.md` and `RESEARCH.md`
+was F430.
+
+Two drivers: the first substantive external bug reports against a released artifact (issues #7 and #8,
+both v1.55.1 on Windows 11), and Adobe's scheduled September 2026 end of ExtendScript support in
+Premiere Pro. The 2026-08-23 conclusion that Adobe had published no firm CEP cutoff is stale.
+
+Not re-queued because they shipped since 2026-08-23: embedded-decoder attestation against the FFmpeg
+8.1.2 floor for CVE-2026-8461, and the huggingface-hub upgrade past the 1.26.0 path-traversal fix.
+
+### P0
+
+- [ ] P0 — F431 — Package the generated manifests into the frozen build
+  Why: `opencut_server.spec` collects data files from `opencut.data` only, so all 17 files under `opencut/_generated/` are absent from every packaged install and each consumer degrades silently.
+  Evidence: Verified: issue #8; `opencut_server.spec:85`; `dist/OpenCut-Server/_internal/opencut/data/` is populated while `_internal/opencut/_generated/` holds zero JSON files; consumers at `opencut/cli.py:32`, `opencut/core/agent_skills.py:22`, `opencut/core/feature_readiness.py:11`, `opencut/core/workflow.py:21`, `opencut/core/surface_ratchet.py:34`, `opencut/mcp_extended_tools.py:20`.
+  Touches: `opencut_server.spec`, packaging smoke tests, `opencut/core/workflow.py` and the other manifest loaders.
+  Acceptance: A built `dist/OpenCut-Server` contains every `opencut/_generated/*.json` present in the source tree; a packaging test enumerates the source manifests and fails when any is missing from the artifact; booting the packaged server logs no "Cannot load route manifest" warning; each loader raises a typed error naming the missing manifest instead of degrading silently.
+  Complexity: S
+
+- [ ] P0 — F432 — Stop adopting a foreign interpreter's site-packages in frozen builds
+  Why: The packaged server executes the first `python`/`python3`/`py` found on PATH and appends its site-packages to `sys.path`, so native modules built for an unrelated CPython minor version become importable and any writable PATH directory containing `python.exe` is executed at startup.
+  Evidence: Verified: `opencut/server.py:158-201`; issue #8 shows a frozen v1.55.1 build adopting `C:\Python312` and then dying with no traceback; contradicts the ingress posture in `opencut/trusted_hosts.py` and `opencut/network_policy.py`.
+  Touches: `opencut/server.py`, optional-dependency discovery, `opencut/dependency_support.py`, capability reporting, packaging smoke tests.
+  Acceptance: The frozen build never executes an interpreter discovered from PATH; optional dependencies resolve only from the bundled runtime and `~/.opencut/packages`; if an external interpreter is used at all it is opt-in, its `sys.version_info` minor version must equal the bundled runtime's, and the decision plus the rejected candidates are logged; a fixture placing a mismatched-ABI package on PATH leaves the packaged server's `sys.path` unchanged and the server running.
+  Complexity: M
+
+- [ ] P0 — F433 — Detect a live server on the port instead of trusting SO_REUSEADDR on Windows
+  Why: `_check_port` sets `SO_REUSEADDR` before binding, and on Windows that permits binding over a socket another process is actively holding, so the startup path reports a busy port as free and starts a second server on it.
+  Evidence: Verified: `opencut/pid.py:98-111`; issue #8 log shows pid 26164 and pid 10352 both writing the PID file for port 5679 within 41 seconds; `_is_opencut_on_port` already exists at `opencut/pid.py:114` and is never consulted by `_check_port`; Windows semantics per https://learn.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse.
+  Touches: `opencut/pid.py`, server startup and `_nuke_old_servers`, PID file handling, launcher scripts, port-collision tests.
+  Acceptance: On Windows the availability probe uses `SO_EXCLUSIVEADDRUSE` or an equivalent that fails against a live listener, and consults `_is_opencut_on_port` before deciding; starting a second server while one is running either attaches to the existing instance or exits with a message naming the live PID and port, and never overwrites the PID file; a fixture holding the port with a live socket makes the second start fail deterministically on Windows, macOS and Linux; TIME_WAIT reuse still succeeds.
+  Complexity: M
+
+- [ ] P0 — F434 — Report GPU usability from executable arch support rather than adapter presence
+  Why: Device discovery trusts `nvidia-smi`, so Settings shows an RTX 50-series adapter as healthy while every job fails, and the failure is re-raised as a message that denies the availability of the very index it lists.
+  Evidence: Verified: issue #7; `opencut/gpu.py:173` (the nvidia-smi path sets no `compute_capability`, unlike the torch path at `:237`), `opencut/gpu.py:114`, `opencut/gpu.py:333-335` discards the underlying `RuntimeError`, `opencut/gpu.py:26-35` renders the contradictory message, `opencut/gpu.py:358` pins `CUDAExecutionProvider` without consulting `onnxruntime.get_available_providers()`; zero repo-wide hits for `get_arch_list`.
+  Touches: `opencut/gpu.py`, `/system/gpu` and `/system/status`, CEP and UXP Settings GPU controls, job preflight, GPU fixtures.
+  Acceptance: Every listed adapter carries a compute capability on both discovery paths and a resolved state of usable, present-but-unsupported, or unavailable, computed against `torch.cuda.get_arch_list()` and `onnxruntime.get_available_providers()`; a present-but-unsupported adapter is shown as such in Settings before a job is submitted and names the required build; `GPUSelectionError` preserves and reports the underlying exception and never claims an index is unavailable while listing it; a fixture with an adapter whose capability is absent from the arch list produces the unsupported state and an actionable message, not the contradictory one.
+  Complexity: M
+
+- [ ] P0 — F435 — Move the plugin registry to a controlled namespace and sign the registry document
+  Why: The registry URL points into a GitHub organization this project does not own, at a repository that does not yet exist, so a third party can create it and become the authoritative plugin index for every installation; the registry document itself is unsigned, and publisher trust is first-use, so a hostile index can introduce a new publisher and have its key pinned silently.
+  Evidence: Verified 2026-09-04: `opencut/core/plugin_marketplace.py:39` targets `https://raw.githubusercontent.com/opencut/plugin-registry/main/registry.json`; the `opencut` GitHub organization exists (created 2022-12-03) and is not `SysAdminDoc`; `opencut/plugin-registry` returns 404; TOFU pinning at `opencut/core/plugin_installation.py:253-273`.
+  Touches: `opencut/core/plugin_marketplace.py`, registry cache handling, `opencut/core/plugin_installation.py`, trust store migration, plugin CLI and routes, marketplace tests.
+  Acceptance: The default registry URL resolves inside a namespace the maintainer controls; the registry document carries a detached signature verified against a key shipped with the release before any entry is parsed; an unsigned or mis-signed registry is refused with a typed error and the cached copy is not replaced; first-use publisher pinning requires the registry signature to have verified; a fixture serving a substituted registry with a new publisher key is rejected without writing to the trust store.
+  Complexity: M
+
+- [ ] P0 — F436 — Make the UXP panel installable from every distribution lane
+  Why: Adobe's ExtendScript support in Premiere Pro is scheduled to end in September 2026 and the CEP panel routes every host mutation through a 167 KB ExtendScript file, yet no shipped installer can deploy the UXP panel that the README advertises.
+  Evidence: Verified: `Install.ps1`, `OpenCut.iss`, `install.py` and `installer/src` contain zero UXP references while carrying 41, 23 and 28 CEP references respectively; `extension/com.opencut.panel/CSXS/manifest.xml:30` declares the ExtendScript `ScriptPath`; 27 `evalScript` call sites in `extension/com.opencut.panel/client/main.js`; `README.md:70` and `README.md:558` advertise the UXP panel; ExtendScript cutoff per https://community.adobe.com/questions-729/extendscript-to-uxp-for-premiere-pro-1553924 and https://github.com/ismael-joffroy-chandoutis/open-source-cinema/blob/master/Agent-Driven-Editing-2026.md. Related blocked work: F252 and F386 cover live-host evidence, which this item does not require.
+  Touches: `Install.ps1`, `OpenCut.iss`, `install.py`, `installer/src`, a shared generated install manifest, `extension/com.opencut.uxp` packaging, uninstall paths, installer tests.
+  Acceptance: One generated manifest describes every file each lane must place for CEP and for UXP, and all four lanes are driven from it; each lane detects the installed Premiere major version and deploys UXP for 25.6 and later, CEP for earlier, and both when both hosts are present; uninstall removes what was installed; a test asserts that adding a panel file to the manifest fails every lane that does not place it; README documents a supported UXP install path.
+  Complexity: L
+
+### P1
+
+- [ ] P1 — F437 — Capture native crashes so a dying server leaves evidence
+  Why: The server can terminate without writing a traceback, which is exactly the failure users report and exactly the failure an ABI-mismatched import produces, and nothing in the tree records it.
+  Evidence: Verified: issue #8's log ends mid-session with no exception; zero repo-wide hits for `faulthandler`, `sys.excepthook` or `threading.excepthook`; `opencut/server.py:653-670` registers only `atexit` cleanup. Distinct from F419, which covers broad Python catches; a native crash raises no Python exception at all.
+  Touches: `opencut/server.py`, logging setup, a `~/.opencut` crash directory, the issue-report template and panel diagnostics, crash fixtures.
+  Acceptance: `faulthandler` is enabled to a persistent file at startup and `sys.excepthook` plus `threading.excepthook` write a structured record naming the exception, thread, loaded optional dependencies and `sys.path` provenance; abnormal termination leaves a timestamped crash file under `~/.opencut`; the panel's issue reporter attaches the most recent crash file; a fixture that raises in a worker thread and one that aborts the process both produce a readable record.
+  Complexity: S
+
+- [ ] P1 — F438 — Correct the GPU install guidance so it names a CUDA build that supports current hardware
+  Why: The documented GPU install command points at the CUDA 12.1 wheel index, which carries no `sm_120` kernels, so every RTX 50-series user who follows the README lands in the failure reported in issue #7.
+  Evidence: Verified: `requirements.txt:3` names the cu121 index; `pyproject.toml:191` pins `torch>=2.10.0`; Blackwell requires cu128 or newer per https://github.com/pytorch/pytorch/issues/159207 and https://github.com/pytorch/pytorch/issues/164342. Complements F424, whose acceptance covers locks and packaging but not the GPU wheel index.
+  Touches: `requirements.txt`, `pyproject.toml` extras, the README GPU section, installer optional-GPU prompts, `docs/MODELS.md`, capability reporting.
+  Acceptance: Every documented GPU install path names a CUDA index whose wheels include the compute capabilities of currently shipping NVIDIA consumer hardware, with the supported range stated; the guidance is generated from one source consumed by README, requirements and the installer, so they cannot diverge; a check fails when the documented index and the declared supported capability range disagree; following the documented command on an sm_120 adapter yields a working transcription job or an explicit unsupported verdict from F434.
+  Complexity: S
+
+### P2
+
+- [ ] P2 — F439 — Decide and enforce which WSGI server serves loopback traffic
+  Why: Loopback binds fall through to the Werkzeug development server, which prints a production warning into the console of every packaged end user and is the surface carrying all panel SSE and WebSocket traffic.
+  Evidence: Verified: `opencut/server.py:709-723`, where `_should_use_production_wsgi` returns False for loopback; issue #8's console output shows the development-server warning; `waitress==3.0.2` is already locked at `requirements-release-lock.txt:1378`.
+  Touches: `opencut/server.py`, launcher scripts and installer console output, SSE and WebSocket streaming paths, load fixtures.
+  Acceptance: The loopback lane either uses the production server already bundled or documents in code why the development server is correct there and suppresses the warning for packaged runs; concurrent SSE subscribers plus a WebSocket client plus a long media job run together without request starvation in a load fixture; the choice is reported by `/system/status` so a bug report states which server was serving.
+  Complexity: M
+
+- [ ] P2 — F440 — Gate the freshness of tracked Adobe platform snapshots
+  Why: The Premiere and UXP compatibility snapshots the project plans against are static files with a `recorded_at` field that nothing reads, and they are stale at the moment the platform is changing.
+  Evidence: Verified: `opencut/_generated/adobe_premierepro_versions.json` records `recorded_at` of 2026-06-25, 71 days before 2026-09-04; `opencut/_generated/adobe_uxp_compatibility.json` alongside it; generators at `opencut/tools/adobe_premierepro_versions.py` and `opencut/tools/adobe_uxp_compatibility.py`; no code reads `recorded_at` from either file. Related to F413, which covers release and dependency documentation but not third-party platform snapshots.
+  Touches: The two Adobe snapshot generators, a freshness check in `opencut/checks.py` or the release gate, `docs/UXP_MIGRATION.md`, capability reporting.
+  Acceptance: Each tracked platform snapshot declares a maximum age; a check reads `recorded_at` and fails the release gate when a snapshot exceeds it, naming the file and its age; refreshing the snapshot clears the failure; a snapshot whose upstream fetch failed is distinguishable from one that is merely old.
+  Complexity: S
