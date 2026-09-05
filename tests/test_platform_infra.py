@@ -357,6 +357,8 @@ class TestPluginMarketplace(unittest.TestCase):
                 publisher_id=signed["publisher_id"],
                 publisher_public_key=signed["publisher_public_key"],
                 publisher_signature=signed["publisher_signature"],
+                # This test covers what happens after the index is authenticated.
+                registry_verified=True,
             )]
 
             def _fake_download(url, dest, **_kwargs):
@@ -413,6 +415,8 @@ class TestPluginMarketplace(unittest.TestCase):
             publisher_id=signed["publisher_id"],
             publisher_public_key=signed["publisher_public_key"],
             publisher_signature=signed["publisher_signature"],
+            # This test covers what happens after the index is authenticated.
+            registry_verified=True,
         )]
 
         def _fake_download(url, dest, **_kwargs):

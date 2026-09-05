@@ -24,6 +24,11 @@ from opencut.core.plugin_installation import (
     validate_staged_plugin,
     verify_artifact_publisher,
 )
+from opencut.core.plugin_registry_trust import (
+    RegistrySignatureError,
+    default_registry_url,
+    verify_registry_document,
+)
 from opencut.core.url_safety import (
     transactional_download,
     validate_public_http_url,
@@ -36,8 +41,15 @@ logger = logging.getLogger("opencut")
 
 PLUGINS_DIR = os.path.join(OPENCUT_DIR, "plugins")
 REGISTRY_CACHE = os.path.join(OPENCUT_DIR, "plugin_registry.json")
-REGISTRY_URL = "https://raw.githubusercontent.com/opencut/plugin-registry/main/registry.json"
+#: Resolved through ``plugin_registry_trust`` so the default namespace is one
+#: the maintainer controls. It previously pointed at ``opencut/plugin-registry``
+#: -- a different owner's organisation, at a repository that did not exist, so
+#: whoever created it would have become the plugin index for every install.
+REGISTRY_URL = default_registry_url()
 REGISTRY_TTL = 3600  # cache for 1 hour
+#: Marker written into the cache after a network document verifies, so a cached
+#: read cannot silently inherit trust a fetch never established.
+_CACHE_VERIFIED_FIELD = "_opencut_registry_verified"
 _PLUGIN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
 _MAX_ARCHIVE_MEMBERS = 5000
 _MAX_ARCHIVE_BYTES = 512 * 1024 * 1024
@@ -63,6 +75,10 @@ class PluginInfo:
     publisher_public_key: str = ""
     publisher_signature: str = ""
     capabilities: List[str] = field(default_factory=list)
+    #: True only when the registry document this entry came from carried a
+    #: signature from a key shipped with this release. First-use publisher
+    #: pinning depends on it, because the entry supplies its own publisher key.
+    registry_verified: bool = False
 
     @property
     def publisher_fingerprint(self) -> str:
@@ -231,23 +247,32 @@ def fetch_plugin_registry(
         on_progress(30, "Fetching plugin registry")
 
     import urllib.request
+
+    # The registry drives which URLs get downloaded and which publisher keys get
+    # pinned on first use, so it goes through the same URL validation as an
+    # artifact download rather than straight to urlopen.
+    registry_url = validate_public_http_url(REGISTRY_URL, label="Plugin registry URL")
     try:
-        with urllib.request.urlopen(REGISTRY_URL, timeout=15) as resp:
+        with urllib.request.urlopen(registry_url, timeout=15) as resp:
             data = json.loads(resp.read().decode("utf-8"))
     except Exception as exc:
         logger.warning("Failed to fetch plugin registry: %s", exc)
-        # Fall back to cached if available
-        if os.path.exists(REGISTRY_CACHE):
-            try:
-                with open(REGISTRY_CACHE, "r", encoding="utf-8") as fh:
-                    data = json.load(fh)
-            except (json.JSONDecodeError, OSError) as cache_exc:
-                raise RuntimeError(
-                    f"Cannot fetch plugin registry and cached registry is unreadable: {cache_exc}"
-                ) from exc
-        else:
-            raise RuntimeError(f"Cannot fetch plugin registry: {exc}")
+        return _parse_registry(_cached_registry_or_raise(exc))
 
+    # Authenticate before a single entry is parsed. A registry that does not
+    # verify is not a degraded registry, it is an untrusted one.
+    try:
+        key_id = verify_registry_document(data)
+    except RegistrySignatureError as exc:
+        logger.error("Plugin registry rejected: %s", exc)
+        # Deliberately do NOT replace the cache: a rejected document must not
+        # displace the last one that verified.
+        raise RegistrySignatureError(
+            f"The plugin registry at {registry_url} could not be authenticated: {exc}"
+        ) from exc
+
+    logger.info("Plugin registry verified with key %s", key_id)
+    data[_CACHE_VERIFIED_FIELD] = True
     os.makedirs(os.path.dirname(REGISTRY_CACHE), exist_ok=True)
     with open(REGISTRY_CACHE, "w", encoding="utf-8") as fh:
         json.dump(data, fh, indent=2)
@@ -258,8 +283,22 @@ def fetch_plugin_registry(
     return _parse_registry(data)
 
 
+def _cached_registry_or_raise(cause: BaseException) -> dict:
+    """Return the last cached registry, or re-raise with the fetch failure."""
+    if os.path.exists(REGISTRY_CACHE):
+        try:
+            with open(REGISTRY_CACHE, "r", encoding="utf-8") as fh:
+                return json.load(fh)
+        except (json.JSONDecodeError, OSError) as cache_exc:
+            raise RuntimeError(
+                f"Cannot fetch plugin registry and cached registry is unreadable: {cache_exc}"
+            ) from cause
+    raise RuntimeError(f"Cannot fetch plugin registry: {cause}")
+
+
 def _parse_registry(data: dict) -> List[PluginInfo]:
     installed = _load_installed()
+    verified = bool(data.get(_CACHE_VERIFIED_FIELD))
     plugins = []
     for entry in data.get("plugins", []):
         if not isinstance(entry, dict):
@@ -290,6 +329,7 @@ def _parse_registry(data: dict) -> List[PluginInfo]:
             if isinstance(entry.get("publisher"), dict) else "",
             capabilities=entry.get("capabilities", [])
             if isinstance(entry.get("capabilities"), list) else [],
+            registry_verified=verified,
         ))
     return plugins
 
@@ -376,6 +416,18 @@ def _install_marketplace_target(
 ) -> PluginInfo:
     """Download, authenticate, stage, and atomically activate one registry entry."""
     plugin_id = _validate_plugin_id(target.plugin_id)
+
+    # Before anything is fetched. The entry supplies its own publisher key and
+    # its own download URL, so if the index that produced it was not signed by a
+    # key shipped with this release, there is nothing here worth contacting --
+    # let alone pinning on first use.
+    if not target.registry_verified:
+        raise RegistrySignatureError(
+            f"Refusing to install {plugin_id}: its registry entry did not come from "
+            "a signed plugin index, so neither its download URL nor its publisher "
+            "key can be trusted. Install from a local directory instead."
+        )
+
     os.makedirs(PLUGINS_DIR, exist_ok=True)
 
     # Download plugin archive

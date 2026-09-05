@@ -293,6 +293,9 @@ def test_marketplace_install_verifies_digest_signature_and_manifest(
             artifact_signature_message("market-plugin", "1.0.0", digest),
         ),
         capabilities=["ui.panel"],
+        # These tests cover the artifact layer, which runs only after the
+        # registry index itself has been authenticated.
+        registry_verified=True,
     )
     monkeypatch.setattr(plugin_marketplace, "PLUGINS_DIR", str(plugins))
     monkeypatch.setattr(plugin_marketplace, "fetch_plugin_registry", lambda: [target])
@@ -354,6 +357,9 @@ def test_marketplace_tamper_and_interruption_never_activate(
             key,
             artifact_signature_message("market-plugin", "1.0.0", digest),
         ),
+        # These tests cover the artifact layer, which runs only after the
+        # registry index itself has been authenticated.
+        registry_verified=True,
     )
     monkeypatch.setattr(plugin_marketplace, "PLUGINS_DIR", str(plugins))
     monkeypatch.setattr(plugin_marketplace, "fetch_plugin_registry", lambda: [target])
