@@ -17,6 +17,19 @@ Notable changes to OpenCut. The git history carries the detailed record.
   startup instead of degrading in silence. A test compares the built artifact
   against the source tree.
 
+### Fixed: the live-updates bridge reported success before it was listening
+
+- Starting the bridge answered "running on port 5680" the moment the thread was
+  spawned. If the port was taken, the bind failed a moment later, the error was
+  logged and dropped, and the panel sat waiting on a socket that never existed.
+  `/ws/status` reported a plain "stopped", so a port collision looked the same
+  as a bridge nobody had started.
+- Starting now waits for the bind and reports what happened, including the port
+  actually bound rather than the one requested. A failure comes back with its
+  reason and stays readable afterwards. The CEP panel connects to the reported
+  port instead of assuming 5680, which mattered because the backend searches
+  5680-5689 and skips the HTTP port.
+
 ### Fixed: the release provenance document described a policy the code had abandoned
 
 - It told readers a tagged FFmpeg release `>= 8.1.1` was acceptable on an open

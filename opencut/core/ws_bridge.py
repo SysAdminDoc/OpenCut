@@ -58,6 +58,10 @@ class WebSocketBridge:
         self._running = False
         self._handlers: Dict[str, Callable] = {}
         self._event_listeners: Dict[str, List[Callable]] = {}
+        # Bind outcome, so start() can report it and status can retain it.
+        self._bind_settled = threading.Event()
+        self._bind_error: Optional[str] = None
+        self._bound_port: Optional[int] = None
 
         # Register built-in handlers
         self._register_builtin_handlers()
@@ -81,16 +85,50 @@ class WebSocketBridge:
             self._event_listeners[event_name] = []
         self._event_listeners[event_name].append(listener)
 
-    def start(self):
-        """Start the WebSocket server in a background thread."""
+    def start(self, *, timeout: float = 5.0) -> dict:
+        """Start the server and wait for the socket to bind.
+
+        Returning before the bind resolved meant ``/ws/start`` answered
+        "running on port 5680" while the thread was still on its way to an
+        OSError, and the only trace of the failure was a log line. The caller
+        now gets the bind outcome and, on success, the port that was actually
+        bound rather than the one that was requested.
+        """
         if self._running:
             logger.warning("WebSocket bridge already running")
-            return
+            return self.bind_result()
 
+        self._bind_error = None
+        self._bound_port = None
+        self._bind_settled.clear()
         self._running = True
         self._thread = threading.Thread(target=self._run_server, daemon=True, name="ws-bridge")
         self._thread.start()
         logger.info("WebSocket bridge starting on ws://%s:%d", self.host, self.port)
+
+        if not self._bind_settled.wait(timeout):
+            self._bind_error = (
+                f"WebSocket bridge did not finish binding {self.host}:{self.port} "
+                f"within {timeout:g}s."
+            )
+            self._running = False
+            logger.error(self._bind_error)
+        return self.bind_result()
+
+    def bind_result(self) -> dict:
+        """Describe the last bind attempt, success or failure."""
+        return {
+            "bound": self._bound_port is not None and self._running,
+            "port": self._bound_port if self._bound_port is not None else self.port,
+            "requested_port": self.port,
+            "host": self.host,
+            "error": self._bind_error,
+        }
+
+    @property
+    def last_error(self) -> Optional[str]:
+        """The last bind or start failure, retained after the thread exits."""
+        return self._bind_error
 
     def stop(self):
         """Stop the WebSocket server."""
@@ -102,6 +140,7 @@ class WebSocketBridge:
                 pass
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=5)
+        self._bound_port = None
         logger.info("WebSocket bridge stopped")
 
     def _run_server(self):
@@ -148,7 +187,15 @@ class WebSocketBridge:
                     max_size=10 * 1024 * 1024,  # 10MB
                 ) as server:
                     self._server = server
-                    logger.info("WebSocket bridge listening on ws://%s:%d", self.host, self.port)
+                    # Read the port back off the listening socket: with port 0,
+                    # or any future retry, the bound port is not the requested
+                    # one, and the panels need the value they can connect to.
+                    self._bound_port = self._read_bound_port(server) or self.port
+                    self._bind_error = None
+                    self._bind_settled.set()
+                    logger.info(
+                        "WebSocket bridge listening on ws://%s:%d", self.host, self._bound_port
+                    )
                     # Run until stopped
                     while self._running:
                         await asyncio.sleep(0.5)
@@ -164,18 +211,42 @@ class WebSocketBridge:
 
         except ImportError:
             self._running = False
+            self._bind_error = (
+                "websockets package not installed. Install with: pip install websockets"
+            )
             logger.warning(
                 "websockets package not installed. WebSocket bridge disabled.\n"
                 "Install with: pip install websockets"
             )
         except OSError as e:
             self._running = False
+            # Keep the reason. This used to be logged and dropped, so /ws/status
+            # reported a generic "stopped" and a port collision was
+            # indistinguishable from a bridge nobody had started.
+            self._bind_error = f"Cannot bind {self.host}:{self.port}: {e}"
             logger.error("WebSocket bridge failed to start: %s", e)
         except Exception as e:
             was_running = self._running
             self._running = False
             if was_running:
+                self._bind_error = f"WebSocket bridge error: {e}"
                 logger.error("WebSocket bridge error: %s", e)
+        finally:
+            # Always release start(): a failure that never settles would other-
+            # wise be reported as a timeout instead of its real cause.
+            self._bind_settled.set()
+
+    @staticmethod
+    def _read_bound_port(server) -> Optional[int]:
+        """Return the port the server actually bound, if it exposes one."""
+        try:
+            for sock in getattr(server, "sockets", None) or []:
+                address = sock.getsockname()
+                if isinstance(address, tuple) and len(address) >= 2:
+                    return int(address[1])
+        except (OSError, TypeError, ValueError) as exc:
+            logger.debug("Could not read the bound WebSocket port: %s", exc)
+        return None
 
     async def _handle_message(self, client: WSClient, raw: str):
         """Handle an incoming WebSocket message."""
@@ -355,14 +426,18 @@ def get_bridge() -> Optional[WebSocketBridge]:
     return _bridge
 
 
-def init_bridge(host: str = "127.0.0.1", port: int = 5680) -> WebSocketBridge:
-    """Initialize and start the global WebSocket bridge."""
+def init_bridge(host: str = "127.0.0.1", port: int = 5680, *, timeout: float = 5.0) -> WebSocketBridge:
+    """Initialize and start the global WebSocket bridge.
+
+    The instance is returned whether or not the bind succeeded; read
+    :meth:`WebSocketBridge.bind_result` to find out which.
+    """
     global _bridge
     with _bridge_lock:
         if _bridge and _bridge.is_running:
             return _bridge
         _bridge = WebSocketBridge(host=host, port=port)
-        _bridge.start()
+        _bridge.start(timeout=timeout)
         return _bridge
 
 

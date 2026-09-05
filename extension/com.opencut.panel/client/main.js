@@ -136,6 +136,7 @@
     var _alertTimer = null;
     var _wsReconnectTimer = null;
     var _wsManualDisconnect = false;
+    var _wsBridgePort = null; // Reported by /ws/status or /ws/start; beats the default.
     var _navScrollPersistTimer = null;
     var _overlayStack = [];
     var _overlayFocusManagementBound = false;
@@ -5559,7 +5560,8 @@
             return;
         }
         _wsManualDisconnect = false;
-        var port = 5680;
+        // /ws/start walks 5680-5689 for a free port, so the default is a guess.
+        var port = _wsBridgePort || 5680;
         var url = "ws://127.0.0.1:" + port;
         try {
             _ws = new WebSocket(url);
@@ -5672,6 +5674,7 @@
         );
         // Also fetch server-side status
         api("GET", "/ws/status", null, function (err, r) {
+            if (!err) rememberWsBridgePort(r);
             if (err) {
                 var readFailed = t(
                     "ws.status_read_failed",
@@ -5776,14 +5779,21 @@
         });
     }
 
+    function rememberWsBridgePort(payload) {
+        var port = Number(payload && payload.port);
+        if (Number.isInteger(port) && port >= 1024 && port <= 65535) _wsBridgePort = port;
+    }
+
     function wsStartBridge() {
         api("POST", "/ws/start", {}, function (err, r) {
             if (err) { showAlert(replaceTemplateValue(t("toast.ws_start_error", "WS start error: {error}"), "{error}", err.message)); return; }
+            rememberWsBridgePort(r);
             if (r && r.success) {
                 showToast(t("toast.live_updates_bridge_started", "Live-updates bridge started"), "success");
                 setTimeout(function () { wsConnect(); }, 500);
             } else {
-                showAlert(r && r.error ? r.error : t("toast.live_updates_bridge_start_failed", "Failed to start WebSocket bridge"));
+                // /ws/start answers only after the bind, so this is the real reason.
+                showAlert((r && (r.error || r.message)) || t("toast.live_updates_bridge_start_failed", "Failed to start WebSocket bridge"));
             }
         });
     }

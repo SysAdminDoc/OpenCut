@@ -38,13 +38,6 @@ Roadmap_Blocked.md; the rest landed.
   Acceptance: One generated catalog separates live and aspirational commands; every live entry has method, payload schema, prerequisites, navigation target, and invoker; missing-route entries never appear in user search; direct-surface counts include only literal panel, CLI, or curated MCP consumers; deleting an invoker lowers the count and fails the ratchet.
   Complexity: L
 
-- [ ] P1 — F415 — Make WebSocket startup return the bound port and preserve bind failures
-  Why: CEP hardcodes port 5680, the backend reports start success before the socket binds, and status converts bind exceptions into a generic stopped state.
-  Evidence: Verified: `extension/com.opencut.panel/client/main.js:5562`, `extension/com.opencut.uxp/main.js:7615`, `opencut/routes/system_realtime_routes.py:91`, and `opencut/core/ws_bridge.py:90`.
-  Touches: `opencut/core/ws_bridge.py`, `opencut/routes/system_realtime_routes.py`, CEP and UXP realtime controllers, and WebSocket integration tests.
-  Acceptance: `/ws/start` returns success only after bind and includes the actual port; both panels connect to that value; `/ws/status` retains the last typed bind or start error; port-collision, delayed-bind, restart, disconnect, and cancellation fixtures pass without a false connected state.
-  Complexity: M
-
 - [ ] P1 — F416 — Unify visible media-library indexing behind one recursive incremental contract
   Why: Visible folder indexing is nonrecursive, stops at 100 files, and retranscribes unchanged media, while JSON, SQLite, and federated indexes expose inconsistent status and clear behavior.
   Evidence: Verified: `opencut/routes/search.py:71`, `opencut/routes/search.py:184`, `opencut/core/footage_search.py:314`, `opencut/core/footage_index_db.py`, and `opencut/core/federated_media_index.py`.
@@ -109,6 +102,13 @@ Roadmap_Blocked.md; the rest landed.
   Complexity: XL
 
 ### P2
+- [ ] P2 — F442 — Make the FFmpeg banner parser reject a non-text banner instead of raising TypeError
+  Why: `parse_ffmpeg_banner` assumes `str` and dies with `TypeError: cannot use a string pattern on a bytes-like object` when handed `bytes`, so a caller that captures FFmpeg output without `text=True` gets an unhandled crash inside the security guard rather than an unverified verdict. Two tests already hit it.
+  Evidence: Verified 2026-09-05: `opencut/core/ffmpeg_provenance.py:446` (`_VERSION_RE.search(first_line)`); `tests/test_remote_realtime.py::TestFrameExtraction::test_extract_success` and `::test_extract_ffmpeg_failure` fail on a clean checkout, both because `@patch("opencut.core.realtime_ai.subprocess.run")` returns `stdout=b"..."` and that module-wide patch also reaches `_probe_bundled_banner`.
+  Touches: `opencut/core/ffmpeg_provenance.py`, `tests/test_remote_realtime.py`.
+  Acceptance: A bytes banner is decoded or refused with the module's typed unverified result, never a `TypeError`; the two frame-extraction tests pass without loosening what they assert about extraction; a fixture passing bytes directly to `parse_ffmpeg_banner` proves the path.
+  Complexity: S
+
 
 - [ ] P2 — F425 — Carry unresolved review comments across cut versions with confidence
   Why: Review comments are bound to immutable versions, so a recut strands unresolved feedback even when the same dialogue or shot survives at a new time.
