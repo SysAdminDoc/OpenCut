@@ -102,6 +102,13 @@ Roadmap_Blocked.md; the rest landed.
   Complexity: XL
 
 ### P2
+- [ ] P2 — F445 — Compare the blocked-work ledger against the state it describes
+  Why: F413 made the release-provenance and advisory documents answer to executable sources, but left the third source it named untouched. `Roadmap_Blocked.md` still carries entries whose stated evidence is provably stale, and nothing detects it: the release-publish entry claimed "the newest artifact anyone can install is 21 versions old" and cited v1.25.1 as latest while v1.55.1 had shipped, tagged, with assets. A ledger that describes the past as the present is worse than no ledger, because it is read as the current blocker list.
+  Evidence: Verified 2026-09-05: `gh release list` shows v1.55.1 (2026-08-25) latest with `OpenCut-Setup-1.55.1.exe`, `payload.zip` and `release-digests.json` attached; `git tag -l v1.55.1` resolves and matches `opencut/__init__.py`; the entry's own Evidence line names v1.25.1 and thirteen untagged versions. `opencut/tools/check_provenance_docs.py` covers documents but not this file. Release versions and counts are separately covered by `dump_project_facts --check` and `sync_badges --check`, already in `GENERATED_DOC_CHECKS`.
+  Touches: `opencut/tools/check_provenance_docs.py` or a sibling checker, `Roadmap_Blocked.md`, `scripts/release_smoke.py`.
+  Acceptance: A check reads each blocked entry's machine-checkable claims (referenced tags, released versions, cited file paths and line anchors) and fails naming any that no longer hold; an entry whose blocker has cleared is reported rather than silently carried; the check runs in the release gate and passes on a ledger corrected in the same commit. `Roadmap_Blocked.md` is gitignored, so the check must tolerate its absence rather than failing a clean checkout.
+  Complexity: M
+
 - [ ] P2 — F442 — Make the FFmpeg banner parser reject a non-text banner instead of raising TypeError
   Why: `parse_ffmpeg_banner` assumes `str` and dies with `TypeError: cannot use a string pattern on a bytes-like object` when handed `bytes`, so a caller that captures FFmpeg output without `text=True` gets an unhandled crash inside the security guard rather than an unverified verdict. Two tests already hit it.
   Evidence: Verified 2026-09-05: `opencut/core/ffmpeg_provenance.py:446` (`_VERSION_RE.search(first_line)`); `tests/test_remote_realtime.py::TestFrameExtraction::test_extract_success` and `::test_extract_ffmpeg_failure` fail on a clean checkout, both because `@patch("opencut.core.realtime_ai.subprocess.run")` returns `stdout=b"..."` and that module-wide patch also reaches `_probe_bundled_banner`.
