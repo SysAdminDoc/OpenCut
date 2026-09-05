@@ -144,6 +144,47 @@ def install_cep_extension():
         enable_unsigned_extensions_windows()
 
 
+def install_uxp_extension():
+    """Place the UXP panel where Premiere 25.6+ looks for a sideloaded plugin.
+
+    Adobe's supported distribution channel for UXP is a signed ``.ccx`` through
+    Creative Cloud or the Unified Plugin Installer Agent. The filesystem route
+    below is the developer-mode one, which is the only path an unsigned local
+    install can take, and it needs Developer Mode turned on inside Premiere --
+    a preference no installer can set. This is still worth doing: with
+    ExtendScript support ending in September 2026, the CEP panel alone leaves
+    users of newer Premiere builds with nothing.
+    """
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    src = os.path.join(base_dir, "extension", "com.opencut.uxp")
+    if not os.path.isdir(src):
+        print("  [!!] UXP panel source not found, skipping UXP install")
+        return
+
+    try:
+        sys.path.insert(0, base_dir)
+        from opencut.core.uxp_package import read_uxp_manifest, sideload_target
+
+        manifest = read_uxp_manifest(src)
+        dest = sideload_target(manifest)
+    except Exception as exc:
+        print(f"  [!!] Could not resolve the UXP install path: {exc}")
+        return
+
+    try:
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        if os.path.exists(dest):
+            shutil.rmtree(dest)
+            print("  [OK] Removed previous UXP panel install")
+        shutil.copytree(src, dest, ignore=shutil.ignore_patterns("node_modules", "__pycache__"))
+    except OSError as exc:
+        print(f"  [!!] Could not install the UXP panel: {exc}")
+        return
+
+    print(f"  [OK] UXP panel installed to: {dest}")
+    print("       Premiere 25.6+: enable Settings > Plugins > Developer Mode, then restart.")
+
+
 def enable_unsigned_extensions_windows():
     """Set PlayerDebugMode registry key for unsigned CEP extensions."""
     try:
@@ -257,6 +298,7 @@ def main() -> int:
     check_ffmpeg()
     install_deps()
     install_cep_extension()
+    install_uxp_extension()
     create_launcher()
     check_gpu()
     if not verify():

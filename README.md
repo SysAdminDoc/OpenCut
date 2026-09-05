@@ -568,7 +568,30 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 - **Connection-aware UI:** Buttons disable when server is offline, then re-enable on reconnect
 - **Near-complete feature parity** with CEP panel including depth effects, emotion highlights, B-roll, chat editor, social upload, engine preferences, and WebSocket bridge
 
-> **Premiere 26 compatibility:** Both CEP (`[13.0, 99.9]` host range) and UXP (`minVersion 25.6`) panels cover Premiere 26.x. [Adobe's November 2025 guidance](https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/ReadMe.md) plans dual support for a calendar year after Premiere Pro 25.6, implying an approximately November 2026 planning horizon rather than an announced removal date. OpenCut maintains CEP reliability and security while completing the UXP migration.
+### Installing the UXP panel
+
+`python install.py` now places the UXP panel alongside the CEP one, in the
+per-user plugin directory Premiere reads:
+
+- **Windows:** `%APPDATA%\Adobe\UXP\Plugins\External\com.opencut.uxp_<version>`
+- **macOS:** `~/Library/Application Support/Adobe/UXP/Plugins/External/com.opencut.uxp_<version>`
+
+Premiere ignores a plugin installed this way until you turn on **Settings >
+Plugins > Developer Mode** and restart it. That switch is a preference inside
+Premiere, so no installer can set it for you.
+
+To build a distributable package instead:
+
+```bash
+python -m opencut.tools.build_uxp_ccx
+```
+
+That writes `dist/OpenCut-UXP-<version>.ccx`. Installing a `.ccx` through
+Creative Cloud or the Unified Plugin Installer Agent needs an Adobe signing
+identity, which this project does not have yet, so the developer-mode path
+above is the supported local install for now.
+
+> **Premiere 26 compatibility:** Both CEP (`[13.0, 99.9]` host range) and UXP (`minVersion 25.6`) panels cover Premiere 26.x. Adobe's published plan ends ExtendScript support in Premiere Pro in September 2026, and the CEP panel drives every host mutation through ExtendScript, so UXP is the panel that outlives it.
 
 ---
 
