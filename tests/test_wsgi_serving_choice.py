@@ -107,7 +107,15 @@ def test_the_loopback_path_does_not_print_the_development_warning(monkeypatch, c
 
 @pytest.fixture()
 def streaming_server():
-    """A real threaded Werkzeug server with one slow streaming endpoint."""
+    """Serve a streaming app through `_serve_wsgi_app` itself.
+
+    This used to build its own server with `make_server` directly, so it proved
+    that Werkzeug's threaded mode does not serialise -- which was never in
+    doubt -- while never entering the function under test. Breaking
+    `_serve_wsgi_app` left it green. Now the loopback lane starts the server,
+    so a change that serialises requests, buffers streams, or picks the wrong
+    server fails here.
+    """
     from flask import Flask, Response
 
     app = Flask(__name__)
@@ -125,51 +133,91 @@ def streaming_server():
     def quick():
         return {"ok": True}
 
+    @app.route("/slow-job")
+    def slow_job():
+        # Stands in for a long media job holding a worker the whole time.
+        time.sleep(1.5)
+        return {"done": True}
+
     port = _free_port()
-    srv = make_server("127.0.0.1", port, app, threaded=True)
-    thread = threading.Thread(target=srv.serve_forever, daemon=True)
+    started = threading.Event()
+    captured: dict[str, object] = {}
+
+    real_make_server = make_server
+
+    def _capturing_make_server(host, bind_port, wsgi_app, **kwargs):
+        server = real_make_server(host, bind_port, wsgi_app, **kwargs)
+        captured["server"] = server
+        captured["threaded"] = kwargs.get("threaded")
+        started.set()
+        return server
+
+    monkey = pytest.MonkeyPatch()
+    monkey.setattr("werkzeug.serving.make_server", _capturing_make_server)
+
+    thread = threading.Thread(
+        target=lambda: server_module._serve_wsgi_app(app, host="127.0.0.1", port=port, debug=False),
+        daemon=True,
+    )
     thread.start()
-    time.sleep(0.2)
+    assert started.wait(10), "_serve_wsgi_app never built a server"
+    time.sleep(0.3)
     try:
-        yield port
+        yield port, captured
     finally:
-        srv.shutdown()
-        srv.server_close()
+        server = captured.get("server")
+        if server is not None:
+            server.shutdown()
         thread.join(timeout=5)
+        monkey.undo()
 
 
-def test_open_streams_do_not_starve_other_requests(streaming_server):
-    """Three concurrent SSE readers plus ordinary traffic on the same server.
+def test_the_loopback_lane_serves_threaded(streaming_server):
+    _port, captured = streaming_server
+    assert captured["threaded"] is True, (
+        "the loopback lane built a single-threaded server; one open stream "
+        "would block every other request"
+    )
 
-    The threaded server has to keep answering while streams are held open. If
-    it serialised, the quick calls would queue behind a one-second stream.
+
+def test_open_streams_and_a_long_job_do_not_starve_other_requests(streaming_server):
+    """Three SSE readers plus a long job plus ordinary traffic, all at once.
+
+    This is the combination the acceptance names. If the lane serialised, the
+    quick calls would queue behind the 1.5s job and the held-open streams.
     """
     import urllib.request
 
-    port = streaming_server
+    port, _captured = streaming_server
     base = f"http://127.0.0.1:{port}"
 
     def read_stream():
-        with urllib.request.urlopen(f"{base}/stream", timeout=15) as resp:
+        with urllib.request.urlopen(f"{base}/stream", timeout=20) as resp:
             return len(resp.read())
+
+    def long_job():
+        with urllib.request.urlopen(f"{base}/slow-job", timeout=20) as resp:
+            return resp.read()
 
     def quick_call():
         started = time.time()
-        with urllib.request.urlopen(f"{base}/quick", timeout=15) as resp:
+        with urllib.request.urlopen(f"{base}/quick", timeout=20) as resp:
             resp.read()
         return time.time() - started
 
-    with ThreadPoolExecutor(max_workers=8) as pool:
+    with ThreadPoolExecutor(max_workers=12) as pool:
         streams = [pool.submit(read_stream) for _ in range(3)]
-        time.sleep(0.15)  # let the streams get established and stay open
+        job = pool.submit(long_job)
+        time.sleep(0.2)  # let the streams and the job get established
         quick = [pool.submit(quick_call) for _ in range(5)]
 
         durations = [future.result() for future in quick]
         payloads = [future.result() for future in streams]
+        assert job.result()
 
     assert all(size > 0 for size in payloads), "a stream returned nothing"
     slowest = max(durations)
     assert slowest < 1.0, (
-        f"a plain request waited {slowest:.2f}s behind open streams; the server "
-        "is serialising requests"
+        f"a plain request waited {slowest:.2f}s behind open streams and a long "
+        "job; the loopback lane is serialising requests"
     )
