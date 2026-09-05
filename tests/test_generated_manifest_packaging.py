@@ -124,3 +124,65 @@ def test_built_artifact_contains_every_packaged_data_file():
         "Rebuild after the spec change; collect_data_files is per-subpackage.\n"
         + "\n".join(f"  {name}" for name in missing[:25])
     )
+
+
+# ---------------------------------------------------------------------------
+# Loaders must not invent answers when the manifest did not ship
+# ---------------------------------------------------------------------------
+
+def test_workflow_metadata_does_not_claim_implemented_without_a_manifest(tmp_path, caplog):
+    """The worst silent degrade: readiness fabricated as "implemented".
+
+    A packaged build with no opencut/_generated hit this on every call, so the
+    system reported all 53 workflow endpoints as runnable on the strength of a
+    file it could not read.
+    """
+    from opencut.core import workflow
+
+    missing = tmp_path / "route_manifest.json"
+    with caplog.at_level("ERROR"):
+        metadata = workflow._workflow_route_metadata(missing)
+
+    assert metadata, "the endpoint fallback itself should survive"
+    readiness = {entry["readiness"] for entry in metadata.values()}
+    assert readiness == {"unknown"}, (
+        f"readiness was fabricated as {readiness} from a manifest that does not exist"
+    )
+    assert "opencut/_generated" in caplog.text
+
+
+def test_extended_mcp_loader_names_the_missing_manifest(tmp_path):
+    from opencut._generated import GeneratedManifestMissing
+    from opencut.mcp_extended_tools import load_route_manifest
+
+    with pytest.raises(GeneratedManifestMissing) as excinfo:
+        load_route_manifest(tmp_path / "route_manifest.json")
+    assert "route_manifest.json" in str(excinfo.value)
+    assert "opencut/_generated" in str(excinfo.value)
+
+
+def test_surface_ratchet_loader_names_the_missing_manifest(tmp_path):
+    from opencut._generated import GeneratedManifestMissing
+    from opencut.core.surface_ratchet import load_manifest
+
+    with pytest.raises(GeneratedManifestMissing):
+        load_manifest(tmp_path / "route_manifest.json")
+
+
+def test_cli_route_manifest_error_names_the_packaging_cause(tmp_path):
+    import click
+
+    from opencut.cli import _load_cli_route_manifest
+
+    with pytest.raises(click.ClickException) as excinfo:
+        _load_cli_route_manifest(tmp_path / "route_manifest.json")
+    assert "opencut/_generated" in str(excinfo.value)
+
+
+def test_agent_skill_validation_reports_a_missing_manifest(monkeypatch, tmp_path, caplog):
+    from opencut.core import agent_skills
+
+    monkeypatch.setattr(agent_skills, "ROUTE_MANIFEST_PATH", tmp_path / "route_manifest.json")
+    with caplog.at_level("ERROR"):
+        assert agent_skills._load_route_method_pairs() == set()
+    assert "opencut/_generated" in caplog.text

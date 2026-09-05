@@ -696,9 +696,17 @@ def _workflow_route_metadata(path: Path = ROUTE_MANIFEST_PATH) -> Dict[str, Dict
     """Load readiness and labels for workflowable routes from the manifest."""
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, json.JSONDecodeError) as exc:
+        # The fallback endpoint list is a safety net for routing, but readiness
+        # is a claim about what can actually run. Reporting "implemented" for
+        # all 53 because the manifest was missing invented an answer, and a
+        # packaged build with no opencut/_generated hit this every time.
+        logger.error(
+            "Route manifest unreadable (%s); reporting workflow readiness as unknown. "
+            "A packaged build missing opencut/_generated causes this.", exc,
+        )
         return {
-            endpoint: {"label": label, "readiness": "implemented"}
+            endpoint: {"label": label, "readiness": "unknown"}
             for endpoint, label in KNOWN_ENDPOINTS.items()
         }
     metadata: Dict[str, Dict[str, Any]] = {}

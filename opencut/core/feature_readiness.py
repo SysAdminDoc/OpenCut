@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Mapping, MutableMapping
+
+logger = logging.getLogger("opencut")
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 ROUTE_MANIFEST_PATH = PACKAGE_ROOT / "_generated" / "route_manifest.json"
@@ -34,7 +37,14 @@ def _clean_route(route: object) -> str:
 def _route_manifest_by_rule() -> dict[str, dict]:
     try:
         payload = json.loads(ROUTE_MANIFEST_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, json.JSONDecodeError) as exc:
+        # An empty result here is indistinguishable from "no routes are ready",
+        # and lru_cache freezes it for the life of the process. Say so once.
+        logger.error(
+            "Cannot read %s (%s); every route will grade as missing until this is fixed. "
+            "A packaged build without opencut/_generated causes this.",
+            ROUTE_MANIFEST_PATH, exc,
+        )
         return {}
 
     out: dict[str, dict] = {}
@@ -51,7 +61,11 @@ def _route_manifest_by_rule() -> dict[str, dict]:
 def _feature_readiness_by_route() -> dict[str, dict]:
     try:
         payload = json.loads(FEATURE_READINESS_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.error(
+            "Cannot read %s (%s); feature readiness falls back to route data only.",
+            FEATURE_READINESS_PATH, exc,
+        )
         return {}
 
     out: dict[str, dict] = {}

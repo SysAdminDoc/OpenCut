@@ -121,7 +121,14 @@ def _load_route_method_pairs() -> Set[Tuple[str, str]]:
     try:
         data = json.loads(ROUTE_MANIFEST_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        logger.warning("Cannot load route manifest for skill validation: %s", exc)
+        # Returning an empty set makes every skill route look unknown, which
+        # reads as a skill-authoring mistake rather than the packaging defect
+        # it usually is (issue #8).
+        logger.error(
+            "Cannot load route manifest for skill validation (%s); every skill route "
+            "will report as unknown. A packaged build without opencut/_generated "
+            "causes this.", exc,
+        )
         return set()
 
     pairs: Set[Tuple[str, str]] = set()
