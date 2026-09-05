@@ -178,24 +178,25 @@ def test_a_failed_start_clears_the_previous_error_on_retry(bridge):
 # ---------------------------------------------------------------------------
 
 def test_cep_panel_does_not_hardcode_the_bridge_port():
-    """The CEP panel dialled 5680 whatever the backend reported."""
+    """The CEP panel dialled 5680 whatever the backend reported.
+
+    The port logic itself now lives in ``client/ws-bridge-port.js`` and is
+    exercised behaviourally by ``tests/ws-bridge-port.test.mjs``; asserting on
+    identifier names here proved only that the diff existed. What is left is
+    the one thing that file cannot see: the literal is gone from main.js.
+    """
     source = (REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "main.js").read_text(
         encoding="utf-8", errors="replace"
     )
     assert "var port = 5680;" not in source, "the panel is back to a hardcoded bridge port"
-    assert "_wsBridgePort" in source
-    assert "rememberWsBridgePort" in source
 
 
-def test_cep_panel_records_the_port_from_both_endpoints():
-    source = (REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "main.js").read_text(
-        encoding="utf-8", errors="replace"
-    )
-    # Reading it from only one of the two leaves the other path on the default.
-    start_block = source.split('api("POST", "/ws/start"', 1)[1][:600]
-    status_block = source.split('api("GET", "/ws/status"', 1)[1][:400]
-    assert "rememberWsBridgePort" in start_block
-    assert "rememberWsBridgePort" in status_block
+def test_the_extracted_port_module_is_loaded_by_the_panel():
+    """A module main.js references but index.html never loads is a crash."""
+    client = REPO_ROOT / "extension" / "com.opencut.panel" / "client"
+    assert (client / "ws-bridge-port.js").is_file()
+    markup = (client / "index.html").read_text(encoding="utf-8", errors="replace")
+    assert "ws-bridge-port.js" in markup, "the panel would hit an undefined global"
 
 
 def test_concurrent_start_calls_do_not_double_bind(bridge):

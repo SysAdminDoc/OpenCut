@@ -37,6 +37,7 @@ export default [
         OpenCutCollapsibleCards: "readonly",
         OpenCutHostWriteVerification: "readonly",
         OpenCutPanelBootstrapToken: "readonly",
+        OpenCutWsBridgePort: "readonly",
         SystemPath: "readonly",
         module: "readonly",
       },

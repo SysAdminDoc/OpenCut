@@ -99,9 +99,11 @@ describe("panel controller budgets", () => {
     // `rememberWsBridgePort` and its two call sites, and three comments.
     // A review then found that recording the port was not enough: `wsConnect`
     // read `_wsBridgePort` synchronously, so the very first connect after a
-    // panel load still used 5680 because nothing had answered yet. Twelve more
-    // lines resolve the port before dialling and explain why.
-    ["client/main.js", 18838],
+    // panel load still used 5680 because nothing had answered yet. Resolving
+    // the port before dialling cost twelve lines, and moving the tracker into
+    // client/ws-bridge-port.js gave five of them back, which is the point of
+    // this budget: logic belongs in a module a test can call.
+    ["client/main.js", 18833],
     ["client/update-controller.js", 300],
     ["client/results-controller.js", 300],
     ["client/settings-diagnostics-controller.js", 110],
