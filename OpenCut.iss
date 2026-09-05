@@ -82,6 +82,7 @@ Source: "OpenCut-Launcher.vbs"; DestDir: "{app}"; Flags: ignoreversion
 
 ; CEP Extension
 Source: "extension\com.opencut.panel\*"; DestDir: "{app}\extension\com.opencut.panel"; Excludes: "node_modules\*,tests\*,test-results\*,playwright-report\*"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "extension\com.opencut.uxp\*"; DestDir: "{app}\extension\com.opencut.uxp"; Excludes: "node_modules\*,tests\*,test-results\*,playwright-report\*"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Dirs]
 Name: "{app}\logs"
@@ -463,6 +464,33 @@ begin
   DirectoryCopy(ExtSrc, ExtDest);
 end;
 
+// Adobe ends ExtendScript support in Premiere Pro in September 2026 and the CEP
+// panel above drives every host mutation through it, so shipping CEP alone
+// leaves newer Premiere builds with nothing. Signed .ccx distribution needs an
+// Adobe identity; this is the developer-mode sideload path Adobe documents.
+// Premiere ignores the plugin until Settings > Plugins > Developer Mode is on.
+procedure InstallUXPExtension();
+var
+  UXPSrc, UXPDest, UXPParent: string;
+begin
+  UXPSrc := ExpandConstant('{app}\extension\com.opencut.uxp');
+  if not DirExists(UXPSrc) then
+    exit;
+
+  UXPParent := ExpandConstant('{userappdata}\Adobe\UXP\Plugins\External');
+  // Premiere requires the folder to be "<id>_<version>" exactly. The version
+  // comes from the installer so it stays in step with the packaged manifest.
+  UXPDest := UXPParent + '\com.opencut.uxp_' + '{#MyAppVersion}';
+
+  if not DirExists(UXPParent) then
+    ForceDirectories(UXPParent);
+
+  if DirExists(UXPDest) then
+    DelTree(UXPDest, True, True, True);
+
+  DirectoryCopy(UXPSrc, UXPDest);
+end;
+
 // --- Pre-install: kill server before upgrading ---
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
@@ -482,9 +510,12 @@ begin
     AddToPath(ExpandConstant('{app}\ffmpeg'));
     // Write machine-readable installer manifest for support/debug tooling
     WriteInstallerManifest();
-    // Install CEP extension
+    // Install both panels: CEP for Premiere up to 25.5, UXP for 25.6+
     if WizardIsTaskSelected('installextension') then
+    begin
       InstallCEPExtension();
+      InstallUXPExtension();
+    end;
   end;
 end;
 
@@ -690,6 +721,8 @@ end;
 Type: filesandordirs; Name: "{app}"
 ; CEP extension (redundant with code above, but belt-and-suspenders)
 Type: filesandordirs; Name: "{userappdata}\Adobe\CEP\extensions\com.opencut.panel"
+; UXP panel
+Type: filesandordirs; Name: "{userappdata}\Adobe\UXP\Plugins\External\com.opencut.uxp_{#MyAppVersion}"
 ; Logs
 Type: filesandordirs; Name: "{app}\logs"
 ; FFmpeg

@@ -40,6 +40,51 @@ public class CepInstaller
             "CEP extension installed to Adobe extensions folder.", LogLevel.Success);
     }
 
+    /// <summary>
+    /// Place the UXP panel where Premiere 25.6+ looks for a sideloaded plugin.
+    /// Premiere ignores it until the user enables Settings &gt; Plugins &gt;
+    /// Developer Mode, which is a preference no installer can set.
+    /// </summary>
+    public void InstallUxpExtension(InstallConfig config, IProgress<InstallProgress> progress, int step, int totalSteps)
+    {
+        var stepName = "Installing UXP panel";
+        var source = config.UxpExtensionPath;
+        var target = config.UxpTargetPath;
+
+        if (!Directory.Exists(source))
+        {
+            Report(progress, step, totalSteps, stepName,
+                "UXP panel source not found; skipping.", LogLevel.Warning);
+            return;
+        }
+
+        Report(progress, step, totalSteps, stepName, $"Copying UXP panel to {target}...");
+
+        var parentDir = Path.GetDirectoryName(target);
+        if (parentDir != null)
+            Directory.CreateDirectory(parentDir);
+
+        if (Directory.Exists(target))
+        {
+            try
+            {
+                Directory.Delete(target, recursive: true);
+                Report(progress, step, totalSteps, stepName, "Removed existing UXP panel.", LogLevel.Debug);
+            }
+            catch (Exception ex)
+            {
+                Report(progress, step, totalSteps, stepName,
+                    $"Warning: Could not remove old UXP panel: {ex.Message}", LogLevel.Warning);
+            }
+        }
+
+        _fileInstaller.CopyDirectory(source, target, stepName, progress, step, totalSteps);
+
+        Report(progress, step, totalSteps, stepName,
+            "UXP panel installed. Enable Settings > Plugins > Developer Mode in Premiere 25.6+, then restart it.",
+            LogLevel.Success);
+    }
+
     public void RemoveExtension(string? installPath = null)
     {
         // Remove from Adobe CEP extensions folder
@@ -51,6 +96,21 @@ public class CepInstaller
         {
             try { Directory.Delete(cepPath, recursive: true); }
             catch { /* Best effort */ }
+        }
+
+        // Remove every installed UXP panel version. The folder carries the
+        // plugin version, so match by prefix rather than assuming this build's.
+        var uxpRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Adobe", "UXP", "Plugins", "External");
+
+        if (Directory.Exists(uxpRoot))
+        {
+            foreach (var dir in Directory.GetDirectories(uxpRoot, AppConstants.UxpExtensionId + "_*"))
+            {
+                try { Directory.Delete(dir, recursive: true); }
+                catch { /* Best effort */ }
+            }
         }
     }
 

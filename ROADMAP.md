@@ -231,12 +231,6 @@ Not re-queued because they shipped since 2026-08-23: embedded-decoder attestatio
 
 ### P0
 
-- [ ] P0 — F436 — Make the UXP panel installable from every distribution lane
-  Why: Adobe's ExtendScript support in Premiere Pro is scheduled to end in September 2026 and the CEP panel routes every host mutation through a 167 KB ExtendScript file, yet no shipped installer can deploy the UXP panel that the README advertises.
-  Evidence: Verified: `Install.ps1`, `OpenCut.iss`, `install.py` and `installer/src` contain zero UXP references while carrying 41, 23 and 28 CEP references respectively; `extension/com.opencut.panel/CSXS/manifest.xml:30` declares the ExtendScript `ScriptPath`; 27 `evalScript` call sites in `extension/com.opencut.panel/client/main.js`; `README.md:70` and `README.md:558` advertise the UXP panel; ExtendScript cutoff per https://community.adobe.com/questions-729/extendscript-to-uxp-for-premiere-pro-1553924 and https://github.com/ismael-joffroy-chandoutis/open-source-cinema/blob/master/Agent-Driven-Editing-2026.md. Related blocked work: F252 and F386 cover live-host evidence, which this item does not require.
-  Touches: `Install.ps1`, `OpenCut.iss`, `install.py`, `installer/src`, a shared generated install manifest, `extension/com.opencut.uxp` packaging, uninstall paths, installer tests.
-  Acceptance: One generated manifest describes every file each lane must place for CEP and for UXP, and all four lanes are driven from it; each lane detects the installed Premiere major version and deploys UXP for 25.6 and later, CEP for earlier, and both when both hosts are present; uninstall removes what was installed; a test asserts that adding a panel file to the manifest fails every lane that does not place it; README documents a supported UXP install path.
-  Complexity: L
 
 ### P1
 
