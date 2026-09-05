@@ -47,9 +47,10 @@ REGISTRY_CACHE = os.path.join(OPENCUT_DIR, "plugin_registry.json")
 #: whoever created it would have become the plugin index for every install.
 REGISTRY_URL = default_registry_url()
 REGISTRY_TTL = 3600  # cache for 1 hour
-#: Marker written into the cache after a network document verifies, so a cached
-#: read cannot silently inherit trust a fetch never established.
-_CACHE_VERIFIED_FIELD = "_opencut_registry_verified"
+#: There is deliberately no "already verified" marker in the cache. The cache is
+#: an ordinary file in the user's home directory, so any boolean stored there is
+#: attacker-writable and would hand out the trust the signature is supposed to
+#: establish. The signed document is cached verbatim and re-verified on read.
 _PLUGIN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
 _MAX_ARCHIVE_MEMBERS = 5000
 _MAX_ARCHIVE_BYTES = 512 * 1024 * 1024
@@ -243,6 +244,7 @@ def fetch_plugin_registry(
         except (json.JSONDecodeError, OSError):
             pass
 
+
     if on_progress:
         on_progress(30, "Fetching plugin registry")
 
@@ -272,7 +274,6 @@ def fetch_plugin_registry(
         ) from exc
 
     logger.info("Plugin registry verified with key %s", key_id)
-    data[_CACHE_VERIFIED_FIELD] = True
     os.makedirs(os.path.dirname(REGISTRY_CACHE), exist_ok=True)
     with open(REGISTRY_CACHE, "w", encoding="utf-8") as fh:
         json.dump(data, fh, indent=2)
@@ -296,9 +297,24 @@ def _cached_registry_or_raise(cause: BaseException) -> dict:
     raise RuntimeError(f"Cannot fetch plugin registry: {cause}")
 
 
+def _document_is_verified(data: dict) -> bool:
+    """Return True only when ``data`` carries a signature we can verify now.
+
+    Recomputed on every read, including from the cache. The cache lives in the
+    user's home directory, so a stored "this was verified" flag would be
+    attacker-writable -- writing one by hand was enough to grant an arbitrary
+    download URL and publisher key first-use trust.
+    """
+    try:
+        verify_registry_document(data)
+        return True
+    except RegistrySignatureError:
+        return False
+
+
 def _parse_registry(data: dict) -> List[PluginInfo]:
     installed = _load_installed()
-    verified = bool(data.get(_CACHE_VERIFIED_FIELD))
+    verified = _document_is_verified(data)
     plugins = []
     for entry in data.get("plugins", []):
         if not isinstance(entry, dict):

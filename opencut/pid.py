@@ -295,8 +295,12 @@ def _nuke_old_servers(host: str, port: int) -> bool:
     old_pid, _old_port = _read_pid()
     if old_pid:
         _kill_via_pid(old_pid)
-        _remove_pid()
         if _wait_for_port(host, port, timeout=3.0):
+            # Only drop the PID file once the process it names is actually
+            # gone. Removing it first meant a failed kill left a live server
+            # with no PID file, so the caller could no longer name the process
+            # holding the port and reported "an unknown PID" instead.
+            _remove_pid()
             print(f"  Killed old server via PID file (PID {old_pid}).")
             return True
 
