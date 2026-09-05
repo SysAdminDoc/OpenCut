@@ -231,32 +231,11 @@ Not re-queued because they shipped since 2026-08-23: embedded-decoder attestatio
 
 ### P0
 
-- [ ] P0 — F431 — Package the generated manifests into the frozen build
-  Why: `opencut_server.spec` collects data files from `opencut.data` only, so all 17 files under `opencut/_generated/` are absent from every packaged install and each consumer degrades silently.
-  Evidence: Verified: issue #8; `opencut_server.spec:85`; `dist/OpenCut-Server/_internal/opencut/data/` is populated while `_internal/opencut/_generated/` holds zero JSON files; consumers at `opencut/cli.py:32`, `opencut/core/agent_skills.py:22`, `opencut/core/feature_readiness.py:11`, `opencut/core/workflow.py:21`, `opencut/core/surface_ratchet.py:34`, `opencut/mcp_extended_tools.py:20`.
-  Touches: `opencut_server.spec`, packaging smoke tests, `opencut/core/workflow.py` and the other manifest loaders.
-  Acceptance: A built `dist/OpenCut-Server` contains every `opencut/_generated/*.json` present in the source tree; a packaging test enumerates the source manifests and fails when any is missing from the artifact; booting the packaged server logs no "Cannot load route manifest" warning; each loader raises a typed error naming the missing manifest instead of degrading silently.
-  Complexity: S
-
 - [ ] P0 — F432 — Stop adopting a foreign interpreter's site-packages in frozen builds
   Why: The packaged server executes the first `python`/`python3`/`py` found on PATH and appends its site-packages to `sys.path`, so native modules built for an unrelated CPython minor version become importable and any writable PATH directory containing `python.exe` is executed at startup.
   Evidence: Verified: `opencut/server.py:158-201`; issue #8 shows a frozen v1.55.1 build adopting `C:\Python312` and then dying with no traceback; contradicts the ingress posture in `opencut/trusted_hosts.py` and `opencut/network_policy.py`.
   Touches: `opencut/server.py`, optional-dependency discovery, `opencut/dependency_support.py`, capability reporting, packaging smoke tests.
   Acceptance: The frozen build never executes an interpreter discovered from PATH; optional dependencies resolve only from the bundled runtime and `~/.opencut/packages`; if an external interpreter is used at all it is opt-in, its `sys.version_info` minor version must equal the bundled runtime's, and the decision plus the rejected candidates are logged; a fixture placing a mismatched-ABI package on PATH leaves the packaged server's `sys.path` unchanged and the server running.
-  Complexity: M
-
-- [ ] P0 — F433 — Detect a live server on the port instead of trusting SO_REUSEADDR on Windows
-  Why: `_check_port` sets `SO_REUSEADDR` before binding, and on Windows that permits binding over a socket another process is actively holding, so the startup path reports a busy port as free and starts a second server on it.
-  Evidence: Verified: `opencut/pid.py:98-111`; issue #8 log shows pid 26164 and pid 10352 both writing the PID file for port 5679 within 41 seconds; `_is_opencut_on_port` already exists at `opencut/pid.py:114` and is never consulted by `_check_port`; Windows semantics per https://learn.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse.
-  Touches: `opencut/pid.py`, server startup and `_nuke_old_servers`, PID file handling, launcher scripts, port-collision tests.
-  Acceptance: On Windows the availability probe uses `SO_EXCLUSIVEADDRUSE` or an equivalent that fails against a live listener, and consults `_is_opencut_on_port` before deciding; starting a second server while one is running either attaches to the existing instance or exits with a message naming the live PID and port, and never overwrites the PID file; a fixture holding the port with a live socket makes the second start fail deterministically on Windows, macOS and Linux; TIME_WAIT reuse still succeeds.
-  Complexity: M
-
-- [ ] P0 — F434 — Report GPU usability from executable arch support rather than adapter presence
-  Why: Device discovery trusts `nvidia-smi`, so Settings shows an RTX 50-series adapter as healthy while every job fails, and the failure is re-raised as a message that denies the availability of the very index it lists.
-  Evidence: Verified: issue #7; `opencut/gpu.py:173` (the nvidia-smi path sets no `compute_capability`, unlike the torch path at `:237`), `opencut/gpu.py:114`, `opencut/gpu.py:333-335` discards the underlying `RuntimeError`, `opencut/gpu.py:26-35` renders the contradictory message, `opencut/gpu.py:358` pins `CUDAExecutionProvider` without consulting `onnxruntime.get_available_providers()`; zero repo-wide hits for `get_arch_list`.
-  Touches: `opencut/gpu.py`, `/system/gpu` and `/system/status`, CEP and UXP Settings GPU controls, job preflight, GPU fixtures.
-  Acceptance: Every listed adapter carries a compute capability on both discovery paths and a resolved state of usable, present-but-unsupported, or unavailable, computed against `torch.cuda.get_arch_list()` and `onnxruntime.get_available_providers()`; a present-but-unsupported adapter is shown as such in Settings before a job is submitted and names the required build; `GPUSelectionError` preserves and reports the underlying exception and never claims an index is unavailable while listing it; a fixture with an adapter whose capability is absent from the arch list produces the unsupported state and an actionable message, not the contradictory one.
   Complexity: M
 
 - [ ] P0 — F435 — Move the plugin registry to a controlled namespace and sign the registry document
