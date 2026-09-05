@@ -31,13 +31,6 @@ Roadmap_Blocked.md; the rest landed.
 
 ### P1
 
-- [ ] P1 — F413 — Derive release, dependency, and planning documentation from executable facts
-  Why: Passing documentation tests pin FFmpeg and Python-advisory statements that contradict executable policy, while the blocked-work ledger still describes release and queue work that has shipped.
-  Evidence: Verified: `docs/RELEASE_PROVENANCE.md:32`, `opencut/core/ffmpeg_provenance.py:59`, `docs/PYTHON_ADVISORIES.md:16`, `opencut/tools/pip_audit_extras.py:57`, `tests/test_release_provenance_attestation.py:31`, and `Roadmap_Blocked.md:104`.
-  Touches: `opencut/_generated/project_facts.json`, documentation generators and checks, `README.md`, `docs/RELEASE_PROVENANCE.md`, `docs/PYTHON_ADVISORIES.md`, `Roadmap_Blocked.md`, and provenance tests.
-  Acceptance: Public FFmpeg lanes, advisory waivers, dependency floors, release versions, counts, and blocked-item state are generated or compared against executable sources; literal tests no longer bless stale values; mutating any source fact without its generated documentation makes the release gate fail with the exact divergent field.
-  Complexity: M
-
 - [ ] P1 — F414 — Generate one runnable command catalog and count only real user surfaces
   Why: The backend command catalog has 225 entries but only 43 runnable routes, 182 missing routes are accepted as speculative, and route accounting treats that backend list as direct user exposure.
   Evidence: Verified: `opencut/core/command_palette.py:400`, `tests/test_ux_intelligence.py:68`, `opencut/tools/dump_route_manifest.py:390`, and `extension/com.opencut.panel/client/main.js:13888`.

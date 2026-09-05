@@ -593,6 +593,13 @@ GENERATED_DOC_CHECKS = [
         "Adobe Premiere snapshot freshness",
         [sys.executable, "-m", "opencut.tools.adobe_premierepro_versions", "--check-freshness"],
     ),
+    (
+        # The release-provenance and advisory docs restated policy that lives in
+        # code, and drifted four statements away from it while their tests
+        # asserted the stale strings literally.
+        "provenance documentation",
+        [sys.executable, "-m", "opencut.tools.check_provenance_docs", "--check"],
+    ),
 ]
 
 
