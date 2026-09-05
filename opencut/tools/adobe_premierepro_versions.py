@@ -54,6 +54,103 @@ SNAPSHOT_VERSION = 2
 TRACKED_TAGS = ("latest", "beta")
 TRACKED_TAG_PREFIXES = ("release-",)
 
+# How old the committed snapshot may get before the release gate objects.
+#
+# ``recorded_at`` was written on every refresh and read by nothing, so the
+# snapshot silently aged: it sat at 2026-06-25 while OpenCut planned its UXP
+# migration against it, through the period Adobe was retiring ExtendScript.
+# Ninety days is a release cycle or two -- long enough not to nag, short enough
+# that a platform decision is never taken on year-old data.
+MAX_SNAPSHOT_AGE_DAYS = 90
+
+
+class SnapshotFreshnessError(RuntimeError):
+    """The committed snapshot is older than ``MAX_SNAPSHOT_AGE_DAYS``."""
+
+
+def snapshot_age_days(snapshot: dict, *, now: Optional[datetime] = None) -> Optional[float]:
+    """Return the snapshot's age in days, or None when it has no timestamp."""
+    recorded = str((snapshot or {}).get("recorded_at") or "").strip()
+    if not recorded:
+        return None
+    try:
+        stamp = datetime.fromisoformat(recorded.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if stamp.tzinfo is None:
+        stamp = stamp.replace(tzinfo=timezone.utc)
+    reference = now or datetime.now(timezone.utc)
+    return (reference - stamp).total_seconds() / 86400.0
+
+
+def check_snapshot_freshness(
+    snapshot: Optional[dict],
+    *,
+    max_age_days: int = MAX_SNAPSHOT_AGE_DAYS,
+    now: Optional[datetime] = None,
+) -> dict:
+    """Grade a committed snapshot's age.
+
+    ``state`` separates the two failures the roadmap item asks to distinguish:
+    a snapshot whose upstream fetch failed (``status`` is not ``ok``) is a
+    different problem from one that simply was not refreshed, and they need
+    different responses.
+    """
+    if snapshot is None:
+        return {
+            "state": "missing",
+            "ok": False,
+            "age_days": None,
+            "max_age_days": max_age_days,
+            "detail": f"No committed snapshot at {SNAPSHOT_PATH}.",
+        }
+
+    status = str(snapshot.get("status") or "").strip().lower()
+    age = snapshot_age_days(snapshot, now=now)
+
+    if status and status != "ok":
+        return {
+            "state": "upstream_error",
+            "ok": False,
+            "age_days": age,
+            "max_age_days": max_age_days,
+            "detail": (
+                f"Snapshot records status={status!r} "
+                f"({snapshot.get('error') or 'no error text'}); the last refresh did not "
+                "reach the registry, so its contents are a placeholder rather than stale data."
+            ),
+        }
+
+    if age is None:
+        return {
+            "state": "undated",
+            "ok": False,
+            "age_days": None,
+            "max_age_days": max_age_days,
+            "detail": "Snapshot carries no usable recorded_at, so its age cannot be judged.",
+        }
+
+    if age > max_age_days:
+        return {
+            "state": "stale",
+            "ok": False,
+            "age_days": age,
+            "max_age_days": max_age_days,
+            "detail": (
+                f"{SNAPSHOT_PATH.name} was recorded {age:.0f} days ago "
+                f"(limit {max_age_days}). Refresh with "
+                "`python -m opencut.tools.adobe_premierepro_versions`."
+            ),
+        }
+
+    return {
+        "state": "fresh",
+        "ok": True,
+        "age_days": age,
+        "max_age_days": max_age_days,
+        "detail": f"{SNAPSHOT_PATH.name} is {age:.0f} days old (limit {max_age_days}).",
+    }
+
 
 @dataclass
 class VersionSnapshot:
@@ -352,7 +449,24 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         default=SNAPSHOT_PATH,
         help="Path to read/write the snapshot (default: %(default)s).",
     )
+    parser.add_argument(
+        "--check-freshness",
+        action="store_true",
+        help=(
+            "Read the committed snapshot's recorded_at and fail when it is older "
+            f"than {MAX_SNAPSHOT_AGE_DAYS} days. Makes no network call."
+        ),
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
+
+    if args.check_freshness:
+        committed = load_committed_snapshot(args.output)
+        verdict = check_snapshot_freshness(committed)
+        if args.json:
+            print(json.dumps(verdict, indent=2, sort_keys=True))
+        else:
+            print(f"[{verdict['state']}] {verdict['detail']}")
+        return 0 if verdict["ok"] else 1
 
     live = build_versions(offline=args.offline)
 

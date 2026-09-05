@@ -17,6 +17,23 @@ Notable changes to OpenCut. The git history carries the detailed record.
   startup instead of degrading in silence. A test compares the built artifact
   against the source tree.
 
+### Fixed: the console no longer warns about a production deployment
+
+- A loopback server printed "WARNING: This is a development server. Do not use
+  it in a production deployment." on every start, plus a second copy of the
+  address OpenCut had already printed. One user pasted that into a bug report
+  about something else entirely.
+- The same threaded server still handles loopback traffic; it is just built
+  without the banner. `/system/status` now reports which server is running, so
+  a bug report can say. Remote binds still use Waitress.
+
+### Added: the Adobe version snapshot can go stale loudly
+
+- `adobe_premierepro_versions.json` records when it was captured and nothing
+  ever read it, so the file sat untouched for months while the UXP migration
+  was planned against it. The release gate now fails when it is more than 90
+  days old, and distinguishes that from a snapshot whose upstream fetch failed.
+
 ### Added: the UXP panel now installs
 
 - Every installer shipped only the CEP panel while the README advertised a UXP

@@ -336,12 +336,18 @@ def system_status():
                 if created and (now - created) < 86400:
                     completed_today += 1
 
+    # Which server is actually handling traffic. A bug report that pastes the
+    # console cannot otherwise tell waitress from the Werkzeug threaded server,
+    # and they behave differently under concurrent SSE.
+    from opencut.server import active_wsgi_server
+
     return jsonify({
         "connected": True,
         "uptime_seconds": int(uptime),
         "cpu_percent": cpu_percent,
         "ram_used_mb": ram_used_mb,
         "ram_total_mb": ram_total_mb,
+        "wsgi_server": active_wsgi_server(),
         "gpu": gpu_info,
         "disk_free_gb": disk_free_gb,
         "jobs": {
