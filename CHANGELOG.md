@@ -17,6 +17,19 @@ Notable changes to OpenCut. The git history carries the detailed record.
   startup instead of degrading in silence. A test compares the built artifact
   against the source tree.
 
+### Fixed: saved editing defaults are applied again
+
+- A survey keyed on the stored file rather than the accessor found seven
+  settings under `~/.opencut` that reached no consumer. Changing the chapter
+  count, the minimum multicam cut length, the footage-index transcription model
+  or the loudness target in Settings saved the value, served it back, and then
+  the job used a literal instead.
+- Those four now reach the work. Two more, colour-match profiles and auto-zoom
+  presets, have no reader anywhere on either side and are recorded for removal
+  with a migration that cleans them off disk.
+- A new registry states what every persisted setting is for, and a test fails
+  when a stored setting has no consumer or a route stops reading one.
+
 ### Fixed: the live-updates bridge reported success before it was listening
 
 - Starting the bridge answered "running on port 5680" the moment the thread was

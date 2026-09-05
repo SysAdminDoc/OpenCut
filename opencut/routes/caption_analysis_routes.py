@@ -9,6 +9,8 @@ __all__ = [
     "captions_qc_reading_profiles",
 ]
 
+import logging
+
 from .captions import (
     VALID_WHISPER_MODELS,
     CaptionConfig,
@@ -96,6 +98,22 @@ def transcript_summarize(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 # Captions: Chapter Generation
 # ---------------------------------------------------------------------------
+logger = logging.getLogger("opencut")
+
+
+def _saved_chapter_defaults() -> dict:
+    """Return the operator's saved chapter defaults, falling back in place."""
+    fallback = {"max_chapters": 15, "min_chapter_duration": 30.0, "naming_style": "descriptive"}
+    try:
+        from opencut.user_data import load_chapter_defaults
+
+        saved = load_chapter_defaults()
+    except Exception as exc:  # pragma: no cover - unreadable settings
+        logger.debug("Could not read saved chapter defaults: %s", exc)
+        return fallback
+    return {**fallback, **(saved if isinstance(saved, dict) else {})}
+
+
 def _validate_chapters_input(data):
     """At least one of file/filepath/segments must be present."""
     segs = data.get("segments")
@@ -125,7 +143,23 @@ def captions_chapters(job_id, filepath, data):
         llm_provider = "ollama"
     llm_model = data.get("llm_model", "llama3")
     api_key = data.get("api_key", "")
-    max_chapters = safe_int(data.get("max_chapters", 15), 15, min_val=1, max_val=100)
+    # Saved chapter defaults were stored and served back but never applied, so
+    # changing them in Settings did nothing to a generated chapter list.
+    chapter_defaults = _saved_chapter_defaults()
+    max_chapters = safe_int(
+        data.get("max_chapters", chapter_defaults["max_chapters"]),
+        chapter_defaults["max_chapters"],
+        min_val=1,
+        max_val=100,
+    )
+    min_chapter_duration = safe_float(
+        data.get("min_chapter_duration", chapter_defaults["min_chapter_duration"]),
+        chapter_defaults["min_chapter_duration"],
+        min_val=1.0,
+        max_val=3600.0,
+    )
+    # naming_style is stored and served but generate_chapters has no parameter
+    # for it, so it is deliberately not read here. Tracked as F443.
     transcribe_model = data.get("model", "base")
 
     # Validate segments if provided directly
@@ -183,6 +217,7 @@ def captions_chapters(job_id, filepath, data):
         effective_segments,
         llm_config=llm_config,
         max_chapters=max_chapters,
+        min_chapter_duration=min_chapter_duration,
     )
 
     chapters = result.get("chapters", []) if isinstance(result, dict) else []
