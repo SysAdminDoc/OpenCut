@@ -739,6 +739,21 @@ def audio_separate(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 # Audio Suite: Loudness Normalization
 # ---------------------------------------------------------------------------
+def _saved_loudness_target():
+    """Return the operator's saved LUFS target, or None to use the preset."""
+    try:
+        from opencut.user_data import load_loudness_target
+
+        value = load_loudness_target().get("target_lufs")
+    except Exception as exc:  # pragma: no cover - unreadable settings
+        logger.debug("Could not read the saved loudness target: %s", exc)
+        return None
+    if value is None:
+        return None
+    target = safe_float(value, -14.0, min_val=-70.0, max_val=0.0)
+    return target
+
+
 @audio_bp.route("/audio/normalize", methods=["POST"])
 @require_csrf
 @workflow_step("Normalizing audio")
@@ -755,6 +770,11 @@ def audio_normalize(job_id, filepath, data):
     target_lufs = data.get("target_lufs", None)
     if target_lufs is not None:
         target_lufs = safe_float(target_lufs, -16.0, min_val=-70.0, max_val=0.0)
+    else:
+        # The saved target is what the operator set in Settings. Skipping
+        # straight to the preset meant that value was stored, served back, and
+        # never applied to a single render.
+        target_lufs = _saved_loudness_target()
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)

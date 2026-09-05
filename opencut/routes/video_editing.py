@@ -619,6 +619,19 @@ def _pyannote_segments_for_multicam(filepath, data):
     return _diarization_result_to_multicam_segments(diarization_result)
 
 
+def _saved_multicam_config() -> dict:
+    """Return the operator's saved multicam defaults, falling back in place."""
+    fallback = {"min_cut_duration": 1.0, "gap_tolerance": 0.5, "default_speaker_count": 2}
+    try:
+        from opencut.user_data import load_multicam_config
+
+        saved = load_multicam_config()
+    except Exception as exc:  # pragma: no cover - unreadable settings
+        logger.debug("Could not read saved multicam defaults: %s", exc)
+        return fallback
+    return {**fallback, **(saved if isinstance(saved, dict) else {})}
+
+
 @video_editing_bp.route("/video/multicam-cuts", methods=["POST"])
 @require_csrf
 @async_job(
@@ -633,7 +646,15 @@ def video_multicam_cuts(job_id, filepath, data):
     segments = data.get("segments", None)
     speaker_map = data.get("speaker_map", None)
     track_map = data.get("track_map", None)
-    min_cut_duration = safe_float(data.get("min_cut_duration", 1.0), 1.0, min_val=0.1, max_val=60.0)
+    # The saved multicam defaults were stored and served but never applied, so
+    # a minimum cut length set in Settings had no effect on a generated cut.
+    multicam_defaults = _saved_multicam_config()
+    min_cut_duration = safe_float(
+        data.get("min_cut_duration", multicam_defaults["min_cut_duration"]),
+        multicam_defaults["min_cut_duration"],
+        min_val=0.1,
+        max_val=60.0,
+    )
     mode = str(data.get("mode") or "audio").strip().lower()
     strategy = str(data.get("strategy") or "speaker").strip().lower()
     boundary_source = "provided_segments" if segments is not None else "unknown"

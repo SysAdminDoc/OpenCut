@@ -32,6 +32,24 @@ logger = logging.getLogger("opencut")
 search_bp = Blueprint("search", __name__)
 
 
+def _saved_footage_index_config() -> dict:
+    """Return the operator's saved footage-index options, falling back in place."""
+    fallback = {
+        "index_path": "",
+        "auto_index_on_load": False,
+        "whisper_model": "base",
+        "max_index_size_mb": 500,
+    }
+    try:
+        from opencut.user_data import load_footage_index_config
+
+        saved = load_footage_index_config()
+    except Exception as exc:  # pragma: no cover - unreadable settings
+        logger.debug("Could not read saved footage index options: %s", exc)
+        return fallback
+    return {**fallback, **(saved if isinstance(saved, dict) else {})}
+
+
 def _validate_auto_index_payload(data):
     """Validate the synchronous portion of an auto-index request."""
     files = data.get("files", [])
@@ -42,7 +60,9 @@ def _validate_auto_index_payload(data):
 
     from opencut.security import VALID_WHISPER_MODELS
 
-    model = data.get("model", "base")
+    # Validate against the same default the handler will use, or a saved model
+    # would be validated as "base" and then silently replaced at run time.
+    model = data.get("model", _saved_footage_index_config()["whisper_model"])
     if model not in VALID_WHISPER_MODELS:
         return f"Invalid model: {model}"
     return None
@@ -57,7 +77,10 @@ def search_index(job_id, filepath, data):
     """Transcribe and index a list of files (or scan a folder) for footage search."""
     files = data.get("files", [])
     folder = data.get("folder", "").strip()
-    model = data.get("model", "base")
+    # The saved footage-index model was stored and served back but never
+    # applied, so choosing a larger model in Settings changed nothing about
+    # what got indexed.
+    model = data.get("model", _saved_footage_index_config()["whisper_model"])
     language = data.get("language", None)
 
     # If folder provided, scan for media files
@@ -201,7 +224,7 @@ def auto_index_project(job_id, filepath, data):
     missing, and up-to-date entries are reported in the completed job result.
     """
     files = data.get("files", [])
-    model = data.get("model", "base")
+    model = data.get("model", _saved_footage_index_config()["whisper_model"])
     language = data.get("language")
 
     from opencut.core.captions import check_whisper_available, transcribe
@@ -563,7 +586,10 @@ def search_multimodal_index(job_id, filepath, data):
     """Index files with transcript, OCR text, and audio event classification."""
     files = data.get("files", [])
     folder = data.get("folder", "").strip()
-    model = data.get("model", "base")
+    # The saved footage-index model was stored and served back but never
+    # applied, so choosing a larger model in Settings changed nothing about
+    # what got indexed.
+    model = data.get("model", _saved_footage_index_config()["whisper_model"])
     language = data.get("language", None)
     enable_ocr = safe_bool(data.get("ocr"), default=True)
     enable_audio_tags = safe_bool(data.get("audio_tags"), default=True)
