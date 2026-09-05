@@ -6,7 +6,7 @@ focused on app-factory and startup concerns.
 
 Covers:
 - PID file read / write / removal
-- Port availability checks (SO_REUSEADDR-aware)
+- Port availability checks (live-listener aware; see ``_check_port``)
 - Kill strategies (HTTP shutdown, PID kill, netstat)
 - Master "nuke" sequence that tries all strategies in order
 """
@@ -92,23 +92,58 @@ def _is_pid_alive(pid: int) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Port Checking (SO_REUSEADDR-aware to handle TIME_WAIT sockets)
+# Port Checking (a live listener wins; TIME_WAIT remnants are reusable)
 # ---------------------------------------------------------------------------
 
-def _check_port(host: str, port: int) -> bool:
-    """Return True when ``port`` is available for binding.
+def _port_has_listener(host: str, port: int, timeout: float = 0.5) -> bool:
+    """Return True when a process is actively accepting on ``host:port``.
 
-    Uses ``SO_REUSEADDR`` so TIME_WAIT sockets from recently-killed servers
-    do not falsely report the port as busy.
+    This is the authoritative "is the port taken" signal. A bind probe is not:
+    on Windows ``SO_REUSEADDR`` lets a second socket bind over one that another
+    process is *actively* holding (POSIX only permits that for TIME_WAIT), so a
+    bind-based check reported a busy port as free and OpenCut started a second
+    server on it. See ``_check_port``.
     """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.settimeout(timeout)
+            return s.connect_ex((host, port)) == 0
+    except OSError:
+        return False
+
+
+def _bind_probe(host: str, port: int, *, tolerate_time_wait: bool) -> bool:
+    """Return True when this process could bind ``host:port`` right now."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if tolerate_time_wait:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            elif hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                # Windows-only. Refuses the bind if anyone else holds the port,
+                # which is the semantic POSIX gives a plain bind for free.
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
             s.settimeout(1)
             s.bind((host, port))
             return True
     except OSError:
         return False
+
+
+def _check_port(host: str, port: int) -> bool:
+    """Return True when ``port`` is free for this process to own.
+
+    A live listener always wins: no amount of socket-option tolerance makes it
+    safe to start a second server against the same user data directory. Only
+    once nothing is listening do we accept a TIME_WAIT socket left behind by a
+    recently-killed server, which is what the original ``SO_REUSEADDR`` probe
+    was reaching for.
+    """
+    if _port_has_listener(host, port):
+        return False
+    if _bind_probe(host, port, tolerate_time_wait=False):
+        return True
+    # Bind refused with nothing listening: a TIME_WAIT remnant is safe to reuse.
+    return _bind_probe(host, port, tolerate_time_wait=True)
 
 
 def _is_opencut_on_port(host: str, port: int) -> bool:

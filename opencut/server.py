@@ -563,6 +563,41 @@ from opencut.pid import (  # noqa: E402, F401
 # ---------------------------------------------------------------------------
 # Windows Toast Notification
 # ---------------------------------------------------------------------------
+def _report_missing_generated_manifests() -> list[str]:
+    """Fail loudly at boot when the build shipped without its manifests.
+
+    Each individual loader falls back on its own, so a build missing
+    ``opencut/_generated`` used to surface as one incidental warning and then a
+    scatter of unrelated-looking feature bugs. Report the whole set once, where
+    someone reading a bug report will see it.
+    """
+    from opencut._generated import (
+        GENERATED_DIR,
+        GeneratedManifestMissing,
+        missing_manifests,
+    )
+
+    missing = missing_manifests()
+    if not missing:
+        return []
+    detail = ", ".join(missing)
+    message = (
+        f"{len(missing)} generated manifest(s) missing from {GENERATED_DIR}: {detail}. "
+        "This build was packaged without opencut/_generated; route validation, "
+        "feature readiness, extended MCP tools and the CLI route allowlist are degraded. "
+        "Reinstall OpenCut or rebuild with collect_data_files('opencut._generated')."
+    )
+    logger.error(message)
+    print(f"  WARNING: {message}")
+    try:
+        from opencut.checks import record_check_failure
+
+        record_check_failure("generated_manifests", GeneratedManifestMissing(missing))
+    except ImportError:  # pragma: no cover - checks is a first-party module
+        pass
+    return missing
+
+
 def _show_startup_notification(port):
     """Show a Windows toast notification so user knows the server started."""
     if sys.platform != "win32":
@@ -616,8 +651,25 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
         # Port is busy - run the kill sequence
         if _nuke_old_servers(host, port):
             effective_port = port
+        elif _is_opencut_on_port(host, port):
+            # An OpenCut server we could not reclaim is still serving. Moving to
+            # an alternate port would put two servers on the same ~/.opencut
+            # databases and overwrite the PID file that points at the live one,
+            # which is how a working install turns into "service unavailable".
+            live_pid, live_port = _read_pid()
+            located = f"PID {live_pid}" if live_pid else "an unknown PID"
+            print("")
+            print(f"  ERROR: OpenCut is already running on {host}:{port} ({located}).")
+            print("  Stop that server before starting another, or use --port to")
+            print("  run this one on a different port deliberately.")
+            print("")
+            logger.error(
+                "Refusing to start: live OpenCut server on %s:%s (pid=%s, pid-file port=%s)",
+                host, port, live_pid, live_port,
+            )
+            sys.exit(1)
         else:
-            # Kill sequence failed - find an alternate port
+            # Port held by something that is not OpenCut - find an alternate.
             recover_durable_work = False
             print("  Searching for an open port...")
             for offset in range(1, 11):
@@ -680,6 +732,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     print("  Press Ctrl+C to stop")
     print("")
     logger.info(f"Server starting on http://{host}:{effective_port} (pid={os.getpid()})")
+    _report_missing_generated_manifests()
 
     # Show Windows toast notification so user knows server started (especially
     # when launched via VBS hidden launcher where console is invisible)

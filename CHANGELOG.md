@@ -2,6 +2,46 @@
 
 Notable changes to OpenCut. The git history carries the detailed record.
 
+## Unreleased
+
+### Fixed: the packaged server shipped without its generated manifests
+
+- Every release built with PyInstaller was missing all sixteen files under
+  `opencut/_generated`, because `collect_data_files` gathers one subpackage at
+  a time and the spec named only `opencut.data`. Route validation, feature
+  readiness, extended MCP tools and the CLI route allowlist all quietly fell
+  back to defaults, and the only visible sign was one warning about
+  `route_manifest.json`. Reported in issue #8.
+- The spec now derives the data-bearing subpackages from the source tree, so a
+  new one cannot be forgotten, and the server reports every missing manifest at
+  startup instead of degrading in silence. A test compares the built artifact
+  against the source tree.
+
+### Fixed: two servers could bind the same port on Windows
+
+- The port check set `SO_REUSEADDR` before binding, which on Windows also
+  allows binding over a socket another process is actively using. A busy port
+  read as free, a second server started on it, and the second overwrote the PID
+  file that pointed at the first. The panel saw the result as intermittent
+  "service unavailable". Also reported in issue #8.
+- A live listener is now detected directly, TIME_WAIT sockets left by a killed
+  server are still reusable, and OpenCut refuses to start a second server
+  against a running one rather than moving to another port and sharing its
+  databases.
+
+### Fixed: a supported GPU reported as unavailable
+
+- Selecting an RTX 50-series card failed every job with "GPU index 0 is not
+  available", while listing index 0 as available in the same sentence. The
+  adapter was fine; the installed PyTorch build simply had no kernels for it.
+  Reported in issue #7.
+- Adapters now carry their compute capability on both detection paths, and
+  OpenCut checks it against the architectures the installed build was compiled
+  for. An adapter the build cannot run is reported as such in Settings before a
+  job starts, and the message names the wheel that would work instead of
+  suggesting a different device. ONNX Runtime is no longer asked for a CUDA
+  provider that a CPU-only install does not have.
+
 ## 1.55.1: Installer crash fix
 
 ### Fixed: setup no longer dies on the Options page
