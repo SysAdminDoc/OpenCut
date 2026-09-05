@@ -9,6 +9,7 @@ import ipaddress
 import logging
 import logging.handlers
 import os
+import re
 import subprocess as _sp
 import sys
 import threading as _log_threading
@@ -157,52 +158,132 @@ except Exception as exc:  # keep diagnostics/API available while media work is b
 # ---------------------------------------------------------------------------
 # System Site-Packages Discovery (frozen builds)
 # ---------------------------------------------------------------------------
-def _setup_system_site_packages():
-    """Add system Python's site-packages to sys.path for frozen builds.
+#: Opt-in for the legacy behaviour of importing an external interpreter's
+#: site-packages into the frozen build. Set it to the interpreter's path, or to
+#: "1"/"auto" to search PATH the way OpenCut used to.
+EXTERNAL_SITE_PACKAGES_ENV = "OPENCUT_EXTERNAL_SITE_PACKAGES"
 
-    When running as a PyInstaller exe, optional packages installed via pip
-    into the system Python are invisible. This finds system Python in PATH,
-    queries its site-packages dirs, and appends them so _try_import() can
-    discover packages like auto-editor, mediapipe, edge-tts, etc.
+
+def _external_interpreter_version(python: str) -> tuple[int, int] | None:
+    """Return ``(major, minor)`` for ``python``, or None when it cannot run."""
+    try:
+        result = _sp.run(
+            [python, "-c", "import sys; print('%d.%d' % sys.version_info[:2])"],
+            capture_output=True, text=True, timeout=10, check=False,
+        )
+    except (OSError, _sp.SubprocessError) as exc:
+        logger.debug("  Could not read version from %s: %s", python, exc)
+        return None
+    if result.returncode != 0:
+        return None
+    match = re.match(r"\s*(\d+)\.(\d+)", result.stdout or "")
+    return (int(match.group(1)), int(match.group(2))) if match else None
+
+
+def _candidate_external_interpreters(setting: str) -> list[str]:
+    """Return the interpreters the operator asked us to consider, in order."""
+    setting = (setting or "").strip()
+    if not setting:
+        return []
+    if setting.lower() not in {"1", "true", "yes", "auto"}:
+        # An explicit path. Anything else on PATH is irrelevant.
+        return [setting] if os.path.isfile(setting) else []
+    import shutil
+
+    found = []
+    for name in ("python", "python3", "py"):
+        resolved = shutil.which(name)
+        if resolved and resolved not in found:
+            found.append(resolved)
+    return found
+
+
+def _setup_system_site_packages():
+    """Import optional packages from an external interpreter, when asked to.
+
+    This used to run unconditionally in frozen builds: it executed the first
+    ``python`` on PATH and appended whatever site-packages that interpreter
+    reported. Two problems, both real. Native extension modules built for a
+    different CPython minor version are not merely unusable, they abort the
+    process on import, which is what "the server just dies" looked like in
+    issue #8 (a 3.13 build adopting C:\\Python312). And it made any writable
+    directory on PATH that contains a python.exe into startup code execution
+    plus an import-shadowing path, in a product that otherwise attests its
+    decoders and pins its model revisions.
+
+    So it is now opt-in, and even then the interpreter's minor version must
+    match this build's. The bundled runtime plus ``~/.opencut/packages``
+    (populated with ``pip --target``) remain the supported way to add optional
+    dependencies to a packaged install.
     """
     if not getattr(sys, "frozen", False):
-        return
+        return []
 
-    import shutil
-    for name in ("python", "python3", "py"):
-        python = shutil.which(name)
-        if not python:
+    setting = os.environ.get(EXTERNAL_SITE_PACKAGES_ENV, "")
+    if not setting:
+        logger.debug(
+            "  External site-packages disabled; set %s to opt in. "
+            "Optional deps resolve from the bundled runtime and ~/.opencut/packages.",
+            EXTERNAL_SITE_PACKAGES_ENV,
+        )
+        return []
+
+    ours = sys.version_info[:2]
+    rejected: list[str] = []
+    for python in _candidate_external_interpreters(setting):
+        version = _external_interpreter_version(python)
+        if version is None:
+            rejected.append(f"{python} (version unreadable)")
             continue
+        if version != ours:
+            # A mismatched .pyd does not raise ImportError, it crashes the
+            # interpreter, so this has to be refused rather than attempted.
+            rejected.append(f"{python} (Python {version[0]}.{version[1]}, need {ours[0]}.{ours[1]})")
+            continue
+        added = _append_site_packages_from(python)
+        logger.info(
+            "  External site-packages: added %d path(s) from %s (Python %d.%d); rejected: %s",
+            added, python, version[0], version[1], ", ".join(rejected) or "none",
+        )
+        return [python]
+
+    logger.warning(
+        "  %s is set but no compatible interpreter was found. Rejected: %s. "
+        "OpenCut needs Python %d.%d to share native modules safely.",
+        EXTERNAL_SITE_PACKAGES_ENV, ", ".join(rejected) or "none", ours[0], ours[1],
+    )
+    return []
+
+
+def _append_site_packages_from(python: str) -> int:
+    """Append ``python``'s site-packages directories to ``sys.path``."""
+    import json
+
+    added = 0
+    probes = (
+        "import site, json; print(json.dumps(site.getsitepackages()))",
+        "import site, json; print(json.dumps([site.getusersitepackages()]))",
+    )
+    for probe in probes:
         try:
             result = _sp.run(
-                [python, "-c", "import site, json; print(json.dumps(site.getsitepackages()))"],
-                capture_output=True, text=True, timeout=10, check=False
+                [python, "-c", probe],
+                capture_output=True, text=True, timeout=10, check=False,
             )
-            if result.returncode == 0:
-                import json
-                paths = json.loads(result.stdout.strip())
-                added = 0
-                for p in paths:
-                    if os.path.isdir(p) and p not in sys.path:
-                        sys.path.append(p)
-                        added += 1
-                # Also check user site-packages
-                result2 = _sp.run(
-                    [python, "-c", "import site; print(site.getusersitepackages())"],
-                    capture_output=True, text=True, timeout=10, check=False
-                )
-                if result2.returncode == 0:
-                    user_sp = result2.stdout.strip()
-                    if os.path.isdir(user_sp) and user_sp not in sys.path:
-                        sys.path.append(user_sp)
-                        added += 1
-                if added:
-                    logger.info("  System site-packages: added %d paths from %s", added, python)
-                return
-        except Exception as e:
-            logger.debug("  Could not query site-packages from %s: %s", name, e)
-
-    logger.debug("  System Python not found — optional deps from pip unavailable")
+        except (OSError, _sp.SubprocessError) as exc:
+            logger.debug("  site-packages probe failed for %s: %s", python, exc)
+            continue
+        if result.returncode != 0:
+            continue
+        try:
+            paths = json.loads(result.stdout.strip() or "[]")
+        except json.JSONDecodeError:
+            continue
+        for path in paths:
+            if isinstance(path, str) and os.path.isdir(path) and path not in sys.path:
+                sys.path.append(path)
+                added += 1
+    return added
 
 
 # Ensure ~/.opencut/packages (pip --target fallback) is importable EARLY as a
@@ -212,6 +293,16 @@ os.makedirs(_opencut_packages, exist_ok=True)
 if _opencut_packages not in sys.path:
     sys.path.append(_opencut_packages)
     logger.info("  Added ~/.opencut/packages to sys.path (fallback)")
+
+# Arm crash capture before any optional dependency is imported: a module built
+# against the wrong CPython ABI aborts the process on import, and only an
+# already-armed faulthandler writes anything when that happens.
+try:
+    from opencut.crash_reporter import install_crash_handlers
+
+    install_crash_handlers()
+except Exception as _crash_setup_error:  # pragma: no cover - never block startup
+    logger.warning("Could not install crash handlers: %s", _crash_setup_error)
 
 _setup_system_site_packages()
 

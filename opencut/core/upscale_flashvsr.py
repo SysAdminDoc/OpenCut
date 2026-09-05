@@ -54,7 +54,7 @@ def check_flashvsr_available() -> bool:
 
 
 INSTALL_HINT = (
-    "pip install flashvsr torch --index-url https://download.pytorch.org/whl/cu121"
+    "pip install flashvsr torch --index-url https://download.pytorch.org/whl/cu128"
 )
 
 

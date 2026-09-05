@@ -214,7 +214,7 @@ def check_gpu():
             print(f"  [OK] CUDA GPU: {name} ({vram:.1f}GB VRAM)")
         else:
             print("  [--] No CUDA GPU detected. AI features will use CPU (slower).")
-            print("       For GPU: pip install torch --index-url https://download.pytorch.org/whl/cu121")
+            print("       For GPU: pip install torch --index-url https://download.pytorch.org/whl/cu128")
     except ImportError:
         print("  [--] PyTorch not installed. AI features unavailable until installed.")
     except Exception as exc:

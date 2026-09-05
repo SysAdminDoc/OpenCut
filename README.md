@@ -688,7 +688,7 @@ publishes a compatible dependency lane.
 ### GPU Acceleration
 
 ```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+pip install "torch>=2.10" "torchvision>=0.25" torchaudio --index-url https://download.pytorch.org/whl/cu128
 ```
 
 GPU-heavy routes have built-in rate limiting (one GPU job at a time) and cancellation support. Choose the active CUDA adapter from the CEP or UXP Settings panel, or set `OPENCUT_GPU_INDEX` to a non-negative device index before starting the server. The selected adapter is reported by `/system/status`; invalid indexes return the available-device list instead of silently falling back.
