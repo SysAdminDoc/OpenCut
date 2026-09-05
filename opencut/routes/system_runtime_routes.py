@@ -175,6 +175,9 @@ def _detect_gpu():
         "device": selection.get("device", "cpu"),
         "devices": devices,
         "selection_error": selection.get("selection_error"),
+        # The panel needs this to tell "no such adapter" apart from "this build
+        # has no kernels for that adapter" — two failures with opposite fixes.
+        "runtime_support": selection.get("runtime_support", {}),
         "architecture": (selected or {}).get(
             "architecture",
             selection.get("faster_whisper", {}).get("architecture", "unknown"),

@@ -44,7 +44,14 @@
                     var device = devices[i] || {};
                     var option = documentRef.createElement("option");
                     option.value = String(device.index);
-                    option.textContent = String(device.index) + " — " + String(device.name || t("settings.gpu_adapter_device", "CUDA device"));
+                    var label = String(device.index) + " — " + String(device.name || t("settings.gpu_adapter_device", "CUDA device"));
+                    // An adapter this build has no kernels for is listed but
+                    // marked, so the dropdown never silently offers a device
+                    // that fails every job.
+                    if (device.usable === false) {
+                        label += " " + t("settings.gpu_adapter_unsupported_tag", "(unsupported by this build)");
+                    }
+                    option.textContent = label;
                     select.appendChild(option);
                 }
                 var configured = state && state.configured_index != null
@@ -55,10 +62,22 @@
                 select.disabled = devices.length === 0;
             }
             if (state && state.selection_error) {
-                setStatus(
-                    t("settings.gpu_adapter_invalid", "The configured GPU is unavailable. Choose another adapter."),
-                    "error"
-                );
+                // Two different failures used to share one message. Telling a
+                // user their RTX 5070 "is unavailable" while listing it in the
+                // dropdown above sent them looking for a hardware fault, when
+                // the fix was a different PyTorch build (issue #7).
+                var failure = state.selection_error;
+                var message;
+                if (failure.code === "GPU_BUILD_UNSUPPORTED") {
+                    message = failure.error || t(
+                        "settings.gpu_adapter_unsupported",
+                        "This GPU is installed but the current build cannot run on it."
+                    );
+                    if (failure.required_build) message += " " + failure.required_build;
+                } else {
+                    message = t("settings.gpu_adapter_invalid", "The configured GPU is unavailable. Choose another adapter.");
+                }
+                setStatus(message, "error");
             } else if (state && Array.isArray(state.devices) && state.devices.length) {
                 var selected = state.selected_index != null ? String(state.selected_index) : "auto";
                 setStatus(

@@ -67,15 +67,26 @@ def test_no_stale_index_survives_anywhere_in_the_shipped_docs():
     """Catch a fifth site appearing that DOCUMENTED_INSTALL_SITES does not list."""
     stale = {name for name in CUDA_INDEX_MAX_CAPABILITY if name != CUDA_WHEEL_INDEX}
     skip_dirs = {".git", "build", "dist", "node_modules", "__pycache__", "release_licenses"}
+    # *.egg-info is gitignored build output whose PKG-INFO is generated from
+    # README.md, which this module already gates directly. A stale local copy
+    # would fail this for a file nobody edits.
     # Files that legitimately discuss the old index: history, planning, and the
     # tests that assert the fix.
     skip_files = {"CHANGELOG.md", "ROADMAP.md", "RESEARCH.md", "Roadmap_Blocked.md", "CLAUDE.md"}
 
     offenders = []
     for path in REPO_ROOT.rglob("*"):
-        if not path.is_file() or path.suffix not in {".md", ".txt", ".py", ".ps1", ".iss"}:
+        if not path.is_file():
             continue
-        if set(path.relative_to(REPO_ROOT).parts) & skip_dirs:
+        # PKG-INFO has no suffix and still ships in the sdist and wheel, where
+        # it renders on PyPI. A suffix-only filter could not see it.
+        if path.suffix not in {".md", ".txt", ".py", ".ps1", ".iss"} and path.name != "PKG-INFO":
+            continue
+        # Only directory components, so a *file* named "build" is still checked.
+        directories = path.relative_to(REPO_ROOT).parts[:-1]
+        if set(directories) & skip_dirs:
+            continue
+        if any(name.endswith(".egg-info") for name in directories):
             continue
         if path.name in skip_files or path.name.startswith("requirements-release"):
             continue

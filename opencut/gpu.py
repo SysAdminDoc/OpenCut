@@ -187,14 +187,31 @@ def torch_supported_capabilities(torch_module=None) -> set[tuple[int, int]]:
         logger.debug("torch.cuda.get_arch_list() unavailable: %s", exc)
         return set()
     supported: set[tuple[int, int]] = set()
+    unparsed: list[str] = []
     for arch in arches:
         # The minor version is always the final digit: sm_86 is 8.6, sm_90 is
         # 9.0, and sm_120 is 12.0 (not 1.20 -- getting this backwards makes a
         # cu128 build look like it cannot run the Blackwell card it was built
         # for). The first group is greedy so it absorbs the extra digit.
-        match = re.fullmatch(r"sm_(\d+)(\d)", str(arch).strip())
+        #
+        # The optional suffix matters: PyTorch emits architecture-conditional
+        # entries like sm_90a and sm_120a for Hopper and Blackwell. Dropping
+        # those silently would leave a partially parsed set that still looks
+        # authoritative, and a working H100 or RTX 5090 would be graded
+        # unsupported -- worse than the bug this whole check exists to fix.
+        text = str(arch).strip()
+        match = re.fullmatch(r"sm_(\d+)(\d)([a-z]*)", text)
         if match:
             supported.add((int(match.group(1)), int(match.group(2))))
+        elif not re.fullmatch(r"compute_\d+[a-z]*", text):
+            unparsed.append(text)
+    if unparsed:
+        # Refuse to grade against a list we only half understand.
+        logger.warning(
+            "Unrecognised CUDA architecture entries %s; skipping build-support grading.",
+            ", ".join(sorted(unparsed)),
+        )
+        return set()
     return supported
 
 
@@ -465,11 +482,21 @@ def gpu_selection_status(devices: list[dict] | None = None) -> dict:
     error = None
     if configured is not None and configured not in available_indexes:
         error = GPUSelectionError(configured, devices).to_dict()
-    selected = (
-        configured
-        if configured in available_indexes
-        else (min(available_indexes) if available_indexes and error is None else None)
-    )
+    def _usable(index: int) -> bool:
+        device = next((d for d in devices if d.get("index") == index), None)
+        return gpu_runtime_support(device)["state"] != GPU_SUPPORT_UNSUPPORTED
+
+    if configured in available_indexes:
+        selected = configured
+    elif available_indexes and error is None:
+        # Automatic selection must skip adapters this build cannot execute on.
+        # Picking min() unconditionally meant a machine with an unsupported
+        # card at index 0 and a working one at index 1 failed every job.
+        runnable = sorted(index for index in available_indexes if _usable(index))
+        selected = runnable[0] if runnable else min(available_indexes)
+    else:
+        selected = None
+
     selected_device = next(
         (device for device in devices if device.get("index") == selected),
         None,
@@ -484,6 +511,11 @@ def gpu_selection_status(devices: list[dict] | None = None) -> dict:
             reason=support["reason"],
             required_build=support["required_build"],
         ).to_dict()
+        # An adapter this build cannot run is not a selection. Leaving it set
+        # made get_device_index() hand "cuda:0" to callers that never look at
+        # selection_error, so the job failed deep inside a model load instead.
+        selected = None
+        selected_device = None
     return {
         "configured_index": configured,
         "selected_index": selected,

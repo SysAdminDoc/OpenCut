@@ -776,8 +776,27 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
                 print("")
                 sys.exit(1)
 
-    # Write PID file so future instances can kill us
-    _write_pid(effective_port)
+    # Write PID file so future instances can kill us -- but never over one that
+    # names a server still serving. An alternate-port instance that clobbers the
+    # PID file orphans the original: nothing can find it to shut it down, which
+    # is the same failure as two servers on one port, just one step removed.
+    _existing_pid, _existing_port = _read_pid()
+    if (
+        effective_port != port
+        and _existing_pid is not None
+        and _existing_port is not None
+        and _existing_port != effective_port
+        and _is_opencut_on_port(host, _existing_port)
+    ):
+        logger.warning(
+            "Leaving the PID file pointing at the live server on port %s; this "
+            "instance runs on %s and will not be discoverable through it.",
+            _existing_port, effective_port,
+        )
+        print(f"  Note: another OpenCut server is live on port {_existing_port}.")
+        print(f"        This instance runs on {effective_port} and shares its user data.")
+    else:
+        _write_pid(effective_port)
 
     # Only the process that owns the requested port may recover shared durable
     # work. An alternate-port instance can coexist with the original server,

@@ -213,3 +213,90 @@ def test_install_refuses_an_entry_from_an_unverified_index(monkeypatch, tmp_path
         )
 
     assert trust_writes == [], "an unverified index reached the publisher trust store"
+
+
+def test_a_hand_written_cache_cannot_grant_itself_trust(tmp_path, monkeypatch):
+    """The bypass an adversarial review found and exploited.
+
+    Trust used to come from a boolean stored in the cache file. That file lives
+    in the user's home directory, so writing it by hand was enough to hand an
+    arbitrary download URL and publisher key first-use trust, and because the
+    shipped key set is empty the network path can never set the flag legitimately
+    -- a forged cache was the only way it could ever be true.
+    """
+    from opencut.core import plugin_marketplace
+
+    forged = {
+        "_opencut_registry_verified": True,
+        "plugins": [{
+            "id": "evil",
+            "name": "Evil",
+            "download_url": "https://evil.example.com/payload.zip",
+            "publisher": {"id": "attacker", "public_key": "x", "signature": "y"},
+        }],
+    }
+    cache = tmp_path / "plugin_registry.json"
+    cache.write_text(json.dumps(forged), encoding="utf-8")
+
+    monkeypatch.setattr(plugin_marketplace, "REGISTRY_CACHE", str(cache))
+    monkeypatch.setattr(plugin_marketplace, "_registry_cache_valid", lambda: True)
+    monkeypatch.setattr(plugin_marketplace, "_load_installed", lambda: {})
+
+    entries = plugin_marketplace.fetch_plugin_registry()
+    assert len(entries) == 1
+    assert entries[0].registry_verified is False, (
+        "a forged cache marker granted registry trust"
+    )
+
+
+def test_a_signed_cache_is_still_trusted(tmp_path, monkeypatch):
+    """Positive control: real signatures survive a cache round trip."""
+    from opencut.core import plugin_marketplace
+
+    private, public = _keypair()
+    doc = _document([{"id": "demo", "name": "Demo", "download_url": "https://example.com/d.zip"}])
+    doc["signature"] = sign_registry_document(doc, private)
+
+    cache = tmp_path / "plugin_registry.json"
+    cache.write_text(json.dumps(doc), encoding="utf-8")
+
+    monkeypatch.setattr(plugin_marketplace, "REGISTRY_CACHE", str(cache))
+    monkeypatch.setattr(plugin_marketplace, "_registry_cache_valid", lambda: True)
+    monkeypatch.setattr(plugin_marketplace, "_load_installed", lambda: {})
+    monkeypatch.setattr(
+        "opencut.core.plugin_registry_trust.load_trusted_registry_keys",
+        lambda path=None: {"test-key": public},
+    )
+
+    entries = plugin_marketplace.fetch_plugin_registry()
+    assert len(entries) == 1
+    assert entries[0].registry_verified is True
+
+
+def test_an_override_url_outside_our_namespace_is_ignored(monkeypatch):
+    from opencut.core.plugin_registry_trust import DEFAULT_REGISTRY_URL, default_registry_url
+
+    monkeypatch.setenv(
+        "OPENCUT_PLUGIN_REGISTRY_URL",
+        "https://raw.githubusercontent.com/opencut/plugin-registry/main/registry.json",
+    )
+    assert default_registry_url() == DEFAULT_REGISTRY_URL
+
+
+def test_a_self_hosted_override_is_honoured(monkeypatch):
+    from opencut.core.plugin_registry_trust import default_registry_url
+
+    monkeypatch.setenv("OPENCUT_PLUGIN_REGISTRY_URL", "https://plugins.example.com/registry.json")
+    assert default_registry_url() == "https://plugins.example.com/registry.json"
+
+
+def test_unknown_key_message_lists_what_is_trusted():
+    """Operator precedence made the 'none' fallback unreachable."""
+    _, public = _keypair()
+    private2, _ = _keypair()
+    doc = _document()
+    doc["signing_key_id"] = "nope"
+    doc["signature"] = sign_registry_document(doc, private2)
+    with pytest.raises(RegistrySignatureError) as excinfo:
+        verify_registry_document(doc, trusted_keys={"test-key": public})
+    assert "this build trusts: test-key" in str(excinfo.value)

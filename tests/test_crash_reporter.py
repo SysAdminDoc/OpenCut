@@ -15,6 +15,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import textwrap
+from pathlib import Path
 
 import pytest
 
@@ -87,21 +88,24 @@ def test_crash_log_is_trimmed_when_oversized(crash_log, monkeypatch):
 
 
 def _run_child(tmp_path, body: str) -> subprocess.CompletedProcess:
+    """Run ``body`` in a real child with crash handlers armed.
+
+    The prelude is assembled line by line rather than through ``dedent`` with an
+    interpolated body: a multi-line body pasted into an indented f-string keeps
+    the surrounding indentation on its first line only, which makes the child
+    die of IndentationError instead of the failure under test.
+    """
+    repo_root = Path(__file__).resolve().parents[1]
+    prelude = [
+        "import sys",
+        f"sys.path.insert(0, {str(repo_root)!r})",
+        "from opencut import crash_reporter",
+        f"crash_reporter.OPENCUT_DIR = {str(tmp_path)!r}",
+        f"crash_reporter.CRASH_LOG = {str(tmp_path / 'crash.log')!r}",
+        "crash_reporter.install_crash_handlers()",
+    ]
     script = tmp_path / "child.py"
-    script.write_text(
-        textwrap.dedent(
-            f"""
-            import sys
-            sys.path.insert(0, {str(__import__("pathlib").Path(__file__).resolve().parents[1]).replace(chr(92), '/')!r})
-            from opencut import crash_reporter
-            crash_reporter.OPENCUT_DIR = {str(tmp_path).replace(chr(92), '/')!r}
-            crash_reporter.CRASH_LOG = {str(tmp_path / "crash.log").replace(chr(92), '/')!r}
-            crash_reporter.install_crash_handlers()
-            {body}
-            """
-        ),
-        encoding="utf-8",
-    )
+    script.write_text("\n".join(prelude) + "\n" + textwrap.dedent(body) + "\n", encoding="utf-8")
     return subprocess.run(
         [sys.executable, str(script)], capture_output=True, text=True, timeout=120, check=False
     )
@@ -128,3 +132,27 @@ def test_unhandled_exception_in_a_child_is_recorded(tmp_path):
     assert "SystemError: fatal in main" in text
     # The original traceback still reaches stderr; the record is an addition.
     assert "SystemError" in result.stderr
+
+
+def test_thread_traceback_still_reaches_stderr(tmp_path):
+    """Capturing a record must not swallow the traceback developers rely on.
+
+    The thread hook wrote crash.log and stopped there, so a worker exception
+    vanished from the console and the server log the moment opencut.server was
+    imported. The main-thread hook always chained to the default; this one did
+    not, and the asymmetry was accidental.
+    """
+    result = _run_child(
+        tmp_path,
+        "import threading\n"
+        "def boom():\n"
+        "    raise RuntimeError('worker exploded')\n"
+        "t = threading.Thread(target=boom, name='opencut-worker-3')\n"
+        "t.start(); t.join()\n",
+    )
+    combined = result.stdout + result.stderr
+    assert "RuntimeError: worker exploded" in combined, (
+        "the thread traceback no longer reaches stderr"
+    )
+    text = (tmp_path / "crash.log").read_text(encoding="utf-8", errors="replace")
+    assert "opencut-worker-3" in text

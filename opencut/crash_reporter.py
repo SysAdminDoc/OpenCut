@@ -122,8 +122,15 @@ def _thread_excepthook(args):
         thread=thread_name,
     )
     logger.critical(
-        "Unhandled exception in thread %s; wrote crash record to %s", thread_name, CRASH_LOG
+        "Unhandled exception in thread %s; wrote crash record to %s",
+        thread_name,
+        CRASH_LOG,
+        exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
     )
+    # Capturing the record must not swallow the traceback the developer already
+    # relied on. Chain to the default hook so stderr still shows it, exactly as
+    # the main-thread hook does.
+    threading.__excepthook__(args)
 
 
 def install_crash_handlers(*, enable_faulthandler: bool = True) -> str:

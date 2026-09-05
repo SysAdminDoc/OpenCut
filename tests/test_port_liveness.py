@@ -81,7 +81,13 @@ def test_wait_for_port_does_not_report_a_live_listener_as_free(listening_port):
 
 
 def test_check_port_tolerates_a_recently_closed_connection(free_port):
-    """A TIME_WAIT remnant from a killed server stays reusable."""
+    """A TIME_WAIT remnant from a killed server stays reusable.
+
+    Asserting only that ``_check_port`` returns True would pass whether or not
+    a TIME_WAIT socket existed, so it could not detect the tolerance
+    regressing. Drive the two probes directly and require that the tolerant one
+    is what rescues the port when the exclusive one refuses it.
+    """
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((HOST, free_port))
@@ -92,4 +98,57 @@ def test_check_port_tolerates_a_recently_closed_connection(free_port):
     client.close()
     server.close()
 
+    assert _port_has_listener(HOST, free_port) is False, "nothing should still be listening"
+    exclusive = _bind_probe(HOST, free_port, tolerate_time_wait=False)
+    tolerant = _bind_probe(HOST, free_port, tolerate_time_wait=True)
+    assert tolerant is True, "a TIME_WAIT remnant must stay reusable"
+    if not exclusive:
+        # The interesting case: the strict probe refused and only the tolerant
+        # one succeeded, which is exactly the fallback _check_port relies on.
+        assert _check_port(HOST, free_port) is True
     assert _check_port(HOST, free_port) is True
+
+
+def test_a_failed_kill_leaves_the_pid_file_intact(tmp_path, monkeypatch):
+    """The PID file must survive a kill that did not work.
+
+    ``_nuke_old_servers`` removed it right after ``_kill_via_pid`` regardless of
+    whether the process died. When the kill failed, the caller then reported
+    "an unknown PID" for the live server it was trying to name, and nothing
+    could find that server afterwards.
+    """
+    pid_file = tmp_path / "server.pid"
+    pid_file.write_text("4242\n5679\n", encoding="utf-8")
+    monkeypatch.setattr(pid_module, "PID_FILE", str(pid_file))
+
+    monkeypatch.setattr(pid_module, "_kill_via_shutdown_endpoint", lambda *a, **k: False)
+    monkeypatch.setattr(pid_module, "_kill_via_pid", lambda *a, **k: False)
+    monkeypatch.setattr(pid_module, "_kill_via_netstat", lambda *a, **k: False)
+    # The port never frees: every strategy fails.
+    monkeypatch.setattr(pid_module, "_wait_for_port", lambda *a, **k: False)
+    monkeypatch.setattr(pid_module, "_check_port", lambda *a, **k: False)
+
+    assert pid_module._nuke_old_servers(HOST, 5679) is False
+    assert pid_file.exists(), "a failed kill deleted the live server's PID file"
+    assert pid_module._read_pid() == (4242, 5679)
+
+
+def test_a_successful_kill_still_clears_the_pid_file(tmp_path, monkeypatch):
+    """Positive control: the cleanup must still happen when the kill works."""
+    pid_file = tmp_path / "server.pid"
+    pid_file.write_text("4242\n5679\n", encoding="utf-8")
+    monkeypatch.setattr(pid_module, "PID_FILE", str(pid_file))
+
+    monkeypatch.setattr(pid_module, "_kill_via_shutdown_endpoint", lambda *a, **k: False)
+    monkeypatch.setattr(pid_module, "_kill_via_pid", lambda *a, **k: True)
+
+    calls = {"n": 0}
+
+    def _wait(*_args, **_kwargs):
+        calls["n"] += 1
+        return calls["n"] > 1  # first call (after shutdown endpoint) fails
+
+    monkeypatch.setattr(pid_module, "_wait_for_port", _wait)
+
+    assert pid_module._nuke_old_servers(HOST, 5679) is True
+    assert not pid_file.exists()

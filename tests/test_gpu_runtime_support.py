@@ -251,3 +251,61 @@ def test_device_names_containing_commas_still_parse(monkeypatch):
     # so the comma-splitting stays covered while the field count changes.
     assert devices[0]["name"] == "NVIDIA RTX A4000,Laptop GPU"
     assert devices[0]["compute_capability"] == "8.6"
+
+
+# ---------------------------------------------------------------------------
+# Regressions found by adversarial review of the first fix
+# ---------------------------------------------------------------------------
+
+def test_architecture_conditional_entries_are_understood():
+    """PyTorch emits sm_90a / sm_120a for Hopper and Blackwell.
+
+    Dropping them left a half-parsed set that still looked authoritative, so a
+    working H100 or RTX 5090 was graded unsupported -- worse than the original
+    bug.
+    """
+    module = _torch_stub(["sm_75", "sm_80", "sm_86", "sm_90a", "sm_100a", "sm_120a"])
+    supported = torch_supported_capabilities(module)
+    assert (9, 0) in supported
+    assert (12, 0) in supported
+    assert (10, 0) in supported
+
+
+def test_a_supported_blackwell_build_grades_the_card_usable():
+    module = _torch_stub(["sm_90a", "sm_120a"])
+    assert gpu_runtime_support(BLACKWELL, torch_module=module)["state"] == GPU_SUPPORT_USABLE
+
+
+def test_an_unrecognised_arch_entry_refuses_to_grade():
+    """Half-understanding the list must not produce a confident verdict."""
+    module = _torch_stub(["sm_90", "totally_new_format"])
+    assert gpu_runtime_support(ADA, torch_module=module)["state"] == GPU_SUPPORT_UNKNOWN
+
+
+def test_auto_selection_skips_an_unsupported_adapter(monkeypatch):
+    """Index 0 unsupported, index 1 usable: pick 1, not 0."""
+    from opencut import gpu as gpu_module
+
+    monkeypatch.setattr(gpu_module, "_configured_gpu_index", lambda: None)
+    monkeypatch.setattr(gpu_module, "torch_supported_capabilities", lambda *a, **k: {(8, 9)})
+
+    devices = [dict(BLACKWELL), {"index": 1, "name": "RTX 4070 SUPER", "compute_capability": "8.9"}]
+    status = gpu_module.gpu_selection_status(devices)
+    assert status["selected_index"] == 1
+    assert status["device"] == "cuda:1"
+    assert status["selection_error"] is None
+
+
+def test_an_unsupported_only_machine_selects_no_device(monkeypatch):
+    """A device the build cannot run is not a selection."""
+    from opencut import gpu as gpu_module
+
+    monkeypatch.setattr(gpu_module, "_configured_gpu_index", lambda: None)
+    monkeypatch.setattr(gpu_module, "torch_supported_capabilities", lambda *a, **k: {(8, 9)})
+
+    status = gpu_module.gpu_selection_status([dict(BLACKWELL)])
+    assert status["selection_error"]["code"] == "GPU_BUILD_UNSUPPORTED"
+    assert status["selected_index"] is None, (
+        "get_device_index() would hand cuda:0 to callers that never read selection_error"
+    )
+    assert status["device"] == "cpu"

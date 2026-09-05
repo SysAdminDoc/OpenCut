@@ -1615,6 +1615,8 @@
   "settings.gpu_adapter_saving": "Saving GPU adapter selection…",
   "settings.gpu_adapter_saved": "GPU adapter selection saved.",
   "settings.gpu_adapter_invalid": "The configured GPU is unavailable. Choose another adapter.",
+  "settings.gpu_adapter_unsupported": "This GPU is installed but the current build cannot run on it.",
+  "settings.gpu_adapter_unsupported_tag": "(unsupported by this build)",
   "settings.gpu_adapter_none": "No CUDA adapters detected; GPU work will use CPU.",
   "settings.theme_auto": "Match Premiere",
   "settings.theme_dark": "Dark",

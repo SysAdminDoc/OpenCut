@@ -126,9 +126,11 @@ def verify_registry_document(document: dict, *, trusted_keys: dict[str, str] | N
         raise RegistrySignatureError("registry document does not name a signing key")
     public_key = keys.get(key_id)
     if public_key is None:
+        # ``+`` binds tighter than ``or``, so the fallback has to be built first.
+        trusted = ", ".join(sorted(keys)) or "none"
         raise RegistrySignatureError(
             f"registry document is signed by unknown key {key_id!r}; "
-            "this build trusts: " + ", ".join(sorted(keys)) or "none"
+            f"this build trusts: {trusted}"
         )
 
     signature = document.get(SIGNATURE_FIELD)
@@ -175,9 +177,22 @@ def registry_url_is_controlled(url: str, *, owner: str = "SysAdminDoc") -> bool:
 
 
 def default_registry_url() -> str:
-    """Return the registry URL, honouring an operator override."""
+    """Return the registry URL, honouring an operator override.
+
+    An override pointing at a GitHub namespace the project does not control is
+    refused: that is the exact shape of the bug this replaces, and accepting it
+    from an environment variable would just move the landmine.
+    """
     override = os.environ.get("OPENCUT_PLUGIN_REGISTRY_URL", "").strip()
-    return override or DEFAULT_REGISTRY_URL
+    if not override:
+        return DEFAULT_REGISTRY_URL
+    if not registry_url_is_controlled(override):
+        logger.error(
+            "Ignoring OPENCUT_PLUGIN_REGISTRY_URL %r: it points at a GitHub namespace "
+            "this project does not control.", override,
+        )
+        return DEFAULT_REGISTRY_URL
+    return override
 
 
 #: The GitHub namespace here must be one the maintainer controls.
