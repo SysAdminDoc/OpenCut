@@ -237,16 +237,3 @@ Not re-queued because they shipped since 2026-08-23: embedded-decoder attestatio
 
 ### P2
 
-- [ ] P2 — F439 — Decide and enforce which WSGI server serves loopback traffic
-  Why: Loopback binds fall through to the Werkzeug development server, which prints a production warning into the console of every packaged end user and is the surface carrying all panel SSE and WebSocket traffic.
-  Evidence: Verified: `opencut/server.py:709-723`, where `_should_use_production_wsgi` returns False for loopback; issue #8's console output shows the development-server warning; `waitress==3.0.2` is already locked at `requirements-release-lock.txt:1378`.
-  Touches: `opencut/server.py`, launcher scripts and installer console output, SSE and WebSocket streaming paths, load fixtures.
-  Acceptance: The loopback lane either uses the production server already bundled or documents in code why the development server is correct there and suppresses the warning for packaged runs; concurrent SSE subscribers plus a WebSocket client plus a long media job run together without request starvation in a load fixture; the choice is reported by `/system/status` so a bug report states which server was serving.
-  Complexity: M
-
-- [ ] P2 — F440 — Gate the freshness of tracked Adobe platform snapshots
-  Why: The Premiere and UXP compatibility snapshots the project plans against are static files with a `recorded_at` field that nothing reads, and they are stale at the moment the platform is changing.
-  Evidence: Verified: `opencut/_generated/adobe_premierepro_versions.json` records `recorded_at` of 2026-06-25, 71 days before 2026-09-04; `opencut/_generated/adobe_uxp_compatibility.json` alongside it; generators at `opencut/tools/adobe_premierepro_versions.py` and `opencut/tools/adobe_uxp_compatibility.py`; no code reads `recorded_at` from either file. Related to F413, which covers release and dependency documentation but not third-party platform snapshots.
-  Touches: The two Adobe snapshot generators, a freshness check in `opencut/checks.py` or the release gate, `docs/UXP_MIGRATION.md`, capability reporting.
-  Acceptance: Each tracked platform snapshot declares a maximum age; a check reads `recorded_at` and fails the release gate when a snapshot exceeds it, naming the file and its age; refreshing the snapshot clears the failure; a snapshot whose upstream fetch failed is distinguishable from one that is merely old.
-  Complexity: S

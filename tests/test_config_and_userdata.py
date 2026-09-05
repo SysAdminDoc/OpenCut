@@ -600,7 +600,47 @@ def test_remote_wsgi_server_invokes_waitress(monkeypatch):
     assert calls == [(app, {"host": "0.0.0.0", "port": 5679, "threads": 12})]
 
 
-def test_loopback_wsgi_server_uses_flask_dev_server():
+def test_loopback_wsgi_server_uses_the_werkzeug_threaded_server(monkeypatch):
+    """Loopback still gets Werkzeug's threaded server, just not via ``app.run``.
+
+    This asserted ``app.run(...)`` was called, which is the route through
+    ``run_simple`` -- and ``run_simple`` is what prints "This is a development
+    server. Do not use it in a production deployment." into the console of
+    every packaged user, one of whom pasted it into a bug report. Suppressing
+    that banner means building the same server with ``make_server`` instead, so
+    the old assertion pinned the one implementation detail the fix had to
+    change. The contract it was really protecting -- loopback does not get
+    waitress, and it is threaded -- is what is asserted now.
+    """
+    import opencut.server as server
+
+    built = []
+
+    class _FakeServer:
+        def serve_forever(self):
+            built.append("served")
+
+        def server_close(self):
+            built.append("closed")
+
+    def _fake_make_server(host, port, app, **kwargs):
+        built.append((host, port, kwargs.get("threaded")))
+        return _FakeServer()
+
+    monkeypatch.setattr("werkzeug.serving.make_server", _fake_make_server)
+
+    class FakeApp:
+        def run(self, **kwargs):  # pragma: no cover - must not be reached
+            raise AssertionError("loopback should not route through app.run any more")
+
+    server._serve_wsgi_app(FakeApp(), host="127.0.0.1", port=5679, debug=False)
+
+    assert built == [("127.0.0.1", 5679, True), "served", "closed"]
+    assert "waitress" not in server.active_wsgi_server()
+
+
+def test_debug_loopback_still_uses_app_run_for_the_reloader(monkeypatch):
+    """Debug mode keeps ``app.run``: the reloader lives there."""
     import opencut.server as server
 
     calls = []
@@ -609,6 +649,6 @@ def test_loopback_wsgi_server_uses_flask_dev_server():
         def run(self, **kwargs):
             calls.append(kwargs)
 
-    server._serve_wsgi_app(FakeApp(), host="127.0.0.1", port=5679, debug=False)
+    server._serve_wsgi_app(FakeApp(), host="127.0.0.1", port=5679, debug=True)
 
-    assert calls == [{"host": "127.0.0.1", "port": 5679, "debug": False, "threaded": True}]
+    assert calls == [{"host": "127.0.0.1", "port": 5679, "debug": True, "threaded": True}]

@@ -586,6 +586,13 @@ GENERATED_DOC_CHECKS = [
         "feature readiness",
         [sys.executable, "-m", "opencut.tools.dump_feature_readiness", "--check"],
     ),
+    (
+        # recorded_at was written on every refresh and read by nothing, so the
+        # Premiere snapshot aged silently while the UXP migration was planned
+        # against it. Offline: this reads the committed file, it does not fetch.
+        "Adobe Premiere snapshot freshness",
+        [sys.executable, "-m", "opencut.tools.adobe_premierepro_versions", "--check-freshness"],
+    ),
 ]
 
 

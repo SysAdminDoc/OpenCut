@@ -869,17 +869,53 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     _serve_wsgi_app(server_app, host=host, port=effective_port, debug=debug)
 
 
+#: Which server handled this process's traffic, so a bug report can say.
+_ACTIVE_WSGI_SERVER = "not started"
+
+
+def active_wsgi_server() -> str:
+    return _ACTIVE_WSGI_SERVER
+
+
 def _serve_wsgi_app(app, *, host: str, port: int, debug: bool) -> None:
-    """Serve the Flask app with a production WSGI server for remote binds."""
+    """Serve the Flask app, choosing the right server for the bind."""
+    global _ACTIVE_WSGI_SERVER
+
     if _should_use_production_wsgi(host=host, debug=debug):
         from waitress import serve
 
         threads = _waitress_thread_count()
+        _ACTIVE_WSGI_SERVER = f"waitress (threads={threads})"
         logger.info("Serving remote OpenCut API with Waitress (threads=%s)", threads)
         serve(app, host=host, port=port, threads=threads)
         return
 
-    app.run(host=host, port=port, debug=debug, threaded=True)
+    if debug:
+        _ACTIVE_WSGI_SERVER = "werkzeug (debug reloader)"
+        app.run(host=host, port=port, debug=True, threaded=True)
+        return
+
+    # Loopback, not debugging. Werkzeug's threaded server stays: this bind is
+    # reachable only from the machine it runs on, and the panel's SSE and
+    # WebSocket paths want a response that is written straight through.
+    #
+    # What does change is the noise. ``app.run`` routes through
+    # ``run_simple``, whose ``log_startup`` reprints the address OpenCut has
+    # already printed and adds "This is a development server. Do not use it in
+    # a production deployment." A user pasted exactly that into issue #8 while
+    # reporting an unrelated crash. ``make_server`` is the same server without
+    # the banner.
+    from werkzeug.serving import make_server
+
+    _ACTIVE_WSGI_SERVER = "werkzeug (threaded, loopback)"
+    logger.info("Serving loopback OpenCut API with the Werkzeug threaded server")
+    server = make_server(host, port, app, threaded=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
 
 
 def _should_use_production_wsgi(*, host: str, debug: bool) -> bool:
