@@ -17,7 +17,7 @@ Version numbers ship in [`opencut/__init__.py`](opencut/__init__.py) and are kep
 
 **Please do not open public GitHub issues for security problems.**
 
-Email [matt@mavenimaging.com](mailto:matt@mavenimaging.com) with:
+Email [matt_parker@outlook.com](mailto:matt_parker@outlook.com) with:
 
 1. A description of the issue: what you see and what you expected.
 2. Reproducer steps, ideally as a minimal request / script / config.
