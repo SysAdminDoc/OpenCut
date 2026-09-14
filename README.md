@@ -21,6 +21,16 @@
 
  > **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited, reviewable silence-cut passes direct to timeline, cross-project media search, stem separation, voice cloning, 55-style animated captions with exportable artifacts, local LLM highlights, and multi-platform social export, with no subscriptions, no usage caps, and no API keys required for core local features. Cloud providers, Edge-TTS, downloads, telemetry, and social uploads are optional, explicit network features.
 
+<p align="center">
+  <a href="https://ko-fi.com/X8K126YVER">
+    <img height="42" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" alt="Buy me a coffee on Ko-fi" />
+  </a>
+</p>
+
+<p align="center">
+  <sub><em>If OpenCut saves you editing time, a coffee helps me keep its tools tested and maintained.</em></sub>
+</p>
+
 ---
 
 ## Project planning
