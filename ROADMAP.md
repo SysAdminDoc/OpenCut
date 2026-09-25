@@ -20,6 +20,7 @@ Roadmap_Blocked.md; the rest landed.
   Evidence: Verified: `opencut/registry.py:148`, `opencut/_generated/feature_readiness.json`, `opencut/routes/jobs_routes.py:184`, `opencut/mcp_extended_tools.py:138`, and `opencut/core/openapi_source.py:231`.
   Touches: `opencut/registry.py`, readiness generators, `opencut/routes/jobs_routes.py`, `opencut/mcp_extended_tools.py`, `opencut/core/openapi_source.py`, install guidance, and catalogue tests.
   Acceptance: One per-adapter resolved state distinguishes available, dependency-gated, and terminal-stub implementations; generated manifests equal runtime resolution; queue admission rejects terminal stubs before job creation; extended MCP hides or explicitly marks them; OpenAPI carries readiness metadata; a new declared/runtime disagreement fails the suite.
+  Research note (2026-09-25): Public install examples currently use `opencut` instead of the declared `opencut-ppro` distribution, and model cards advertise nonexistent `music` and `enhance` extras. F411 must expose canonical install commands from `opencut/project_facts.py` and `pyproject.toml`; F458 owns the repository-wide documentation ratchet.
   Complexity: L
 
 - [ ] P0 — F412 — Apply feature readiness to real CEP and UXP controls
@@ -99,6 +100,7 @@ Roadmap_Blocked.md; the rest landed.
   Evidence: Verified: `requirements-build.txt:3`, `requirements-release-lock.txt:64`, `:841`, `:1381`, `requirements-lock.txt:30`, `Dockerfile`, https://github.com/pyinstaller/pyinstaller/security/advisories/GHSA-9fxf-4qw3-ghmr, https://github.com/microsoft/onnxruntime/releases/tag/v1.29.0, and https://github.com/PyAV-Org/PyAV/releases/tag/v18.1.0.
   Touches: Dependency declarations and locks, `Dockerfile`, `opencut_server.spec`, release smoke, capability reporting, model and media corpora, and packaging tests.
   Acceptance: PyInstaller is at least 6.22.2 and the canonical artifact is asserted onedir; Werkzeug locks converge; PyAV 18.1.0 and ONNX Runtime 1.29.0 pass CPU plus available GPU providers; Python 3.11.16, 3.12.14, 3.13.15, and 3.14.7 are exercised; free-threaded builds are explicitly excluded until green; the Docker base uses a patch tag and digest; OTIO is tested on 3.13 and 3.14 or reports unavailable with a reason; nonnative keyring backends fail closed for production secrets.
+  Research note (2026-09-25): PyInstaller 6.22.3 is current. Existing Windows smoke scripts assert files and uninstall without launching the installed `OpenCut-Server.exe`; this matrix must start that executable, poll the pure-liveness endpoint from F447, inspect manifests and crash records, and cover no system Python plus hostile Python 3.12 and 3.14 PATH states.
   Complexity: XL
 
 ### P2
@@ -122,6 +124,7 @@ Roadmap_Blocked.md; the rest landed.
   Evidence: Verified local model: `opencut/core/review_links.py:35`, `tests/test_review_versions.py`; Likely demand: https://www.reddit.com/r/editors/comments/q419v1 and https://kitsu.cg-wire.com/review/.
   Touches: Review versions, OTIO diffing, transcript anchors, content fingerprints, review portal and bundle UI, notifications, and review fixtures.
   Acceptance: Creating a version proposes mappings using timeline diff, transcript anchors, time warps, and perceptual hashes; each proposal preserves the original anchor and exposes method plus confidence; high-confidence mappings can be accepted in bulk; low-confidence mappings remain quarantined; deleted material stays unresolved on its original version; shifted, split, deleted, and duplicate-shot fixtures pass.
+  Research note (2026-09-25): Frame.io carryover depends on F446's V4 account, asset, version, and comment identities. Keep local review-bundle carryover independently usable.
   Complexity: M
 
 - [ ] P2 — F426 — Query federated visual embeddings with explicit resource budgets
@@ -209,7 +212,7 @@ is clean, and an independent AST sweep of all of `opencut/**` found no `subproce
 `check_output` without `timeout=` and no unbounded process `wait()`/`communicate()`. One caveat worth
 fixing opportunistically: that linter's `SCAN_DIRS` covers only `opencut/core` and `opencut/routes`, so
 `opencut/helpers.py` — which holds the two most-used `Popen` sites in the codebase — is never scanned.
-It is correct today by inspection, not by enforcement.
+It was correct on 2026-08-22 by inspection, not by enforcement.
 
 ### P1
 
@@ -237,8 +240,10 @@ highest prior allocation across `ROADMAP.md`, `Roadmap_Blocked.md`, `CHANGELOG.m
 was F430.
 
 Two drivers: the first substantive external bug reports against a released artifact (issues #7 and #8,
-both v1.55.1 on Windows 11), and Adobe's scheduled September 2026 end of ExtendScript support in
-Premiere Pro. The 2026-08-23 conclusion that Adobe had published no firm CEP cutoff is stale.
+both v1.55.1 on Windows 11), and a superseded interpretation of Adobe's extension transition.
+Correction recorded 2026-09-25: Adobe says ExtendScript is unaffected; Premiere stops new CEP
+submissions in 2027-12, disables CEP by default in 2028-12, and removes CEP in 2029-12. F452 owns
+the repository-wide correction and compatibility refresh.
 
 Not re-queued because they shipped since 2026-08-23: embedded-decoder attestation against the FFmpeg
 8.1.2 floor for CVE-2026-8461, and the huggingface-hub upgrade past the 1.26.0 path-traversal fix.
@@ -251,3 +256,105 @@ Not re-queued because they shipped since 2026-08-23: embedded-decoder attestatio
 
 ### P2
 
+## Research-Driven Additions — 2026-09-25
+
+Added from the 2026-09-25 research pass in `RESEARCH.md`. IDs continue the existing F-number scheme;
+the highest prior allocation across `ROADMAP.md`, `Roadmap_Blocked.md`, `CHANGELOG.md`, and
+`RESEARCH.md` was F445.
+
+### P0
+
+- [ ] P0 — F446 — Replace the legacy Frame.io V2 contract with a recoverable V4 integration
+  Why: Frame.io retail accounts moved to V4 on 2026-06-01, while OpenCut still hardcodes the V2 API and token model, so the advertised integration is no longer a reliable production path.
+  Evidence: Verified: `opencut/core/frameio_integration.py:18`, `opencut/routes/platform_infra_routes.py`, https://help.frame.io/en/articles/9859849-adobe-premiere-frame-io-v4-comments-panel-overview, https://next.developer.frame.io/platform/v4/docs/quick-start, https://next.developer.frame.io/platform/docs/guides/webhooks, and https://next.developer.frame.io/platform/docs/guides/uploading-to-frame-io/how-local-remote-uploads-work.
+  Touches: `opencut/core/frameio_integration.py`, platform and collaboration routes, review comments and versions, credential storage, webhook validation, upload jobs, settings migration, diagnostics, and recorded API fixtures.
+  Acceptance: V2-only endpoints and tokens are removed; Adobe IMS OAuth refresh and revocation are handled through the existing secret boundary; account, project, asset, version, comment, and attachment IDs remain stable across sync; large uploads resume by part with progress and idempotent retry; webhook signatures, timestamp skew, duplicate event IDs, and replay are verified before mutation; queued writes survive an offline restart; old settings migrate or roll back without losing review mappings; recorded V4 contracts pass and one credential-gated smoke creates, comments on, versions, and deletes a disposable asset.
+  Complexity: L
+
+- [ ] P0 — F447 — Keep liveness independent from crash-prone native capability discovery
+  Why: `/health` imports optional native stacks through `_build_capabilities()`, so a Torch, ONNX Runtime, or TensorFlow process abort can kill the server before health and diagnostics respond.
+  Evidence: Verified: `opencut/routes/system.py:260`, `opencut/routes/system.py:478`, `opencut/server.py:289`, and https://github.com/SysAdminDoc/OpenCut/discussions/10.
+  Touches: System routes, capability registry and cache, subprocess supervision, crash records, support bundles, installer and release smoke, and health tests.
+  Acceptance: The canonical liveness endpoint imports no optional native package and responds while a deliberately broken Torch fixture is installed; readiness reports core server dependencies separately; each optional capability probes in a bounded child process keyed by runtime and package fingerprint; timeout, access violation, and nonzero exit become typed unavailable or unknown states with a crash record; one failed probe cannot terminate or stall the Flask process; concurrent requests share a cached probe; the installed-executable smoke proves health before capability discovery.
+  Complexity: M
+
+- [ ] P0 — F448 — Make optional Python packages owned by the bundled runtime ABI
+  Why: Frozen startup trusts one flat `~/.opencut/packages` directory, while runtime and WPF installers can populate it with a different system Python, leaving incompatible native wheels visible to the bundled interpreter.
+  Evidence: Verified: `opencut/server.py:289`, `opencut/security.py:366`, `opencut/security.py:460`, `opencut/routes/system_whisper_routes.py`, `installer/src/OpenCut.Installer/Services/DependencyInstaller.cs`, and https://github.com/SysAdminDoc/OpenCut/discussions/9.
+  Touches: Runtime identity, optional dependency resolver and installer, WPF dependency service, package storage, settings migration, capability receipts, uninstall and rollback, and Windows packaging tests.
+  Acceptance: One resolver derives a target from implementation, Python ABI, architecture, and app version; runtime and WPF installs use that exact target and lock; mismatched interpreters and wheels are rejected before install; every native package smoke-imports through F447 before becoming available; the old flat directory is inventoried, safely migrated when compatible, otherwise quarantined with recovery instructions; no-system-Python, Python 3.12-first, Python 3.14-first, interrupted install, downgrade, and uninstall fixtures preserve a last known-good store.
+  Complexity: L
+
+- [ ] P0 — F449 — Enforce one model acquisition boundary across every loader
+  Why: The central safety helpers do not protect the 33 core modules that call `from_pretrained` directly, and the 2026-08-17 checkpoint-shard traversal advisory has no confirmed fixed Transformers version at the research cutoff.
+  Evidence: Verified: `opencut/core/model_safety.py`, 33 matches for `from_pretrained(` under `opencut/core/`, and https://github.com/advisories/GHSA-fv5v-hfxp-5379.
+  Touches: `opencut/core/model_safety.py`, every Hugging Face and Torch model loader, model cards, cache and offline handling, plugin trust policy, dependency locks, and adversarial tests.
+  Acceptance: Every model is acquired through one API requiring repository, immutable revision, normalized root, allowed filenames, and recorded hashes; safetensors is preferred and pickle or remote code is denied unless a reviewed allowlist names the exact revision; shard paths, redirects, symlinks, archives, and cache hits remain beneath the model root; offline reuse verifies the same manifest; a static ratchet rejects new direct loaders; traversal, malicious pickle, unexpected code, mutable revision, corrupt cache, and no-network fixtures fail before model import.
+  Complexity: L
+
+- [ ] P0 — F450 — Report Premiere host security posture from versioned advisory data
+  Why: OpenCut knows the host version but cannot tell an editor that Premiere 26.3.2 and earlier or 25.6.5 and earlier are affected by Adobe's 2026-09 critical bulletin.
+  Evidence: Verified: `opencut/tools/adobe_premierepro_versions.py`, `opencut/_generated/adobe_premierepro_versions.json`, https://helpx.adobe.com/security/products/premiere_pro/apsb26-157.html, and https://helpx.adobe.com/sg/security/products/premiere_pro/apsb26-76.html.
+  Touches: CEP and UXP host-version adapters, generated Adobe data, system diagnostics, support bundles, settings status, panel notices, and advisory fixtures.
+  Acceptance: Exact host version maps to safe, affected, unsupported, or unknown through a dated data file with bulletin URL, affected ranges, fixed ranges, and severity; both panels show one nonblocking warning for affected hosts and no warning for a verified fixed host; diagnostics and support bundles include the verdict and data revision; unknown beta or malformed versions never receive a false-safe state; boundary fixtures cover 25.6.5, 25.6.6, 26.3.2, 26.5.0, and 26.5.1.
+  Complexity: M
+
+- [ ] P0 — F451 — Re-evaluate the FFmpeg 8.1.3 release lane against fix commits
+  Why: FFmpeg 8.1.3 was published on 2026-09-21, so OpenCut's claim that it was never published is false, but a version number alone does not prove that every tracked decoder and filter fix is present.
+  Evidence: Verified: `opencut/core/ffmpeg_provenance.py:64`, `scripts/verify_ffmpeg_provenance.py`, `tests/test_ffmpeg_cve_matrix.py`, https://ffmpeg.org/download.html, https://raw.githubusercontent.com/FFmpeg/FFmpeg/release/8.1/Changelog, and https://ffmpeg.org/security.html.
+  Touches: FFmpeg provenance and CVE matrix, installer verifier, release locks and docs, binary acquisition, hostile-media corpus, diagnostics, and rollback.
+  Acceptance: Every tracked advisory maps to an upstream fix commit and proves that commit or a reviewed backport is in the exact 8.1.3 tag; source tag, release archive, binary hash, signature, configuration, linked libraries, and runtime banner agree; vulnerable decoder and filter probes fail safely; the lane opens only when the full matrix passes and otherwise records the exact missing fix; upgrade retains the prior verified binary for rollback and removes every statement that 8.1.3 was unpublished.
+  Complexity: M
+
+### P1
+
+- [ ] P1 — F452 — Correct the Adobe transition contract and qualify Premiere UXP 26.5
+  Why: Repository prose still says ExtendScript ends in 2026-09 and the generated host snapshot stops at 26.3, while Adobe now states that ExtendScript is unaffected and publishes a staged CEP retirement through 2029 plus UXP 26.5 APIs.
+  Evidence: Verified: `README.md:604`, `docs/UXP_MIGRATION.md`, `opencut/_generated/adobe_premierepro_versions.json`, https://blog.developer.adobe.com/en/publish/2026/09/investing-in-the-future-of-creative-cloud-extensibility-uxp-comes-to-our-flagship-applications, https://helpx.adobe.com/premiere/desktop/whats-new/release-notes.html, and https://developer.adobe.com/premiere-pro/uxp/changelog/.
+  Touches: Adobe version snapshot and checker, CEP/UXP policy docs and comments, UXP API notes and typings, transcript and work-area adapters, C2PA bridge, parity manifest, and compatibility tests.
+  Acceptance: Every repository claim uses the official dates: new Premiere CEP submissions stop in 2027-12, CEP is disabled by default in 2028-12, CEP is absent in 2029-12, and ExtendScript is unaffected; the generated snapshot records Premiere 26.5.1, UXP 26.5, and the 27.0 beta with source dates; language-pack checks, clip transcription, C2PA, media management, and work-area APIs are feature-detected; Premiere 25.6 through 26.4 retains current fallbacks; stale deadline text and an over-age snapshot fail local checks.
+  Complexity: M
+
+- [ ] P1 — F453 — Use one rational time domain across edit plans and interchange
+  Why: Float seconds and rounded or integer frame rates cross multiple planning and export paths, while drop-frame is explicitly unhandled and VFR, reverse, and retime defects recur across editor trackers.
+  Evidence: Verified: `opencut/core/auto_edit.py:299`, `opencut/core/sequence_index.py:138`, `opencut/core/iso_ingest.py`, `opencut/core/multi_pov.py`, `opencut/core/multicam_xml.py`, `opencut/core/script_to_roughcut.py`, https://github.com/WyattBlue/auto-editor/releases, and https://github.com/AcademySoftwareFoundation/OpenTimelineIO/issues.
+  Touches: Shared time types, edit and transcript plans, sequence index, multicam and ingest, Premiere adapters, OTIO/FCPXML/AAF import and export, validation receipts, and property-based fixtures.
+  Acceptance: Internal time is an exact rational value with explicit rate and drop-frame metadata; float seconds are accepted or emitted only at named external boundaries; 23.976, 24, 25, 29.97 DF/NDF, 50, 59.94 DF/NDF, mixed-rate, VFR, reverse, speed-ramp, nested, and hour-boundary fixtures round-trip within a documented frame tolerance; invalid rate conversions fail with context; a static check prevents new `int(fps)` or rounded-rate planning paths.
+  Complexity: L
+
+- [ ] P1 — F454 — Issue semantic fidelity receipts for OTIO, FCPXML, and AAF
+  Why: Successful parsing and media-byte validation do not prove that a project exchange preserved editorial meaning such as links, transitions, retimes, reverse effects, markers, and enabled state.
+  Evidence: Verified: `opencut/export/otio_export.py`, `opencut/core/fcpxml_export.py`, `opencut/core/edl_aaf.py`, existing F418 and F428, and https://github.com/AcademySoftwareFoundation/OpenTimelineIO/issues.
+  Touches: Interchange importers and exporters, `opencut/export/otio_diff.py`, rational time from F453, asset identity, validation receipts, diagnostics, and golden project corpora.
+  Acceptance: Export and re-import produce a machine-readable receipt for track order, clip and source identity, exact ranges, transitions, gaps, markers, links, enabled state, speed and reverse effects, color metadata, and unknown namespaced metadata; deterministic losses block promotion, documented adapter limits warn with affected objects, and intentional transforms appear as explicit diffs; golden projects cover split, duplicate, nested, offline, mixed-rate, reverse, retimed, linked audio, and unknown-effect cases for each format.
+  Complexity: L
+
+- [ ] P1 — F455 — Consolidate the CEP and UXP visual hierarchy around editor tasks
+  Why: The v1.55.0 density pass verified rendering but not whether each container was necessary; the panels still use 96 CEP cards and 66 UXP cards with 465 combined buttons, so borders, pills, small copy, and repeated headers compete with the operations editors need to scan.
+  Evidence: Verified: `extension/com.opencut.panel/client/index.html:227`, `extension/com.opencut.uxp/index.html:149`, `extension/com.opencut.panel/client/style.css`, `extension/com.opencut.uxp/style.css`, and the 2026-09-25 repository UI audit in `RESEARCH.md`.
+  Touches: CEP and UXP markup and styles, shared tokens, tab controllers, status rendering, microcopy, screenshot baselines, and rendered accessibility tests.
+  Acceptance: Cut, Captions, Search, Deliverables, and Settings are reorganized into task groups with no nested passive cards; borders mark interactive selection, state, or a true region rather than every tool; decorative status pills become plain metadata; headers and explanatory copy are shortened or revealed contextually; essential text is at least 12 CSS pixels and primary body copy at least 13; related controls share one group and one dominant action; every existing action and tab order remains reachable; paired CEP/UXP screenshots at 360, 480, and 1200 pixels in dark and light themes show no clipping and a materially lower passive-card count; axe, focus, forced-color, and reduced-motion checks pass.
+  Complexity: L
+
+- [ ] P1 — F456 — Test real product states instead of injected state markup
+  Why: The six-state accessibility test injects loading, empty, error, permission, and confirmation nodes, so it can pass while production controllers render an inaccessible or unrecoverable state.
+  Evidence: Verified: `extension/com.opencut.panel/tests/rendered/panel-regression.spec.mjs:982`, `extension/com.opencut.panel/tests/rendered/panel-regression.spec.mjs:2548`, and the CEP/UXP controller paths referenced by those tests.
+  Touches: CEP and UXP request and host adapters, state controllers, rendered test harness, fixtures, focus and announcement utilities, and screenshots.
+  Acceptance: Both panels reach loading, empty, recoverable error, permission denied, offline, destructive confirmation, success, and canceled states through real controller entry points and intercepted backend or host responses; each state has an accessible name, expected focus target, recovery action, and no stale controls; tests run at docked and wide widths in both themes with axe; the injected `renderedStateFixture` no longer counts as coverage for any production state.
+  Complexity: M
+
+- [ ] P1 — F457 — Turn host transcript selections and markers into reusable selects
+  Why: Editors repeatedly ask to convert transcript ranges to markers and marker ranges to selects, while UXP already exports host transcript JSON but OpenCut has no product consumer for it.
+  Evidence: Verified: `extension/com.opencut.uxp/main.js:1507`, `opencut/core/transcript_timeline_edit.py`, https://community.adobe.com/feature-requests-730/feature-request-convert-transcripts-into-sequence-markers-1327693, https://community.adobe.com/feature-requests-730/use-a-marker-to-select-in-and-out-on-the-sequence-or-clip-a-feature-request-1328954, and https://community.adobe.com/announcements-732/search-markers-across-your-entire-project-1549479.
+  Touches: UXP and CEP transcript adapters, marker host actions, transcript workbench from F422, rational time from F453, select and sequence planning, undo receipts, and rendered tests.
+  Acceptance: A transcript selection creates source or sequence ranged markers without retranscription, retaining text, speaker, source clip, exact rational range, confidence, and chosen label or color; selected markers can preview, set in/out, or build a reviewable selects sequence in timeline order; duplicate and overlapping ranges have explicit merge choices; unsupported host versions explain the fallback; every mutation has preview and undo; fixtures cover multicam, nested, mixed-rate, translated, low-confidence, and stale-transcript mappings.
+  Complexity: M
+
+### P2
+
+- [ ] P2 — F458 — Enforce public documentation against manifests and generated project facts
+  Why: Install commands, optional extras, UXP domains, installer signing and architecture, referenced workflows, route counts, and a clean-checkout link currently disagree with the repository's executable facts.
+  Evidence: Verified: `opencut/project_facts.py:90`, `README.md:401`, `README.md:1078`, `docs/MCP_SERVER.md:36`, `opencut/model_cards.py:105`, `docs/UXP_MACOS_HTTP.md:78`, `extension/com.opencut.uxp/manifest.json:31`, `docs/WINDOWS_ARM64_PACKAGING.md:42`, `docs/INSTALLER_POLICY.md:126`, and `CONTRIBUTING.md:3`.
+  Touches: Project facts, documentation checks, README and docs, model-card generation, package and extension manifests, installer policy, generated route inventory, and fresh-clone tests.
+  Acceptance: A local check parses public install examples and validates distribution name plus extras against `pyproject.toml`; documented UXP domains equal the live manifest; signing, architecture, supported-version, and workflow claims resolve to current policy and tracked files; route, blueprint, and module counts come from generated facts; public links cannot target gitignored files such as `CLAUDE.md`; planted stale examples fail with a file and field name; the check runs in the existing documentation and fresh-clone test lanes.
+  Complexity: M
