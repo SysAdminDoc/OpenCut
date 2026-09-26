@@ -358,3 +358,22 @@ the highest prior allocation across `ROADMAP.md`, `Roadmap_Blocked.md`, `CHANGEL
   Touches: Project facts, documentation checks, README and docs, model-card generation, package and extension manifests, installer policy, generated route inventory, and fresh-clone tests.
   Acceptance: A local check parses public install examples and validates distribution name plus extras against `pyproject.toml`; documented UXP domains equal the live manifest; signing, architecture, supported-version, and workflow claims resolve to current policy and tracked files; route, blueprint, and module counts come from generated facts; public links cannot target gitignored files such as `CLAUDE.md`; planted stale examples fail with a file and field name; the check runs in the existing documentation and fresh-clone test lanes.
   Complexity: M
+
+## Issue Intake (2026-09-26)
+
+Open GitHub issues checked against this list on 2026-09-26. Both open issues (#7 and #8, v1.55.1 on Windows 11) are named as drivers of the 2026-09-04 section above, and the engineering half is recorded as done in Roadmap_Blocked.md (F441). Neither issue has a reply, so the reporters do not know. Restated here so the list carries them.
+
+### P2
+
+- [ ] P2: Answer #8, the Windows installer build cannot find `route_manifest.json` (issue #8)
+  Reported: jaloji, 2026-09-01, v1.55.1 Windows installer.
+  Why: after installing and launching the server, the Premiere bridge connects and then everything reports "service unavailable"; the server log shows `Cannot load route manifest for workflow validation: [Errno 2] No such file or directory` under `server\_internal\opencut\_generated\route_manifest.json`, plus `System site-packages: added 2 paths from C:\Python312\python.EXE`, meaning the frozen server picked up a foreign interpreter.
+  Status: F441 records the four root causes fixed in b8b682a1, 7b16555f, 6b378b37 and 8ec4a5f6 (generated manifests missing from the frozen build, foreign site-packages adoption, two servers on one port, no crash evidence).
+  Next: reply with what was wrong, the commits, and the release that ships them; close when the reporter confirms or after the release goes out.
+  Evidence: https://github.com/SysAdminDoc/OpenCut/issues/8
+
+- [ ] P2: Answer #7, "GPU index 0 not available" on an RTX 5070 that Settings detects (issue #7)
+  Reported: jyotpatel14, 2026-08-30, v1.55.1, CEP panel, Windows 11, fresh install with `pip install onnxruntime`.
+  Why: captions and transcription fail with `GPUSelectionError: GPU index 0 is not available. Available CUDA devices: 0: NVIDIA GeForce RTX 5070` although the Settings screen lists the GPU. F441 attributes it to the cu121 index in the old README, which cannot drive a Blackwell card, and names the working install command.
+  Next: reply with the install command and the README change; close when the reporter confirms.
+  Evidence: https://github.com/SysAdminDoc/OpenCut/issues/7
