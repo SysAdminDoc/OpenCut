@@ -369,11 +369,11 @@ Open GitHub issues checked against this list on 2026-09-26. Both open issues (#7
   Reported: jaloji, 2026-09-01, v1.55.1 Windows installer.
   Why: after installing and launching the server, the Premiere bridge connects and then everything reports "service unavailable"; the server log shows `Cannot load route manifest for workflow validation: [Errno 2] No such file or directory` under `server\_internal\opencut\_generated\route_manifest.json`, plus `System site-packages: added 2 paths from C:\Python312\python.EXE`, meaning the frozen server picked up a foreign interpreter.
   Status: F441 records the four root causes fixed in b8b682a1, 7b16555f, 6b378b37 and 8ec4a5f6 (generated manifests missing from the frozen build, foreign site-packages adoption, two servers on one port, no crash evidence).
-  Next: reply with what was wrong, the commits, and the release that ships them; close when the reporter confirms or after the release goes out.
+  Next: reply with what was wrong, the commits, and the release that ships them; the issue is then Matt's to close, never an agent's.
   Evidence: https://github.com/SysAdminDoc/OpenCut/issues/8
 
 - [ ] P2: Answer #7, "GPU index 0 not available" on an RTX 5070 that Settings detects (issue #7)
   Reported: jyotpatel14, 2026-08-30, v1.55.1, CEP panel, Windows 11, fresh install with `pip install onnxruntime`.
   Why: captions and transcription fail with `GPUSelectionError: GPU index 0 is not available. Available CUDA devices: 0: NVIDIA GeForce RTX 5070` although the Settings screen lists the GPU. F441 attributes it to the cu121 index in the old README, which cannot drive a Blackwell card, and names the working install command.
-  Next: reply with the install command and the README change; close when the reporter confirms.
+  Next: reply with the install command and the README change; the issue is then Matt's to close.
   Evidence: https://github.com/SysAdminDoc/OpenCut/issues/7
