@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1564-orange)
-![Tests](https://img.shields.io/badge/Tests-14500+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-15200+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only. Each route is tagged
@@ -601,7 +601,7 @@ Creative Cloud or the Unified Plugin Installer Agent needs an Adobe signing
 identity, which this project does not have yet, so the developer-mode path
 above is the supported local install for now.
 
-> **Premiere 26 compatibility:** Both CEP (`[13.0, 99.9]` host range) and UXP (`minVersion 25.6`) panels cover Premiere 26.x. Adobe's published plan ends ExtendScript support in Premiere Pro in September 2026, and the CEP panel drives every host mutation through ExtendScript, so UXP is the panel that outlives it.
+> **Premiere 26 compatibility:** Both CEP (`[13.0, 99.9]` host range) and UXP (`minVersion 25.6`) panels cover Premiere 26.x. Adobe [plans to support CEP and UXP side by side for a calendar year](https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/ReadMe.md) after the November 2025 Premiere Pro 25.6 update, so OpenCut plans around CEP support ending near November 2026. Adobe hasn't announced an exact date. The CEP panel drives every host mutation through ExtendScript, so UXP is the panel that outlives it.
 
 ---
 
@@ -989,7 +989,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-14,500+ estimated tests across 363 root test files covering route smoke tests,
+15,200+ estimated tests across 380 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -1058,7 +1058,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (14,500+ estimated tests, 363 root test files)
+tests/               # pytest test suite (15,200+ estimated tests, 380 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/
