@@ -88,7 +88,9 @@ _PRIVATE_KEY_RE = re.compile(
 # ``;``, ``,`` or spaces, and a dict or call repr. A flag that is the
 # whole value (``cookie=on``, ``cookie=off: disabled``) is left alone,
 # but not when anything other than a space, quote or closing bracket
-# follows its punctuation (``cookie=on.;sid=...``).
+# follows its punctuation (``cookie=on.;sid=...``). A list item whose
+# ``=`` is followed by a space ends the list (``;password= ...``), so the
+# assignment pattern still sees that name.
 _SECRET_HEADER_RE = re.compile(
     r"(?P<prefix>(?:(?P<open>\([ \t]*b?[\"'])|(?<![\w-]))(?P<env>http_)?(?:authorization|"
     r"proxy[-_]authorization|x[-_]api[-_]key|x[-_]auth[-_]token|x[-_]opencut[-_]token|"
@@ -101,8 +103,9 @@ _SECRET_HEADER_RE = re.compile(
     r"(?:(?:digest|oauth|hawk|aws4-hmac-sha256|vapid|mutual|hoba|scram-sha-(?:1|256))[ \t]+[^\r\n]*"
     r"|(?:[{\[]|[A-Za-z_][\w.]*\()[^\r\n]*"
     r"|(?:(?:basic|bearer|token|negotiate|ntlm|apikey|api-key|dpop|kerberos|sharedkey(?:lite)?)[ \t]+)?"
-    r"(?:[^\s&,;=]++=[^\s&,;]*+(?:[ \t]*[;,][ \t]*[^\s&,;=]++(?:=[^\s&,;]*+)?|[ \t]++[^\s&,;=]++=[^\s&,;]*+)*+"
-    r"|[^\s&,;]++(?:;[ \t]*[^\s&,;=]+=[^\s&,;]*)*)))"
+    r"(?:[^\s&,;=]++=[^\s&,;]*+(?:[ \t]*[;,][ \t]*[^\s&,;=]++(?!=[ \t])(?:=[^\s&,;]*+)?"
+    r"|[ \t]++[^\s&,;=]++=(?![ \t])[^\s&,;]*+)*+"
+    r"|[^\s&,;]++(?:;[ \t]*[^\s&,;=]+=(?![ \t])[^\s&,;]*)*)))"
     r"|[^\r\n]*)))",
     re.IGNORECASE,
 )
@@ -229,6 +232,9 @@ def _redact_match_value(match: re.Match[str]) -> str:
 _URL_HOST_PATH_RE = re.compile(
     r"(?:localhost|[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+|\[[0-9A-Fa-f:.]+\])(?::\d+)?/"
 )
+# Patterns that run after the userinfo one and can read a label at the
+# end of a URL run whose value lies past it (``,token: 9f2c...``).
+_TRAILING_LABEL_PATTERNS = (_QUERY_SECRET_RE, _ASSIGNED_SECRET_RE, _CLI_SECRET_RE, _AUTH_SCHEME_RE)
 
 
 def _redact_url_userinfo(match: re.Match[str]) -> str:
@@ -240,7 +246,8 @@ def _redact_url_userinfo(match: re.Match[str]) -> str:
     ends the userinfo or comes after it, so cutting there can't leak the
     password. But with an ``=`` before it, that ``@`` may sit inside a
     named value (``?password=Pa@ss``) whose name the cut would drop, so
-    the whole run goes.
+    the whole run goes, except a secret label at its end whose value
+    lies past it, which stays for a later pattern to read.
     """
     rest = match.group("rest")
     last = rest.rfind("@")
@@ -249,9 +256,39 @@ def _redact_url_userinfo(match: re.Match[str]) -> str:
     at = _readable_userinfo_end(rest, _userinfo_stop(rest))
     if at is None:
         if "=" in rest[rest.find("@"):last]:
-            return f"{match.group('prefix')}{REDACTION_MARKER}"
+            label = _trailing_label_start(match, last)
+            if label is None:
+                tail = ""
+            elif rest[label - 1].isalnum():
+                tail = rest[label:]
+            else:
+                tail = rest[label - 1:]
+            return f"{match.group('prefix')}{REDACTION_MARKER}{tail}"
         at = last
     return f"{match.group('prefix')}{REDACTION_MARKER}{rest[at:]}"
+
+
+def _trailing_label_start(match: re.Match[str], last: int) -> int | None:
+    """Where in ``rest``, after its ``@`` at ``last``, a secret label
+    starts whose whole value lies past the end of the URL run, or ``None``.
+
+    A value that starts inside the run may not be redacted whole by the
+    pattern that found it, since an earlier pattern can take part of it
+    first, so only a bare label is kept.
+    """
+    text = match.string
+    base = match.start("rest")
+    end = match.end("rest")
+    start = None
+    for pattern in _TRAILING_LABEL_PATTERNS:
+        for found in pattern.finditer(text, base + last + 1, min(len(text), end + 256)):
+            if found.start() >= end:
+                break
+            if found.end() > end:
+                if found.start("value") >= end and (start is None or found.start() < start):
+                    start = found.start()
+                break
+    return None if start is None else start - base
 
 
 def _userinfo_stop(rest: str) -> int:

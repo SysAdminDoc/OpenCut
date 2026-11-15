@@ -838,6 +838,19 @@ _FIFTH_REVIEW_LEAKS = {
     "password holding @, digits with a dot and #": ("http://admin:Secret@123.45#{}@cam/", "LeakE3"),
     "fragment value holding @ right after the host": ("https://u:p@h.example.com#token={}@abc", "LeakE4"),
     "path parameter holding @ before a query": ("http://admin:pw@nas/x;password=Pa?ss@{}", "LeakE5"),
+    "token: joined to a URL with an @ in its query": ("http://u:p@nas/x?a=b@c,token: abcdefgh12{}", "LeakF1"),
+    "secret: joined to a URL with an @ in its query": ("rtsp://admin:pw@cam/x?user=a@b;secret: {}", "LeakF2"),
+    "--password joined to a URL with an @ in its query": ("http://u:p@nas/x?a=b@c,--password {}", "LeakF3"),
+    "Bearer joined to a URL with an @ in its query": ("http://u:p@nas/x?a=b@c,Bearer abcdefgh12{}", "LeakF4"),
+    "token: after a slash in a URL with an @ in its query": ("http://u:p@nas/x?a=b@c/token: abcdefgh12{}", "LeakF5"),
+    "quoted query password after an @ in the query": ('http://u:p@nas/x?a=b@c&password="pass {}"', "LeakF6"),
+    "fragment token in a quoted URL with an @ in its query": (
+        '"https://u:p@nas:80/s?key=a@b@x;x-amz-signature=s1#token=p:{}"',
+        "LeakF7",
+    ),
+    "cookie= flag before a spaced password=": ("cookie=on.;password= {}", "LeakG1"),
+    "cookie= list before a spaced password=": ("cookie=sid=abc;password= {}", "LeakG2"),
+    "cookie= list before a spaced password= after a space": ("cookie=sid=abc password= {}", "LeakG3"),
 }
 
 
@@ -867,6 +880,7 @@ def test_fifth_review_credential_forms_are_redacted(name):
             "rtsp://admin:P@ss.w0rd#LeakB7@192.168.1.64:554/Streaming/Channels/101",
             "rtsp://[REDACTED]@192.168.1.64:554/Streaming/Channels/101",
         ),
+        ("http://u:LeakB8@nas/x?a=b@c,token: abcdefgh12LeakB9", "http://[REDACTED],token: [REDACTED]"),
     ],
 )
 def test_a_query_secret_holding_an_at_sign_is_redacted_whole(line, kept):
