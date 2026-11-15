@@ -29,7 +29,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Optional
 
-from opencut.core.issue_report import _redact_sensitive_text
+from opencut.core.issue_report import _redact_sensitive_text, _redact_structure
 from opencut.server_log import server_log_path, server_log_tail
 
 logger = logging.getLogger("opencut")
@@ -376,13 +376,9 @@ def _extract_metadata(record: dict) -> dict:
             if isinstance(value, str):
                 value = _redact_sensitive_text(value)
             elif isinstance(value, (list, dict)):
-                flat = _redact_sensitive_text(json.dumps(value, default=str))
-                try:
-                    value = json.loads(flat)
-                except ValueError:
-                    # Redaction broke the JSON. Hand back the redacted text
-                    # rather than the raw value.
-                    value = flat
+                # Walk the structure. Regexing its JSON text missed values
+                # holding an escaped quote and could turn params into a str.
+                value = _redact_structure(json.loads(json.dumps(value, default=str)))
             out[key] = value
     return out
 

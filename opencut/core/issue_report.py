@@ -35,10 +35,11 @@ def check_issue_report_available() -> bool:
 
 
 _HOME = os.path.expanduser("~")
+# Any run of separators between segments, so a path inside JSON (where
+# every backslash is doubled) is caught too.
 _HOME_PATTERNS = [
-    re.compile(re.escape(_HOME), re.IGNORECASE),
-    re.compile(r"[A-Za-z]:\\Users\\[^\\]+", re.IGNORECASE),
-    re.compile(r"[A-Za-z]:/Users/[^/]+", re.IGNORECASE),
+    re.compile(r"[\\/]+".join(re.escape(part) for part in re.split(r"[\\/]+", _HOME)), re.IGNORECASE),
+    re.compile(r"[A-Za-z]:[\\/]+Users[\\/]+[^\\/\r\n\"']+", re.IGNORECASE),
 ]
 
 REDACTION_MARKER = "[REDACTED]"
@@ -67,38 +68,52 @@ _PRIVATE_KEY_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _SECRET_HEADER_RE = re.compile(
-    r"^(?P<prefix>[ \t]*(?:authorization|proxy-authorization|x-api-key|"
+    r"(?P<prefix>(?<![\w-])(?:authorization|proxy-authorization|x-api-key|"
     r"x-auth-token|x-opencut-token|x-amz-security-token|cookie|set-cookie)"
-    r"[ \t]*:[ \t]*)(?P<value>[^\r\n]*)",
-    re.IGNORECASE | re.MULTILINE,
-)
-_URL_USERINFO_RE = re.compile(
-    r"(?P<prefix>\b[a-z][a-z0-9+.-]*://)[^\s/@:]+:[^\s/@]+@",
+    r"[\"']?[ \t]*:[ \t]*(?P<vq>[\"'])?)"
+    r"(?P<value>(?(vq)(?:(?!(?P=vq))[^\r\n])*|[^\r\n]*))",
     re.IGNORECASE,
 )
-# ``:`` covers colon-separated option lists such as Shaka Packager's
-# ``--keys label=X:key_id=...:key=...``.
+_URL_USERINFO_RE = re.compile(
+    # The user may be empty and the password may hold "@" or "/" (an
+    # escaped one is decoded first), so run to the last "@" before a host.
+    r"(?P<prefix>\b[a-z][a-z0-9+.-]*://)[^\s/@:]*:\S*?@"
+    r"(?=[^\s/@?#]*(?:[/?#\s\"'<>]|$))",
+    re.IGNORECASE | re.MULTILINE,
+)
+# Besides query strings, a bare ``token=`` after whitespace, a quote or a
+# bracket counts, and so does ``:key=`` right behind a hex key id, which is
+# Shaka Packager's ``--keys label=X:key_id=...:key=...`` list.
 _QUERY_SECRET_RE = re.compile(
-    rf"(?P<prefix>(?:[?&;:]|&amp;){_QUERY_SECRET_NAME}=)"
+    r"(?P<prefix>(?:[?&;]|&amp;|(?<![^\s\"'(\[,])|key_id=[0-9A-Fa-f]+:)"
+    rf"{_QUERY_SECRET_NAME}=)"
     r"(?P<value>[^&#\s\"'<>\r\n]*)",
     re.IGNORECASE,
 )
 _ASSIGNED_SECRET_RE = re.compile(
-    rf"(?P<prefix>(?P<kq>[\"']?)\b(?:{_KNOWN_SECRET_ENV}|{_SECRET_NAME})\b"
-    r"(?P=kq)[ \t]*[:=][ \t]*)"
+    rf"(?P<prefix>(?P<kq>[\"']?)\b(?:[A-Za-z0-9]+_)*(?:{_KNOWN_SECRET_ENV}|{_SECRET_NAME})\b"
+    r"(?P=kq)[ \t]*(?:(?P<colon>:)|=)[ \t]*)"
     rf"(?P<value>(?P<vq>[\"'])(?!{re.escape(REDACTION_MARKER)})"
     r"(?:(?!(?P=vq))[^\r\n])*(?P=vq)"
-    rf"|(?![\"']?{re.escape(REDACTION_MARKER)})[^\s,;\r\n}}\]]+)",
+    rf"|(?![\"']?{re.escape(REDACTION_MARKER)})"
+    r"(?(colon)[^,;\r\n}\]\"']+|[^\s,;\r\n}\]]+))",
     re.IGNORECASE,
 )
 _CLI_SECRET_RE = re.compile(
-    rf"(?P<prefix>--{_SECRET_NAME}(?:=|[ \t]+))(?P<value>[^\s\"']+)",
+    rf"(?P<prefix>(?<![\w-])--?(?:[A-Za-z0-9]+[_-])*{_SECRET_NAME}"
+    r"(?:=|[ \t]+|[\"'],[ \t]*[\"']))(?P<value>[^\s\"']+)",
     re.IGNORECASE,
 )
 _AUTH_SCHEME_RE = re.compile(
-    r"(?P<prefix>\b(?:basic|bearer)[ \t]+)(?P<value>[A-Za-z0-9._~+/=-]{8,})",
+    r"(?P<prefix>\b(?:basic|bearer)(?:[ \t]+|\+))(?P<value>[A-Za-z0-9._~+/=-]{8,})",
     re.IGNORECASE,
 )
+# Keys whose whole value is a secret when a structure is walked.
+_SECRET_KEY_RE = re.compile(
+    rf"(?:^|[_\-\s.])(?:{_KNOWN_SECRET_ENV}|{_SECRET_NAME}|authorization|bearer|token)(?:[_\-\s.]|$)",
+    re.IGNORECASE,
+)
+_PERCENT_ESCAPE_RE = re.compile(r"%[0-9A-Fa-f]{2}")
 _PROVIDER_SECRET_PATTERNS = (
     re.compile(r"\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{16,}\b"),
     re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b", re.IGNORECASE),
@@ -141,11 +156,79 @@ def _redact_sensitive_text(text: str) -> str:
     The substitutions intentionally retain header, variable, query-parameter,
     and command-line option names so the resulting issue preview remains useful.
     This is a best-effort guardrail, not a replacement for user review.
+
+    server.log writes one JSON object per line, where quotes and backslashes
+    are escaped and a header is never at the start of a line. Each such line
+    is decoded, its strings are redacted as plain text, and, when anything
+    changed, it is encoded again in the line's own JSON style.
     """
     if not text:
         return text
 
-    redacted = _scrub_paths(str(text))
+    redacted = _PRIVATE_KEY_RE.sub(REDACTION_MARKER, str(text))
+    return "\n".join(_redact_line(line) for line in redacted.split("\n"))
+
+
+def _redact_line(line: str) -> str:
+    body = line.rstrip("\r")
+    stripped = body.strip()
+    if stripped.startswith("{") and stripped.endswith("}"):
+        try:
+            record = json.loads(stripped)
+        except ValueError:
+            record = None
+        if isinstance(record, dict):
+            redacted = _redact_structure(record)
+            if redacted == record:
+                return line
+            start = body.index(stripped)
+            return (
+                body[:start]
+                + _encode_like(redacted, record, stripped)
+                + body[start + len(stripped):]
+                + line[len(body):]
+            )
+    return _redact_plain_text(line)
+
+
+def _encode_like(value: Any, original: Any, encoded: str) -> str:
+    """Encode ``value`` with the separators and escaping that turn
+    ``original`` back into ``encoded``, so compact JSON stays compact."""
+    for separators in ((", ", ": "), (",", ":")):
+        for ensure_ascii in (False, True):
+            if json.dumps(original, ensure_ascii=ensure_ascii, separators=separators) == encoded:
+                return json.dumps(value, ensure_ascii=ensure_ascii, separators=separators)
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _redact_structure(value: Any) -> Any:
+    """Redact a decoded JSON value: secret-named keys lose their value,
+    and every string is redacted as plain text."""
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():
+            name = _redact_plain_text(key) if isinstance(key, str) else key
+            if isinstance(item, str) and item and _SECRET_KEY_RE.search(str(key)):
+                out[name] = REDACTION_MARKER
+            else:
+                out[name] = _redact_structure(item)
+        return out
+    if isinstance(value, list):
+        return [_redact_structure(item) for item in value]
+    if isinstance(value, str):
+        return _redact_plain_text(value)
+    return value
+
+
+def _redact_plain_text(text: str) -> str:
+    if not text:
+        return text
+    redacted = text
+    if _PERCENT_ESCAPE_RE.search(redacted):
+        # A URL nested in a query string hides its userinfo and an
+        # ``auth=Bearer%20...`` value behind percent escapes.
+        redacted = urllib.parse.unquote(redacted)
+    redacted = _scrub_paths(redacted)
     redacted = _PRIVATE_KEY_RE.sub(REDACTION_MARKER, redacted)
     redacted = _SECRET_HEADER_RE.sub(_redact_match_value, redacted)
     redacted = _URL_USERINFO_RE.sub(

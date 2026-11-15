@@ -7,6 +7,7 @@ nothing writes, so every bundle shipped without logs.
 
 from __future__ import annotations
 
+import json
 import logging
 import logging.handlers
 import os
@@ -205,3 +206,110 @@ def test_secrets_the_server_logged_never_reach_a_bundle(server_logger, fake_home
         for name, value in secrets.items():
             assert value not in text, f"{name} secret leaked into the {where}"
     assert "[REDACTED]" in outputs["log export"]
+
+
+def test_credential_forms_in_the_json_log_never_reach_a_bundle(
+    server_logger, fake_home, tmp_path, monkeypatch, client
+):
+    """server.log lines are JSON objects, so a header is never at the start of
+    a line and quotes and backslashes arrive escaped. Each form below got
+    through every bundle before the log lines were decoded first."""
+    import opencut.routes.settings as settings_routes
+    import opencut.server as server_module
+
+    data_dir = fake_home / ".opencut"
+    monkeypatch.setattr(settings_routes, "OPENCUT_DIR", str(data_dir))
+    monkeypatch.setattr(server_module, "LOG_FILE", str(data_dir / "server.log"))
+    job_id = f"job-{uuid.uuid4().hex[:8]}"
+    forms = {
+        "header mid-line": ("rejected request X-OpenCut-Token: %s", "OcTokMidLine0001"),
+        "token scheme": ("upstream Authorization: Token %s", "TokSchemeValue0002"),
+        "header dict repr": ("headers={'Authorization': 'Token %s'}", "DictReprValue0003"),
+        "header dump": ("request headers:\nAuthorization: Token %s\nAccept: */*", "HeaderDump0004"),
+        "@ in password": ("source rtmp://cam:p@%s@10.0.0.5/live", "AtInPassword0005"),
+        "empty user": ("source rtmp://:%s@ingest.example.com/app", "EmptyUser0006"),
+        "encoded userinfo": (
+            "GET /api/probe?url=https%%3A%%2F%%2Falice%%3A%s%%40example.com%%2Fx",
+            "EncodedUser0007",
+        ),
+        "encoded bearer": ("GET /api?auth=Bearer%%20%s", "EncodedBearer0008"),
+        "bare token": ("remote auth token=%s", "BareToken0009"),
+        "bare key": ("provider key=%s", "BareKey0010"),
+        "flag in a list": ("cmd: ['tool', '--api-key', '%s']", "FlagInList0011"),
+        "prefixed name": ('payload {"llm_api_key": "%s"}', "PrefixedName0012"),
+        "single-dash flag": ("ffmpeg -i in.mp4 -passphrase %s -f mpegts srt://host:9000", "SingleDash0013"),
+        "spaced passphrase": ("passphrase: correct horse %s", "SpacedPass0014"),
+        "shaka key first": ("packager --keys key=%s:key_id=00112233445566778899aabbccddeeff", "ShakaFirst0015"),
+        "home path": ("opened C:\\Users\\%s\\Videos\\clip.mp4", "homeuser0016"),
+    }
+    for template, value in forms.values():
+        server_logger.warning("%s " + template, job_id, value)
+    for handler in server_logger.handlers:
+        handler.flush()
+    raw = (data_dir / "server.log").read_text(encoding="utf-8")
+    assert all(value in raw for _, value in forms.values())
+
+    from opencut.core import crash_packet, issue_report, job_diagnostics
+
+    report = issue_report.bundle(title="t", description="d")
+    packet = crash_packet.build_packet(output_path=tmp_path / "packet.zip", include_jobs=False)
+    with zipfile.ZipFile(packet.output_path) as zf:
+        packet_log = zf.read("server.log").decode("utf-8")
+    metadata_secret = "MetaQuoteTail0017"
+    nested_secret = "MetaNested0018"
+    monkeypatch.setattr(
+        job_diagnostics,
+        "_resolve_job",
+        lambda _job_id: {
+            "status": "error",
+            "params": {
+                "password": 'q"Tail' + metadata_secret,
+                "provider": {"llm_api_key": nested_secret},
+                "token_count": 512,
+            },
+        },
+    )
+    diag = job_diagnostics.build_diagnostic(job_id)
+    exported = client.get("/logs/export")
+    tailed = client.get("/logs/tail?lines=500")
+    assert exported.status_code == 200
+    assert tailed.status_code == 200
+
+    outputs = {
+        "issue report": report["body"],
+        "crash packet": packet_log,
+        "job log slice": diag.log_slice.body if diag.log_slice else "",
+        "log export": exported.get_data(as_text=True),
+        "log tail": "\n".join(tailed.get_json()["lines"]),
+    }
+    assert job_id in outputs["job log slice"]
+    assert job_id in outputs["log tail"]
+    for where, body in outputs.items():
+        for name, (_, value) in forms.items():
+            assert value not in body, f"{name} leaked into the {where}"
+
+    params = diag.metadata["params"]
+    assert isinstance(params, dict)
+    assert params["token_count"] == 512
+    assert metadata_secret not in json.dumps(params)
+    assert nested_secret not in json.dumps(params)
+
+
+@pytest.mark.parametrize(
+    "ordinary",
+    [
+        "ffmpeg -vf drawtext=fontfile=Arial.ttf:text=Hi:fontsize=24:x=10 out.mp4",
+        "cache entry ns:key=thumbs/abc123",
+        "opencut:token=refresh-window",
+        "fetched https://cdn.example.com:8443/media/clip.mp4",
+        '{"max_tokens": 512, "token_count": 7}',
+    ],
+)
+def test_redaction_leaves_ordinary_text_alone(ordinary):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    redacted = _redact_sensitive_text(ordinary)
+    if ordinary.startswith("{"):
+        assert json.loads(redacted) == json.loads(ordinary)
+    else:
+        assert redacted == ordinary

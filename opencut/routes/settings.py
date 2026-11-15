@@ -743,7 +743,7 @@ def tail_logs():
             continue
         if job_filter and job_filter not in record["raw"] and job_filter != record["job_id"]:
             continue
-        result.append(record["raw"])
+        result.append(_redact_sensitive_text(record["raw"]))
     # Tail
     tail = result[-lines:]
     return jsonify({"lines": tail, "total": len(result)})
