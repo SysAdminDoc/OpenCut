@@ -84,11 +84,12 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - More forms are caught too: `token = '...'`, `api_token` and `oauth_token`
   in a query, `HTTP_AUTHORIZATION=` from a request environment, a list of
   passwords, `-encryption_key`, a URL that was encoded twice, a login URL
-  passed inside another link's query, and a camera URL whose password
-  starts with digits, holds an `@`, ends in `/` or runs past 1,024
-  characters. So are Negotiate, NTLM and Digest credentials, cookie lists,
-  the byte-string headers an ASGI server logs and a `token:` right after a
-  logger name. A CORS header list keeps its other names, `hasPassword=true`
+  passed inside another link's query, a query password holding an `@`, and
+  a camera URL whose password starts with digits, holds an `@`, ends in `/`
+  or runs past 1,024 characters. So are Negotiate, NTLM and Digest
+  credentials, cookie lists (even after `cookie=on.`), the byte-string
+  headers an ASGI server logs and a `token:` right after a logger name or a
+  file path. A CORS header list keeps its other names, `hasPassword=true`
   and `has_api_key: false` stay readable, and an IPv6 address is no longer
   taken for a password.
 - Ordinary text stays as it was: a CDN link with a port and `logo@2x.png`,

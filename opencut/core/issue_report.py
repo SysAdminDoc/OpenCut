@@ -86,7 +86,9 @@ _PRIVATE_KEY_RE = re.compile(
 # would, but keeps its auth scheme (a Digest or OAuth parameter list
 # runs to the end of the line), a ``name=value`` cookie list joined by
 # ``;``, ``,`` or spaces, and a dict or call repr. A flag that is the
-# whole value (``cookie=on``, ``cookie=off: disabled``) is left alone.
+# whole value (``cookie=on``, ``cookie=off: disabled``) is left alone,
+# but not when anything other than a space follows its punctuation
+# (``cookie=on.;sid=...``).
 _SECRET_HEADER_RE = re.compile(
     r"(?P<prefix>(?:(?P<open>\([ \t]*b?[\"'])|(?<![\w-]))(?P<env>http_)?(?:authorization|"
     r"proxy[-_]authorization|x[-_]api[-_]key|x[-_]auth[-_]token|x[-_]opencut[-_]token|"
@@ -95,7 +97,7 @@ _SECRET_HEADER_RE = re.compile(
     r"(?P<value>(?(vq)(?:\\.|(?!(?P=vq))[^\r\n\\])*"
     r"|(?(eq)(?(env)[^\r\n]*"
     rf"|(?!{re.escape(REDACTION_MARKER)})(?!(?:true|false|none|null|on|off|yes|no)"
-    r"(?:[.:!?]|/(?:true|false|none|null|on|off|yes|no))?(?![^\s&,;\"')\]}]))"
+    r"(?:(?:[.:!?]|/(?:true|false|none|null|on|off|yes|no))(?=\s|$)|(?![^\s&,;\"')\]}])))"
     r"(?:(?:digest|oauth|hawk|aws4-hmac-sha256|vapid|mutual|hoba|scram-sha-(?:1|256))[ \t]+[^\r\n]*"
     r"|(?:[{\[]|[A-Za-z_][\w.]*\()[^\r\n]*"
     r"|(?:(?:basic|bearer|token|negotiate|ntlm|apikey|api-key|dpop|kerberos|sharedkey(?:lite)?)[ \t]+)?"
@@ -141,12 +143,12 @@ _QUERY_SECRET_RE = re.compile(
 # (``token = 'x'``), or it stands alone before a colon and a value that
 # is 8 or more characters after a space (``token: 9f2c...``) or mixes
 # letters and digits in 4 or more (``token:Ab3x``). A logging prefix
-# (``WARNING:root:token: ...``) doesn't hide it, but a path's
-# ``/token:`` does. So a parser's ``Unexpected token: punc``, drawtext's
+# (``WARNING:root:token: ...``) or a path (``/run/secrets/token: ...``)
+# doesn't hide it. So a parser's ``Unexpected token: punc``, drawtext's
 # ``Token: 5a`` and a namespaced ``app:token:refresh-window`` stay.
 _TOKEN_NAME = (
     r"(?:(?(kq)token|(?!))|token(?=[ \t]*[:=][ \t]*(?:[bru]{1,2})?[\"'])"
-    r"|(?<![A-Za-z0-9_/-])token(?=[ \t]*:(?:[ \t]+[^\s,;}\]\"']{8}"
+    r"|(?<![A-Za-z0-9_-])token(?=[ \t]*:(?:[ \t]+[^\s,;}\]\"']{8}"
     r"|[ \t]*+(?=[^\s,;}\]\"':]{4})(?=[^\s,;}\]\"':]*[0-9])(?=[^\s,;}\]\"':]*[A-Za-z]))))"
 )
 _ASSIGNED_SECRET_RE = re.compile(
@@ -222,41 +224,52 @@ def _redact_match_value(match: re.Match[str]) -> str:
 
 
 # What may follow the ``@`` that ends a userinfo cut short of the run's
-# last ``@``: a dotted host, ``localhost`` or an IP, a port, then a path.
+# last ``@``: a dotted host, ``localhost`` or an IP, a port, then a path,
+# query or fragment.
 _URL_HOST_PATH_RE = re.compile(
-    r"(?:localhost|[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+|\[[0-9A-Fa-f:.]+\])(?::\d+)?/"
+    r"(?:localhost|[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+|\[[0-9A-Fa-f:.]+\])(?::\d+)?[/?#]"
 )
 
 
 def _redact_url_userinfo(match: re.Match[str]) -> str:
     """Redact from ``scheme://`` to the ``@`` that ends the userinfo.
 
-    The run's last ``@`` always ends it or comes after it, so cutting
-    there can't leak. An earlier ``@`` is used only when a plain host
-    and path follow it and no other URL does, which keeps
-    ``?to=ops@example.com`` and ``/media/@user/clip.mp4`` readable.
+    An earlier ``@`` is used only when a plain host follows it and no
+    other URL does, which keeps ``?to=ops@example.com`` and
+    ``/media/@user/clip.mp4`` readable. Otherwise the run's last ``@``
+    ends the userinfo or comes after it, so cutting there can't leak the
+    password. When that ``@`` is in the query or fragment it may sit
+    inside a secret value (``?password=Pa@ss``), and the whole run goes.
     """
     rest = match.group("rest")
     last = rest.rfind("@")
     if last < 0:
         return match.group(0)
-    at = _readable_userinfo_end(rest)
+    stop = _userinfo_stop(rest)
+    at = _readable_userinfo_end(rest, stop)
     if at is None:
+        if last > stop:
+            return f"{match.group('prefix')}{REDACTION_MARKER}"
         at = last
     return f"{match.group('prefix')}{REDACTION_MARKER}{rest[at:]}"
 
 
-def _readable_userinfo_end(rest: str) -> int | None:
-    """The last ``@`` before a ``?`` or ``#`` that follows the first one,
-    stepping back past an ``@`` that starts a path segment, or ``None``
-    when the text after it isn't plainly a host and path.
-    """
+def _userinfo_stop(rest: str) -> int:
+    """Where the query or fragment after the run's first ``@`` starts."""
     first = rest.find("@")
     stop = len(rest)
     for mark in "?#":
         found = rest.find(mark, first)
         if found >= 0:
             stop = min(stop, found)
+    return stop
+
+
+def _readable_userinfo_end(rest: str, stop: int) -> int | None:
+    """The last ``@`` before ``stop``, stepping back past an ``@`` that
+    starts a path segment, or ``None`` when the text after it isn't
+    plainly a host.
+    """
     at = rest.rfind("@", 0, stop)
     while at > 0 and rest[at - 1] == "/":
         earlier = rest.rfind("@", 0, at)

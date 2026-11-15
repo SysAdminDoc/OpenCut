@@ -796,7 +796,7 @@ def test_a_url_password_ends_at_the_at_sign_before_the_host(line, secret, kept):
         "Unexpected token: 0x",
         "max token: 4k",
         "app:token:v2",
-        "GET /v1/token:exchange2",
+        "cookie=on. next",
     ],
 )
 def test_fourth_review_ordinary_text_is_left_alone(ordinary):
@@ -805,3 +805,57 @@ def test_fourth_review_ordinary_text_is_left_alone(ordinary):
     assert _redact_sensitive_text(ordinary) == ordinary
     wrapped = json.dumps({"message": ordinary})
     assert json.loads(_redact_sensitive_text(wrapped)) == {"message": ordinary}
+
+
+_FIFTH_REVIEW_LEAKS = {
+    "query password holding @ after a single-label host": (
+        "http://admin:pw@nas/login?password=Pa@ss{}",
+        "LeakA1",
+    ),
+    "query password holding @ right after the host": ("https://u:p@h.example.com?password=Pa@ss{}", "LeakA2"),
+    "query key holding @ before a nested URL": (
+        "https://u:p@h.example.com/x?api_key=ab@{}&amp;next=https://e.example.org/",
+        "LeakA4",
+    ),
+    "fragment token holding @": ("http://u:p@nas/cb#access_token=ab@{}", "LeakA5"),
+    "token: after a path": ("/run/secrets/token: s3cr3tValue{}", "LeakC1"),
+    "token: after a drive path": ("C:/app/token: abcdefgh12{}", "LeakC2"),
+    "token: in a URL path": ("https://h.example.com/api/token:{}x9", "LeakC5"),
+    "token: after an encoded path": ("p=%2Frun%2Fsecrets%2Ftoken%3A%20s3cr3tValue{}", "LeakC6"),
+    "cookie= flag with a period before a list": ("cookie=on.;sid={}", "LeakD1"),
+    "cookie= flag pair before a list": ("cookie=on/off;sid={}", "LeakD2"),
+    "cookie= flag with a colon before a list": ("cookie=yes:;sid={}", "LeakD3"),
+    "Cookie= flag with a period before a spaced list": ("Cookie=on.; sid={}", "LeakD4"),
+    "set-cookie= flag before attributes": ("set-cookie=true.;Path=/;sid={}", "LeakD5"),
+}
+
+
+@pytest.mark.parametrize("name", sorted(_FIFTH_REVIEW_LEAKS))
+def test_fifth_review_credential_forms_are_redacted(name):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    template, secret = _FIFTH_REVIEW_LEAKS[name]
+    line = template.format(secret)
+    assert secret in line
+    json_line = json.dumps({"level": "WARNING", "message": f"job-1 {line}"})
+
+    assert secret not in _redact_sensitive_text(line)
+    assert secret not in _redact_sensitive_text(json_line)
+
+
+@pytest.mark.parametrize(
+    ("line", "kept"),
+    [
+        (
+            "https://u:LeakB1@h.example.com?password=Pa@ssLeakB2",
+            "https://[REDACTED]@h.example.com?password=[REDACTED]",
+        ),
+        ("http://admin:LeakB3@nas/login?password=Pa@ssLeakB4", "http://[REDACTED]"),
+        ("https://user:LeakB5@h.example.com?to=ops@example.com", "https://[REDACTED]@h.example.com?to=ops@example.com"),
+        ("https://user:LeakB6@localhost:8080#ref=a@b.c", "https://[REDACTED]@localhost:8080#ref=a@b.c"),
+    ],
+)
+def test_a_query_secret_holding_an_at_sign_is_redacted_whole(line, kept):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    assert _redact_sensitive_text(line) == kept
