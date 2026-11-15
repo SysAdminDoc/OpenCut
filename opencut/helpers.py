@@ -52,15 +52,10 @@ def _bundled_binary_path(binary: str) -> str | None:
         names.append(f"{binary}.exe")
 
     candidates = []
+    configured = ""
     configured_dir = os.environ.get("OPENCUT_FFMPEG_DIR", "").strip()
     if configured_dir:
         configured = os.path.expanduser(os.path.expandvars(configured_dir))
-        # The Linux launchers and build script name the folder holding the
-        # binaries; a parent with an ffmpeg/ folder is still accepted below.
-        for name in names:
-            path = os.path.join(configured, name)
-            if os.path.isfile(path) and os.access(path, os.X_OK):
-                return os.path.abspath(path)
         candidates.append(configured)
 
     executable = getattr(_sys, "executable", "")
@@ -77,10 +72,22 @@ def _bundled_binary_path(binary: str) -> str | None:
         if normalized in seen:
             continue
         seen.add(normalized)
-        for name in names:
-            path = os.path.join(base, "ffmpeg", name)
-            if os.path.isfile(path) and os.access(path, os.X_OK):
-                return os.path.abspath(path)
+        found = _first_executable(os.path.join(base, "ffmpeg"), names)
+        if not found and configured and base == configured:
+            # The Linux launchers and build script name the folder holding the
+            # binaries. It's probed after the parent layout, whose ffmpeg/
+            # folder carries the binary's own name.
+            found = _first_executable(base, names)
+        if found:
+            return found
+    return None
+
+
+def _first_executable(folder: str, names: list[str]) -> str | None:
+    for name in names:
+        path = os.path.join(folder, name)
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return os.path.abspath(path)
     return None
 
 

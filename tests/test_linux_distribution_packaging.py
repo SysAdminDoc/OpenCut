@@ -164,6 +164,22 @@ def test_ffmpeg_dir_still_accepts_a_parent_with_an_ffmpeg_folder(monkeypatch, tm
         assert os.path.normcase(helpers._bundled_binary_path(binary) or "") == expected
 
 
+def test_ffmpeg_dir_parent_never_resolves_to_the_ffmpeg_folder_itself(monkeypatch, tmp_path):
+    """A parent layout holds a folder named like the binary; only the binary inside may win.
+
+    Export tests patch os.path.isfile to True, and Windows os.access accepts a
+    folder, so probing <dir>/ffmpeg before <dir>/ffmpeg/ffmpeg handed the
+    folder to subprocess.
+    """
+    import opencut.helpers as helpers
+
+    media = _fake_media_binaries(tmp_path / "OpenCut-Server" / "ffmpeg")
+    monkeypatch.setenv("OPENCUT_FFMPEG_DIR", str(tmp_path / "OpenCut-Server"))
+    real_isfile = os.path.isfile
+    monkeypatch.setattr(os.path, "isfile", lambda path: os.path.isdir(path) or real_isfile(path))
+    assert os.path.normcase(helpers._bundled_binary_path("ffmpeg") or "") == media["ffmpeg"]
+
+
 def test_build_script_builds_appdir_appimage_and_flatpak_bundle():
     text = _read(BUILD_SCRIPT)
 
