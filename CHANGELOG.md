@@ -126,6 +126,10 @@ Notable changes to OpenCut. The git history carries the detailed record.
   launcher first, and install only into `~/.opencut/packages`. When there isn't
   one, the error says which version to install. Reinstalling Whisper no longer
   uninstalls anything from your own Python.
+- The faster-whisper fallback that upgrades pip first handed pip, setuptools
+  and wheel to pip as one name, which pip rejects, so that step never ran. It
+  names them separately now, and the packaged app skips it rather than putting
+  a copy of pip in `~/.opencut/packages`.
 
 ### Added: crash records
 

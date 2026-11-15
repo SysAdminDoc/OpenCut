@@ -80,6 +80,15 @@ def install_whisper(job_id, filepath, data):
             base = [_pip_python, "-m", "pip", "install"] + list(extra_flags) + [pkg, "--quiet"]
             return pip_install_variants(base, _target_dir)
 
+        def _pip_tooling_upgrade():
+            """Upgrade the installing Python's own pip; a copy under --target never runs."""
+            if getattr(sys, "frozen", False):
+                # The user's Python is only borrowed to fill the packages dir.
+                return []
+            base = [_pip_python, "-m", "pip", "install", "--upgrade",
+                    "pip", "setuptools", "wheel", "--quiet"]
+            return [base, [*base, "--user"]]
+
         # Strategy list - try each in order until one works
         strategies = []
         if backend == "faster-whisper":
@@ -91,7 +100,7 @@ def install_whisper(job_id, filepath, data):
                 },
                 {
                     "label": "Upgrade pip + prefer binary wheels",
-                    "pre_cmds": _pip_pre("pip setuptools wheel", "--upgrade"),
+                    "pre_cmds": _pip_tooling_upgrade(),
                     "cmds": _pip_cmd("faster-whisper", "--prefer-binary"),
                 },
                 {

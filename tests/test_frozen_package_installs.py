@@ -200,6 +200,38 @@ def test_whisper_install_without_a_matching_python_says_which_one(
     assert all(cmd[0] != sys.executable for cmd in commands)
 
 
+@pytest.mark.parametrize("packaged", [True, False], ids=["packaged", "source"])
+def test_the_upgrade_pip_strategy_runs_a_command_pip_accepts(
+    monkeypatch, request, inline_jobs, recorded, client, csrf_token, packaged,
+):
+    if packaged:
+        request.getfixturevalue("frozen")
+        monkeypatch.setattr(security, "_find_system_python", lambda: MATCHING)
+
+    def first_strategy_fails(cmd, *args, **kwargs):
+        recorded["popen"].append(cmd)
+        proc = _FakeProc(cmd)
+        if "--prefer-binary" not in cmd:  # only strategy 2's install succeeds
+            proc.returncode = 1
+        return proc
+
+    monkeypatch.setattr(subprocess, "Popen", first_strategy_fails)
+
+    job = _job(client, csrf_token, "/install-whisper", {"backend": "faster-whisper"})
+
+    assert job["status"] == "complete", job.get("error")
+    pip_installs = [cmd for cmd in _every_command(recorded) if "pip" in cmd and "install" in cmd]
+    # "pip setuptools wheel" as one argument is an invalid requirement to pip.
+    assert [arg for cmd in pip_installs for arg in cmd if " " in arg] == []
+    upgrades = [cmd for cmd in pip_installs if "setuptools" in cmd]
+    if packaged:
+        # The borrowed Python's own pip stays as it is, and pip in --target never runs.
+        assert upgrades == []
+    else:
+        assert upgrades and all({"pip", "wheel", "--upgrade"} <= set(cmd) for cmd in upgrades)
+        assert all("--target" not in cmd for cmd in upgrades)
+
+
 def test_whisper_reinstall_in_a_packaged_build_leaves_the_users_python_alone(
     monkeypatch, frozen, inline_jobs, recorded, client, csrf_token,
 ):
