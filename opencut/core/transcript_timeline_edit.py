@@ -969,14 +969,15 @@ def apply_edits(
         raise ValueError("No cuts to apply")
     for cut in cuts:
         # Checked before rendering: an infinite end (JSON Infinity) would
-        # render to the end of the source and then fail in the sidecars.
+        # render to the end of the source and then fail in the sidecars,
+        # and so would a record time the EDL can't label.
         if not all(
             math.isfinite(t) and abs(t) < _MAX_CUT_SECONDS
-            for t in (cut.source_start, cut.source_end)
+            for t in (cut.source_start, cut.source_end, cut.dest_start, cut.dest_start + cut.duration)
         ):
             raise ValueError(
                 f"Cut times must be finite and under 100 hours, got "
-                f"{cut.source_start!r} to {cut.source_end!r}"
+                f"{cut.source_start!r} to {cut.source_end!r} placed at {cut.dest_start!r}"
             )
     if not os.path.isfile(source_file):
         raise FileNotFoundError(f"Source file not found: {source_file}")

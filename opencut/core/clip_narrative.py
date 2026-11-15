@@ -20,7 +20,6 @@ from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.core.timecode_utils import (
-    nominal_timecode_rate,
     seconds_to_clock_time,
     seconds_to_ndf_timecode,
 )
@@ -538,12 +537,12 @@ def _generate_edl(
 
 
 def _format_tc(seconds: float, fps: float = 30.0) -> str:
-    """Timecode at ``fps``, or clock time at a rate SMPTE can't label (12.5 fps, say)."""
+    """Timecode at ``fps``, or clock time where timecode can't label it
+    (12.5 fps, say, or past 99:59:59)."""
     try:
-        nominal_timecode_rate(fps)
+        return seconds_to_ndf_timecode(seconds, fps)
     except ValueError:
         return seconds_to_clock_time(seconds)
-    return seconds_to_ndf_timecode(seconds, fps)
 
 
 # ---------------------------------------------------------------------------

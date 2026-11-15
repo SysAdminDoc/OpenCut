@@ -15,7 +15,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.core.timecode_utils import nominal_timecode_rate, seconds_to_ndf_timecode
+from opencut.core.timecode_utils import seconds_to_ndf_timecode
 from opencut.helpers import get_video_info
 
 logger = logging.getLogger("opencut")
@@ -519,9 +519,6 @@ def assemble_from_template(
     """
     if not template.slots:
         raise ValueError("Template has no slots")
-    # The EDL is part of the result, so refuse a rate with no SMPTE
-    # timecode before probing any media.
-    nominal_timecode_rate(template.fps)
 
     assembled_clips = []
     missing_slots = []
@@ -629,7 +626,13 @@ def assemble_from_template(
         on_progress(85)
 
     # Generate EDL
-    edl_text = _generate_assembly_edl(assembled_clips, template.name, template.fps)
+    try:
+        edl_text = _generate_assembly_edl(assembled_clips, template.name, template.fps)
+    except ValueError as exc:
+        # A rate with no SMPTE timecode (12.5 fps, or 100 and up) or a clip
+        # past 99:59:59 can't be labeled. The clip list and OTIO still stand.
+        logger.warning("Template assembly has no EDL: %s", exc)
+        edl_text = ""
 
     if on_progress:
         on_progress(90)

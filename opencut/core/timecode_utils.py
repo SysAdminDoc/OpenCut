@@ -149,21 +149,23 @@ def frames_to_timecode(
     return _frames_to_ndf_timecode(frame_num, fps)
 
 
-def nominal_timecode_rate(fps: float) -> int:
+def nominal_timecode_rate(fps: float, *, two_digit_frames: bool = True) -> int:
     """Return the frames per timecode second that non-drop timecode counts.
 
     An integer rate counts itself. An NTSC rate (23.976, 29.97, 59.94 and the
     exact x/1.001 values) counts the next whole number. Any other rate has no
     SMPTE timecode, so it raises ``ValueError`` instead of mislabeling frames.
     So does a rate of 100 or more, whose frame numbers don't fit the
-    two-digit frame field.
+    two-digit frame field, unless ``two_digit_frames`` is False: a review
+    label can take three digits, and an EDL import at 120 fps still reads
+    two-digit fields.
     """
     fps = float(fps)
     if not (fps > 0 and math.isfinite(fps)):
         raise ValueError(f"Frame rate must be a positive number, got {fps!r}")
     for candidate in (fps, fps * 1.001):
         nominal = round(candidate)
-        if 0 < nominal < 100 and abs(candidate - nominal) < 0.01:
+        if 0 < nominal and (nominal < 100 or not two_digit_frames) and abs(candidate - nominal) < 0.01:
             return int(nominal)
     raise ValueError(f"{fps:g} fps has no SMPTE timecode; use a whole-number or NTSC frame rate")
 
@@ -203,12 +205,16 @@ def seconds_to_clock_time(seconds: float, decimal_mark: str = ".") -> str:
 
     The whole time is rounded before it is split, so 59.9996 s carries
     into ``00:01:00.000`` instead of printing an invalid ``00:00:60.000``.
+    Whole seconds and the fraction are counted apart, so a huge time can't
+    overflow or lose its milliseconds, and a half millisecond rounds up.
     Negative times clamp to zero.
     """
     seconds = float(seconds)
     if not math.isfinite(seconds):
         raise ValueError(f"Time must be a finite number of seconds, got {seconds!r}")
-    millis = int(round(max(0.0, seconds) * 1000))
+    seconds = max(0.0, seconds)
+    whole = math.floor(seconds)
+    millis = whole * 1000 + math.floor((seconds - whole) * 1000 + 0.5)
     hours, millis = divmod(millis, 3_600_000)
     minutes, millis = divmod(millis, 60_000)
     secs, millis = divmod(millis, 1000)

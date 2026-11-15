@@ -107,7 +107,8 @@ Notable changes to OpenCut. The git history carries the detailed record.
   written as `00:00:60.000`, which players reject. Positioned WebVTT, TTML,
   the SDH, multi-language and shot-aware SRT and VTT exports, project note
   exports and the silence summary now round the whole time first, so it
-  reads `00:01:00.000`.
+  reads `00:01:00.000`. A very long time keeps its exact milliseconds, and
+  half a millisecond rounds up.
 
 ### Fixed: EDL and ADR timecode at 23.976, 29.97 and 59.94
 
@@ -121,8 +122,10 @@ Notable changes to OpenCut. The git history carries the detailed record.
   instead of being written wrong.
 - Auto rough cut, template assembly and the review bundle's marker EDL and
   Premiere marker CSV had their own copies of the old math and now use the
-  same converter. Rough cut and template assembly check the rate before they
-  look at any media. Review markers still get a label at 12.5 fps. At 24, 25,
+  same converter. At a rate with no timecode, or past 99 hours, rough cut and
+  template assembly still put the edit together and only leave out the EDL.
+  Review markers still get a label at 12.5 fps, at 100 fps and up, and past
+  99 hours, with frames counted at the real rate. At 24, 25,
   30 and other whole-number rates their frames now round to the nearest
   frame instead of always rounding down, so some events move by one frame.
 - The multicam timecode sync EDL uses the same converter, so it refuses
@@ -130,7 +133,9 @@ Notable changes to OpenCut. The git history carries the detailed record.
   refused, since their frame numbers don't fit an EDL. A time that isn't a
   number, or that runs past 99 hours, is an error instead of `00:00:00:00`.
 - EDL import refuses a timecode with a three-digit frame field instead of
-  reading `00:00:01:119` as frame 11.
+  reading `00:00:01:119` as frame 11. A 120 fps EDL with two-digit frames
+  still imports. A minute, second or frame that's out of range is refused,
+  and the error names the event it's in.
 - A transcript edit on footage whose rate has no timecode (12.5 fps, or an
   odd phone rate) renders again. It used to fail at the very end over the
   EDL. Now it skips just that file and still writes the OTIO sidecar. The
@@ -145,6 +150,8 @@ Notable changes to OpenCut. The git history carries the detailed record.
   edit list, and SCC and MCC captions, which always run at 29.97. With a
   rate that has no timecode, the rough cut skips its EDL, the EDL exports
   refuse before creating a file, and the text lists fall back to clock time.
+  The same happens past 99 hours, and a transcript edit checks where each
+  cut lands on the timeline before it renders anything.
 - SRT times from the broadcast caption tools round to the millisecond. 2.3
   seconds used to come out as `00:00:02.299`.
 

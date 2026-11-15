@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
-from opencut.core.timecode_utils import ndf_timecode_to_seconds, seconds_to_ndf_timecode
+from opencut.core.timecode_utils import nominal_timecode_rate, seconds_to_ndf_timecode
 
 logger = logging.getLogger("opencut")
 
@@ -54,13 +54,22 @@ def _seconds_to_tc(seconds: float, fps: float = 30.0) -> str:
 
 
 def _tc_to_seconds(tc: str, fps: float = 30.0) -> float:
-    """Convert non-drop timecode HH:MM:SS:FF to seconds."""
+    """Convert non-drop timecode HH:MM:SS:FF to seconds.
+
+    Frames count at the nominal rate and are timed at ``fps``, so a 29.97
+    EDL reads back what was written. At 100 fps and up the two-digit
+    fields are still read, as import always did.
+    """
     # fullmatch, so a three-digit frame field ("00:00:01:119") is an
     # error instead of being read as frame 11.
     m = _TC_PATTERN.fullmatch(tc.strip())
     if not m:
         raise ValueError(f"Invalid timecode: {tc}")
-    return ndf_timecode_to_seconds(m.group(0), fps)
+    nominal = nominal_timecode_rate(fps, two_digit_frames=False)
+    hours, minutes, seconds, frames = (int(part) for part in m.groups())
+    if minutes >= 60 or seconds >= 60 or frames >= nominal:
+        raise ValueError(f"Invalid timecode: {tc} has a field out of range at {fps:g} fps")
+    return ((hours * 3600 + minutes * 60 + seconds) * nominal + frames) / float(fps)
 
 
 def export_edl(
@@ -149,6 +158,16 @@ def export_edl(
     return EDLResult(output_path=output_path, event_count=len(cuts))
 
 
+def _event_seconds(m: re.Match, fps: float) -> Dict[str, float]:
+    """The four timecodes of an event line in seconds. A bad field names
+    its event, since it stops the whole import."""
+    names = ("source_in", "source_out", "record_in", "record_out")
+    try:
+        return {f"{name}_seconds": _tc_to_seconds(m.group(group), fps) for group, name in enumerate(names, 5)}
+    except ValueError as exc:
+        raise ValueError(f"EDL event {m.group(1)}: {exc}") from exc
+
+
 def import_edl(
     edl_path: str,
     fps: float = 30.0,
@@ -194,7 +213,7 @@ def import_edl(
         r"(\d+:\d{2}:\d{2}:\d+)\s+"  # source in
         r"(\d+:\d{2}:\d{2}:\d+)\s+"  # source out
         r"(\d+:\d{2}:\d{2}:\d+)\s+"  # record in
-        r"(\d+:\d{2}:\d{2}:\d+)(?!\S)"  # record out
+        r"(\d+:\d{2}:\d{2}:\d+)"  # record out
     )
 
     for line in lines:
@@ -222,10 +241,7 @@ def import_edl(
                 "source_out": m.group(6),
                 "record_in": m.group(7),
                 "record_out": m.group(8),
-                "source_in_seconds": _tc_to_seconds(m.group(5), fps),
-                "source_out_seconds": _tc_to_seconds(m.group(6), fps),
-                "record_in_seconds": _tc_to_seconds(m.group(7), fps),
-                "record_out_seconds": _tc_to_seconds(m.group(8), fps),
+                **_event_seconds(m, fps),
                 "clip_name": "",
                 "source_file": "",
             }

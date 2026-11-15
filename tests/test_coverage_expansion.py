@@ -355,27 +355,42 @@ class TestNtscNonDropTimecode:
         assert timecode == "25:03:04:05"
         assert round(_tc_to_seconds(timecode, fps) * fps) == frame
 
-    def test_rough_cut_refuses_a_rate_without_timecode_before_probing(self, monkeypatch):
+    @pytest.mark.parametrize("fps, has_edl", [(30.0, True), (12.5, False), (120.0, False)])
+    def test_rough_cut_assembles_at_any_rate_and_skips_only_an_edl_it_cannot_label(self, tmp_path, monkeypatch, fps, has_edl):
         from opencut.core import auto_rough_cut
 
-        def _no_probe(*_args, **_kwargs):
-            raise AssertionError("media was analysed before the rate was checked")
+        clip = tmp_path / "interview_segment.mp4"
+        clip.write_bytes(b"not really a video")
+        monkeypatch.setattr(auto_rough_cut, "get_video_info",
+                            lambda _p: {"width": 1920, "height": 1080, "fps": fps, "duration": 30.0})
+        monkeypatch.setattr(auto_rough_cut._sp, "run",
+                            lambda *_a, **_kw: MagicMock(returncode=0, stdout=b'{"streams":[]}', stderr=b""))
 
-        monkeypatch.setattr(auto_rough_cut, "get_video_info", _no_probe)
-        monkeypatch.setattr(auto_rough_cut, "analyze_clips", _no_probe)
-        with pytest.raises(ValueError, match="SMPTE"):
-            auto_rough_cut.assemble_rough_cut("Intro. Outro.", ["a.mp4"], mode="loose", fps=12.5)
+        result = auto_rough_cut.assemble_rough_cut(
+            "Interview segment opening\n\nInterview segment closing", [str(clip)], mode="loose", fps=fps,
+        )
 
-    def test_template_assembly_refuses_a_rate_without_timecode_before_probing(self, monkeypatch):
+        assert len(result.cuts) == 2
+        assert ("001  " in result.edl_text) is has_edl
+        if not has_edl:
+            assert result.edl_text == ""
+
+    @pytest.mark.parametrize("fps, has_edl", [(30.0, True), (12.5, False), (120.0, False)])
+    def test_template_assembly_assembles_at_any_rate_and_skips_only_an_edl_it_cannot_label(self, tmp_path, monkeypatch, fps, has_edl):
         from opencut.core import template_assembly_adv as taa
 
-        def _no_probe(*_args, **_kwargs):
-            raise AssertionError("media was probed before the rate was checked")
+        clip = tmp_path / "intro.mp4"
+        clip.write_bytes(b"not really a video")
+        monkeypatch.setattr(taa, "get_video_info",
+                            lambda _p: {"width": 1920, "height": 1080, "fps": fps, "duration": 10.0})
+        template = taa.Template(name="t", fps=fps, slots=[taa.TemplateSlot(name="intro", duration=2.0)])
 
-        monkeypatch.setattr(taa, "get_video_info", _no_probe)
-        template = taa.Template(name="t", fps=12.5, slots=[taa.TemplateSlot(name="intro", duration=2.0)])
-        with pytest.raises(ValueError, match="SMPTE"):
-            taa.assemble_from_template(template, {"intro": "a.mp4"})
+        result = taa.assemble_from_template(template, {"intro": str(clip)})
+
+        assert len(result.clips) == 1
+        assert ("001  " in result.edl_text) is has_edl
+        if not has_edl:
+            assert result.edl_text == ""
 
     def test_transcript_edit_keeps_the_render_when_the_rate_has_no_timecode(self, tmp_path, monkeypatch):
         from opencut.core import transcript_timeline_edit as tte
@@ -439,6 +454,89 @@ class TestNtscNonDropTimecode:
         with pytest.raises(ValueError, match="Invalid timecode"):
             import_edl(str(path), fps=30.0)
 
+    @pytest.mark.parametrize("fps", [100.0, 120.0, 120000 / 1001])
+    def test_edl_import_reads_two_digit_frames_at_100_fps_and_up(self, tmp_path, fps):
+        from opencut.core.edl_aaf import _tc_to_seconds, import_edl
+
+        nominal = round(fps)
+        assert _tc_to_seconds("00:00:01:00", fps) == pytest.approx(nominal / fps)
+        path = tmp_path / "fast.edl"
+        path.write_text(
+            "TITLE: fast\nFCM: NON-DROP FRAME\n\n"
+            "001  AX       V     C        00:00:00:00 00:00:01:50 00:00:00:00 00:00:01:50\n",
+            encoding="utf-8",
+        )
+        event = import_edl(str(path), fps=fps).cuts[0]
+        assert event["record_out_seconds"] == pytest.approx((nominal + 50) / fps)
+
+    def test_edl_import_still_reads_a_record_out_with_text_stuck_to_it(self, tmp_path):
+        from opencut.core.edl_aaf import import_edl
+
+        path = tmp_path / "tail.edl"
+        path.write_text(
+            "TITLE: tail\nFCM: NON-DROP FRAME\n\n"
+            "001  AX       V     C        00:00:00:00 00:00:02:00 00:00:00:00 00:00:02:00*\n",
+            encoding="utf-8",
+        )
+
+        event = import_edl(str(path), fps=30.0).cuts[0]
+        assert event["record_out_seconds"] == pytest.approx(2.0)
+
+    @pytest.mark.parametrize("bad", ["00:00:01:45", "00:75:01:00", "00:00:61:00"])
+    def test_edl_import_names_the_event_with_a_field_out_of_range(self, tmp_path, bad):
+        from opencut.core.edl_aaf import import_edl
+
+        path = tmp_path / "range.edl"
+        path.write_text(
+            "TITLE: range\nFCM: NON-DROP FRAME\n\n"
+            "001  AX       V     C        00:00:00:00 00:00:01:00 00:00:00:00 00:00:01:00\n\n"
+            f"002  AX       V     C        00:00:01:00 {bad} 00:00:01:00 00:00:02:00\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="EDL event 002: Invalid timecode"):
+            import_edl(str(path), fps=30.0)
+
+    @pytest.mark.parametrize("seconds, fps, expected", [
+        (360360.0, 30000 / 1001, "100:00:00:00"),
+        (3600.0, 120000 / 1001, "00:59:56:48"),
+        (3600.0, 120.0, "01:00:00:00"),
+    ])
+    def test_review_labels_count_true_rate_frames_where_an_edl_cannot(self, seconds, fps, expected):
+        from opencut.core.review_bundle import _seconds_to_timecode
+
+        assert _seconds_to_timecode(seconds, fps) == expected
+
+    def test_clock_time_keeps_huge_times_exact_and_rounds_a_half_millisecond_up(self):
+        from opencut.core.silence import _format_time
+        from opencut.core.timecode_utils import seconds_to_clock_time
+
+        assert seconds_to_clock_time(1e306).endswith(".000")
+        assert _format_time(1e306).endswith(".000")
+        assert seconds_to_clock_time(1e13 + 0.123) == "2777777777:46:40.123"
+        assert seconds_to_clock_time(0.0005) == "00:00:00.001"
+        assert seconds_to_clock_time(59.9996) == "00:01:00.000"
+
+    def test_text_lists_fall_back_to_clock_time_past_99_hours(self, tmp_path):
+        from opencut.core.clip_narrative import _format_tc
+        from opencut.core.paper_edit import PaperEdit, PaperEditSelection, export_paper_edit
+
+        assert _format_tc(360001.5, 30.0) == "100:00:01.500"
+        edit = PaperEdit(selections=[PaperEditSelection(start=360001.5, end=360003.0)])
+        out = tmp_path / "list.txt"
+        export_paper_edit(edit, format="txt", output_path_str=str(out), fps=30.0)
+        assert "100:00:01.500" in out.read_text(encoding="utf-8")
+
+    def test_paper_edit_edl_past_99_hours_is_refused_before_a_file_is_made(self, tmp_path, monkeypatch):
+        from opencut.core.paper_edit import PaperEdit, PaperEditSelection, export_paper_edit
+
+        monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+        edit = PaperEdit(selections=[PaperEditSelection(start=360001.0, end=360003.0)])
+
+        with pytest.raises(ValueError):
+            export_paper_edit(edit, format="edl", fps=30.0)
+        assert list(tmp_path.iterdir()) == []
+
     def test_transcript_edit_keeps_the_render_when_the_edl_cannot_be_written(self, tmp_path, monkeypatch):
         from opencut.core import transcript_timeline_edit as tte
 
@@ -486,6 +584,23 @@ class TestNtscNonDropTimecode:
 
         with pytest.raises(ValueError, match="finite"):
             tte.apply_edits(str(source), [tte.CutEntry(source_start=1.0, source_end=end)],
+                            output_dir=str(tmp_path))
+
+    @pytest.mark.parametrize("dest", [float("inf"), 400000.0, 100 * 3600.0 - 1.0])
+    def test_transcript_edit_refuses_a_record_time_it_cannot_label_before_rendering(self, tmp_path, monkeypatch, dest):
+        from opencut.core import transcript_timeline_edit as tte
+
+        source = tmp_path / "talk.mp4"
+        source.write_bytes(b"not really a video")
+
+        def _no_render(*_args, **_kwargs):
+            raise AssertionError("rendered before the record times were checked")
+
+        monkeypatch.setattr(tte, "get_video_info", lambda _p: {"fps": 30.0, "duration": 10.0})
+        monkeypatch.setattr(tte, "run_ffmpeg", _no_render)
+
+        with pytest.raises(ValueError, match="finite"):
+            tte.apply_edits(str(source), [tte.CutEntry(source_start=1.0, source_end=4.0, dest_start=dest)],
                             output_dir=str(tmp_path))
 
     def test_rough_cut_edl_counts_at_the_rendered_rate(self, tmp_path, monkeypatch):

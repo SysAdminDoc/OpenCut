@@ -19,7 +19,7 @@ import subprocess as _sp
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.core.timecode_utils import nominal_timecode_rate, seconds_to_ndf_timecode
+from opencut.core.timecode_utils import seconds_to_ndf_timecode
 from opencut.helpers import get_ffprobe_path, get_video_info
 
 logger = logging.getLogger("opencut")
@@ -691,10 +691,6 @@ def assemble_rough_cut(
     if len(media_paths) > MAX_CLIPS:
         raise ValueError(f"Too many clips ({len(media_paths)}). Max: {MAX_CLIPS}")
 
-    # The EDL is what this returns, so refuse a rate with no SMPTE timecode
-    # before analysing any media.
-    nominal_timecode_rate(fps)
-
     if on_progress:
         on_progress(5)
 
@@ -746,7 +742,13 @@ def assemble_rough_cut(
 
     # Step 6: Generate EDL
     total_dur = sum(c.duration for c in cuts)
-    edl_text = generate_edl(cuts, fps=fps)
+    try:
+        edl_text = generate_edl(cuts, fps=fps)
+    except ValueError as exc:
+        # A rate with no SMPTE timecode (12.5 fps, or 100 and up) or a cut
+        # past 99:59:59 can't be labeled. The cut list still stands.
+        logger.warning("Rough cut has no EDL: %s", exc)
+        edl_text = ""
 
     if on_progress:
         on_progress(95)

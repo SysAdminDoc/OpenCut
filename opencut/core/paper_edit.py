@@ -12,7 +12,6 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
 from opencut.core.timecode_utils import (
-    nominal_timecode_rate,
     seconds_to_clock_time,
     seconds_to_ndf_timecode,
 )
@@ -262,8 +261,11 @@ def export_paper_edit(
         raise ValueError(f"Unsupported format: {format}. Use json, txt, or edl")
 
     if format == "edl":
-        # Refuse a rate with no SMPTE timecode before creating the file.
-        nominal_timecode_rate(fps)
+        # Refuse a rate or a time that timecode can't label (12.5 fps, or
+        # past 99:59:59) before creating the file.
+        record_out = sum(s.duration for s in paper_edit.selections)
+        for value in [record_out, *(t for s in paper_edit.selections for t in (s.start, s.end))]:
+            seconds_to_ndf_timecode(value, fps)
 
     if on_progress:
         on_progress(10, f"Exporting paper edit as {format}...")
@@ -318,8 +320,8 @@ def export_paper_edit(
             record_out = record_in + s.duration
             lines.append(
                 f"{i + 1:03d}  AX  V  C  "
-                f"{_fmt_tc(s.start, fps)} {_fmt_tc(s.end, fps)} "
-                f"{_fmt_tc(record_in, fps)} {_fmt_tc(record_out, fps)}\n"
+                f"{seconds_to_ndf_timecode(s.start, fps)} {seconds_to_ndf_timecode(s.end, fps)} "
+                f"{seconds_to_ndf_timecode(record_in, fps)} {seconds_to_ndf_timecode(record_out, fps)}\n"
             )
             if s.text:
                 lines.append(f"* {s.text[:80]}\n")
@@ -339,9 +341,9 @@ def export_paper_edit(
 
 
 def _fmt_tc(seconds: float, fps: float = 30.0) -> str:
-    """Timecode at ``fps``, or clock time at a rate SMPTE can't label (12.5 fps, say)."""
+    """Timecode at ``fps``, or clock time where timecode can't label it
+    (12.5 fps, say, or past 99:59:59)."""
     try:
-        nominal_timecode_rate(fps)
+        return seconds_to_ndf_timecode(seconds, fps)
     except ValueError:
         return seconds_to_clock_time(seconds)
-    return seconds_to_ndf_timecode(seconds, fps)

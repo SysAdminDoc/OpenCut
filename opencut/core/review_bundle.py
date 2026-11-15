@@ -44,7 +44,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from xml.sax.saxutils import escape
 
 from opencut.core.marker_metadata import denormalise_color, normalise_color
-from opencut.core.timecode_utils import seconds_to_ndf_timecode
+from opencut.core.timecode_utils import nominal_timecode_rate, seconds_to_ndf_timecode
 from opencut.helpers import get_ffmpeg_path, run_ffmpeg
 from opencut.openapi_registry import openapi_response_schema
 
@@ -408,14 +408,22 @@ def build_review_markers_otio(
 
 def _seconds_to_timecode(seconds: float, framerate: float) -> str:
     rate = _safe_float(framerate, DEFAULT_OTIO_RATE)
+    seconds = _safe_float(seconds)
     try:
-        return seconds_to_ndf_timecode(_safe_float(seconds), rate)
+        return seconds_to_ndf_timecode(seconds, rate)
     except ValueError:
-        # No SMPTE timecode at this rate (12.5 fps, say). A review marker
-        # still needs a label, so count clock seconds and rounded frames.
         pass
-    fps = max(1, int(round(rate)))
-    total_frames = max(0, int(round(_safe_float(seconds) * fps)))
+    # An EDL can't hold this label (100 fps and up, or past 99:59:59), but a
+    # review marker still needs one. Frames count at the true rate and are
+    # labeled at the nominal one, as above, with as many digits as they
+    # take. With no nominal rate (12.5 fps, say), count clock seconds and
+    # rounded frames.
+    try:
+        fps = nominal_timecode_rate(rate, two_digit_frames=False)
+        total_frames = max(0, int(round(seconds * rate)))
+    except ValueError:
+        fps = max(1, int(round(rate)))
+        total_frames = max(0, int(round(seconds * fps)))
     frames = total_frames % fps
     total_seconds = total_frames // fps
     secs = total_seconds % 60
