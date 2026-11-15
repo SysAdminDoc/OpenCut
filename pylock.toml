@@ -432,14 +432,14 @@ sha256 = "4b65538ae22f6fed0ce4874efd317463a7489796a0939fa66824dd542125a192"
 
 [[packages]]
 name = "msgpack"
-version = "1.2.1"
+version = "1.2.4"
 
 [[packages.wheels]]
-name = "msgpack-1.2.1-cp313-cp313-win_amd64.whl"
-url = "https://files.pythonhosted.org/packages/e2/98/577e10b055096a7dd40732358cabaf7180a20c79ed1dcdbb618e4b9deac7/msgpack-1.2.1-cp313-cp313-win_amd64.whl"
+name = "msgpack-1.2.4-cp313-cp313-win_amd64.whl"
+url = "https://files.pythonhosted.org/packages/02/4a/a7e2778ce09a943c17b6f91c7acb2f9488357657c01f2cccb278297621c4/msgpack-1.2.4-cp313-cp313-win_amd64.whl"
 
 [packages.wheels.hashes]
-sha256 = "33f14fba63278b714efe6ad07e50ea5f03d91537aa6a1c5f1ceca4cf44013ca9"
+sha256 = "318d4e634d2b320be10decd9968ad1ae0be1d80cba23b5528c37b429eeb0e3e0"
 
 [[packages]]
 name = "narwhals"
