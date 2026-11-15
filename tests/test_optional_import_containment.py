@@ -272,3 +272,87 @@ def test_a_probe_during_another_threads_import_gets_the_finished_module(fake_sit
     finally:
         loader.join(timeout=30)
         sys.modules.pop("f462_slow_ok", None)
+
+
+def test_modules_that_probe_each_other_from_two_threads_both_finish(fake_site):
+    """A module that calls _try_import while it is itself being imported must
+    not hold a second per-name lock: the other thread can be waiting on
+    Python's module lock for the first, and that cycle never resolved."""
+    import threading
+
+    (fake_site / "f462_cycle_a.py").write_text(
+        "import time\n"
+        "from opencut import helpers\n"
+        "time.sleep(0.4)\n"
+        "B = helpers._try_import('f462_cycle_b')\n"
+        "VALUE = 'a'\n",
+        encoding="utf-8",
+    )
+    (fake_site / "f462_cycle_b.py").write_text(
+        "import time\ntime.sleep(0.4)\nimport f462_cycle_a\nVALUE = 'b'\n",
+        encoding="utf-8",
+    )
+    barrier = threading.Barrier(2)
+    results = {}
+
+    def probe(name):
+        barrier.wait()
+        results[name] = helpers._try_import(name)
+
+    threads = [
+        threading.Thread(target=probe, args=(name,), daemon=True)
+        for name in ("f462_cycle_a", "f462_cycle_b")
+    ]
+    try:
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=20)
+        assert not any(t.is_alive() for t in threads), "the two probes deadlocked"
+        assert set(results) == {"f462_cycle_a", "f462_cycle_b"}
+    finally:
+        sys.modules.pop("f462_cycle_a", None)
+        sys.modules.pop("f462_cycle_b", None)
+
+
+def test_a_module_that_imports_after_a_retryable_failure_is_handed_back(fake_site):
+    """ensure_package installs a missing dependency and then imports the
+    module itself; the earlier ImportError record must not hide it."""
+    import importlib
+
+    (fake_site / "f462_needs_dep.py").write_text(
+        "import f462_the_dep\nVALUE = 5\n", encoding="utf-8"
+    )
+    try:
+        assert helpers._try_import("f462_needs_dep") is None
+        assert helpers.import_failures()["f462_needs_dep"]["retryable"] is True
+
+        (fake_site / "f462_the_dep.py").write_text("X = 1\n", encoding="utf-8")
+        importlib.invalidate_caches()
+        importlib.import_module("f462_needs_dep")
+
+        module = helpers._try_import("f462_needs_dep")
+        assert module is not None and module.VALUE == 5
+        assert "f462_needs_dep" not in helpers.import_failures()
+    finally:
+        sys.modules.pop("f462_needs_dep", None)
+        sys.modules.pop("f462_the_dep", None)
+
+
+def test_resolve_probe_records_a_scripting_module_that_raises(fake_site, monkeypatch):
+    from opencut.core import resolve_bridge
+
+    monkeypatch.setattr(resolve_bridge, "_ensure_resolve_path", lambda: None)
+    (fake_site / "DaVinciResolveScript.py").write_text(
+        "import pathlib\n"
+        "p = pathlib.Path(__file__).with_name('attempts.txt')\n"
+        "p.write_text((p.read_text() if p.exists() else '') + 'x')\n"
+        "raise OSError('[WinError 126] fusionscript.dll')\n",
+        encoding="utf-8",
+    )
+
+    assert [checks.check_resolve_available() for _ in range(3)] == [False, False, False]
+
+    assert (fake_site / "attempts.txt").read_text(encoding="utf-8") == "x"
+    assert helpers.import_failures()["DaVinciResolveScript"]["exception"] == "OSError"
+    assert "import:DaVinciResolveScript" in checks.get_check_failures()

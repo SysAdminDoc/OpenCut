@@ -22,6 +22,8 @@ import os
 import sys
 from typing import Dict, List, Optional
 
+from opencut.helpers import _try_import
+
 logger = logging.getLogger("opencut")
 
 
@@ -34,10 +36,11 @@ def check_resolve_available() -> bool:
     """
     try:
         _ensure_resolve_path()
-        import DaVinciResolveScript  # noqa: F401
-        return True
-    except (ImportError, Exception):
+    except Exception:  # noqa: BLE001 -- a bad install path is "unavailable"
         return False
+    # Through _try_import so a module that raises on import is recorded
+    # once and listed in /system/check-failures, not re-run every poll.
+    return _try_import("DaVinciResolveScript") is not None
 
 
 def _ensure_resolve_path():

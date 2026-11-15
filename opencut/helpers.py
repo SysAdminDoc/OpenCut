@@ -777,6 +777,16 @@ _IMPORT_FAILURES_LOCK = threading.Lock()
 # own import lock lets each waiting thread rerun a module whose import just
 # failed, which is the retry a broken torch can't survive.
 _IMPORT_LOCKS: dict = {}
+# How deep this thread is inside _try_import. Only the outermost probe
+# takes a per-name lock: a module that probes another while it is being
+# imported would otherwise hold one lock while waiting for a second, and a
+# thread holding that second lock can be waiting on Python's module lock
+# for the first, a cycle Python's deadlock detection can't see.
+_IMPORT_DEPTH = threading.local()
+# Longest wait for another thread's first import of the same name. Past it
+# the probe goes ahead under Python's own module locks, which do detect
+# deadlocks, so no cycle through these locks can hang a thread for good.
+_IMPORT_WAIT_SECONDS = 120.0
 
 
 def _is_not_installed(name: str, exc: BaseException) -> bool:
@@ -804,10 +814,20 @@ def _try_import(name: str):
             return jsonify({"error": "torch not installed"}), 400
     """
     with _IMPORT_FAILURES_LOCK:
+        loaded = _sys.modules.get(name)
+        if loaded is not None and not getattr(
+            getattr(loaded, "__spec__", None), "_initializing", False
+        ):
+            # Fully imported since any failure was recorded (an install
+            # followed by a plain import), so that record is stale.
+            _IMPORT_FAILURES.pop(name, None)
+            return loaded
         if name in _IMPORT_FAILURES:
             return None
         import_lock = _IMPORT_LOCKS.setdefault(name, threading.RLock())
-    import_lock.acquire()
+    depth = getattr(_IMPORT_DEPTH, "value", 0)
+    locked = depth == 0 and import_lock.acquire(timeout=_IMPORT_WAIT_SECONDS)
+    _IMPORT_DEPTH.value = depth + 1
     try:
         with _IMPORT_FAILURES_LOCK:
             if name in _IMPORT_FAILURES:
@@ -838,7 +858,9 @@ def _try_import(name: str):
             )
         return None
     finally:
-        import_lock.release()
+        _IMPORT_DEPTH.value = depth
+        if locked:
+            import_lock.release()
 
 
 def forget_retryable_import_failures() -> None:
