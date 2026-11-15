@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import importlib.metadata as metadata
 import json
 import re
@@ -569,11 +570,29 @@ def validate_ffmpeg_provenance(path: Path) -> dict:
     return record
 
 
+def import_checkout_module(name: str):
+    """Import ``name`` from the checkout being packaged, never an installed copy.
+
+    The installer builder runs this script from ``installer/``, so ``opencut``
+    was importable only through whatever Python happened to have it installed,
+    and an editable install read another checkout's source into the evidence.
+    """
+    root = str(REPO_ROOT)
+    if not sys.path or sys.path[0] != root:
+        sys.path.insert(0, root)
+    module = importlib.import_module(name)
+    origin = Path(module.__file__ or "").resolve()
+    if not origin.is_relative_to(REPO_ROOT.resolve()):
+        raise CompositionError(
+            f"{name} was imported from {origin}, outside the checkout being packaged ({REPO_ROOT})"
+        )
+    return module
+
+
 def resolve_embedded_media_provenance(*, lane: str, artifact_paths: Sequence[Path]) -> dict:
     try:
-        from opencut.core.embedded_media_provenance import build_release_inventory
-
-        inventory = build_release_inventory(lane=lane, artifact_paths=artifact_paths)
+        provenance = import_checkout_module("opencut.core.embedded_media_provenance")
+        inventory = provenance.build_release_inventory(lane=lane, artifact_paths=artifact_paths)
     except Exception as exc:
         raise CompositionError(f"embedded media provenance could not be collected: {exc}") from exc
     if not inventory.get("ok"):

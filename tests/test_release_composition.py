@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -241,6 +242,49 @@ def test_release_outputs_include_embedded_media_manifest(tmp_path):
     payload = json.loads(manifest.read_text(encoding="utf-8"))
     assert payload["ok"] is True
     assert payload["security"]["cve"] == "CVE-2026-8461"
+
+
+def test_embedded_media_evidence_comes_from_this_checkout(tmp_path):
+    # Run it the way InstallerBuilder.ps1 does: from another folder, with
+    # PYTHONPATH and the user site ignored, so only the script itself can put
+    # this checkout ahead of any installed or editable copy of opencut.
+    script = REPO_ROOT / "scripts" / "release_composition.py"
+    probe = tmp_path / "probe.py"
+    probe.write_text(
+        "import importlib.util, sys\n"
+        f"spec = importlib.util.spec_from_file_location('probe_rc', {str(script)!r})\n"
+        "module = importlib.util.module_from_spec(spec)\n"
+        "sys.modules['probe_rc'] = module\n"
+        "spec.loader.exec_module(module)\n"
+        "found = module.import_checkout_module('opencut.core.embedded_media_provenance')\n"
+        "print(found.__file__)\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [sys.executable, "-I", str(probe)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert Path(result.stdout.strip()).resolve().is_relative_to(REPO_ROOT.resolve())
+
+
+def test_embedded_media_evidence_refuses_a_module_from_elsewhere(tmp_path, monkeypatch):
+    composition = _load_script("release_composition")
+    planted = tmp_path / "opencut_planted_copy"
+    planted.mkdir()
+    (planted / "__init__.py").write_text("", encoding="utf-8")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.delitem(sys.modules, "opencut_planted_copy", raising=False)
+    try:
+        with pytest.raises(composition.CompositionError, match="outside the checkout"):
+            composition.import_checkout_module("opencut_planted_copy")
+    finally:
+        sys.modules.pop("opencut_planted_copy", None)
 
 
 def test_license_gate_covers_every_direct_requirement():

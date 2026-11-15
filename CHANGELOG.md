@@ -2,6 +2,12 @@
 
 Notable changes to OpenCut. The git history carries the detailed record.
 
+## Unreleased
+
+### Release builds
+
+- The installer's release composition now reads `opencut` from the checkout being packaged. It used to import whatever copy the build Python had installed, so a clean build environment failed with "No module named 'opencut'" and an editable install from another folder put that folder's code into the evidence.
+
 ## 1.56.0: Security floors and packaged-app fixes
 
 ### Security: Pillow 13 and newer floors for seven other packages
