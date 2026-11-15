@@ -75,6 +75,16 @@ Notable changes to OpenCut. The git history carries the detailed record.
   with secret values swapped out. The live log view in Settings is redacted
   the same way as the export, and its job filter only matches the redacted
   text.
+- More forms are caught too: `token = '...'`, `api_token` and `oauth_token`
+  in a query, `HTTP_AUTHORIZATION=` from a request environment, a list of
+  passwords, `-encryption_key`, a URL that was encoded twice, and a camera
+  URL whose password starts with digits. A CORS header list keeps its
+  other names, `hasPassword=true` stays readable, and an IPv6 address is no
+  longer taken for a password.
+- A long log line used to take up to 18 seconds to clean. It's now a small
+  fraction of a second.
+- Job diagnostics still come out when a job parameter can't be printed, and
+  the live log view no longer splits a record at an unusual line separator.
 
 ### Fixed: SRT and VTT captions no longer lose words
 

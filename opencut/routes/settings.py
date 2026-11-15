@@ -133,7 +133,12 @@ def _read_tail_lines(filepath: str, max_lines: int) -> list[str]:
             position -= chunk_size
             f.seek(position)
             buffer[:0] = f.read(chunk_size)
-    lines = buffer.decode("utf-8", errors="replace").splitlines()
+    # Split on "\n" only. splitlines() also breaks at "\r", "\f" and
+    # "\u2028", which can sit inside a record, and hands the redactor
+    # half of one.
+    lines = buffer.decode("utf-8", errors="replace").split("\n")
+    if lines and not lines[-1]:
+        lines.pop()
     if position > 0 and lines:
         # The read began mid-line. That fragment is not a whole JSON
         # record, so it can't be decoded and redacted like the rest.
@@ -749,7 +754,11 @@ def tail_logs():
         redacted = _redact_sensitive_text(record["raw"])
         # Match the redacted text, so a job_id filter can't be used to
         # guess a secret one substring at a time.
-        if job_filter and job_filter not in redacted and job_filter != record["job_id"]:
+        if (
+            job_filter
+            and job_filter not in redacted
+            and job_filter != _redact_sensitive_text(record["job_id"])
+        ):
             continue
         result.append(redacted)
     # Tail

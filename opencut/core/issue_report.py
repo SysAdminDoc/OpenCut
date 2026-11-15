@@ -48,7 +48,7 @@ _SECRET_NAME = (
     r"(?:api[_-]?key|access[_-]?token|auth(?:entication)?[_-]?token|"
     r"bearer[_-]?token|client[_-]?secret|credential|passphrase|password|passwd|"
     r"private[_-]?key|refresh[_-]?token|secret(?:[_-]?key)?|"
-    r"session[_-]?token|signature)"
+    r"session[_-]?token|signature|(?:en|de)cryption[_-]?key)"
 )
 _KNOWN_SECRET_ENV = (
     r"(?:ANTHROPIC_API_KEY|AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|"
@@ -58,8 +58,10 @@ _KNOWN_SECRET_ENV = (
     r"OPENCUT_API_TOKEN|OPENCUT_REMOTE_AUTH_TOKEN|REPLICATE_API_TOKEN|"
     r"SLACK_TOKEN|STRIPE_SECRET_KEY)"
 )
+# A query name may carry a prefix (``api_token``, ``oauth_token``), but a
+# bare ``key`` or ``sig`` may not, so ``cache_key`` stays readable.
 _QUERY_SECRET_NAME = (
-    rf"(?:{_SECRET_NAME}|authorization|key|sig|token|x-amz-credential|"
+    rf"(?:(?:[A-Za-z0-9]+[_-])*(?:{_SECRET_NAME}|token)|authorization|key|sig|x-amz-credential|"
     r"x-amz-security-token|x-amz-signature|x-api-key|x-auth-token|"
     r"x-goog-signature|x-opencut-token)"
 )
@@ -68,20 +70,27 @@ _PRIVATE_KEY_RE = re.compile(
     r"-----END(?: [A-Z0-9]+)? PRIVATE KEY-----",
     re.IGNORECASE | re.DOTALL,
 )
+# ``name: value`` and ``NAME=value`` (a WSGI environ), plus the
+# ``('Name', 'value')`` pair of a header list. The pair form needs the
+# opening bracket, so ``['Authorization', 'Content-Type']`` stays.
 _SECRET_HEADER_RE = re.compile(
-    r"(?P<prefix>(?<![\w-])(?:http_)?(?:authorization|proxy[-_]authorization|"
-    r"x[-_]api[-_]key|x[-_]auth[-_]token|x[-_]opencut[-_]token|"
+    r"(?P<prefix>(?:(?P<open>\([ \t]*[\"'])|(?<![\w-]))(?:http_)?(?:authorization|"
+    r"proxy[-_]authorization|x[-_]api[-_]key|x[-_]auth[-_]token|x[-_]opencut[-_]token|"
     r"x[-_]amz[-_]security[-_]token|cookie|set[-_]cookie)"
-    r"(?:[\"']?[ \t]*:|[\"'],)[ \t]*(?P<vq>[\"'])?)"
+    r"(?:[\"']?[ \t]*[:=]|(?(open)[\"'],|(?!)))[ \t]*(?P<vq>[\"'])?)"
     r"(?P<value>(?(vq)(?:\\.|(?!(?P=vq))[^\r\n\\])*|[^\r\n]*))",
     re.IGNORECASE,
 )
 _URL_USERINFO_RE = re.compile(
     # The user may be empty and the password may hold "@" or "/", so run to
-    # the last "@" that a host follows. Digits then "/" after the first ":"
-    # are a port ("host:8443/a/@b"), not a password.
-    r"(?P<prefix>(?<![a-z0-9+.-])[a-z][a-z0-9+.-]*://)[^\s/@:\"'<>]*:"
-    r"(?!\d+(?:[/?#\s\"'<>]|$))[^\s\"'<>]*@"
+    # the last "@" that a host follows, within 1,024 characters so a long
+    # line can't make every "://" rescan it. Digits after the first ":" are
+    # a port when a path, query or the end follows ("host:8443/a/@b"), but
+    # not when "/" and then an "@" do ("admin:2024/pw@cam"). A password
+    # never ends in "/" ("bucket:prefix/@2x"), and the user part never
+    # holds "[", so an IPv6 host's colons don't start one.
+    r"(?P<prefix>(?<![a-z0-9+.-])[a-z][a-z0-9+.-]*://)[^\s/@:\[\]\"'<>]*:"
+    r"(?!\d+(?:[?#\s\"'<>]|$|/(?![^\s/?#\"'<>@]+@)))[^\s\"'<>]{0,1024}(?<!/)@"
     r"(?=[^\s/@?#\"'<>]*(?:[/?#\s\"'<>]|$))",
     re.IGNORECASE | re.MULTILINE,
 )
@@ -90,20 +99,30 @@ _URL_USERINFO_RE = re.compile(
 # Shaka Packager's ``--keys label=X:key_id=...:key=...`` list.
 _QUERY_SECRET_RE = re.compile(
     r"(?P<prefix>(?:[?&;]|&amp;|(?<![^\s\"'(\[,])|key_id=[0-9A-Fa-f]+:|"
-    r"label=[^:\s\"']*:)"
+    r"label=[^:=&\s\"']*:)"
     rf"{_QUERY_SECRET_NAME}=)"
-    r"(?P<value>(?P<vq>[\"'])(?:\\.|(?!(?P=vq))[^\r\n\\])*(?P=vq)"
+    r"(?P<value>(?:[bru]{1,2})?(?P<vq>[\"'])(?:\\.|(?!(?P=vq))[^\r\n\\])*(?P=vq)"
     r"|[^&#\s\"'<>\r\n]*)",
     re.IGNORECASE,
 )
+# ``token`` alone is too common a word, so it counts as a secret name when
+# the key is quoted (``'api_token': ...``), the value is quoted
+# (``token = 'x'``), or it stands alone before a colon (``token: x``).
+_TOKEN_NAME = (
+    r"(?:(?(kq)token|(?!))|token(?=[ \t]*[:=][ \t]*(?:[bru]{1,2})?[\"'])"
+    r"|(?<![A-Za-z0-9_-])token(?=[ \t]*:[ \t]*[^\s]))"
+)
 _ASSIGNED_SECRET_RE = re.compile(
-    rf"(?P<prefix>(?P<kq>[\"']?)\b(?:[A-Za-z0-9]+_)*"
+    rf"(?P<prefix>(?P<kq>[\"'])?(?<![A-Za-z0-9_-])_*(?:[A-Za-z0-9]+[_-])*"
     r"(?-i:(?:[a-z0-9]+(?:[A-Z][a-z0-9]+)*?(?=[A-Z]))?)"
-    rf"(?:{_KNOWN_SECRET_ENV}|{_SECRET_NAME}|(?<=[\"'])token(?=[\"']))\b"
-    r"(?P=kq)[ \t]*(?:(?P<colon>:)|=)[ \t]*)"
-    rf"(?P<value>(?P<vq>[\"'])(?!{re.escape(REDACTION_MARKER)})"
+    rf"(?:{_KNOWN_SECRET_ENV}|{_SECRET_NAME}|{_TOKEN_NAME})\b"
+    r"(?(kq)(?P=kq))[ \t]*(?:(?P<colon>:)|=)[ \t]*)"
+    # A list value goes whole. A bytes or raw string keeps its quotes.
+    # An unquoted true/false/none/null is a flag (``hasPassword=true``).
+    r"(?P<value>\[[^\]\r\n]*\]"
+    rf"|(?:[bru]{{1,2}})?(?P<vq>[\"'])(?!{re.escape(REDACTION_MARKER)})"
     r"(?:\\.|(?!(?P=vq))[^\r\n\\])*(?P=vq)"
-    rf"|(?![\"']?{re.escape(REDACTION_MARKER)})"
+    rf"|(?![\"']?{re.escape(REDACTION_MARKER)})(?!(?:true|false|none|null)\b)"
     r"(?(colon)[^,;\r\n}\]\"']+|[^\s,;\r\n}\]]+))",
     re.IGNORECASE,
 )
@@ -122,7 +141,9 @@ _SECRET_KEY_RE = re.compile(
     re.IGNORECASE,
 )
 _PERCENT_ESCAPE_RE = re.compile(r"%[0-9A-Fa-f]{2}")
-_PERCENT_TOKEN_RE = re.compile(r"[^\s\"'<>]*%[0-9A-Fa-f]{2}[^\s\"'<>]*")
+# Every run between separators. The callback skips runs with no escape;
+# a pattern that looked for the escape itself rescanned long runs.
+_PERCENT_TOKEN_RE = re.compile(r"[^\s\"'<>]+")
 _CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 _PROVIDER_SECRET_PATTERNS = (
     re.compile(r"\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{16,}\b"),
@@ -218,12 +239,15 @@ def _redact_structure(value: Any) -> Any:
         out = {}
         for key, item in value.items():
             name = _redact_plain_text(key) if isinstance(key, str) else key
-            if (
-                isinstance(item, str)
-                and item
-                and _SECRET_KEY_RE.search(_CAMEL_BOUNDARY_RE.sub("_", str(key)))
-            ):
+            secret = bool(_SECRET_KEY_RE.search(_CAMEL_BOUNDARY_RE.sub("_", str(key))))
+            if secret and isinstance(item, str) and item:
                 out[name] = REDACTION_MARKER
+            elif secret and isinstance(item, list):
+                # A list of secrets (``"password": ["..."]``) loses each string.
+                out[name] = [
+                    REDACTION_MARKER if isinstance(entry, str) and entry else _redact_structure(entry)
+                    for entry in item
+                ]
             else:
                 out[name] = _redact_structure(item)
         return out
@@ -249,14 +273,19 @@ def _redact_escaped_token(match: re.Match[str]) -> str:
 
     The token is replaced by its decoded, redacted form only when that
     finds something, so ``frame_%04d.png`` and ``my%20clip.mp4`` keep
-    their escapes.
+    their escapes. Up to three rounds of decoding, for a URL encoded
+    again each time it was nested (``%253Ftoken%253D...``).
     """
     token = match.group(0)
-    decoded = urllib.parse.unquote(token)
-    if decoded == token:
-        return token
-    redacted = _redact_unescaped(decoded)
-    return token if redacted == decoded else redacted
+    decoded = token
+    for _ in range(3):
+        if not _PERCENT_ESCAPE_RE.search(decoded):
+            break
+        decoded = urllib.parse.unquote(decoded)
+        redacted = _redact_unescaped(decoded)
+        if redacted != decoded:
+            return redacted
+    return token
 
 
 def _redact_unescaped(text: str) -> str:

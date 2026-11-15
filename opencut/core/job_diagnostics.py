@@ -380,12 +380,24 @@ def _extract_metadata(record: dict) -> dict:
                 # holding an escaped quote and could turn params into a str.
                 try:
                     value = _redact_structure(json.loads(json.dumps(value, default=str)))
-                except (TypeError, ValueError, RecursionError):
-                    # Non-string keys or a self-reference: no JSON shape
-                    # to keep, so redact its text instead of failing.
-                    value = _redact_sensitive_text(str(value))
+                except Exception:
+                    # Non-string keys, a self-reference or a value whose
+                    # __str__ raises: no JSON shape to keep, so redact its
+                    # text instead of failing.
+                    value = _redact_unshaped(value, key)
             out[key] = value
     return out
+
+
+def _redact_unshaped(value, key: str) -> str:
+    """Redacted text of a job field JSON can't hold. A field too deep
+    for ``repr`` or whose ``__str__`` raises becomes a placeholder, so one
+    odd parameter can't cost the whole diagnostic."""
+    try:
+        return _redact_sensitive_text(str(value))
+    except Exception:
+        logger.debug("Job field %s has no printable form", key, exc_info=True)
+        return "[could not be read]"
 
 
 def build_diagnostic(job_id: str, *, log_tail_lines: int = 200) -> JobDiagnostic:

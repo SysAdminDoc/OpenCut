@@ -11,6 +11,7 @@ import json
 import logging
 import logging.handlers
 import os
+import time
 import uuid
 import zipfile
 
@@ -447,3 +448,133 @@ def test_log_tail_job_filter_cannot_probe_a_redacted_value(client, tmp_path, mon
 
     assert client.get("/logs/tail?job_id=LeakProbe").get_json()["total"] == 0
     assert client.get("/logs/tail?job_id=job-1").get_json()["total"] == 1
+
+
+# Forms a second review got past the redactor.
+_SECOND_REVIEW_LEAKS = {
+    "digits then a slash in a password": ("rtsp://admin:2024/{}@192.168.1.10/stream", "LeakDigitPass23"),
+    "spaced token assignment": ("token = '{}'", "LeakSpacedToken24"),
+    "token before a colon": ("token: {}", "LeakTokenColon25"),
+    "bytes literal": ("token=b'{}'", "LeakBytesToken26"),
+    "prefixed query token": ("GET /a?api_token={}&x=1", "LeakApiToken27"),
+    "oauth query token": ("GET /a?oauth_token={}", "LeakOauthToken28"),
+    "prefixed token key": ("{{'api_token': '{}'}}", "LeakApiTokenKey29"),
+    "hyphenated header key": ("headers={{'X-Access-Token': '{}'}}", "LeakAccessToken30"),
+    "environ authorization": ("HTTP_AUTHORIZATION=Token {}", "LeakEnvAuth31"),
+    "environ opencut token": ("HTTP_X_OPENCUT_TOKEN={}", "LeakEnvToken32"),
+    "camelCase token key": ('payload {{"apiToken": "{}"}}', "LeakCamelToken33"),
+    "list of secrets": ("{{'password': ['{}']}}", "LeakPassList34"),
+    "ffmpeg encryption key": ("ffmpeg -encryption_key {} -i a.mp4", "LeakEncKey35"),
+    "double-encoded query": ("u=https%253A%252F%252Fh%252Fx%253Ftoken%253D{}", "LeakDoubleEnc36"),
+    "private attribute": ("self._password = '{}'", "LeakPrivAttr37"),
+}
+
+
+@pytest.mark.parametrize("name", sorted(_SECOND_REVIEW_LEAKS))
+def test_second_review_credential_forms_are_redacted(name):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    template, secret = _SECOND_REVIEW_LEAKS[name]
+    line = template.format(secret)
+    assert secret in line
+    json_line = json.dumps({"level": "WARNING", "message": f"job-1 {line}"})
+
+    assert secret not in _redact_sensitive_text(line)
+    assert secret not in _redact_sensitive_text(json_line)
+
+
+@pytest.mark.parametrize(
+    "ordinary",
+    [
+        "fetched http://[::1]:8443/media/@user/clip.mp4",
+        "POST http://[::1]:8443/v1/notify?to=ops@example.com",
+        "CORS allow_headers=['Authorization', 'Content-Type']",
+        "user hasPassword=true for job",
+        "s3://bucket:prefix/@2x/thumb.png",
+        "GET /x?cache_key=thumbs",
+    ],
+)
+def test_second_review_ordinary_text_is_left_alone(ordinary):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    assert _redact_sensitive_text(ordinary) == ordinary
+    wrapped = json.dumps({"message": ordinary})
+    assert json.loads(_redact_sensitive_text(wrapped)) == {"message": ordinary}
+
+
+def test_a_list_under_a_secret_key_loses_its_strings():
+    from opencut.core.issue_report import REDACTION_MARKER, _redact_structure
+
+    out = _redact_structure({"password": ["LeakList38", {"note": "ok"}], "clips": ["a.mp4"]})
+    assert out == {"password": [REDACTION_MARKER, {"note": "ok"}], "clips": ["a.mp4"]}
+
+
+def test_redacting_long_lines_stays_fast():
+    """A 100 KB line used to take 18 seconds when it held a percent escape,
+    and about 2 seconds of repeated ``a://b:`` or ``label=``."""
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    lines = ["x" * 50_000 + "%41 " + "y%41" * 12_500, "a://b:" * 17_000, "label=" * 17_000]
+    start = time.perf_counter()
+    for line in lines:
+        _redact_sensitive_text(line)
+    assert time.perf_counter() - start < 2
+
+
+def test_job_params_that_cannot_be_printed_still_give_a_diagnostic(monkeypatch):
+    from opencut.core import job_diagnostics
+
+    class Unprintable:
+        def __str__(self):
+            raise RuntimeError("no text form")
+
+        __repr__ = __str__
+
+    deep: list = []
+    node = deep
+    for _ in range(50_000):
+        child: list = []
+        node.append(child)
+        node = child
+    for params in ({"clip": Unprintable(), "password": "LeakUnprintable39"}, {"deep": deep, "password": "LeakDeep40"}):
+        monkeypatch.setattr(
+            job_diagnostics,
+            "_resolve_job",
+            lambda _job_id, params=params: {"status": "error", "params": params},
+        )
+        diag = job_diagnostics.build_diagnostic("job-x")
+        assert diag.metadata["params"] == "[could not be read]"
+
+
+def test_log_tail_keeps_a_record_with_a_line_separator_whole(client, tmp_path, monkeypatch):
+    """splitlines() broke a record at U+2028, and the second half went
+    through the plain-text path with its quotes still escaped."""
+    import opencut.server as server_module
+
+    secret = "LeakSeparator41"
+    record = json.dumps(
+        {"level": "INFO", "job_id": "job-1", "message": f'a\u2028 payload {{"api_key": "{secret}"}}'},
+        ensure_ascii=False,
+    )
+    assert "\u2028" in record
+    log_file = tmp_path / "server.log"
+    log_file.write_text(record + "\n", encoding="utf-8")
+    monkeypatch.setattr(server_module, "LOG_FILE", str(log_file))
+
+    data = client.get("/logs/tail?lines=50").get_json()
+    assert data["total"] == 1
+    assert secret not in json.dumps(data)
+
+
+def test_log_tail_job_filter_cannot_confirm_a_redacted_job_id(client, tmp_path, monkeypatch):
+    import opencut.server as server_module
+
+    secret_id = "sk-proj-LeakJobId42abcdefghijklmnop"
+    log_file = tmp_path / "server.log"
+    log_file.write_text(
+        json.dumps({"level": "INFO", "job_id": secret_id, "message": "started"}) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(server_module, "LOG_FILE", str(log_file))
+
+    assert client.get(f"/logs/tail?job_id={secret_id}").get_json()["total"] == 0
