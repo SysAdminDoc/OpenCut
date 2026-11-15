@@ -424,18 +424,20 @@ def _enforce_line_limits(
     segments: List[SubtitleSegment],
     max_chars: int,
     max_lines: int,
+    min_duration: float = 0.0,
 ) -> tuple:
     """Wrap subtitle text to fit within character/line constraints.
 
     A subtitle that needs more than ``max_lines`` lines is split into
     consecutive subtitles with its time shared by character count, so no
-    text is dropped.
+    text is dropped. Each piece keeps ``min_duration`` when the subtitle is
+    long enough to give every piece that much.
     """
     result: List[SubtitleSegment] = []
     wrap_count = 0
     for seg in segments:
         original = seg.text
-        chunks = timed_caption_chunks(seg.text, seg.start, seg.end, max_chars, max_lines)
+        chunks = timed_caption_chunks(seg.text, seg.start, seg.end, max_chars, max_lines, min_duration)
         if len(chunks) <= 1:
             seg.text = _wrap_text(seg.text, max_chars, max_lines)
             result.append(seg)
@@ -524,7 +526,8 @@ def process_shot_aware(
         on_progress(75)
 
     # Step 6: Line wrapping
-    working, wrap_count = _enforce_line_limits(working, max_chars, max_lines)
+    # Runs after the minimum-duration step, so it keeps that minimum itself.
+    working, wrap_count = _enforce_line_limits(working, max_chars, max_lines, min_dur)
     if on_progress:
         on_progress(90)
 

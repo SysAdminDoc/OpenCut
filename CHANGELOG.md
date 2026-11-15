@@ -58,6 +58,13 @@ Notable changes to OpenCut. The git history carries the detailed record.
   split into another cue at a word boundary, timed from the word timestamps
   when there are any and by character count when there aren't. A word too long
   for one cue is split across cues instead of being clipped.
+- Positioned WebVTT from the broadcast caption export splits long cues the
+  same way. It used to keep the first two lines and drop the rest, so one
+  23-word caption came out with 11 words.
+- When shot-aware cleanup splits a cue, a short leftover piece no longer
+  flashes by. Each piece keeps the profile's minimum duration (0.833 s for
+  Netflix) when the cue is long enough for that, and the pieces split the time
+  evenly when it isn't.
 
 ### Fixed: EDL and ADR timecode at 23.976, 29.97 and 59.94
 

@@ -235,6 +235,97 @@ def test_shot_aware_line_limits_split_instead_of_dropping_lines():
         assert all_lines_within(lines, 42)
 
 
+# Eight 4-character words make a 39-character line at 42 per line, so 16 words
+# fill two lines and "zzzz" (44 characters with line two) spills into a third,
+# giving pieces of 79 and 4 characters. By character share alone "zzzz" would
+# get under 0.1 s of a 2 s cue.
+_SHORT_TAIL_WORDS = [f"aa{n:02d}" for n in range(1, 17)] + ["zzzz"]
+
+
+def _shot_aware(start, end):
+    from opencut.core.subtitle_shot_aware import SubtitleSegment, process_shot_aware
+
+    segment = SubtitleSegment(index=1, start=start, end=end, text=" ".join(_SHORT_TAIL_WORDS))
+    return process_shot_aware([segment], cuts=[], profile="netflix").adjusted_subtitles
+
+
+def test_shot_aware_split_keeps_the_profile_minimum_duration():
+    from opencut.core.subtitle_shot_aware import get_profile
+
+    min_dur = get_profile("netflix")["min_duration"]
+    pieces = _shot_aware(10.0, 12.0)
+
+    assert [seg.text.replace("\n", " ").split() for seg in pieces] == [_SHORT_TAIL_WORDS[:16], ["zzzz"]]
+    assert pieces[0].start == 10.0 and pieces[-1].end == 12.0
+    assert pieces[1].start == pytest.approx(pieces[0].end)
+    # The short piece is pinned at the minimum and the long one takes the rest.
+    assert pieces[1].end - pieces[1].start == pytest.approx(min_dur)
+    assert pieces[0].end - pieces[0].start == pytest.approx(2.0 - min_dur)
+
+
+def test_shot_aware_split_shares_equally_when_the_minimum_cannot_fit():
+    # Two pieces need 2 x 0.833 s, more than this 1.5 s cue has. Keeping the
+    # cue's own start and end, the fairest split is half each.
+    pieces = _shot_aware(10.0, 11.5)
+
+    assert [seg.text.replace("\n", " ").split() for seg in pieces] == [_SHORT_TAIL_WORDS[:16], ["zzzz"]]
+    assert pieces[0].start == 10.0 and pieces[-1].end == 11.5
+    assert [seg.end - seg.start for seg in pieces] == [pytest.approx(0.75), pytest.approx(0.75)]
+
+
+def test_timed_chunks_without_a_minimum_keep_the_character_share():
+    from opencut.core.caption_line_breaks import timed_caption_chunks
+
+    cues = timed_caption_chunks(" ".join(_SHORT_TAIL_WORDS), 0.0, 8.3, 42, 2)
+
+    assert [(start, end) for _, start, end in cues] == [(0.0, pytest.approx(7.9)), (pytest.approx(7.9), 8.3)]
+
+
+def test_positioned_webvtt_splits_long_cues_instead_of_dropping_words(tmp_path):
+    from opencut.core.broadcast_caption import CaptionSegment as BroadcastSegment
+    from opencut.core.broadcast_caption import export_webvtt_positioned
+
+    tokens = _F459_TEXT.split()
+    long_word = "x" * 50
+    segments = [
+        BroadcastSegment(index=1, start=1.0, end=9.0, text=" ".join(tokens), row=2),
+        BroadcastSegment(index=2, start=10.0, end=12.0, text=f"see {long_word} now", row=15),
+    ]
+    output = tmp_path / "positioned.vtt"
+
+    export_webvtt_positioned(segments, str(output))
+
+    def _seconds(stamp):
+        h, m, s = stamp.split(":")
+        return int(h) * 3600 + int(m) * 60 + float(s)
+
+    cues = []
+    for block in output.read_text(encoding="utf-8").split("\n\n"):
+        lines = [line for line in block.splitlines() if line and line != "WEBVTT"]
+        if lines:
+            start, _, end, *settings = lines[0].split()
+            cues.append((_seconds(start), _seconds(end), settings, lines[1:]))
+
+    first = [cue for cue in cues if cue[1] <= 9.0]
+    second = [cue for cue in cues if cue[0] >= 10.0]
+    assert len(first) + len(second) == len(cues)
+    assert len(first) > 1
+    assert " ".join(" ".join(lines) for *_, lines in first).split() == tokens
+    assert "".join("".join(lines) for *_, lines in second).replace(" ", "") == "see" + long_word + "now"
+    for group, (lo, hi), settings in (
+        (first, (1.0, 9.0), ["line:10%", "position:50%", "align:center", "size:80%"]),
+        (second, (10.0, 12.0), ["line:90%", "position:50%", "align:center", "size:80%"]),
+    ):
+        assert group[0][0] == pytest.approx(lo) and group[-1][1] == pytest.approx(hi)
+        for previous, current in zip(group, group[1:]):
+            assert current[0] == pytest.approx(previous[1])
+        for start, end, cue_settings, lines in group:
+            assert end > start
+            assert cue_settings == settings
+            assert 1 <= len(lines) <= 2
+            assert all_lines_within(lines, 42)
+
+
 def test_shot_aware_wrap_uses_unicode_line_breaker():
     from opencut.core.subtitle_shot_aware import _wrap_text
 

@@ -19,6 +19,7 @@ from opencut.core.caption_interchange import (
     document_from_items,
     export_caption_document,
 )
+from opencut.core.caption_line_breaks import caption_lines, timed_caption_chunks
 
 logger = logging.getLogger("opencut")
 
@@ -613,10 +614,6 @@ def export_webvtt_positioned(
     lines_out: List[str] = ["WEBVTT", ""]
 
     for i, seg in enumerate(segments):
-        text_lines = _truncate_lines(seg.text, max_chars, max_lines_limit)
-        start_ts = _seconds_to_vtt(seg.start)
-        end_ts = _seconds_to_vtt(seg.end)
-
         # Build cue settings
         cue_settings = []
         # Position based on row
@@ -636,10 +633,15 @@ def export_webvtt_positioned(
         cue_settings.append("size:80%")
 
         settings_str = " ".join(cue_settings)
-        timing_line = f"{start_ts} --> {end_ts} {settings_str}"
-        lines_out.append(timing_line)
-        lines_out.append("\n".join(text_lines))
-        lines_out.append("")
+        # Text that needs more lines than a cue allows continues in the next
+        # cue, so no words are dropped.
+        for chunk, chunk_start, chunk_end in timed_caption_chunks(
+            seg.text, seg.start, seg.end, max_chars, max_lines_limit
+        ):
+            timing_line = f"{_seconds_to_vtt(chunk_start)} --> {_seconds_to_vtt(chunk_end)} {settings_str}"
+            lines_out.append(timing_line)
+            lines_out.append("\n".join(caption_lines(chunk, max_chars)))
+            lines_out.append("")
 
         if on_progress:
             on_progress(int(((i + 1) / len(segments)) * 90))

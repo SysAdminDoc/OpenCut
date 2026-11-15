@@ -122,12 +122,15 @@ def timed_caption_chunks(
     end: float,
     max_line_length: int,
     max_lines: int,
+    min_duration: float = 0.0,
 ) -> List[Tuple[str, float, float]]:
     """Split caption text into cues that each wrap into at most ``max_lines`` lines.
 
     Returns ``(text, start, end)`` per cue. A cue's text runs from its first
     wrapped line to its last in the source, so no-space CJK text gains no
     spaces and nothing is dropped. Time is shared out by character count.
+    With ``min_duration`` set, every cue gets at least that long when the
+    span allows it, and the cues share the span equally when it doesn't.
     """
     if max_lines <= 0:
         raise ValueError("max_lines must be greater than zero")
@@ -151,7 +154,50 @@ def timed_caption_chunks(
         cue_end = end if index == len(chunks) - 1 else start + (end - start) * consumed / total_chars
         cues.append((chunk, cue_start, cue_end))
         cue_start = cue_end
+    if min_duration > 0 and any(cue_end - cue_start < min_duration for _, cue_start, cue_end in cues):
+        cues = _cues_with_min_duration(cues, start, end, min_duration)
     return cues
+
+
+def _cues_with_min_duration(
+    cues: List[Tuple[str, float, float]],
+    start: float,
+    end: float,
+    min_duration: float,
+) -> List[Tuple[str, float, float]]:
+    """Retime ``cues`` so each lasts at least ``min_duration`` inside ``start``-``end``.
+
+    Cues that would fall short are pinned at the minimum, and the rest of the
+    span is shared by character count among the others. When the span can't
+    give every cue the minimum, the cues share it equally.
+    """
+    count = len(cues)
+    span = end - start
+    weights = [len(text) for text, _, _ in cues]
+    if span < min_duration * count:
+        durations = [span / count] * count
+    else:
+        pinned: set = set()
+        while True:
+            rest = span - min_duration * len(pinned)
+            free_weight = sum(w for i, w in enumerate(weights) if i not in pinned) or 1
+            durations = [
+                min_duration if i in pinned else rest * w / free_weight
+                for i, w in enumerate(weights)
+            ]
+            short = {i for i, d in enumerate(durations) if i not in pinned and d < min_duration}
+            if not short:
+                break
+            pinned |= short
+    retimed: List[Tuple[str, float, float]] = []
+    cue_start = start
+    elapsed = 0.0
+    for index, ((text, _, _), duration) in enumerate(zip(cues, durations)):
+        elapsed += duration
+        cue_end = end if index == count - 1 else start + elapsed
+        retimed.append((text, cue_start, cue_end))
+        cue_start = cue_end
+    return retimed
 
 
 def wrap_caption_text(
