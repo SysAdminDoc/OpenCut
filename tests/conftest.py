@@ -12,6 +12,10 @@ from pathlib import Path
 import pytest
 
 _fixture_log = logging.getLogger("opencut.tests.conftest")
+# The suite isolates user data by faking ``~``. An OPENCUT_HOME inherited from
+# the shell outranks ``~`` for the data folder, so tests would read and write
+# the caller's real one, past the guard below. Tests that need it set it.
+os.environ.pop("OPENCUT_HOME", None)
 _REAL_USER_DATA_ROOT = os.path.normcase(
     os.path.realpath(os.path.join(os.path.expanduser("~"), ".opencut"))
 )
