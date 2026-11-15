@@ -1012,9 +1012,15 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                     # CUDA's active device is thread-local. Apply the
                     # persisted adapter after the worker thread starts and
                     # before any route-specific model import or inference.
-                    from opencut.gpu import activate_selected_gpu
+                    from opencut.gpu import GPUUnsupportedBuildError, activate_selected_gpu
 
-                    activate_selected_gpu()
+                    try:
+                        activate_selected_gpu()
+                    except GPUUnsupportedBuildError as gpu_exc:
+                        # Only PyTorch work is affected, and get_device()
+                        # raises this again for it. Failing here also killed
+                        # FFmpeg-only and faster-whisper jobs (issue #7).
+                        logger.warning("Job %s (%s): %s", job_id, job_type, gpu_exc)
                     result = f(job_id, filepath, data)
                     resource_update = _stop_resource_sampler(resource_sampler)
                     resource_sampler = None

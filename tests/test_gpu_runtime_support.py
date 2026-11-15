@@ -309,3 +309,201 @@ def test_an_unsupported_only_machine_selects_no_device(monkeypatch):
         "get_device_index() would hand cuda:0 to callers that never read selection_error"
     )
     assert status["device"] == "cpu"
+
+
+# ---------------------------------------------------------------------------
+# An adapter the PyTorch build cannot run must not fail work that never asks
+# PyTorch for it. The first round of fixes made the issue #7 message accurate,
+# but every job still failed: the job boundary activated the GPU strictly for
+# preview-frame (FFmpeg only) as well, faster-whisper (CTranslate2 kernels)
+# was vetoed by torch's arch list, and the CTranslate2/ONNX helpers rebuilt the
+# verdict as the original "GPU index 0 is not available" text.
+# ---------------------------------------------------------------------------
+
+CU126_ARCHES = ["sm_50", "sm_60", "sm_70", "sm_75", "sm_80", "sm_86", "sm_90"]
+
+
+def _blackwell_machine(monkeypatch, *, configured=None, extra_devices=()):
+    """nvidia-smi lists an RTX 5070; the installed torch tops out at sm_90."""
+    from opencut import gpu as gpu_module
+
+    module = _torch_stub(CU126_ARCHES, device_count=1 + len(extra_devices))
+    monkeypatch.setattr(gpu_module, "torch", module)
+    monkeypatch.setattr(gpu_module, "_HAS_TORCH", True)
+    monkeypatch.setattr(gpu_module, "_configured_gpu_index", lambda: configured)
+    devices = [dict(BLACKWELL), *[dict(device) for device in extra_devices]]
+    monkeypatch.setattr(
+        gpu_module,
+        "list_gpu_devices",
+        lambda: [gpu_module._annotate_gpu_device(device) for device in devices],
+    )
+    return gpu_module, module
+
+
+def test_auto_mode_runs_torch_on_cpu_instead_of_failing(monkeypatch):
+    gpu_module, module = _blackwell_machine(monkeypatch)
+
+    assert gpu_module.activate_selected_gpu() is None
+    assert module.set_device_calls == []
+    assert gpu_module.get_device() == "cpu"
+
+
+def test_auto_mode_activates_the_adapter_status_selects(monkeypatch):
+    """Status skipped the unrunnable index 0; activation used to hardcode it."""
+    gpu_module, module = _blackwell_machine(
+        monkeypatch,
+        extra_devices=[{"index": 1, "name": "NVIDIA GeForce RTX 3080", "compute_capability": "8.6"}],
+    )
+
+    assert gpu_module.gpu_selection_status()["selected_index"] == 1
+    assert gpu_module.activate_selected_gpu() == 1
+    assert module.set_device_calls == [1]
+
+
+def test_auto_mode_set_device_failure_falls_back_to_cpu(monkeypatch):
+    from opencut import gpu as gpu_module
+
+    def _boom(index):
+        raise RuntimeError("CUDA error: no kernel image is available for execution on the device")
+
+    module = _torch_stub(["sm_120"], set_device=_boom)
+    monkeypatch.setattr(gpu_module, "_configured_gpu_index", lambda: None)
+
+    assert gpu_module.activate_selected_gpu(torch_module=module, devices=[dict(BLACKWELL)]) is None
+
+
+def test_manual_mode_still_names_the_wheel_for_torch_work(monkeypatch):
+    gpu_module, _module = _blackwell_machine(monkeypatch, configured=0)
+
+    with pytest.raises(GPUUnsupportedBuildError):
+        gpu_module.get_device()
+
+
+@pytest.mark.parametrize("configured, expected", [
+    (None, {"device": "cuda", "device_index": 0}),
+    (0, {"device": "cuda", "device_index": 0}),
+])
+def test_ctranslate2_ignores_a_torch_only_verdict(monkeypatch, configured, expected):
+    gpu_module, _module = _blackwell_machine(monkeypatch, configured=configured)
+
+    assert gpu_module.selected_ct2_device_kwargs() == expected
+
+
+@pytest.mark.parametrize("configured, expected", [
+    (None, [("CUDAExecutionProvider", {"device_id": 0}), "CPUExecutionProvider"]),
+    (0, [("CUDAExecutionProvider", {"device_id": 0}), "CPUExecutionProvider"]),
+])
+def test_onnx_ignores_a_torch_only_verdict(monkeypatch, configured, expected):
+    gpu_module, _module = _blackwell_machine(monkeypatch, configured=configured)
+    monkeypatch.setattr(gpu_module, "onnx_cuda_provider_available", lambda: True)
+
+    assert gpu_module.selected_onnx_providers() == expected
+
+
+def test_a_missing_index_still_fails_ctranslate2_and_onnx(monkeypatch):
+    gpu_module, _module = _blackwell_machine(monkeypatch, configured=3)
+
+    with pytest.raises(GPUSelectionError) as excinfo:
+        gpu_module.selected_ct2_device_kwargs()
+    assert excinfo.value.code == "INVALID_GPU_INDEX"
+    with pytest.raises(GPUSelectionError):
+        gpu_module.selected_onnx_providers()
+
+
+@pytest.mark.parametrize("configured", [None, 0])
+def test_cpu_only_job_completes_on_an_unrunnable_adapter(monkeypatch, configured):
+    """The reporter's log shows preview-frame, an FFmpeg job, dying on this."""
+    from concurrent.futures import Future
+
+    from flask import Flask
+
+    from opencut.jobs import _get_job_copy, async_job
+
+    _blackwell_machine(monkeypatch, configured=configured)
+
+    class InlinePool:
+        def submit(self, job_id, fn):
+            future = Future()
+            fn()
+            future.set_result(None)
+            return future
+
+    monkeypatch.setattr("opencut.workers.get_pool", lambda: InlinePool())
+    monkeypatch.setattr("opencut.jobs._persist_job", lambda *args, **kwargs: None)
+
+    app = Flask(__name__)
+
+    @app.route("/cpu-only-job", methods=["POST"])
+    @async_job("cpu-only-job", filepath_required=False)
+    def cpu_only_job(job_id, filepath, data):
+        return {"frames": 1}
+
+    response = app.test_client().post("/cpu-only-job", json={})
+    assert response.status_code == 200
+    job = _get_job_copy(response.get_json()["job_id"])
+    assert job["status"] == "complete", job.get("error")
+
+
+@pytest.mark.parametrize("configured, expected_index", [(None, None), (0, 0)])
+def test_faster_whisper_keeps_the_gpu_when_only_torch_lacks_kernels(
+    monkeypatch, configured, expected_index,
+):
+    import sys
+
+    import opencut.core.captions as captions
+    from opencut.utils.config import CaptionConfig
+
+    gpu_module, module = _blackwell_machine(monkeypatch, configured=configured)
+    module.cuda.empty_cache = lambda: None
+    monkeypatch.setitem(sys.modules, "torch", module)
+    calls = []
+
+    class FakeWhisperModel:
+        def __init__(self, model_name, **kwargs):
+            calls.append(kwargs)
+
+        def transcribe(self, *_args, **_kwargs):
+            segment = types.SimpleNamespace(
+                text="hello", start=0.0, end=1.0, words=[],
+                avg_logprob=0.0, no_speech_prob=0.0,
+            )
+            return [segment], types.SimpleNamespace(language="en", language_probability=1.0)
+
+    monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=FakeWhisperModel))
+
+    captions._transcribe_faster_whisper("audio.wav", CaptionConfig(model="base", word_timestamps=False))
+
+    assert calls[0]["device"] == "cuda"
+    assert calls[0]["compute_type"] == "float16"
+    assert calls[0].get("device_index") == expected_index
+
+
+def test_a_raw_cuda_arch_error_gets_the_install_command():
+    """Modules that call torch.cuda directly fail inside the model instead."""
+    from opencut.core.install_hints import suggestion_for_exception
+
+    error = RuntimeError("CUDA error: no kernel image is available for execution on the device")
+    suggestion = suggestion_for_exception(error, context="upscale")
+    assert "cu128" in suggestion
+    assert suggestion_for_exception(RuntimeError("disk full"), context="upscale") == ""
+
+
+def test_packaged_builds_get_an_install_command_that_reaches_them(monkeypatch):
+    """The frozen server ignores system site-packages, so plain pip is a no-op."""
+    import sys
+
+    from opencut import gpu as gpu_module
+
+    assert gpu_module.torch_gpu_install_command().startswith("pip install torch")
+
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(gpu_module.os, "name", "nt")
+    command = gpu_module.torch_gpu_install_command()
+    major, minor = sys.version_info[:2]
+    assert command.startswith(f"py -{major}.{minor} -m pip install")
+    assert r"%USERPROFILE%\.opencut\packages" in command
+    assert "cu128" in command
+    hint = gpu_module.gpu_runtime_support(
+        BLACKWELL, torch_module=_torch_stub(CU126_ARCHES)
+    )["required_build"]
+    assert "--target" in hint

@@ -249,6 +249,28 @@ TORCH_GPU_INSTALL_COMMAND = (
 )
 
 
+def torch_gpu_install_command() -> str:
+    """Return the torch install command that reaches *this* server.
+
+    A packaged server ignores the system interpreter's site-packages and loads
+    optional packages from ``~/.opencut/packages`` with its own Python version,
+    so the plain ``pip install`` above changes nothing for installer users.
+    """
+    import sys
+
+    if not getattr(sys, "frozen", False):
+        return f"pip install torch --index-url {CUDA_WHEEL_INDEX_URL}"
+    major, minor = sys.version_info[:2]
+    if os.name == "nt":
+        python, target = f"py -{major}.{minor}", r'"%USERPROFILE%\.opencut\packages"'
+    else:
+        python, target = f"python{major}.{minor}", "~/.opencut/packages"
+    return (
+        f"{python} -m pip install --upgrade --target {target} torch "
+        f"--index-url {CUDA_WHEEL_INDEX_URL}"
+    )
+
+
 def supported_capability_range() -> tuple[tuple[int, int], tuple[int, int]]:
     """Return ``(oldest, newest)`` compute capability the documented lane covers."""
     return (7, 5), CUDA_INDEX_MAX_CAPABILITY[CUDA_WHEEL_INDEX]
@@ -256,16 +278,17 @@ def supported_capability_range() -> tuple[tuple[int, int], tuple[int, int]]:
 
 #: A build that cannot run an adapter needs a different wheel, not a different
 #: device. Keyed by capability major so the advice names a real download.
-_REQUIRED_BUILD_HINTS = {
-    12: (
-        f"RTX 50-series/Blackwell (sm_120) needs a CUDA 12.8 or newer PyTorch build: "
-        f"pip install torch --index-url {CUDA_WHEEL_INDEX_URL}"
-    ),
-    10: (
-        f"This adapter needs a CUDA 12.8 or newer PyTorch build: "
-        f"pip install torch --index-url {CUDA_WHEEL_INDEX_URL}"
-    ),
+_REQUIRED_BUILD_PREFIXES = {
+    12: "RTX 50-series/Blackwell (sm_120) needs a CUDA 12.8 or newer PyTorch build: ",
+    10: "This adapter needs a CUDA 12.8 or newer PyTorch build: ",
 }
+
+
+def _required_build_hint(capability_major: int) -> str:
+    prefix = _REQUIRED_BUILD_PREFIXES.get(capability_major)
+    if prefix is None:
+        return "Install a PyTorch build compiled for this adapter's compute capability, or select CPU."
+    return prefix + torch_gpu_install_command()
 
 GPU_SUPPORT_USABLE = "usable"
 GPU_SUPPORT_UNSUPPORTED = "unsupported-build"
@@ -312,10 +335,7 @@ def gpu_runtime_support(device: dict | None, *, torch_module=None) -> dict:
             f"the installed PyTorch build has no kernel image for compute capability {label} "
             f"(it was built for up to {highest[0]}.{highest[1]})"
         ),
-        "required_build": _REQUIRED_BUILD_HINTS.get(
-            capability[0],
-            "Install a PyTorch build compiled for this adapter's compute capability, or select CPU.",
-        ),
+        "required_build": _required_build_hint(capability[0]),
     }
 
 
@@ -577,7 +597,34 @@ def activate_selected_gpu(*, torch_module=None, devices: list[dict] | None = Non
 
     devices = list_gpu_devices() if devices is None else list(devices)
     indexes = {int(device.get("index")) for device in devices if "index" in device}
-    index = configured if configured is not None else 0
+    auto = configured is None
+    if auto:
+        # Choose exactly what gpu_selection_status() reports. Hardcoding 0 here
+        # failed every job on a machine whose index 0 the build cannot run,
+        # while Settings showed index 1 selected.
+        runnable = sorted(
+            int(device["index"])
+            for device in devices
+            if "index" in device
+            and gpu_runtime_support(device, torch_module=module)["state"] != GPU_SUPPORT_UNSUPPORTED
+        )
+        if runnable:
+            index = runnable[0]
+        elif indexes:
+            # Nothing listed is runnable by this PyTorch build. Auto means "use
+            # the GPU when it works", so PyTorch work runs on CPU. Raising here
+            # failed FFmpeg-only and faster-whisper jobs too (issue #7).
+            device = next((d for d in devices if d.get("index") == min(indexes)), None)
+            support = gpu_runtime_support(device, torch_module=module)
+            _warn_cpu_fallback(
+                f"{(device or {}).get('name') or 'CUDA device'}: {support['reason']}. "
+                f"{support['required_build']}"
+            )
+            return None
+        else:
+            index = 0
+    else:
+        index = configured
     if index not in indexes:
         # A mocked/limited torch runtime may not have nvidia-smi metadata;
         # use its runtime count as the authoritative fallback.
@@ -603,6 +650,9 @@ def activate_selected_gpu(*, torch_module=None, devices: list[dict] | None = Non
     try:
         module.cuda.set_device(index)
     except (AttributeError, RuntimeError, TypeError, ValueError) as exc:
+        if auto:
+            _warn_cpu_fallback(f"CUDA refused adapter {index}: {exc}")
+            return None
         # set_device failed on an adapter we listed as present. That is a build
         # or driver problem, never "pick a different index".
         device = next((d for d in devices if d.get("index") == index), None)
@@ -619,19 +669,45 @@ def activate_selected_gpu(*, torch_module=None, devices: list[dict] | None = Non
     return index
 
 
+_CPU_FALLBACK_WARNED: set[str] = set()
+
+
+def _warn_cpu_fallback(detail: str) -> None:
+    """Log the auto-mode CPU fallback once per cause, not once per job."""
+    if detail in _CPU_FALLBACK_WARNED:
+        logger.debug("PyTorch GPU work runs on CPU: %s", detail)
+        return
+    _CPU_FALLBACK_WARNED.add(detail)
+    logger.warning("GPU auto-selection: PyTorch work runs on CPU. %s", detail)
+
+
 def get_device_index() -> int | None:
     """Return the effective CUDA index, or ``None`` when CPU is active."""
     status = gpu_selection_status()
     return status.get("selected_index")
 
 
+def runtime_adapter_index(status: dict | None = None) -> int | None:
+    """Return the adapter for runtimes that ship their own CUDA kernels.
+
+    CTranslate2 (faster-whisper) and ONNX Runtime never execute PyTorch
+    kernels, so PyTorch's compiled architecture list says nothing about them.
+    Only a missing index is fatal here. Rebuilding the PyTorch verdict as a
+    plain selection error resurrected the issue #7 text, "GPU index 0 is not
+    available. Available CUDA devices: 0: ...", on exactly these paths.
+    """
+    status = gpu_selection_status() if status is None else status
+    error = status.get("selection_error")
+    if error:
+        if error.get("code") != GPUUnsupportedBuildError.code:
+            raise GPUSelectionError(error.get("requested_index"), status.get("devices", []))
+        return error.get("requested_index")
+    return status.get("selected_index")
+
+
 def selected_ct2_device_kwargs() -> dict:
     """Return CTranslate2 constructor kwargs for the selected adapter."""
-    status = gpu_selection_status()
-    if status.get("selection_error"):
-        error = status["selection_error"]
-        raise GPUSelectionError(error.get("requested_index"), status.get("devices", []))
-    index = status.get("selected_index")
+    index = runtime_adapter_index()
     if index is None:
         return {"device": "auto"}
     return {"device": "cuda", "device_index": index}
@@ -639,11 +715,7 @@ def selected_ct2_device_kwargs() -> dict:
 
 def selected_onnx_providers() -> list:
     """Return ONNX Runtime providers pinned to the selected CUDA index."""
-    status = gpu_selection_status()
-    if status.get("selection_error"):
-        error = status["selection_error"]
-        raise GPUSelectionError(error.get("requested_index"), status.get("devices", []))
-    index = status.get("selected_index")
+    index = runtime_adapter_index()
     if index is None:
         # Keep ONNX Runtime's provider probing behaviour when no CUDA device
         # metadata is available (for example, a vendor runtime without torch).
@@ -696,8 +768,8 @@ def _cuda_available() -> bool:
     try:
         if not torch.cuda.is_available():
             return False
-        activate_selected_gpu(torch_module=torch)
-        return True
+        # None means auto-selection found no adapter this build can run.
+        return activate_selected_gpu(torch_module=torch) is not None
     except GPUSelectionError:
         raise
     except Exception as exc:

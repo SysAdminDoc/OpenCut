@@ -197,9 +197,26 @@ def build_install_suggestion(
 def suggestion_for_exception(exc: BaseException, *, context: str = "") -> str:
     """Return an install suggestion for a dependency-shaped exception."""
     message = str(exc)
+    if _looks_like_cuda_arch_mismatch(message):
+        from opencut.gpu import torch_gpu_install_command
+
+        return (
+            "The installed PyTorch build has no kernels for this GPU. Install a build that "
+            f"covers it: {torch_gpu_install_command()} (or enable CPU mode)."
+        )
     if not _looks_like_missing_dependency(exc, message):
         return ""
     return build_install_suggestion(message, context=context, message=message)
+
+
+def _looks_like_cuda_arch_mismatch(message: str) -> bool:
+    # Modules that call torch.cuda directly meet an unsupported adapter here,
+    # inside the model, rather than at OpenCut's own selection check.
+    lower = message.lower()
+    return (
+        "no kernel image is available" in lower
+        or "not compatible with the current pytorch installation" in lower
+    )
 
 
 def _looks_like_missing_dependency(exc: BaseException, message: str) -> bool:

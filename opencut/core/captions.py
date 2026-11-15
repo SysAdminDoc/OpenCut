@@ -1299,23 +1299,34 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 device = "cpu"
                 compute_type = "int8"
             else:
-                from opencut.gpu import activate_selected_gpu, get_device_index
+                from opencut.gpu import (
+                    GPUUnsupportedBuildError,
+                    activate_selected_gpu,
+                    get_device_index,
+                )
 
-                activate_selected_gpu(torch_module=torch)
-                device_index = get_device_index()
+                try:
+                    activate_selected_gpu(torch_module=torch)
+                    device_index = get_device_index()
+                except GPUUnsupportedBuildError as exc:
+                    # faster-whisper runs CTranslate2 kernels, so a PyTorch
+                    # build without them for this card is no reason to leave
+                    # the GPU; a real CUDA failure still retries on CPU below.
+                    logger.info("faster-whisper keeps the GPU: %s", exc)
+                    device_index = exc.requested
         except ImportError:
             # No torch, let faster-whisper decide but be ready to fall back
             pass
 
     if device == "cuda":
         try:
-            from opencut.gpu import gpu_selection_status
+            from opencut.gpu import gpu_selection_status, runtime_adapter_index
 
             selection = gpu_selection_status()
             selected_index = (
                 device_index
                 if device_index is not None
-                else selection.get("selected_index")
+                else runtime_adapter_index(selection)
             )
             selected_gpu = next(
                 (
