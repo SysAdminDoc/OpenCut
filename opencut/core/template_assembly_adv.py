@@ -15,6 +15,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.core.timecode_utils import nominal_timecode_rate, seconds_to_ndf_timecode
 from opencut.helpers import get_video_info
 
 logger = logging.getLogger("opencut")
@@ -518,6 +519,9 @@ def assemble_from_template(
     """
     if not template.slots:
         raise ValueError("Template has no slots")
+    # The EDL is part of the result, so refuse a rate with no SMPTE
+    # timecode before probing any media.
+    nominal_timecode_rate(template.fps)
 
     assembled_clips = []
     missing_slots = []
@@ -657,12 +661,8 @@ def assemble_from_template(
 # EDL generation
 # ---------------------------------------------------------------------------
 def _format_tc(seconds: float, fps: float = 30.0) -> str:
-    """Format seconds as SMPTE timecode."""
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    f = int((seconds % 1.0) * fps)
-    return f"{h:02d}:{m:02d}:{s:02d}:{f:02d}"
+    """Format seconds as non-drop SMPTE timecode."""
+    return seconds_to_ndf_timecode(seconds, fps)
 
 
 def _generate_assembly_edl(

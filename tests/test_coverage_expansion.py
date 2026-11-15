@@ -332,6 +332,77 @@ class TestNtscNonDropTimecode:
         with pytest.raises(ValueError):
             _seconds_to_tc(10.0, fps)
 
+    @pytest.mark.parametrize("fps, expected", _NTSC_HOUR)
+    def test_assembly_and_review_writers_label_one_hour_at_the_nominal_rate(self, fps, expected):
+        from opencut.core.auto_rough_cut import _format_timecode
+        from opencut.core.review_bundle import _seconds_to_timecode as _review_tc
+        from opencut.core.template_assembly_adv import _format_tc
+
+        assert _format_timecode(3600.0, fps) == expected
+        assert _format_tc(3600.0, fps) == expected
+        assert _review_tc(3600.0, fps) == expected
+
+    @pytest.mark.parametrize("fps", [30000 / 1001, 25.0])
+    def test_timecode_past_a_day_keeps_counting_and_reads_back(self, fps):
+        from opencut.core.edl_aaf import _seconds_to_tc, _tc_to_seconds
+
+        nominal = round(fps)
+        # 25 hours, 3 minutes, 4 seconds and 5 frames, counted at the nominal rate.
+        frame = ((25 * 60 + 3) * 60 + 4) * nominal + 5
+        timecode = _seconds_to_tc(frame / fps, fps)
+
+        assert timecode == "25:03:04:05"
+        assert round(_tc_to_seconds(timecode, fps) * fps) == frame
+
+    def test_rough_cut_refuses_a_rate_without_timecode_before_probing(self, monkeypatch):
+        from opencut.core import auto_rough_cut
+
+        def _no_probe(*_args, **_kwargs):
+            raise AssertionError("media was analysed before the rate was checked")
+
+        monkeypatch.setattr(auto_rough_cut, "get_video_info", _no_probe)
+        monkeypatch.setattr(auto_rough_cut, "analyze_clips", _no_probe)
+        with pytest.raises(ValueError, match="SMPTE"):
+            auto_rough_cut.assemble_rough_cut("Intro. Outro.", ["a.mp4"], mode="loose", fps=12.5)
+
+    def test_template_assembly_refuses_a_rate_without_timecode_before_probing(self, monkeypatch):
+        from opencut.core import template_assembly_adv as taa
+
+        def _no_probe(*_args, **_kwargs):
+            raise AssertionError("media was probed before the rate was checked")
+
+        monkeypatch.setattr(taa, "get_video_info", _no_probe)
+        template = taa.Template(name="t", fps=12.5, slots=[taa.TemplateSlot(name="intro", duration=2.0)])
+        with pytest.raises(ValueError, match="SMPTE"):
+            taa.assemble_from_template(template, {"intro": "a.mp4"})
+
+    def test_transcript_edit_keeps_the_render_when_the_rate_has_no_timecode(self, tmp_path, monkeypatch):
+        from opencut.core import transcript_timeline_edit as tte
+
+        source = tmp_path / "talk.mp4"
+        source.write_bytes(b"not really a video")
+        rendered = []
+        monkeypatch.setattr(tte, "get_video_info", lambda _p: {"fps": 12.5, "duration": 10.0})
+        monkeypatch.setattr(tte, "run_ffmpeg", lambda cmd, **_kw: rendered.append(cmd))
+
+        result = tte.apply_edits(str(source), [tte.CutEntry(source_start=1.0, source_end=4.0)],
+                                 output_dir=str(tmp_path))
+
+        assert rendered, "the edit should still render"
+        assert result.new_duration == pytest.approx(3.0)
+        assert not (tmp_path / "talk_edited.edl").exists()
+        otio = json.loads((tmp_path / "talk_edited.otio.json").read_text(encoding="utf-8"))
+        assert "12.5" in json.dumps(otio)
+
+    def test_review_marker_edl_still_labels_a_rate_without_timecode(self):
+        from opencut.core.review_bundle import build_review_markers_edl
+
+        edl = build_review_markers_edl([{"start_seconds": 61.0, "text": "look here"}], framerate=12.5)
+
+        # 12.5 has no SMPTE timecode, so review markers fall back to clock
+        # seconds with frames counted at the rounded rate.
+        assert "00:01:01:00" in edl
+
 
 class TestExportEdl:
     """Tests for export_edl content generation."""

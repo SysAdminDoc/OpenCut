@@ -76,6 +76,15 @@ Notable changes to OpenCut. The git history carries the detailed record.
   labels them at 24, 30 or 60. EDL import reads them back to the same frame.
   A rate that has no SMPTE timecode, like 12.5, is refused with an error
   instead of being written wrong.
+- Auto rough cut, template assembly and the review bundle's marker EDL and
+  Premiere marker CSV had their own copies of the old math and now use the
+  same converter. Rough cut and template assembly check the rate before they
+  look at any media. Review markers still get a label at 12.5 fps.
+- A transcript edit on footage whose rate has no timecode (12.5 fps, or an
+  odd phone rate) renders again. It used to fail at the very end over the
+  EDL. Now it skips just that file and still writes the OTIO sidecar.
+- Timecode past 24 hours keeps counting (`25:03:04:05`) instead of wrapping
+  back to `01:03:04:05`, so a long timeline reads back to the right frame.
 
 ### Fixed: the packaged server shipped without its generated manifests
 

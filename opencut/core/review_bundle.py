@@ -44,6 +44,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from xml.sax.saxutils import escape
 
 from opencut.core.marker_metadata import denormalise_color, normalise_color
+from opencut.core.timecode_utils import seconds_to_ndf_timecode
 from opencut.helpers import get_ffmpeg_path, run_ffmpeg
 from opencut.openapi_registry import openapi_response_schema
 
@@ -406,7 +407,14 @@ def build_review_markers_otio(
 
 
 def _seconds_to_timecode(seconds: float, framerate: float) -> str:
-    fps = max(1, int(round(_safe_float(framerate, DEFAULT_OTIO_RATE))))
+    rate = _safe_float(framerate, DEFAULT_OTIO_RATE)
+    try:
+        return seconds_to_ndf_timecode(_safe_float(seconds), rate)
+    except ValueError:
+        # No SMPTE timecode at this rate (12.5 fps, say). A review marker
+        # still needs a label, so count clock seconds and rounded frames.
+        pass
+    fps = max(1, int(round(rate)))
     total_frames = max(0, int(round(_safe_float(seconds) * fps)))
     frames = total_frames % fps
     total_seconds = total_frames // fps

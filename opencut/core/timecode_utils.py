@@ -170,11 +170,17 @@ def seconds_to_ndf_timecode(seconds: float, fps: float) -> str:
     """Non-drop timecode for a time in seconds.
 
     The frame count comes from the true rate and is labeled at the nominal
-    rate, so one hour at 29.97 reads ``00:59:56:12``.
+    rate, so one hour at 29.97 reads ``00:59:56:12``. Hours keep counting
+    past 23 instead of wrapping, so a timeline longer than a day reads back
+    to the same time.
     """
     nominal = nominal_timecode_rate(fps)
     frame = int(round(max(0.0, float(seconds)) * float(fps)))
-    return _frames_to_ndf_timecode(frame, nominal)
+    whole_seconds, frames = divmod(frame, nominal)
+    return (
+        f"{whole_seconds // 3600:02d}:{whole_seconds // 60 % 60:02d}:"
+        f"{whole_seconds % 60:02d}:{frames:02d}"
+    )
 
 
 def ndf_timecode_to_seconds(timecode: str, fps: float) -> float:

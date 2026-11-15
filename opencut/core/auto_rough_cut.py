@@ -19,6 +19,7 @@ import subprocess as _sp
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.core.timecode_utils import nominal_timecode_rate, seconds_to_ndf_timecode
 from opencut.helpers import get_ffprobe_path, get_video_info
 
 logger = logging.getLogger("opencut")
@@ -615,12 +616,8 @@ def _select_best_clips(
 # EDL generation
 # ---------------------------------------------------------------------------
 def _format_timecode(seconds: float, fps: float = 30.0) -> str:
-    """Format seconds as SMPTE timecode HH:MM:SS:FF."""
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    f = int((seconds % 1.0) * fps)
-    return f"{h:02d}:{m:02d}:{s:02d}:{f:02d}"
+    """Format seconds as non-drop SMPTE timecode HH:MM:SS:FF."""
+    return seconds_to_ndf_timecode(seconds, fps)
 
 
 def generate_edl(
@@ -693,6 +690,10 @@ def assemble_rough_cut(
 
     if len(media_paths) > MAX_CLIPS:
         raise ValueError(f"Too many clips ({len(media_paths)}). Max: {MAX_CLIPS}")
+
+    # The EDL is what this returns, so refuse a rate with no SMPTE timecode
+    # before analysing any media.
+    nominal_timecode_rate(fps)
 
     if on_progress:
         on_progress(5)
