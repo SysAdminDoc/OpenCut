@@ -43,7 +43,10 @@ Notable changes to OpenCut. The git history carries the detailed record.
   thread is still loading a package waits for it rather than getting a
   half-loaded copy. Two packages that load each other from different
   threads can't lock each other up, and a package that loads fine after you
-  install its missing dependency shows as available straight away.
+  install its missing dependency shows as available straight away. A
+  package that puts off loading until it's first used gets the same
+  treatment, instead of its error escaping the check or locking up every
+  check after it.
 
 ### Fixed: issue reports and crash packets carry the server log again
 

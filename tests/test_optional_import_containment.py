@@ -339,6 +339,56 @@ def test_a_module_that_imports_after_a_retryable_failure_is_handed_back(fake_sit
         sys.modules.pop("f462_the_dep", None)
 
 
+def _lazy(name):
+    """Put ``name`` in sys.modules the way importlib.util.LazyLoader does,
+    with its code still waiting for the first attribute read."""
+    import importlib.util
+
+    spec = importlib.util.find_spec(name)
+    spec.loader = importlib.util.LazyLoader(spec.loader)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+
+
+def test_a_lazily_loaded_module_that_raises_is_recorded(fake_site):
+    """Reading __spec__ before the try ran the deferred import there, so its
+    error escaped _try_import instead of becoming a recorded failure."""
+    (fake_site / "f462_lazy_bad.py").write_text('raise OSError("lazy body failed")\n', encoding="utf-8")
+    try:
+        _lazy("f462_lazy_bad")
+        assert helpers._try_import("f462_lazy_bad") is None
+        assert helpers.import_failures()["f462_lazy_bad"]["exception"] == "OSError"
+        # The broken module is still in sys.modules, and stays unavailable.
+        assert helpers._try_import("f462_lazy_bad") is None
+    finally:
+        sys.modules.pop("f462_lazy_bad", None)
+
+
+def test_a_lazily_loaded_module_that_probes_another_does_not_deadlock(fake_site):
+    """The deferred import ran while _try_import held its failure lock, so a
+    module body that called _try_import waited on that lock forever, and so
+    did every later probe in the process."""
+    import threading
+
+    (fake_site / "f462_lazy_probe.py").write_text(
+        "from opencut import helpers\nJSON = helpers._try_import('json')\n", encoding="utf-8"
+    )
+    result = {}
+    try:
+        _lazy("f462_lazy_probe")
+        thread = threading.Thread(
+            target=lambda: result.setdefault("module", helpers._try_import("f462_lazy_probe")),
+            daemon=True,
+        )
+        thread.start()
+        thread.join(timeout=10)
+        assert not thread.is_alive(), "the probe deadlocked on its own lock"
+        assert result["module"].JSON is json
+    finally:
+        sys.modules.pop("f462_lazy_probe", None)
+
+
 def test_resolve_probe_records_a_scripting_module_that_raises(fake_site, monkeypatch):
     from opencut.core import resolve_bridge
 

@@ -796,6 +796,24 @@ def _is_not_installed(name: str, exc: BaseException) -> bool:
     return name == exc.name or name.startswith(exc.name + ".")
 
 
+def _fully_imported(module) -> bool:
+    """True when ``module`` finished importing, decided without running any
+    of its code.
+
+    A module from ``importlib.util.LazyLoader`` runs its deferred import on
+    the first attribute read, and stays a ``_LazyModule`` until that import
+    succeeds. So this checks the type and reads ``__spec__`` through
+    ``object.__getattribute__``, which skips the lazy hook.
+    """
+    if type(module).__name__ == "_LazyModule":
+        return False
+    try:
+        spec = object.__getattribute__(module, "__spec__")
+    except AttributeError:
+        return True
+    return not getattr(spec, "_initializing", False)
+
+
 def _try_import(name: str):
     """
     Import a module by name, returning None when it can't be used.
@@ -814,16 +832,14 @@ def _try_import(name: str):
             return jsonify({"error": "torch not installed"}), 400
     """
     with _IMPORT_FAILURES_LOCK:
-        loaded = _sys.modules.get(name)
-        if loaded is not None and not getattr(
-            getattr(loaded, "__spec__", None), "_initializing", False
-        ):
-            # Fully imported since any failure was recorded (an install
-            # followed by a plain import), so that record is stale.
-            _IMPORT_FAILURES.pop(name, None)
-            return loaded
         if name in _IMPORT_FAILURES:
-            return None
+            loaded = _sys.modules.get(name)
+            if loaded is None or not _fully_imported(loaded):
+                return None
+            # Fully imported since the failure was recorded (an install
+            # followed by a plain import), so that record is stale.
+            del _IMPORT_FAILURES[name]
+            return loaded
         import_lock = _IMPORT_LOCKS.setdefault(name, threading.RLock())
     depth = getattr(_IMPORT_DEPTH, "value", 0)
     locked = depth == 0 and import_lock.acquire(timeout=_IMPORT_WAIT_SECONDS)
