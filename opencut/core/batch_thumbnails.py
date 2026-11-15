@@ -187,7 +187,7 @@ def generate_contact_sheet(
     except ImportError:
         raise ImportError(
             'Pillow is required for contact sheet generation. '
-            'Install with: pip install "Pillow>=12.3.0,<13"'
+            'Install with: pip install "Pillow>=13.0.0,<14"'
         )
 
     if not thumbnails:

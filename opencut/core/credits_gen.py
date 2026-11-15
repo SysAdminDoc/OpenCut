@@ -134,7 +134,7 @@ def generate_credits(
     except ImportError:
         raise RuntimeError(
             'Pillow is required for credits generation. '
-            'Install with: pip install "Pillow>=12.3.0,<13"'
+            'Install with: pip install "Pillow>=13.0.0,<14"'
         )
 
     if on_progress:

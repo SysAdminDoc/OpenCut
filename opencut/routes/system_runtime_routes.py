@@ -458,7 +458,7 @@ def check_dependencies():
         "librosa": 'pip install "opencut-ppro[audio]"',
         "pydub": "pip install pydub",
         "opencv": 'pip install "opencut-ppro[video]"',
-        "Pillow": 'pip install "Pillow>=12.3.0,<13"',
+        "Pillow": 'pip install "Pillow>=13.0.0,<14"',
         "numpy": 'pip install "opencut-ppro[video]"',
         "rembg": 'pip install "opencut-ppro[ai]"',
         "realesrgan": 'pip install "opencut-ppro[ai]"',

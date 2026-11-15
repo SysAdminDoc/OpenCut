@@ -102,7 +102,7 @@ def render_animated_captions(
         raise RuntimeError("Failed to install opencv-python. Install manually: pip install opencv-python")
     if not ensure_package("PIL", "Pillow", on_progress):
         raise RuntimeError(
-            'Failed to install Pillow. Install manually: pip install "Pillow>=12.3.0,<13"'
+            'Failed to install Pillow. Install manually: pip install "Pillow>=13.0.0,<14"'
         )
     import cv2
     import numpy as np

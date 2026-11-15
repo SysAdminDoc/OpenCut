@@ -268,7 +268,7 @@ def generate_lower_third(
     if not ensure_package("PIL", "Pillow", on_progress=on_progress):
         raise RuntimeError(
             'Pillow is required for lower-thirds. '
-            'Install with: pip install "Pillow>=12.3.0,<13"'
+            'Install with: pip install "Pillow>=13.0.0,<14"'
         )
 
     if on_progress:

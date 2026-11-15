@@ -463,7 +463,7 @@ def generate_lut_from_reference(
     except ImportError:
         raise RuntimeError(
             "PIL and numpy are required. Install with: "
-            'pip install "Pillow>=12.3.0,<13" numpy'
+            'pip install "Pillow>=13.0.0,<14" numpy'
         )
 
     if not os.path.isfile(reference_path):

@@ -4,6 +4,22 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ## Unreleased
 
+### Security: Pillow 13 and newer floors for seven other packages
+
+- OpenCut now needs Pillow 13. It fixes 43 advisories published after
+  12.3.0, five of them critical heap overflows in the JPEG, FlashPix and TIFF
+  code. Masks, mattes and thumbnails come out the same, since every place
+  OpenCut turns a NumPy array into an image already hands it 8-bit data.
+- The minimums went up for urllib3 (2.8.0), Werkzeug (3.1.9), certifi,
+  filelock, setuptools, `mcp` and `rembg`. certifi and filelock used to come
+  in only through huggingface-hub. They're declared directly now, so their
+  floors can't slip. `docs/PYTHON_ADVISORIES.md` lists the advisory behind
+  each floor.
+- The release locks and `pylock.toml` pin the fixed versions.
+- Packaged builds use PyInstaller 6.22.3. Version 6.20.0 still looked for
+  SciPy's array helpers under their old pre-1.18 name, so in the packaged
+  server anything built on `scipy.ndimage` failed, object removal included.
+
 ### Fixed: a broken optional package no longer takes down the server
 
 - If PyTorch was installed but its DLLs wouldn't load, it raised `OSError`

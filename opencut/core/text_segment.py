@@ -221,7 +221,7 @@ def _load_clip(on_progress: Optional[Callable] = None):
         raise RuntimeError("PyTorch required for CLIP. Install: pip install torch")
     if not ensure_package("PIL", "Pillow", on_progress):
         raise RuntimeError(
-            'Pillow required. Install: pip install "Pillow>=12.3.0,<13"'
+            'Pillow required. Install: pip install "Pillow>=13.0.0,<14"'
         )
 
     import torch

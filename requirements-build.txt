@@ -1,3 +1,7 @@
 # Release builder tools. Install only with requirements-build-lock.txt and
 # --require-hashes; these packages are not part of the shipped runtime SBOM.
-pyinstaller==6.20.0
+# 6.21.0+ hooks scipy 1.18's scipy._external.array_api_compat; 6.20.0
+# still named the old scipy._lib path, so frozen scipy.ndimage failed.
+pyinstaller==6.22.3
+# PyInstaller needs setuptools; 84.1.0 fixes GHSA-xmj3-9gf7-h52w.
+setuptools>=84.1.0

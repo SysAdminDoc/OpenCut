@@ -153,7 +153,7 @@ def test_core_dependency_security_floor_pins():
     assert deps["flask-cors"] == "flask-cors>=6.0,<7"
     # RA-23 — Werkzeug/Jinja2 ship transitively with flask; their resolver
     # floor must match the lockfile security level even without the lockfile.
-    assert deps["werkzeug"] == "Werkzeug>=3.1.6"
+    assert deps["werkzeug"] == "Werkzeug>=3.1.9"
     assert deps["jinja2"] == "Jinja2>=3.1.6"
 
 
@@ -183,7 +183,7 @@ def test_click_floor_patches_command_injection_advisory():
 def test_transitive_web_dep_floors_match_lockfile():
     """RA-23 — clean-resolver installs cannot select vulnerable web deps.
 
-    requirements-lock.txt holds urllib3 2.7.0, Werkzeug 3.1.7, requests 2.33.0,
+    requirements-lock.txt holds urllib3 2.8.0, Werkzeug 3.1.9, requests 2.33.0,
     Jinja2 3.1.6. The pyproject resolver lane must floor the same packages so
     `pip install opencut-ppro[all]` without the lock cannot regress below the
     advisory-fixed versions.
@@ -193,7 +193,7 @@ def test_transitive_web_dep_floors_match_lockfile():
     extras = project["optional-dependencies"]
 
     # Always-present web deps (via flask) floored in core.
-    assert core["werkzeug"] == "Werkzeug>=3.1.6"  # CVE-2026-21860 / CVE-2025-66221
+    assert core["werkzeug"] == "Werkzeug>=3.1.9"  # CVE-2026-21860 / CVE-2025-66221 / GHSA-g6x2-hccm-hh4m
     assert core["jinja2"] == "Jinja2>=3.1.6"  # CVE-2025-27516
 
     # Transitive HTTP stack floored in every lane that pulls it.
@@ -204,7 +204,96 @@ def test_transitive_web_dep_floors_match_lockfile():
         # across origins on proxied low-level redirects) and CVE-2026-44432
         # (decompression-bomb bypass in parts of the streaming API), both
         # fixed only in 2.7.0 — so the earlier 2.6.3 floor was itself vulnerable.
-        assert deps["urllib3"] == "urllib3>=2.7.0"
+        # GHSA-8988-9cw3-xx77, GHSA-vxq7-64xx-v4gw and GHSA-gh4c-6fx4-qh6g need 2.8.0.
+        assert deps["urllib3"] == "urllib3>=2.8.0"
+
+
+# F463: the first release that fixes each advisory published after the
+# previous floors (GHSA ids in pyproject.toml and requirements.txt).
+_F463_FLOORS = {
+    "pillow": "13.0.0",
+    "urllib3": "2.8.0",
+    "certifi": "2026.10.18",
+    "werkzeug": "3.1.9",
+    "filelock": "4.2.1",
+    "setuptools": "84.1.0",
+    "mcp": "1.30.0",
+    "rembg": "2.0.82",
+}
+
+
+def _locked_versions(lock_name: str) -> dict[str, str]:
+    pins = {}
+    for line in (REPO_ROOT / lock_name).read_text(encoding="utf-8").splitlines():
+        match = re.match(r"^([A-Za-z0-9._-]+)==([^\s;\\]+)", line)
+        if match:
+            pins[match.group(1).lower()] = match.group(2)
+    return pins
+
+
+@pytest.mark.parametrize(
+    "lock_name, must_hold",
+    [
+        (
+            "requirements-release-lock.txt",
+            {"pillow", "urllib3", "certifi", "werkzeug", "filelock", "setuptools"},
+        ),
+        ("requirements-build-lock.txt", {"setuptools"}),
+        ("requirements-lock.txt", {"urllib3", "certifi", "werkzeug"}),
+    ],
+)
+def test_locks_meet_the_f463_security_floors(lock_name, must_hold):
+    from packaging.version import Version
+
+    pins = _locked_versions(lock_name)
+    assert must_hold <= set(pins), f"{lock_name} no longer pins {sorted(must_hold - set(pins))}"
+    for name, floor in _F463_FLOORS.items():
+        if name in pins:
+            assert Version(pins[name]) >= Version(floor), f"{lock_name}: {name} {pins[name]} < {floor}"
+
+
+def test_declarations_meet_the_f463_security_floors():
+    data = _pyproject()
+    project = data["project"]
+    core = _dep_names(project["dependencies"])
+    assert core["werkzeug"] == "Werkzeug>=3.1.9"
+    assert core["certifi"] == "certifi>=2026.10.18"
+    assert core["filelock"] == "filelock>=4.2.1"
+    assert _dep_names(data["build-system"]["requires"])["setuptools"] == "setuptools>=84.1.0"
+
+    extras = project["optional-dependencies"]
+    assert _dep_names(extras["mcp"])["mcp"] == "mcp>=1.30.0,<2"
+    rembg_lanes = {extra: _dep_names(deps)["rembg"] for extra, deps in extras.items() if "rembg" in _dep_names(deps)}
+    assert rembg_lanes and set(rembg_lanes.values()) == {"rembg>=2.0.82,<3"}
+    for extra, deps in extras.items():
+        named = _dep_names(deps)
+        if "pillow" in named:
+            assert named["pillow"] == "Pillow>=13.0.0,<14", extra
+        if "urllib3" in named:
+            assert named["urllib3"] == "urllib3>=2.8.0", extra
+
+    requirements = _dep_names(_active_requirements_txt())
+    assert requirements["pillow"] == "Pillow>=13.0.0,<14"
+    assert requirements["urllib3"] == "urllib3>=2.8.0"
+    assert requirements["certifi"] == "certifi>=2026.10.18"
+    assert requirements["werkzeug"] == "Werkzeug>=3.1.9"
+    assert requirements["filelock"] == "filelock>=4.2.1"
+
+    build = {
+        line.strip()
+        for line in (REPO_ROOT / "requirements-build.txt").read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.startswith("#")
+    }
+    assert "setuptools>=84.1.0" in build
+
+
+def test_no_install_hint_names_an_old_pillow_range():
+    stale = [
+        str(p.relative_to(REPO_ROOT))
+        for p in (REPO_ROOT / "opencut").rglob("*.py")
+        if "Pillow>=12" in p.read_text(encoding="utf-8")
+    ]
+    assert stale == []
 
 
 def test_os_credential_vault_dependency_is_core_and_locked():
@@ -229,11 +318,11 @@ def test_optional_dependency_security_floor_pins():
     for extra in ("standard", "video", "all"):
         deps = _dep_names(extras[extra])
         assert deps["opencv-python"] == "opencv-python==4.14.0.94"
-        assert deps["pillow"] == "Pillow>=12.3.0,<13"
+        assert deps["pillow"] == "Pillow>=13.0.0,<14"
 
     for extra in ("captions", "all"):
         deps = _dep_names(extras[extra])
-        assert deps["pillow"] == "Pillow>=12.3.0,<13"
+        assert deps["pillow"] == "Pillow>=13.0.0,<14"
 
     assert "captions-whisperx" not in extras
     assert "whisperx" not in _dep_names(extras["all"])
@@ -292,7 +381,7 @@ def test_requirements_txt_matches_security_floor():
     required = [
         "flask-cors>=6.0,<7",
         "opencv-python==4.14.0.94",
-        "Pillow>=12.3.0,<13",
+        "Pillow>=13.0.0,<14",
         "# onnxruntime-gpu>=1.26",
         "WhisperX is unsupported until it accepts torchvision >=0.25 / Torch >=2.10.",
     ]
@@ -309,7 +398,7 @@ def test_runtime_security_floors_cover_bootstrap_installers():
         runtime_security_requirement,
     )
 
-    expected = "Pillow>=12.3.0,<13"
+    expected = "Pillow>=13.0.0,<14"
     assert PILLOW_RUNTIME_REQUIREMENT == expected
     assert runtime_security_requirement("Pillow") == expected
     assert runtime_security_requirement("Pillow>=10.0") == expected

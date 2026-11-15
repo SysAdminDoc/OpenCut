@@ -472,7 +472,8 @@ def target_import_env(target_dir: str) -> dict:
     return env
 
 
-PILLOW_RUNTIME_REQUIREMENT = "Pillow>=12.3.0,<13"
+# 13.0.0 fixes 43 advisories published after 12.3.0, five of them critical.
+PILLOW_RUNTIME_REQUIREMENT = "Pillow>=13.0.0,<14"
 OPENCV_RUNTIME_REQUIREMENT = "opencv-python==4.14.0.94"
 
 _SAFE_PACKAGE_RE = re.compile(

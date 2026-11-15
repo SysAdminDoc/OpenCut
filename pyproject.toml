@@ -1,6 +1,7 @@
 [build-system]
-# PEP 639 SPDX license expressions need setuptools 77.0+.
-requires = ["setuptools>=77.0", "wheel"]
+# PEP 639 SPDX license expressions need setuptools 77.0+, and 84.1.0 fixes
+# GHSA-xmj3-9gf7-h52w (Windows path escape in legacy wheel installs).
+requires = ["setuptools>=84.1.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -65,12 +66,20 @@ dependencies = [
     # vulnerable releases: Werkzeug CVE-2026-21860 / CVE-2025-66221
     # (safe_join Windows device-name DoS, fixed 3.1.5), CVE-2026-27199
     # (safe_join Windows device-name bypass causing hanging reads, fixed
-    # 3.1.6), and Jinja2 CVE-2025-27516 (sandbox breakout, fixed 3.1.6).
-    "Werkzeug>=3.1.6",
+    # 3.1.6), GHSA-g6x2-hccm-hh4m (more Windows device names slipping past
+    # safe_join, fixed 3.1.9), and Jinja2 CVE-2025-27516 (sandbox breakout,
+    # fixed 3.1.6).
+    "Werkzeug>=3.1.9",
     "Jinja2>=3.1.6",
     # 1.26 rejects absolute, UNC, drive-relative, and traversal filenames on
     # every platform before local_dir download paths are created (CVE-2026-15717).
     "huggingface-hub>=1.26,<2",
+    # huggingface-hub brings certifi (through httpx) and filelock. certifi
+    # 2026.10.18 drops the emSign roots whose intermediate keys leaked
+    # (GHSA-6q48-6c7w-9gw2). filelock 4.2.1 makes WindowsFileLock honor its
+    # mode (GHSA-8mx5-7m5m-r77g).
+    "certifi>=2026.10.18",
+    "filelock>=4.2.1",
 ]
 
 [project.optional-dependencies]
@@ -79,7 +88,7 @@ standard = [
     # PySceneDetect 0.7 requires the OpenCV distribution directly. Standard
     # and video use that provider rather than declaring a second cv2 package.
     "opencv-python==4.14.0.94",
-    "Pillow>=12.3.0,<13",
+    "Pillow>=13.0.0,<14",
     "numpy>=1.24",
     "librosa>=0.10,<1",
     # F123 — pydub dropped (vestigial; not imported by the OpenCut tree;
@@ -92,14 +101,16 @@ standard = [
     # this lane cannot resolve urllib3<2.7.0 (CVE-2026-21441 decompression-bomb
     # DoS; CVE-2026-44431 sensitive headers forwarded across origins on proxied
     # low-level redirects; CVE-2026-44432 decompression-bomb safeguards bypassed
-    # in parts of the streaming API — the latter two fixed only in 2.7.0) or
-    # requests<2.33.0 (CVE-2026-25645).
+    # in parts of the streaming API — the latter two fixed only in 2.7.0),
+    # urllib3<2.8.0 (GHSA-8988-9cw3-xx77 HTTPS proxy TLS settings ignored,
+    # GHSA-vxq7-64xx-v4gw unbounded chunk-size line, GHSA-gh4c-6fx4-qh6g
+    # chunked deflate loop) or requests<2.33.0 (CVE-2026-25645).
     "requests>=2.33.0",
-    "urllib3>=2.7.0",
+    "urllib3>=2.8.0",
 ]
 captions = [
     "faster-whisper>=1.1,<2",
-    "Pillow>=12.3.0,<13",
+    "Pillow>=13.0.0,<14",
 ]
 audio = [
     # python-audio-separator is the maintained separation backend and the
@@ -114,13 +125,13 @@ audio = [
 ]
 video = [
     "opencv-python==4.14.0.94",
-    "Pillow>=12.3.0,<13",
+    "Pillow>=13.0.0,<14",
     "numpy>=1.24",
     "scenedetect>=0.7.1,<1",
 ]
 ai = [
     "realesrgan>=0.3,<1",
-    "rembg>=2.0,<3",
+    "rembg>=2.0.82,<3",
     "gfpgan>=1.3,<2",
     "insightface>=0.7,<1",
     "onnxruntime>=1.26,<2",
@@ -129,7 +140,7 @@ ai = [
 ]
 ai-gpu = [
     "realesrgan>=0.3,<1",
-    "rembg>=2.0,<3",
+    "rembg>=2.0.82,<3",
     "gfpgan>=1.3,<2",
     "insightface>=0.7,<1",
     "onnxruntime-gpu>=1.26,<2",
@@ -172,8 +183,9 @@ mcp = [
     # OpenCut speaks JSON-RPC directly, but this extra is also used as
     # reference client tooling. Keep installs on the tested 1.x API line
     # until the 1.x -> 2.x protocol/client break has its own compatibility
-    # pass.
-    "mcp>=1.26,<2",
+    # pass. 1.30.0 fixes GHSA-84m7-p3x7-pcfv, GHSA-w4fh-qvv9-3v23 and
+    # GHSA-5h93-6whr-6q8j on the 1.x line.
+    "mcp>=1.30.0,<2",
 ]
 otio = [
     "opentimelineio>=0.17,<0.19",
@@ -221,14 +233,14 @@ all = [
     # RA-15 - [all] is the release-audited convenience lane. Torch-backed
     # features remain explicit extras so pip-audit can fail closed here.
     "opencv-python==4.14.0.94",
-    "Pillow>=12.3.0,<13",
+    "Pillow>=13.0.0,<14",
     "numpy>=1.24",
     "librosa>=0.10,<1",
     # F123 — pydub dropped (see [standard] extra).
     "scenedetect>=0.7.1,<1",
     "pedalboard>=0.9,<1",
     "edge-tts>=6.1,<8",
-    "rembg>=2.0,<3",
+    "rembg>=2.0.82,<3",
     "insightface>=0.7,<1",
     "onnxruntime>=1.26,<2",
     # Legacy-only; see the [auto-edit] extra for why the native binary is
@@ -239,10 +251,11 @@ all = [
     # RA-23 — floor the transitive web stack in the release-audited [all] lane
     # so a clean resolver (no requirements-lock.txt) cannot select vulnerable
     # urllib3/requests releases. Werkzeug/Jinja2 floors come from core deps.
-    # urllib3 2.7.0 is the fix for CVE-2026-44431 and CVE-2026-44432 as well as
-    # the earlier CVE-2026-21441.
+    # urllib3 2.8.0 fixes GHSA-8988-9cw3-xx77, GHSA-vxq7-64xx-v4gw and
+    # GHSA-gh4c-6fx4-qh6g on top of CVE-2026-44431, CVE-2026-44432 and
+    # CVE-2026-21441 (fixed 2.7.0).
     "requests>=2.33.0",
-    "urllib3>=2.7.0",
+    "urllib3>=2.8.0",
 ]
 dev = [
     "pytest>=7.0,<10",
