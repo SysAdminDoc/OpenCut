@@ -133,7 +133,12 @@ def _read_tail_lines(filepath: str, max_lines: int) -> list[str]:
             position -= chunk_size
             f.seek(position)
             buffer[:0] = f.read(chunk_size)
-    return buffer.decode("utf-8", errors="replace").splitlines()
+    lines = buffer.decode("utf-8", errors="replace").splitlines()
+    if position > 0 and lines:
+        # The read began mid-line. That fragment is not a whole JSON
+        # record, so it can't be decoded and redacted like the rest.
+        lines = lines[1:]
+    return lines
 
 
 def _slugify_template_name(name: str) -> str:
@@ -741,9 +746,12 @@ def tail_logs():
         record = _parse_log_line(line)
         if level_filter and record["level"] != level_filter:
             continue
-        if job_filter and job_filter not in record["raw"] and job_filter != record["job_id"]:
+        redacted = _redact_sensitive_text(record["raw"])
+        # Match the redacted text, so a job_id filter can't be used to
+        # guess a secret one substring at a time.
+        if job_filter and job_filter not in redacted and job_filter != record["job_id"]:
             continue
-        result.append(_redact_sensitive_text(record["raw"]))
+        result.append(redacted)
     # Tail
     tail = result[-lines:]
     return jsonify({"lines": tail, "total": len(result)})

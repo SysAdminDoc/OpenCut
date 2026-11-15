@@ -59,8 +59,9 @@ _KNOWN_SECRET_ENV = (
     r"SLACK_TOKEN|STRIPE_SECRET_KEY)"
 )
 _QUERY_SECRET_NAME = (
-    rf"(?:{_SECRET_NAME}|key|sig|token|x-amz-credential|x-amz-security-token|"
-    r"x-amz-signature|x-goog-signature)"
+    rf"(?:{_SECRET_NAME}|authorization|key|sig|token|x-amz-credential|"
+    r"x-amz-security-token|x-amz-signature|x-api-key|x-auth-token|"
+    r"x-goog-signature|x-opencut-token)"
 )
 _PRIVATE_KEY_RE = re.compile(
     r"-----BEGIN(?: [A-Z0-9]+)? PRIVATE KEY-----.*?"
@@ -68,33 +69,40 @@ _PRIVATE_KEY_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _SECRET_HEADER_RE = re.compile(
-    r"(?P<prefix>(?<![\w-])(?:authorization|proxy-authorization|x-api-key|"
-    r"x-auth-token|x-opencut-token|x-amz-security-token|cookie|set-cookie)"
-    r"[\"']?[ \t]*:[ \t]*(?P<vq>[\"'])?)"
-    r"(?P<value>(?(vq)(?:(?!(?P=vq))[^\r\n])*|[^\r\n]*))",
+    r"(?P<prefix>(?<![\w-])(?:http_)?(?:authorization|proxy[-_]authorization|"
+    r"x[-_]api[-_]key|x[-_]auth[-_]token|x[-_]opencut[-_]token|"
+    r"x[-_]amz[-_]security[-_]token|cookie|set[-_]cookie)"
+    r"(?:[\"']?[ \t]*:|[\"'],)[ \t]*(?P<vq>[\"'])?)"
+    r"(?P<value>(?(vq)(?:\\.|(?!(?P=vq))[^\r\n\\])*|[^\r\n]*))",
     re.IGNORECASE,
 )
 _URL_USERINFO_RE = re.compile(
-    # The user may be empty and the password may hold "@" or "/" (an
-    # escaped one is decoded first), so run to the last "@" before a host.
-    r"(?P<prefix>\b[a-z][a-z0-9+.-]*://)[^\s/@:]*:\S*?@"
-    r"(?=[^\s/@?#]*(?:[/?#\s\"'<>]|$))",
+    # The user may be empty and the password may hold "@" or "/", so run to
+    # the last "@" that a host follows. Digits then "/" after the first ":"
+    # are a port ("host:8443/a/@b"), not a password.
+    r"(?P<prefix>(?<![a-z0-9+.-])[a-z][a-z0-9+.-]*://)[^\s/@:\"'<>]*:"
+    r"(?!\d+(?:[/?#\s\"'<>]|$))[^\s\"'<>]*@"
+    r"(?=[^\s/@?#\"'<>]*(?:[/?#\s\"'<>]|$))",
     re.IGNORECASE | re.MULTILINE,
 )
 # Besides query strings, a bare ``token=`` after whitespace, a quote or a
 # bracket counts, and so does ``:key=`` right behind a hex key id, which is
 # Shaka Packager's ``--keys label=X:key_id=...:key=...`` list.
 _QUERY_SECRET_RE = re.compile(
-    r"(?P<prefix>(?:[?&;]|&amp;|(?<![^\s\"'(\[,])|key_id=[0-9A-Fa-f]+:)"
+    r"(?P<prefix>(?:[?&;]|&amp;|(?<![^\s\"'(\[,])|key_id=[0-9A-Fa-f]+:|"
+    r"label=[^:\s\"']*:)"
     rf"{_QUERY_SECRET_NAME}=)"
-    r"(?P<value>[^&#\s\"'<>\r\n]*)",
+    r"(?P<value>(?P<vq>[\"'])(?:\\.|(?!(?P=vq))[^\r\n\\])*(?P=vq)"
+    r"|[^&#\s\"'<>\r\n]*)",
     re.IGNORECASE,
 )
 _ASSIGNED_SECRET_RE = re.compile(
-    rf"(?P<prefix>(?P<kq>[\"']?)\b(?:[A-Za-z0-9]+_)*(?:{_KNOWN_SECRET_ENV}|{_SECRET_NAME})\b"
+    rf"(?P<prefix>(?P<kq>[\"']?)\b(?:[A-Za-z0-9]+_)*"
+    r"(?-i:(?:[a-z0-9]+(?:[A-Z][a-z0-9]+)*?(?=[A-Z]))?)"
+    rf"(?:{_KNOWN_SECRET_ENV}|{_SECRET_NAME}|(?<=[\"'])token(?=[\"']))\b"
     r"(?P=kq)[ \t]*(?:(?P<colon>:)|=)[ \t]*)"
     rf"(?P<value>(?P<vq>[\"'])(?!{re.escape(REDACTION_MARKER)})"
-    r"(?:(?!(?P=vq))[^\r\n])*(?P=vq)"
+    r"(?:\\.|(?!(?P=vq))[^\r\n\\])*(?P=vq)"
     rf"|(?![\"']?{re.escape(REDACTION_MARKER)})"
     r"(?(colon)[^,;\r\n}\]\"']+|[^\s,;\r\n}\]]+))",
     re.IGNORECASE,
@@ -114,6 +122,8 @@ _SECRET_KEY_RE = re.compile(
     re.IGNORECASE,
 )
 _PERCENT_ESCAPE_RE = re.compile(r"%[0-9A-Fa-f]{2}")
+_PERCENT_TOKEN_RE = re.compile(r"[^\s\"'<>]*%[0-9A-Fa-f]{2}[^\s\"'<>]*")
+_CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 _PROVIDER_SECRET_PATTERNS = (
     re.compile(r"\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{16,}\b"),
     re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b", re.IGNORECASE),
@@ -175,19 +185,19 @@ def _redact_line(line: str) -> str:
     if stripped.startswith("{") and stripped.endswith("}"):
         try:
             record = json.loads(stripped)
-        except ValueError:
-            record = None
-        if isinstance(record, dict):
-            redacted = _redact_structure(record)
-            if redacted == record:
-                return line
-            start = body.index(stripped)
-            return (
-                body[:start]
-                + _encode_like(redacted, record, stripped)
-                + body[start + len(stripped):]
-                + line[len(body):]
-            )
+            if isinstance(record, dict):
+                redacted = _redact_structure(record)
+                if redacted == record:
+                    return line
+                start = body.index(stripped)
+                return (
+                    body[:start]
+                    + _encode_like(redacted, record, stripped)
+                    + body[start + len(stripped):]
+                    + line[len(body):]
+                )
+        except (ValueError, RecursionError):
+            pass
     return _redact_plain_text(line)
 
 
@@ -208,7 +218,11 @@ def _redact_structure(value: Any) -> Any:
         out = {}
         for key, item in value.items():
             name = _redact_plain_text(key) if isinstance(key, str) else key
-            if isinstance(item, str) and item and _SECRET_KEY_RE.search(str(key)):
+            if (
+                isinstance(item, str)
+                and item
+                and _SECRET_KEY_RE.search(_CAMEL_BOUNDARY_RE.sub("_", str(key)))
+            ):
                 out[name] = REDACTION_MARKER
             else:
                 out[name] = _redact_structure(item)
@@ -223,12 +237,30 @@ def _redact_structure(value: Any) -> Any:
 def _redact_plain_text(text: str) -> str:
     if not text:
         return text
-    redacted = text
+    redacted = _redact_unescaped(text)
     if _PERCENT_ESCAPE_RE.search(redacted):
-        # A URL nested in a query string hides its userinfo and an
-        # ``auth=Bearer%20...`` value behind percent escapes.
-        redacted = urllib.parse.unquote(redacted)
-    redacted = _scrub_paths(redacted)
+        redacted = _PERCENT_TOKEN_RE.sub(_redact_escaped_token, redacted)
+    return redacted
+
+
+def _redact_escaped_token(match: re.Match[str]) -> str:
+    """Redact a secret that only shows once its token is percent-decoded
+    (a URL nested in a query string, ``auth=Bearer%20...``).
+
+    The token is replaced by its decoded, redacted form only when that
+    finds something, so ``frame_%04d.png`` and ``my%20clip.mp4`` keep
+    their escapes.
+    """
+    token = match.group(0)
+    decoded = urllib.parse.unquote(token)
+    if decoded == token:
+        return token
+    redacted = _redact_unescaped(decoded)
+    return token if redacted == decoded else redacted
+
+
+def _redact_unescaped(text: str) -> str:
+    redacted = _scrub_paths(text)
     redacted = _PRIVATE_KEY_RE.sub(REDACTION_MARKER, redacted)
     redacted = _SECRET_HEADER_RE.sub(_redact_match_value, redacted)
     redacted = _URL_USERINFO_RE.sub(

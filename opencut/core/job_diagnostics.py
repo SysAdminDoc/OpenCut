@@ -378,7 +378,12 @@ def _extract_metadata(record: dict) -> dict:
             elif isinstance(value, (list, dict)):
                 # Walk the structure. Regexing its JSON text missed values
                 # holding an escaped quote and could turn params into a str.
-                value = _redact_structure(json.loads(json.dumps(value, default=str)))
+                try:
+                    value = _redact_structure(json.loads(json.dumps(value, default=str)))
+                except (TypeError, ValueError, RecursionError):
+                    # Non-string keys or a self-reference: no JSON shape
+                    # to keep, so redact its text instead of failing.
+                    value = _redact_sensitive_text(str(value))
             out[key] = value
     return out
 

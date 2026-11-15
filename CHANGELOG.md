@@ -64,11 +64,14 @@ Notable changes to OpenCut. The git history carries the detailed record.
   header in the middle of a message, a quoted password and a home folder
   written with doubled backslashes are all caught. It also catches
   `Authorization: Token ...`, URLs with a password in them (encoded or not),
-  `--api-key` and `-passphrase` flags, names like `llm_api_key`, and
-  passphrases with spaces in them.
+  `--api-key` and `-passphrase` flags, names like `llm_api_key` or
+  `llmApiKey`, header lists and request environments, and passphrases with
+  spaces in them. Frame patterns like `img_%04d.png` and URLs with a port
+  come through untouched.
 - Job diagnostics keep a job's parameters as real data instead of a string,
   with secret values swapped out. The live log view in Settings is redacted
-  the same way as the export.
+  the same way as the export, and its job filter only matches the redacted
+  text.
 
 ### Fixed: SRT and VTT captions no longer lose words
 

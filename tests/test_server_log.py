@@ -313,3 +313,137 @@ def test_redaction_leaves_ordinary_text_alone(ordinary):
         assert json.loads(redacted) == json.loads(ordinary)
     else:
         assert redacted == ordinary
+
+
+# Forms a review got past the redactor, each with a value that must not
+# survive either as a plain line or inside a JSON server.log record.
+_REVIEW_LEAKS = {
+    "encoded space in a query value": ("srt://h:9000?passphrase=correct%20horse%20{}", "LeakEncSpace01"),
+    "encoded space in a password": ("rtmp://u:p%20{}@host/live", "LeakEncPass02"),
+    "encoded & and # in a query value": ("GET /x?password=p%26ss%23{}", "LeakEncAmp03"),
+    "@ and / in a password": ("rtmp://cam:p@ss/{}@10.0.0.5/live", "LeakAtSlash04"),
+    "encoded @ and / in a password": ("rtmp://cam:a%40b%2F{}@host/live", "LeakEncAtSlash05"),
+    "shaka label before key": ("--keys label=SD:key={}:key_id=00112233445566778899aabbccddeeff", "LeakShakaLabel06"),
+    "f-string token repr": ("token='{}'", "LeakTokenRepr07"),
+    "double-quoted key": ('key="{}"', "LeakKeyQuoted08"),
+    "header tuple list": ("headers=[('Authorization', 'Token {}')]", "LeakHeaderTuple09"),
+    "environ headers": ("EnvironHeaders([('X-Opencut-Token', '{}')])", "LeakEnvHeaders10"),
+    "wsgi authorization": ("{{'HTTP_AUTHORIZATION': 'Token {}'}}", "LeakWsgiAuth11"),
+    "wsgi opencut token": ("{{'HTTP_X_OPENCUT_TOKEN': '{}'}}", "LeakWsgiToken12"),
+    "bare token key": ("{{'token': '{}'}}", "LeakTokenKey13"),
+    "header as assignment": ("X-OpenCut-Token={}", "LeakHeaderEq14"),
+    "camelCase name": ('{{"llmApiKey": "{}"}}', "LeakCamelKey15"),
+    "escaped quote in a header": ("headers={{'Authorization': 'Token ab\\'{}'}}", "LeakEscQuote16"),
+}
+
+
+@pytest.mark.parametrize("name", sorted(_REVIEW_LEAKS))
+def test_reviewed_credential_forms_are_redacted_plain_and_as_json(name):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    template, secret = _REVIEW_LEAKS[name]
+    line = template.format(secret)
+    assert secret in line
+    json_line = json.dumps({"level": "WARNING", "message": f"job-1 {line}"})
+
+    assert secret not in _redact_sensitive_text(line)
+    assert secret not in _redact_sensitive_text(json_line)
+
+
+def test_a_camel_case_key_in_a_structure_loses_its_value():
+    from opencut.core.issue_report import REDACTION_MARKER, _redact_structure
+
+    out = _redact_structure({"llmApiKey": "LeakCamelStruct17", "maxTokens": 512, "clipName": "a"})
+    assert out == {"llmApiKey": REDACTION_MARKER, "maxTokens": 512, "clipName": "a"}
+
+
+@pytest.mark.parametrize(
+    "ordinary",
+    [
+        "writing frames to /tmp/frames/img_%04d.png",
+        "opened my%20clip.mp4",
+        "progress 100%ABC done",
+        "fetched https://cdn.example.com:8443/media/@user/clip.mp4",
+        "POST https://api.example.com:8443/v1/notify?to=ops@example.com",
+        '{"pattern": "img_%04d.png", "url": "https://h:8443/a/@b"}',
+    ],
+)
+def test_percent_escapes_and_ports_are_left_alone(ordinary):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    redacted = _redact_sensitive_text(ordinary)
+    if ordinary.startswith("{"):
+        assert json.loads(redacted) == json.loads(ordinary)
+    else:
+        assert redacted == ordinary
+    wrapped = json.dumps({"message": ordinary})
+    assert json.loads(_redact_sensitive_text(wrapped)) == {"message": ordinary}
+
+
+def test_a_line_nested_past_the_recursion_limit_does_not_raise():
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    deep = '{"a":' + "[" * 5000 + "]" * 5000 + ', "password": "LeakDeep18"}'
+    out = _redact_sensitive_text(deep)
+    assert "LeakDeep18" not in out
+
+
+def test_job_params_without_a_json_shape_still_give_a_diagnostic(monkeypatch):
+    from opencut.core import job_diagnostics
+
+    looped = {"password": "LeakLoop19"}
+    looped["self"] = looped
+    for params in ({("a", 1): "x", "password": "LeakTupleKey20"}, looped):
+        monkeypatch.setattr(
+            job_diagnostics,
+            "_resolve_job",
+            lambda _job_id, params=params: {"status": "error", "params": params},
+        )
+        diag = job_diagnostics.build_diagnostic("job-x")
+        rendered = str(diag.metadata["params"])
+        assert "LeakTupleKey20" not in rendered
+        assert "LeakLoop19" not in rendered
+
+
+def test_log_tail_never_returns_a_cut_off_first_line(client, tmp_path, monkeypatch):
+    """A fragment that starts mid-record isn't JSON, so it used to go through
+    the plain-text path with its quotes still escaped."""
+    import opencut.server as server_module
+    from opencut.routes import settings as settings_routes
+
+    secret = "LeakFragment21"
+    record = json.dumps({
+        "level": "INFO",
+        "message": f' payload {{"llm_api_key": "{secret}"}}' * 200,
+        "job_id": "job-7",
+    })
+    filler = json.dumps({"level": "INFO", "job_id": "job-0", "message": "x" * 9})
+    assert len(filler) == 60
+    # 500 filler lines after the record: the reader needs 501 newlines for a
+    # filtered request, so it stops 2,268 bytes into the end of the record.
+    log_file = tmp_path / "server.log"
+    log_file.write_text(record + "\n" + "\n".join([filler] * 500) + "\n", encoding="utf-8")
+    monkeypatch.setattr(server_module, "LOG_FILE", str(log_file))
+
+    lines = settings_routes._read_tail_lines(str(log_file), 3)
+    assert lines and all(json.loads(line) for line in lines)
+
+    resp = client.get("/logs/tail?lines=1&job_id=job-7")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert secret not in json.dumps(data)
+    assert data["total"] == 0
+
+
+def test_log_tail_job_filter_cannot_probe_a_redacted_value(client, tmp_path, monkeypatch):
+    import opencut.server as server_module
+
+    log_file = tmp_path / "server.log"
+    log_file.write_text(
+        json.dumps({"level": "INFO", "job_id": "job-1", "message": "auth password=LeakProbe22"}) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(server_module, "LOG_FILE", str(log_file))
+
+    assert client.get("/logs/tail?job_id=LeakProbe").get_json()["total"] == 0
+    assert client.get("/logs/tail?job_id=job-1").get_json()["total"] == 1
