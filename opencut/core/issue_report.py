@@ -87,8 +87,8 @@ _PRIVATE_KEY_RE = re.compile(
 # runs to the end of the line), a ``name=value`` cookie list joined by
 # ``;``, ``,`` or spaces, and a dict or call repr. A flag that is the
 # whole value (``cookie=on``, ``cookie=off: disabled``) is left alone,
-# but not when anything other than a space follows its punctuation
-# (``cookie=on.;sid=...``).
+# but not when anything other than a space, quote or closing bracket
+# follows its punctuation (``cookie=on.;sid=...``).
 _SECRET_HEADER_RE = re.compile(
     r"(?P<prefix>(?:(?P<open>\([ \t]*b?[\"'])|(?<![\w-]))(?P<env>http_)?(?:authorization|"
     r"proxy[-_]authorization|x[-_]api[-_]key|x[-_]auth[-_]token|x[-_]opencut[-_]token|"
@@ -97,7 +97,7 @@ _SECRET_HEADER_RE = re.compile(
     r"(?P<value>(?(vq)(?:\\.|(?!(?P=vq))[^\r\n\\])*"
     r"|(?(eq)(?(env)[^\r\n]*"
     rf"|(?!{re.escape(REDACTION_MARKER)})(?!(?:true|false|none|null|on|off|yes|no)"
-    r"(?:(?:[.:!?]|/(?:true|false|none|null|on|off|yes|no))(?=\s|$)|(?![^\s&,;\"')\]}])))"
+    r"(?:(?:[.:!?]|/(?:true|false|none|null|on|off|yes|no))(?=[\s\"')\]}]|$)|(?![^\s&,;\"')\]}])))"
     r"(?:(?:digest|oauth|hawk|aws4-hmac-sha256|vapid|mutual|hoba|scram-sha-(?:1|256))[ \t]+[^\r\n]*"
     r"|(?:[{\[]|[A-Za-z_][\w.]*\()[^\r\n]*"
     r"|(?:(?:basic|bearer|token|negotiate|ntlm|apikey|api-key|dpop|kerberos|sharedkey(?:lite)?)[ \t]+)?"
@@ -224,31 +224,31 @@ def _redact_match_value(match: re.Match[str]) -> str:
 
 
 # What may follow the ``@`` that ends a userinfo cut short of the run's
-# last ``@``: a dotted host, ``localhost`` or an IP, a port, then a path,
-# query or fragment.
+# last ``@``: a dotted host, ``localhost`` or an IP, a port, then a path.
+# A ``?`` or ``#`` there could still be a password's (``P@ss.w0rd#1``).
 _URL_HOST_PATH_RE = re.compile(
-    r"(?:localhost|[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+|\[[0-9A-Fa-f:.]+\])(?::\d+)?[/?#]"
+    r"(?:localhost|[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+|\[[0-9A-Fa-f:.]+\])(?::\d+)?/"
 )
 
 
 def _redact_url_userinfo(match: re.Match[str]) -> str:
     """Redact from ``scheme://`` to the ``@`` that ends the userinfo.
 
-    An earlier ``@`` is used only when a plain host follows it and no
-    other URL does, which keeps ``?to=ops@example.com`` and
+    An earlier ``@`` is used only when a plain host and path follow it
+    and no other URL does, which keeps ``?to=ops@example.com`` and
     ``/media/@user/clip.mp4`` readable. Otherwise the run's last ``@``
     ends the userinfo or comes after it, so cutting there can't leak the
-    password. When that ``@`` is in the query or fragment it may sit
-    inside a secret value (``?password=Pa@ss``), and the whole run goes.
+    password. But with an ``=`` before it, that ``@`` may sit inside a
+    named value (``?password=Pa@ss``) whose name the cut would drop, so
+    the whole run goes.
     """
     rest = match.group("rest")
     last = rest.rfind("@")
     if last < 0:
         return match.group(0)
-    stop = _userinfo_stop(rest)
-    at = _readable_userinfo_end(rest, stop)
+    at = _readable_userinfo_end(rest, _userinfo_stop(rest))
     if at is None:
-        if last > stop:
+        if "=" in rest[rest.find("@"):last]:
             return f"{match.group('prefix')}{REDACTION_MARKER}"
         at = last
     return f"{match.group('prefix')}{REDACTION_MARKER}{rest[at:]}"

@@ -797,6 +797,12 @@ def test_a_url_password_ends_at_the_at_sign_before_the_host(line, secret, kept):
         "max token: 4k",
         "app:token:v2",
         "cookie=on. next",
+        "(cookie=on.)",
+        "'cookie=on.'",
+        'msg="cookie=on."',
+        "cookie=on/off)",
+        "[cookie=on.]",
+        "{cookie=on.}",
     ],
 )
 def test_fourth_review_ordinary_text_is_left_alone(ordinary):
@@ -827,6 +833,11 @@ _FIFTH_REVIEW_LEAKS = {
     "cookie= flag with a colon before a list": ("cookie=yes:;sid={}", "LeakD3"),
     "Cookie= flag with a period before a spaced list": ("Cookie=on.; sid={}", "LeakD4"),
     "set-cookie= flag before attributes": ("set-cookie=true.;Path=/;sid={}", "LeakD5"),
+    "password holding @, a dotted word and #": ("rtsp://admin:P@ss.w0rd#{}@192.168.1.64:554/s", "LeakE1"),
+    "password holding @, a dotted word and ?": ("rtsp://admin:P@ss.w0rd?{}@192.168.1.64/stream", "LeakE2"),
+    "password holding @, digits with a dot and #": ("http://admin:Secret@123.45#{}@cam/", "LeakE3"),
+    "fragment value holding @ right after the host": ("https://u:p@h.example.com#token={}@abc", "LeakE4"),
+    "path parameter holding @ before a query": ("http://admin:pw@nas/x;password=Pa?ss@{}", "LeakE5"),
 }
 
 
@@ -846,13 +857,16 @@ def test_fifth_review_credential_forms_are_redacted(name):
 @pytest.mark.parametrize(
     ("line", "kept"),
     [
-        (
-            "https://u:LeakB1@h.example.com?password=Pa@ssLeakB2",
-            "https://[REDACTED]@h.example.com?password=[REDACTED]",
-        ),
+        ("https://u:LeakB1@h.example.com?password=Pa@ssLeakB2", "https://[REDACTED]"),
         ("http://admin:LeakB3@nas/login?password=Pa@ssLeakB4", "http://[REDACTED]"),
-        ("https://user:LeakB5@h.example.com?to=ops@example.com", "https://[REDACTED]@h.example.com?to=ops@example.com"),
-        ("https://user:LeakB6@localhost:8080#ref=a@b.c", "https://[REDACTED]@localhost:8080#ref=a@b.c"),
+        (
+            "https://u:LeakB5@h.example.com/x?password=Pa@ssLeakB6",
+            "https://[REDACTED]@h.example.com/x?password=[REDACTED]",
+        ),
+        (
+            "rtsp://admin:P@ss.w0rd#LeakB7@192.168.1.64:554/Streaming/Channels/101",
+            "rtsp://[REDACTED]@192.168.1.64:554/Streaming/Channels/101",
+        ),
     ],
 )
 def test_a_query_secret_holding_an_at_sign_is_redacted_whole(line, kept):
