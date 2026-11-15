@@ -766,22 +766,85 @@ def get_video_info(filepath: str) -> dict:
 # ---------------------------------------------------------------------------
 # Lazy Import Helper
 # ---------------------------------------------------------------------------
+# Optional modules that are installed but failed to import, keyed by module
+# name. A failed import is not retried: a broken native library fails the
+# same way every time, and torch 2.15 raises on a second ``import torch``
+# after a failed first one, so retrying on every 4-second health poll only
+# repeats the damage.
+_IMPORT_FAILURES: dict = {}
+_IMPORT_FAILURES_LOCK = threading.Lock()
+
+
+def _is_not_installed(name: str, exc: BaseException) -> bool:
+    """True when ``exc`` only says ``name`` (or a parent package) is absent."""
+    if not isinstance(exc, ModuleNotFoundError) or not exc.name:
+        return False
+    return name == exc.name or name.startswith(exc.name + ".")
+
+
 def _try_import(name: str):
     """
-    Import a module by name, returning None on failure.
+    Import a module by name, returning None when it can't be used.
 
-    Replaces the 50+ try/except ImportError blocks scattered throughout
-    the codebase with a single-line call.
+    A module that simply isn't installed returns None and is looked up
+    again next time, so a later install is seen. Any other failure (a DLL
+    that won't load, an ``OSError`` from a too-long path, a module raising
+    ``RuntimeError`` at import) is recorded once with its exception class
+    and message, logged, and answered from that record for the rest of the
+    process. ``import_failures()`` and ``GET /system/check-failures`` list
+    the records.
 
     Usage:
         torch = _try_import("torch")
         if torch is None:
             return jsonify({"error": "torch not installed"}), 400
     """
+    loaded = _sys.modules.get(name)
+    if loaded is not None:
+        return loaded
+    with _IMPORT_FAILURES_LOCK:
+        if name in _IMPORT_FAILURES:
+            return None
     try:
         return importlib.import_module(name)
-    except ImportError:
+    except Exception as exc:  # noqa: BLE001 -- optional imports fail in any way
+        if _is_not_installed(name, exc):
+            return None
+        verdict = {
+            "exception": type(exc).__name__,
+            "message": str(exc)[:500],
+            "ts": time.time(),
+            # A plain ImportError (a dependency missing) can be fixed by an
+            # install, so forget_retryable_import_failures() clears it.
+            "retryable": isinstance(exc, ImportError),
+        }
+        with _IMPORT_FAILURES_LOCK:
+            first = name not in _IMPORT_FAILURES
+            _IMPORT_FAILURES.setdefault(name, verdict)
+        if first:
+            logger.warning(
+                "Optional module %s is installed but failed to import (%s: %s); "
+                "treating it as unavailable until restart",
+                name, verdict["exception"], verdict["message"],
+            )
         return None
+
+
+def forget_retryable_import_failures() -> None:
+    """Drop recorded ImportErrors so the next probe sees a fresh install.
+
+    Other failures stay: a module that raised OSError or RuntimeError while
+    importing is not safe to import a second time in the same process.
+    """
+    with _IMPORT_FAILURES_LOCK:
+        for name in [n for n, v in _IMPORT_FAILURES.items() if v.get("retryable")]:
+            del _IMPORT_FAILURES[name]
+
+
+def import_failures() -> dict:
+    """Copy of the recorded import failures: ``{module: {exception, message, ts}}``."""
+    with _IMPORT_FAILURES_LOCK:
+        return {name: dict(verdict) for name, verdict in _IMPORT_FAILURES.items()}
 
 
 def _try_import_from(package: str, name: str):
@@ -791,11 +854,10 @@ def _try_import_from(package: str, name: str):
     Usage:
         check_whisper = _try_import_from("opencut.core.captions", "check_whisper_available")
     """
-    try:
-        mod = importlib.import_module(package)
-        return getattr(mod, name)
-    except (ImportError, AttributeError):
+    mod = _try_import(package)
+    if mod is None:
         return None
+    return getattr(mod, name, None)
 
 
 # ---------------------------------------------------------------------------

@@ -26,7 +26,7 @@ except ImportError:
 
 from opencut import __version__
 from opencut.errors import safe_error
-from opencut.helpers import _try_import, _try_import_from, get_ffmpeg_path
+from opencut.helpers import _try_import, _try_import_from, forget_retryable_import_failures, get_ffmpeg_path
 from opencut.jobs import (
     _cancel_running_jobs,
     _is_cancelled,
@@ -241,6 +241,8 @@ def invalidate_caps_cache():
     with _caps_cache_lock:
         _caps_cache["data"] = None
         _caps_cache["ts"] = 0.0
+    # An install can supply a dependency an optional module was missing.
+    forget_retryable_import_failures()
     # Also clear the /system/dependencies TTL cache so the next render
     # reflects the new install. _deps_cache and _deps_cache_lock live in
     # system_runtime_routes and are imported at the bottom of this module;

@@ -746,12 +746,13 @@ def onnx_cuda_provider_available() -> bool:
 # ---------------------------------------------------------------------------
 # Optional torch import
 # ---------------------------------------------------------------------------
-try:
-    import torch
-    _HAS_TORCH = True
-except ImportError:
-    torch = None  # type: ignore[assignment]
-    _HAS_TORCH = False
+# _try_import contains any import failure, not just ImportError: a torch
+# whose DLLs won't load raises OSError here, and this module is imported at
+# server start, so an escaped error kept the whole server from starting.
+from opencut.helpers import _try_import  # noqa: E402
+
+torch = _try_import("torch")
+_HAS_TORCH = torch is not None
 
 
 # ---------------------------------------------------------------------------

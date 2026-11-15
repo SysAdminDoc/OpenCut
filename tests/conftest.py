@@ -125,6 +125,17 @@ def _isolate_os_credential_vault(monkeypatch):
     return backend
 
 
+@pytest.fixture(autouse=True)
+def _isolate_optional_import_failures():
+    """A broken-import verdict lasts for the process, so a test that fakes a
+    broken module must not leave that module unavailable for the next test."""
+    from opencut import helpers
+
+    yield
+    with helpers._IMPORT_FAILURES_LOCK:
+        helpers._IMPORT_FAILURES.clear()
+
+
 @pytest.fixture(autouse=True, scope="session")
 def _isolate_process_user_data_home(tmp_path_factory):
     """Keep dynamically computed OpenCut paths inside one test-only home."""

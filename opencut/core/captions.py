@@ -13,7 +13,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..errors import OpenCutError
-from ..helpers import get_video_info
+from ..helpers import _try_import, get_video_info
 from ..security import safe_bool
 from ..utils.config import CaptionConfig
 from . import transcript_cache
@@ -480,43 +480,24 @@ def check_whisper_available() -> Tuple[bool, str]:
         Tuple of (available: bool, backend_name: str).
         backend_name is one of: "whisperx", "faster-whisper", "openai-whisper", "none"
     """
-    # Try WhisperX first (best word-level timestamps)
-    try:
-        import whisperx  # noqa: F401
-        return True, "whisperx"
-    except ImportError:
-        pass
-
-    # Try faster-whisper (fastest inference)
-    try:
-        from faster_whisper import WhisperModel  # noqa: F401
-        return True, "faster-whisper"
-    except ImportError:
-        pass
-
-    # Try openai-whisper (reference implementation)
-    try:
-        import whisper  # noqa: F401
-        return True, "openai-whisper"
-    except ImportError:
-        pass
-
+    # WhisperX first (best word-level timestamps), then faster-whisper
+    # (fastest inference), then openai-whisper (reference implementation).
+    for backend in ("whisperx", "faster-whisper", "openai-whisper"):
+        if _whisper_backend_available(backend):
+            return True, backend
     return False, "none"
 
 
 def _whisper_backend_available(backend: str) -> bool:
-    try:
-        if backend == "whisperx":
-            import whisperx  # noqa: F401
-        elif backend == "faster-whisper":
-            from faster_whisper import WhisperModel  # noqa: F401
-        elif backend == "openai-whisper":
-            import whisper  # noqa: F401
-        else:
-            return False
-    except ImportError:
-        return False
-    return True
+    # _try_import contains every import failure. faster-whisper pulls in
+    # ctranslate2, which imports torch, so a broken torch raises OSError here.
+    if backend == "whisperx":
+        return _try_import("whisperx") is not None
+    if backend == "faster-whisper":
+        return hasattr(_try_import("faster_whisper"), "WhisperModel")
+    if backend == "openai-whisper":
+        return _try_import("whisper") is not None
+    return False
 
 
 def resolve_whisper_backend(override: Optional[str] = None) -> Tuple[str, str]:

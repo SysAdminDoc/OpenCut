@@ -4,6 +4,18 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ## Unreleased
 
+### Fixed: a broken optional package no longer takes down the server
+
+- If PyTorch was installed but its DLLs wouldn't load, it raised `OSError`
+  instead of `ImportError`. The server then wouldn't start at all, and the
+  capability check behind `/health` failed the same way.
+- Any optional package that fails to import now just shows that feature as
+  unavailable. OpenCut tries a broken one once per run, not on every health
+  poll (a second `import torch` after a failed one makes things worse).
+- `GET /system/check-failures` lists each one as `import:<module>` with the
+  error it raised, so you can see why a feature is missing. A package that was
+  only missing a dependency gets another try after you install something.
+
 ### Fixed: issue reports and crash packets carry the server log again
 
 - The server writes `~/.opencut/server.log`, but the issue report, the crash

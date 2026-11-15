@@ -19,7 +19,7 @@ import tempfile
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
-from opencut.helpers import ensure_package, get_ffmpeg_path, get_video_info, run_ffmpeg
+from opencut.helpers import _try_import, ensure_package, get_ffmpeg_path, get_video_info, run_ffmpeg
 from opencut.helpers import output_path as _output_path
 
 logger = logging.getLogger("opencut")
@@ -54,11 +54,7 @@ def _count_frames(filepath: str) -> int:
 # ---------------------------------------------------------------------------
 def check_upscale_available() -> bool:
     """Check if Real-ESRGAN is available."""
-    try:
-        import realesrgan  # noqa: F401
-        return True
-    except ImportError:
-        return False
+    return _try_import("realesrgan") is not None
 
 
 def upscale_video(
@@ -204,20 +200,13 @@ def upscale_video(
 # ---------------------------------------------------------------------------
 def check_rembg_available() -> bool:
     """Check if rembg is available."""
-    try:
-        import rembg  # noqa: F401
-        return True
-    except ImportError:
-        return False
+    return _try_import("rembg") is not None
 
 
 def check_rvm_available() -> bool:
     """Check if Robust Video Matting is available."""
-    try:
-        import torch  # noqa: F401
-        return True  # RVM uses torchvision hub download, needs only torch
-    except ImportError:
-        return False
+    # RVM uses torchvision hub download, needs only torch
+    return _try_import("torch") is not None
 
 
 def remove_background(
@@ -992,8 +981,11 @@ def get_ai_capabilities() -> Dict:
         "video_denoise": True,  # Uses FFmpeg, always available
     }
     # Check GPU
+    torch = _try_import("torch")
+    if torch is None:
+        caps["gpu_available"] = False
+        return caps
     try:
-        import torch
         caps["gpu_available"] = torch.cuda.is_available()
         if caps["gpu_available"]:
             caps["gpu_name"] = torch.cuda.get_device_name(0)

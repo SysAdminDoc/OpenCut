@@ -19,7 +19,7 @@ import os
 from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.core.model_safety import PINNED_HF_MODELS, safe_snapshot_download
-from opencut.helpers import ensure_package
+from opencut.helpers import _try_import, ensure_package
 
 logger = logging.getLogger("opencut")
 
@@ -143,11 +143,8 @@ def check_whisperx_available() -> bool:
 
 
 def check_nllb_available() -> bool:
-    try:
-        import ctranslate2  # noqa: F401
-        return True
-    except ImportError:
-        return False
+    # ctranslate2 imports torch, so a broken torch fails it with OSError.
+    return _try_import("ctranslate2") is not None
 
 
 def check_pysubs2_available() -> bool:

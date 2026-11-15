@@ -342,7 +342,10 @@ def check_failures():
     """Structured failure reasons for ``check_X_available()`` probes (E5).
 
     GET: returns ``{check_name: {exception, message, ts}}`` for every
-    probe that raised since process start (or since last DELETE). Empty
+    probe that raised since process start (or since last DELETE), plus
+    ``import:<module>`` for each optional module that is installed but
+    failed to import. Those stay until restart, since the module is never
+    imported again. Empty
     `{}` when all probes have returned cleanly. Useful for support
     triage — users can see *why* a feature is unavailable instead of a
     silent 503.

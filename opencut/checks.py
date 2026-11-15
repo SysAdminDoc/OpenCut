@@ -18,7 +18,7 @@ import threading
 import time
 from typing import Any
 
-from opencut.helpers import _try_import
+from opencut.helpers import _try_import, import_failures
 
 # ---------------------------------------------------------------------------
 # Structured failure registry (E5)
@@ -53,9 +53,16 @@ def _record_caller_failure(exc: BaseException) -> None:
 
 
 def get_check_failures() -> dict[str, dict[str, Any]]:
-    """Return a thread-safe copy of the failure registry."""
+    """Return a thread-safe copy of the failure registry.
+
+    Optional modules that failed to import are listed as ``import:<module>``.
+    Those last for the process, because the module is never imported again.
+    """
     with _CHECK_FAILURES_LOCK:
-        return {k: dict(v) for k, v in _CHECK_FAILURES.items()}
+        failures = {k: dict(v) for k, v in _CHECK_FAILURES.items()}
+    for module, verdict in import_failures().items():
+        failures[f"import:{module}"] = verdict
+    return failures
 
 
 def clear_check_failures() -> None:
