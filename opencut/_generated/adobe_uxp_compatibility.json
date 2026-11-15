@@ -17,7 +17,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "premierepro",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -49,7 +49,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Application",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -121,7 +121,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Project",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -153,7 +153,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Project",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -180,7 +180,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Project",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -222,7 +222,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Project",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -259,7 +259,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Project",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -291,7 +291,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Project",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -318,7 +318,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Project",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -342,17 +342,17 @@
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 368,
+          "line": 356,
           "symbol": "Project.executeTransaction"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 434,
+          "line": 447,
           "symbol": "Project.executeTransaction"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 438,
+          "line": 451,
           "symbol": "Project.executeTransaction"
         }
       ],
@@ -375,7 +375,7 @@
       "minimum_package_version": "26.3.0",
       "owner": "Project",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -389,22 +389,22 @@
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 390,
+          "line": 400,
           "symbol": "Project.lockedAccess"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 391,
+          "line": 401,
           "symbol": "Project.lockedAccess"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 442,
+          "line": 455,
           "symbol": "Project.lockedAccess"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 443,
+          "line": 456,
           "symbol": "Project.lockedAccess"
         }
       ],
@@ -427,7 +427,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "CompoundAction",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -451,32 +451,32 @@
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 377,
+          "line": 365,
           "symbol": "CompoundAction.addAction"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 378,
+          "line": 366,
           "symbol": "CompoundAction.addAction"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 380,
+          "line": 368,
           "symbol": "CompoundAction.addAction"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 381,
+          "line": 369,
           "symbol": "CompoundAction.addAction"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 385,
+          "line": 373,
           "symbol": "CompoundAction.addAction"
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 439,
+          "line": 452,
           "symbol": "CompoundAction.addAction"
         }
       ],
@@ -499,7 +499,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -536,7 +536,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -583,7 +583,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -615,7 +615,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -652,7 +652,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -694,7 +694,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -736,7 +736,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -763,7 +763,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -790,7 +790,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -817,7 +817,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -854,7 +854,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -891,7 +891,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -923,7 +923,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -950,7 +950,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "SequenceEditor",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
@@ -977,7 +977,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "SequenceEditor",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -998,11 +998,11 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItemSelection",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 356,
+          "line": 386,
           "symbol": "module.TrackItemSelection.createEmptySelection"
         }
       ],
@@ -1030,7 +1030,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "async",
       "used": false
@@ -1051,7 +1051,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -1088,7 +1088,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -1097,7 +1097,7 @@
         },
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 504,
+          "line": 517,
           "symbol": "Sequence.rippleDelete"
         }
       ],
@@ -1120,7 +1120,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -1147,7 +1147,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -1179,7 +1179,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -1206,7 +1206,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Sequence",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -1233,7 +1233,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackList",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -1265,7 +1265,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackList",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -1297,7 +1297,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Track",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -1334,7 +1334,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ProjectItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -1366,7 +1366,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ProjectItem/TrackItem/Marker",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -1428,11 +1428,11 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 439,
+          "line": 452,
           "symbol": "Object.createSetDisabledAction"
         }
       ],
@@ -1455,7 +1455,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "async",
       "used": false
@@ -1476,11 +1476,11 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 380,
+          "line": 368,
           "symbol": "Object.createSetStartAction"
         }
       ],
@@ -1503,11 +1503,11 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 377,
+          "line": 365,
           "symbol": "Object.createSetEndAction"
         }
       ],
@@ -1530,11 +1530,11 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 381,
+          "line": 369,
           "symbol": "Object.createSetInPointAction"
         }
       ],
@@ -1557,11 +1557,11 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
-          "line": 378,
+          "line": 366,
           "symbol": "Object.createSetOutPointAction"
         }
       ],
@@ -1584,7 +1584,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-cut-planner.js",
@@ -1611,7 +1611,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ProjectItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -1653,7 +1653,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ProjectItem/TrackItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -1690,7 +1690,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Marker",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -1722,7 +1722,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ProjectItem/TrackItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -1759,7 +1759,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ProjectItem/TrackItem/CaptionItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -1786,7 +1786,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ProjectItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -1833,7 +1833,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ProjectItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -1865,7 +1865,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ProjectItem/Marker",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -1897,7 +1897,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ProjectItem/Marker",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -1929,7 +1929,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -1956,7 +1956,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem/ProjectItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -1983,7 +1983,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem/CaptionItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2015,7 +2015,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2042,7 +2042,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "CaptionItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "async",
       "used": false
@@ -2063,7 +2063,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "CaptionItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "async",
       "used": false
@@ -2084,7 +2084,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem/CaptionItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -2126,7 +2126,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem/CaptionItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -2153,7 +2153,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem/CaptionItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -2185,7 +2185,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TrackItem/CaptionItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -2212,7 +2212,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "MarkerList",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -2244,7 +2244,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "MarkerList",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -2276,7 +2276,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "MarkerList",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -2308,7 +2308,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "MarkerList",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -2340,7 +2340,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "MarkerList",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -2372,7 +2372,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "MarkerList",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2399,7 +2399,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Marker",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "async",
       "used": false
@@ -2420,7 +2420,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Marker",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2447,7 +2447,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Marker",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2474,7 +2474,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Marker",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
@@ -2506,7 +2506,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "Marker",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2533,7 +2533,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ComponentChain",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -2554,7 +2554,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ComponentChain",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -2575,7 +2575,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ClipProjectItem",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2602,7 +2602,7 @@
       "minimum_package_version": "26.3.0",
       "owner": "Transcript",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2629,7 +2629,7 @@
       "minimum_package_version": "26.3.0",
       "owner": "Transcript",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2661,7 +2661,7 @@
       "minimum_package_version": "26.3.0",
       "owner": "Transcript",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2693,7 +2693,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ObjectMaskUtils",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2720,7 +2720,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TickTime",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2747,7 +2747,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "TickTime",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2774,7 +2774,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "SourceMonitor",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2801,7 +2801,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "EncoderManager",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2828,7 +2828,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "EncoderManager",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2860,7 +2860,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "EncoderManager",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2887,7 +2887,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "EncoderManager",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2919,7 +2919,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "EncoderManager",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2946,7 +2946,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "ProjectConverter",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -2973,7 +2973,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -3000,7 +3000,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -3021,7 +3021,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -3042,7 +3042,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -3063,7 +3063,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -3084,7 +3084,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -3105,7 +3105,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -3126,7 +3126,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -3147,7 +3147,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -3168,7 +3168,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -3189,7 +3189,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -3210,7 +3210,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -3242,7 +3242,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "AAFExportOptions",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/main.js",
@@ -3269,7 +3269,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "UXP document.theme",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -3290,7 +3290,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "UXP document.theme.onUpdated",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [
         {
           "file": "extension/com.opencut.uxp/uxp-theme.js",
@@ -3317,7 +3317,7 @@
       "minimum_package_version": "25.6.0",
       "owner": "UXP document.theme.onUpdated",
       "package": "@adobe/premierepro",
-      "package_version": "26.3.0",
+      "package_version": "27.0.0",
       "source_refs": [],
       "sync_async": "sync",
       "used": false
@@ -3328,7 +3328,7 @@
     "live_host_checks": "blocked_separate",
     "undeclared_capabilities": []
   },
-  "generated_at": "2026-09-05T17:02:27Z",
+  "generated_at": "2026-11-15T21:09:38Z",
   "host_bands": [
     {
       "api_version": 2,
@@ -3382,13 +3382,13 @@
   "minimum_host": "25.6",
   "package": "@adobe/premierepro",
   "package_drift": {
-    "pinned_package_version": "26.3.0",
+    "pinned_package_version": "27.0.0",
     "requires_live_premiere": false,
-    "snapshot_latest": "26.3.0",
+    "snapshot_latest": "27.0.0",
     "snapshot_path": "opencut/_generated/adobe_premierepro_versions.json",
     "status": "in_sync"
   },
-  "package_version": "26.3.0",
+  "package_version": "27.0.0",
   "source_files": [
     "extension/com.opencut.uxp/main.js",
     "extension/com.opencut.uxp/uxp-cut-planner.js",

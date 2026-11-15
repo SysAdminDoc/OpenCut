@@ -33,7 +33,7 @@ def test_generated_manifest_records_used_api_contracts_and_precise_sources():
     ):
         row = by_id[capability_id]
         assert row["package"] == "@adobe/premierepro"
-        assert row["package_version"] == "26.3.0"
+        assert row["package_version"] == "27.0.0"
         assert row["fallback"]
         assert row["host_behavior"]
 

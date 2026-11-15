@@ -28,8 +28,8 @@ def test_f254_beta_snapshot_still_tracks_create_subsequence_version():
     data = json.loads(VERSIONS.read_text(encoding="utf-8"))
 
     assert data["package"] == "@adobe/premierepro"
-    assert data["dist_tags"]["beta"] == "26.3.0-beta.85"
-    assert "26.3.0-beta.85" in data["tracked_versions"]
+    assert data["dist_tags"]["beta"] == "27.1.0-beta.23"
+    assert "27.1.0-beta.23" in data["tracked_versions"]
 
 
 def test_f254_uxp_bridge_sets_range_before_creating_subsequence():
@@ -69,8 +69,8 @@ def test_f254_range_restore_uses_project_transaction():
 def test_f254_adobe_linter_accepts_bridge_and_rejects_unlocked_factory():
     package = json.loads(PANEL_PACKAGE.read_text(encoding="utf-8"))
     dependencies = package["devDependencies"]
-    assert dependencies["@adobe/eslint-plugin-premierepro"] == "26.3.0"
-    assert dependencies["@adobe/premierepro"] == "26.3.0"
+    assert dependencies["@adobe/eslint-plugin-premierepro"] == "27.0.0"
+    assert dependencies["@adobe/premierepro"] == "27.0.0"
     assert UXP_ESLINT_CONFIG.is_file()
 
     eslint_name = "eslint.cmd" if os.name == "nt" else "eslint"

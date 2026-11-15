@@ -22,6 +22,12 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - Packaged builds use PyInstaller 6.22.3. Version 6.20.0 still looked for
   SciPy's array helpers under their old pre-1.18 name, so in the packaged
   server anything built on `scipy.ndimage` failed, object removal included.
+- The release lock takes msgpack 1.2.4. Its C extension in 1.2.1 leaked
+  memory each time it rejected a map key (CVE-2026-114613).
+- `npm audit` flagged 12 packages in the panel's build and test tools, 8 of
+  them high. Vite 8.3.5, Vitest 4.1.12 and pinned fixed versions of
+  minimatch, brace-expansion, js-yaml and source-map-js clear all of them,
+  and nothing is on the allow list.
 
 ### Fixed: a broken optional package no longer takes down the server
 
@@ -236,6 +242,14 @@ Notable changes to OpenCut. The git history carries the detailed record.
   ever read it, so the file sat untouched for months while the UXP migration
   was planned against it. The release gate now fails when it is more than 90
   days old, and distinguishes that from a snapshot whose upstream fetch failed.
+- The snapshot is current again (Premiere Pro 27.0.0, beta 27.1.0), and the
+  UXP panel is now checked against the 27.0.0 type definitions and Adobe's
+  27.0.0 lint rules instead of 26.3.0.
+- Those rules caught silence removal in the UXP panel holding on to a clip
+  selection after Premiere's `createEmptySelection` callback returned, which
+  the 27.0 typings say isn't valid. The selection is now filled and used
+  inside the callback, under the same project lock, and a callback that
+  arrives late changes nothing.
 
 ### Added: the UXP panel now installs
 
