@@ -19,7 +19,7 @@ import subprocess as _sp
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.core.timecode_utils import seconds_to_ndf_timecode
+from opencut.core.timecode_utils import check_frame_rate, seconds_to_ndf_timecode
 from opencut.helpers import get_ffprobe_path, get_video_info
 
 logger = logging.getLogger("opencut")
@@ -690,6 +690,10 @@ def assemble_rough_cut(
 
     if len(media_paths) > MAX_CLIPS:
         raise ValueError(f"Too many clips ({len(media_paths)}). Max: {MAX_CLIPS}")
+
+    # A rate with no timecode only costs the EDL, but 0, a negative rate
+    # or NaN would put a nonsense rate on every cut.
+    check_frame_rate(fps)
 
     if on_progress:
         on_progress(5)

@@ -149,6 +149,15 @@ def frames_to_timecode(
     return _frames_to_ndf_timecode(frame_num, fps)
 
 
+def check_frame_rate(fps: float) -> float:
+    """Return ``fps`` as a float, or raise ``ValueError`` unless it's a
+    positive, finite number."""
+    fps = float(fps)
+    if not (fps > 0 and math.isfinite(fps)):
+        raise ValueError(f"Frame rate must be a positive number, got {fps!r}")
+    return fps
+
+
 def nominal_timecode_rate(fps: float, *, two_digit_frames: bool = True) -> int:
     """Return the frames per timecode second that non-drop timecode counts.
 
@@ -160,9 +169,7 @@ def nominal_timecode_rate(fps: float, *, two_digit_frames: bool = True) -> int:
     label can take three digits, and an EDL import at 120 fps still reads
     two-digit fields.
     """
-    fps = float(fps)
-    if not (fps > 0 and math.isfinite(fps)):
-        raise ValueError(f"Frame rate must be a positive number, got {fps!r}")
+    fps = check_frame_rate(fps)
     for candidate in (fps, fps * 1.001):
         nominal = round(candidate)
         if 0 < nominal and (nominal < 100 or not two_digit_frames) and abs(candidate - nominal) < 0.01:

@@ -131,8 +131,9 @@ Notable changes to OpenCut. The git history carries the detailed record.
   Premiere marker CSV had their own copies of the old math and now use the
   same converter. At a rate with no timecode, or past 99 hours, rough cut and
   template assembly still put the edit together and only leave out the EDL.
-  Review markers still get a label at 12.5 fps, at 100 fps and up, and past
-  99 hours, with frames counted at the real rate. At 24, 25,
+  A frame rate of 0, below 0 or not a number is refused before any media is
+  read. Review markers still get a label at 12.5 fps, and at 100 fps and up
+  or past 99 hours their frames are counted at the real rate. At 24, 25,
   30 and other whole-number rates their frames now round to the nearest
   frame instead of always rounding down, so some events move by one frame.
 - The multicam timecode sync EDL uses the same converter, so it refuses
@@ -157,8 +158,9 @@ Notable changes to OpenCut. The git history carries the detailed record.
   edit list, and SCC and MCC captions, which always run at 29.97. With a
   rate that has no timecode, the rough cut skips its EDL, the EDL exports
   refuse before creating a file, and the text lists fall back to clock time.
-  The same happens past 99 hours, and a transcript edit checks where each
-  cut lands on the timeline before it renders anything.
+  The same happens past 99 hours. A transcript edit builds its EDL before it
+  renders anything, so a cut or pause that would land past 99:59:59 is
+  refused first.
 - SRT times from the broadcast caption tools round to the millisecond. 2.3
   seconds used to come out as `00:00:02.299`.
 

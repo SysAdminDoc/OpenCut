@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import pathlib
 import tempfile
@@ -602,6 +603,69 @@ class TestNtscNonDropTimecode:
         with pytest.raises(ValueError, match="finite"):
             tte.apply_edits(str(source), [tte.CutEntry(source_start=1.0, source_end=4.0, dest_start=dest)],
                             output_dir=str(tmp_path))
+
+    @pytest.mark.parametrize("cuts", [
+        # Ends at 359999.99 s, which rounds to frame 10800000 at 30 fps.
+        [(1.0, 4.0, 359996.99)],
+        # A pause is written one second long, past 99:59:59.
+        [(1.0, 4.0, 0.0), (-1.0, -1.0, 359999.5)],
+    ])
+    def test_transcript_edit_refuses_a_cut_the_edl_cannot_place_before_rendering(self, tmp_path, monkeypatch, cuts):
+        from opencut.core import transcript_timeline_edit as tte
+
+        source = tmp_path / "talk.mp4"
+        source.write_bytes(b"not really a video")
+
+        def _no_render(*_args, **_kwargs):
+            raise AssertionError("rendered before the EDL was built")
+
+        monkeypatch.setattr(tte, "get_video_info", lambda _p: {"fps": 30.0, "duration": 10.0})
+        monkeypatch.setattr(tte, "run_ffmpeg", _no_render)
+        monkeypatch.setattr(tte, "_concat_segments", _no_render)
+        entries = [tte.CutEntry(source_start=a, source_end=b, dest_start=d) for a, b, d in cuts]
+
+        with pytest.raises(ValueError, match="EDL timeline"):
+            tte.apply_edits(str(source), entries, output_dir=str(tmp_path))
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["talk.mp4"]
+
+    @pytest.mark.parametrize("fps", [0.0, -30.0, float("nan"), float("inf")])
+    def test_rough_cut_and_template_refuse_a_rate_that_is_not_a_positive_number(self, tmp_path, monkeypatch, fps):
+        from opencut.core import auto_rough_cut
+        from opencut.core import template_assembly_adv as taa
+
+        clip = tmp_path / "interview_segment.mp4"
+        clip.write_bytes(b"not really a video")
+
+        def _no_probe(*_args, **_kwargs):
+            raise AssertionError("read media before checking the rate")
+
+        monkeypatch.setattr(auto_rough_cut, "get_video_info", _no_probe)
+        monkeypatch.setattr(taa, "get_video_info", _no_probe)
+
+        with pytest.raises(ValueError, match="positive number"):
+            auto_rough_cut.assemble_rough_cut("Interview segment", [str(clip)], mode="loose", fps=fps)
+        template = taa.Template(name="t", fps=fps, slots=[taa.TemplateSlot(name="intro", duration=2.0)])
+        with pytest.raises(ValueError, match="positive number"):
+            taa.assemble_from_template(template, {"intro": str(clip)})
+
+    def test_paper_edit_edl_is_checked_with_the_same_sums_it_writes(self, tmp_path, monkeypatch):
+        """sum() compensates for rounding and the writer adds one selection
+        at a time, so a check by sum() passed a record time the writer then
+        pushed to 100:00:00:00, leaving an empty file."""
+        from opencut.core.paper_edit import PaperEdit, PaperEditSelection, export_paper_edit
+
+        monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+        edge = 359999.98333333334
+        ulp = math.ulp(edge)
+        edit = PaperEdit(selections=[
+            PaperEditSelection(start=0.0, end=edge - 2 * ulp),
+            PaperEditSelection(start=0.0, end=0.6 * ulp),
+            PaperEditSelection(start=0.0, end=0.6 * ulp),
+        ])
+
+        with pytest.raises(ValueError):
+            export_paper_edit(edit, format="edl", fps=30.0)
+        assert list(tmp_path.iterdir()) == []
 
     def test_rough_cut_edl_counts_at_the_rendered_rate(self, tmp_path, monkeypatch):
         from opencut.core import rough_cut

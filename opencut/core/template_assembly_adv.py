@@ -15,7 +15,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.core.timecode_utils import seconds_to_ndf_timecode
+from opencut.core.timecode_utils import check_frame_rate, seconds_to_ndf_timecode
 from opencut.helpers import get_video_info
 
 logger = logging.getLogger("opencut")
@@ -519,6 +519,9 @@ def assemble_from_template(
     """
     if not template.slots:
         raise ValueError("Template has no slots")
+    # A rate with no timecode only costs the EDL, but 0, a negative rate
+    # or NaN would end up as the OTIO rate.
+    check_frame_rate(template.fps)
 
     assembled_clips = []
     missing_slots = []

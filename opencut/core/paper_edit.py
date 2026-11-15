@@ -261,11 +261,21 @@ def export_paper_edit(
         raise ValueError(f"Unsupported format: {format}. Use json, txt, or edl")
 
     if format == "edl":
-        # Refuse a rate or a time that timecode can't label (12.5 fps, or
-        # past 99:59:59) before creating the file.
-        record_out = sum(s.duration for s in paper_edit.selections)
-        for value in [record_out, *(t for s in paper_edit.selections for t in (s.start, s.end))]:
-            seconds_to_ndf_timecode(value, fps)
+        # Built before the file is created, so a rate or a time that
+        # timecode can't label (12.5 fps, or past 99:59:59) leaves no file.
+        edl_lines = ["TITLE: Paper Edit\nFCM: NON-DROP FRAME\n\n"]
+        record_in = 0.0
+        for i, s in enumerate(paper_edit.selections):
+            record_out = record_in + s.duration
+            edl_lines.append(
+                f"{i + 1:03d}  AX  V  C  "
+                f"{seconds_to_ndf_timecode(s.start, fps)} {seconds_to_ndf_timecode(s.end, fps)} "
+                f"{seconds_to_ndf_timecode(record_in, fps)} {seconds_to_ndf_timecode(record_out, fps)}\n"
+            )
+            if s.text:
+                edl_lines.append(f"* {s.text[:80]}\n")
+            edl_lines.append("\n")
+            record_in = record_out
 
     if on_progress:
         on_progress(10, f"Exporting paper edit as {format}...")
@@ -314,21 +324,8 @@ def export_paper_edit(
             f.writelines(lines)
 
     elif format == "edl":
-        lines = ["TITLE: Paper Edit\nFCM: NON-DROP FRAME\n\n"]
-        record_in = 0.0
-        for i, s in enumerate(paper_edit.selections):
-            record_out = record_in + s.duration
-            lines.append(
-                f"{i + 1:03d}  AX  V  C  "
-                f"{seconds_to_ndf_timecode(s.start, fps)} {seconds_to_ndf_timecode(s.end, fps)} "
-                f"{seconds_to_ndf_timecode(record_in, fps)} {seconds_to_ndf_timecode(record_out, fps)}\n"
-            )
-            if s.text:
-                lines.append(f"* {s.text[:80]}\n")
-            lines.append("\n")
-            record_in = record_out
         with open(output_path_str, "w", encoding="utf-8") as f:
-            f.writelines(lines)
+            f.writelines(edl_lines)
 
     if on_progress:
         on_progress(100, f"Exported as {format}")

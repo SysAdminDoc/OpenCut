@@ -17,7 +17,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.core.timecode_utils import seconds_to_ndf_timecode
+from opencut.core.timecode_utils import nominal_timecode_rate, seconds_to_ndf_timecode
 from opencut.helpers import (
     FFmpegCmd,
     build_edge_fade_filter,
@@ -989,6 +989,22 @@ def apply_edits(
     fps = info.get("fps", 30.0)
     original_duration = info.get("duration", 0.0)
 
+    # The EDL is built before rendering, so a cut it can't place (a record
+    # time that rounds to 100:00:00:00, or a pause that runs past it) is
+    # refused before any work. A source rate with no SMPTE timecode only
+    # loses the EDL sidecar below.
+    edl_content = ""
+    edl_error: Optional[ValueError] = None
+    try:
+        edl_content = export_edl(cuts, fps=fps)
+    except ValueError as exc:
+        try:
+            nominal_timecode_rate(fps)
+        except ValueError:
+            edl_error = exc
+        else:
+            raise ValueError(f"Can't place every cut on the EDL timeline: {exc}") from exc
+
     # Filter to actual media cuts (skip silence markers)
     media_cuts = [c for c in cuts if c.source_start >= 0]
     if not media_cuts:
@@ -1024,7 +1040,8 @@ def apply_edits(
     # Export EDL and OTIO sidecar files
     edl_path = out_path.rsplit(".", 1)[0] + ".edl"
     try:
-        edl_content = export_edl(cuts, fps=fps)
+        if edl_error is not None:
+            raise edl_error
         with open(edl_path, "w", encoding="utf-8") as f:
             f.write(edl_content)
     except (ValueError, OSError) as exc:
