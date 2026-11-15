@@ -43,6 +43,10 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - Settings > Export logs used to download only the crash log. It now saves one
   text file with the recent server log and the crash log, with your home
   folder shown as `~`.
+- Before any of those leave your machine, passwords, API keys, bearer tokens,
+  SRT passphrases and packager keys that ended up in the log are replaced with
+  `[REDACTED]`. The issue report already did this, but the crash packet, the
+  log export and job diagnostics only hid your home folder.
 
 ### Fixed: SRT and VTT captions no longer lose words
 

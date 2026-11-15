@@ -29,7 +29,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Optional
 
-from opencut.core.issue_report import _scrub_paths
+from opencut.core.issue_report import _redact_sensitive_text
 from opencut.server_log import server_log_path, server_log_tail
 
 logger = logging.getLogger("opencut")
@@ -374,12 +374,15 @@ def _extract_metadata(record: dict) -> dict:
         if key in record and record[key] is not None:
             value = record[key]
             if isinstance(value, str):
-                value = _scrub_paths(value)
+                value = _redact_sensitive_text(value)
             elif isinstance(value, (list, dict)):
+                flat = _redact_sensitive_text(json.dumps(value, default=str))
                 try:
-                    value = json.loads(_scrub_paths(json.dumps(value, default=str)))
-                except Exception:
-                    pass
+                    value = json.loads(flat)
+                except ValueError:
+                    # Redaction broke the JSON. Hand back the redacted text
+                    # rather than the raw value.
+                    value = flat
             out[key] = value
     return out
 
@@ -396,7 +399,7 @@ def build_diagnostic(job_id: str, *, log_tail_lines: int = 200) -> JobDiagnostic
     diag.job_type = str(record.get("type") or record.get("job_type") or "")
     diag.progress = int(record.get("progress") or 0)
     diag.request_id = str(record.get("request_id") or record.get("client_request_id") or "")
-    diag.error = _scrub_paths(str(record.get("error") or record.get("error_message") or ""))
+    diag.error = _redact_sensitive_text(str(record.get("error") or record.get("error_message") or ""))
     diag.created_at = float(record.get("created_at") or record.get("created") or 0.0)
     finished = record.get("finished_at")
     if finished is None:
@@ -413,7 +416,7 @@ def build_diagnostic(job_id: str, *, log_tail_lines: int = 200) -> JobDiagnostic
             diag.log_slice = LogSlice(
                 source=server_log_path(),
                 line_count=len(matches),
-                body=_scrub_paths(body),
+                body=_redact_sensitive_text(body),
             )
     return diag
 

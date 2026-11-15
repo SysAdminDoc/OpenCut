@@ -42,7 +42,7 @@ def test_packet_includes_crash_log_when_present(tmp_path, monkeypatch):
     (fake_data / "crash.log").write_text("traceback line\nanother line\n", encoding="utf-8")
     (fake_data / "server.log").write_text("info line\n", encoding="utf-8")
 
-    monkeypatch.setattr(cp, "_scrub_paths", lambda s: s)
+    monkeypatch.setattr(cp, "_redact_sensitive_text", lambda s: s)
     monkeypatch.setattr("os.path.expanduser", lambda p: str(fake_home) if p == "~" else p)
 
     result = cp.build_packet(output_path=tmp_path / "packet.zip", include_jobs=False)

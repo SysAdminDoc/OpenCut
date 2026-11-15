@@ -21,6 +21,8 @@ def opened(monkeypatch, tmp_path):
 
     monkeypatch.setattr(user_data, "OPENCUT_DIR", str(tmp_path))
     monkeypatch.setattr(system_module, "_user_data_dir", lambda: str(tmp_path))
+    # server_log resolves through the same helper the server's file handler uses.
+    monkeypatch.setattr(system_module, "server_log_path", lambda home=None: str(tmp_path / "server.log"))
     monkeypatch.setitem(
         _OPEN_PATH_FIXED_TARGETS, "log_dir", lambda: str(tmp_path)
     )

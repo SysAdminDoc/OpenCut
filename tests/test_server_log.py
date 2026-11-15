@@ -145,3 +145,63 @@ def test_export_includes_rotated_lines_and_the_crash_log(fake_home, client, monk
     text = resp.get_data(as_text=True)
     assert text.index("before rotation") < text.index("after rotation")
     assert "Traceback marker" in text
+
+
+def test_secrets_the_server_logged_never_reach_a_bundle(server_logger, fake_home, tmp_path, monkeypatch, client):
+    import opencut.routes.settings as settings_routes
+
+    monkeypatch.setattr(settings_routes, "OPENCUT_DIR", str(fake_home / ".opencut"))
+    job_id = f"job-{uuid.uuid4().hex[:8]}"
+    secrets = {
+        "bearer": "abcDEF1234567890tokenvalue",
+        "openai": "sk-proj-AAAAbbbbCCCCdddd1234",
+        "userinfo": "hunter2pass",
+        "srt": "MySrtPass12345",
+        "shaka": "fedcba9876543210fedcba9876543210",
+    }
+    server_logger.warning("%s request Authorization: Bearer %s", job_id, secrets["bearer"])
+    server_logger.warning("%s calling api_key=%s", job_id, secrets["openai"])
+    server_logger.warning("%s source https://alice:%s@example.com/feed", job_id, secrets["userinfo"])
+    server_logger.warning("%s output srt://host:9000?mode=caller&passphrase=%s", job_id, secrets["srt"])
+    server_logger.warning(
+        "%s packager --keys label=PRIMARY:key_id=00112233445566778899aabbccddeeff:key=%s",
+        job_id,
+        secrets["shaka"],
+    )
+    for handler in server_logger.handlers:
+        handler.flush()
+    raw = (fake_home / ".opencut" / "server.log").read_text(encoding="utf-8")
+    assert all(value in raw for value in secrets.values())
+
+    from opencut.core import crash_packet, issue_report, job_diagnostics
+
+    report = issue_report.bundle(title="t", description="d")
+    packet = crash_packet.build_packet(output_path=tmp_path / "packet.zip", include_jobs=False)
+    with zipfile.ZipFile(packet.output_path) as zf:
+        packet_log = zf.read("server.log").decode("utf-8")
+    monkeypatch.setattr(
+        job_diagnostics,
+        "_resolve_job",
+        lambda _job_id: {
+            "status": "error",
+            "error": f"upload failed for srt://host:9000?passphrase={secrets['srt']}",
+            "params": {"url": f"https://alice:{secrets['userinfo']}@example.com/x", "api_key": secrets["openai"]},
+        },
+    )
+    diag = job_diagnostics.build_diagnostic(job_id)
+    resp = client.get("/logs/export")
+    assert resp.status_code == 200
+
+    outputs = {
+        "issue report": report["body"],
+        "crash packet": packet_log,
+        "job log slice": diag.log_slice.body if diag.log_slice else "",
+        "job error": diag.error,
+        "job metadata": str(diag.metadata),
+        "log export": resp.get_data(as_text=True),
+    }
+    assert job_id in outputs["job log slice"]
+    for where, text in outputs.items():
+        for name, value in secrets.items():
+            assert value not in text, f"{name} secret leaked into the {where}"
+    assert "[REDACTED]" in outputs["log export"]

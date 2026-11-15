@@ -37,7 +37,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
-from opencut.core.issue_report import _scrub_paths, _tail_file
+from opencut.core.issue_report import _redact_sensitive_text, _tail_file
 from opencut.openapi_registry import openapi_response_schema
 from opencut.server_log import SERVER_LOG_NAME, server_log_tail
 
@@ -120,7 +120,7 @@ def _environment_block() -> str:
         if len(pip_names) > 80:
             rows.append(f"pip_distributions_truncated={len(pip_names) - 80}")
 
-    body = _scrub_paths("\n".join(rows) + "\n")
+    body = _redact_sensitive_text("\n".join(rows) + "\n")
     return body
 
 
@@ -132,12 +132,12 @@ def _recent_jobs_block(limit: int = 50) -> Optional[str]:
             from opencut.jobs import _jobs
 
             entries = list(_jobs.values())[-limit:]
-            return _scrub_paths(json.dumps(entries, default=str, indent=2)) + "\n"
+            return _redact_sensitive_text(json.dumps(entries, default=str, indent=2)) + "\n"
         except Exception:
             return None
     try:
         entries = list(iter_recent_jobs(limit))
-        return _scrub_paths(json.dumps(entries, default=str, indent=2)) + "\n"
+        return _redact_sensitive_text(json.dumps(entries, default=str, indent=2)) + "\n"
     except Exception:
         return None
 
@@ -156,8 +156,8 @@ def build_packet(
     data_dir = Path(os.path.expanduser("~")) / ".opencut"
     crash_log = data_dir / "crash.log"
 
-    crash_text = _scrub_paths(_tail_file(str(crash_log), max_bytes=crash_tail_bytes)) if crash_log.exists() else ""
-    log_text = _scrub_paths("\n".join(server_log_tail(max_lines=log_tail_lines)))
+    crash_text = _redact_sensitive_text(_tail_file(str(crash_log), max_bytes=crash_tail_bytes)) if crash_log.exists() else ""
+    log_text = _redact_sensitive_text("\n".join(server_log_tail(max_lines=log_tail_lines)))
     environment_text = _environment_block()
     jobs_text = _recent_jobs_block() if include_jobs else None
 

@@ -58,6 +58,7 @@ from opencut.security import (
     validate_path,
     verify_destructive_confirm_token,
 )
+from opencut.server_log import server_log_path
 from opencut.user_data import load_whisper_settings, save_whisper_settings
 
 logger = logging.getLogger("opencut")
@@ -84,7 +85,7 @@ def _user_data_dir() -> str:
 #: identifier to a resolver that returns a path this server owns, so the
 #: browser context only ever sends an opaque name.
 _OPEN_PATH_FIXED_TARGETS = {
-    "server_log": lambda: os.path.join(_user_data_dir(), "server.log"),
+    "server_log": lambda: server_log_path(),
     "crash_log": lambda: os.path.join(_user_data_dir(), "crash.log"),
     "security_audit_log": lambda: os.path.join(_user_data_dir(), "security_audit.jsonl"),
     "log_dir": _user_data_dir,

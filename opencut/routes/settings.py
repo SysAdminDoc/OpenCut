@@ -15,7 +15,7 @@ from importlib import resources
 from flask import Blueprint, jsonify, request, send_file
 
 from opencut import __version__, credential_store
-from opencut.core.issue_report import _scrub_paths, _tail_file
+from opencut.core.issue_report import _redact_sensitive_text, _tail_file
 from opencut.core.workflow import compile_workflow_template, validate_workflow_steps
 from opencut.errors import safe_error
 from opencut.helpers import OPENCUT_DIR, compute_estimate
@@ -691,7 +691,8 @@ def export_logs():
     """Export the server log tail and the crash log as one text file.
 
     The server log tail reaches into the rotated ``server.log.N`` files
-    when the live one is short. Home paths are replaced with ``~``.
+    when the live one is short. Home paths are replaced with ``~`` and
+    credentials the server logged are redacted.
     """
     sections = []
     server_lines = server_log_tail(max_lines=LOG_EXPORT_MAX_LINES)
@@ -705,7 +706,7 @@ def export_logs():
         sections.append("===== crash.log =====\n" + crash_text.rstrip("\n"))
     if not sections:
         return jsonify({"error": "No logs found"}), 404
-    payload = _scrub_paths("\n\n".join(sections) + "\n").encode("utf-8")
+    payload = _redact_sensitive_text("\n\n".join(sections) + "\n").encode("utf-8")
     return send_file(io.BytesIO(payload), mimetype="text/plain", as_attachment=True,
                      download_name="opencut_logs.txt")
 

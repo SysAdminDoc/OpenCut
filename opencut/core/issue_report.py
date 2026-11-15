@@ -45,7 +45,7 @@ REDACTION_MARKER = "[REDACTED]"
 
 _SECRET_NAME = (
     r"(?:api[_-]?key|access[_-]?token|auth(?:entication)?[_-]?token|"
-    r"bearer[_-]?token|client[_-]?secret|credential|password|passwd|"
+    r"bearer[_-]?token|client[_-]?secret|credential|passphrase|password|passwd|"
     r"private[_-]?key|refresh[_-]?token|secret(?:[_-]?key)?|"
     r"session[_-]?token|signature)"
 )
@@ -76,8 +76,10 @@ _URL_USERINFO_RE = re.compile(
     r"(?P<prefix>\b[a-z][a-z0-9+.-]*://)[^\s/@:]+:[^\s/@]+@",
     re.IGNORECASE,
 )
+# ``:`` covers colon-separated option lists such as Shaka Packager's
+# ``--keys label=X:key_id=...:key=...``.
 _QUERY_SECRET_RE = re.compile(
-    rf"(?P<prefix>(?:[?&;]|&amp;){_QUERY_SECRET_NAME}=)"
+    rf"(?P<prefix>(?:[?&;:]|&amp;){_QUERY_SECRET_NAME}=)"
     r"(?P<value>[^&#\s\"'<>\r\n]*)",
     re.IGNORECASE,
 )
