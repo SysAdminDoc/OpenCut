@@ -55,37 +55,30 @@ def install_whisper(job_id, filepath, data):
         _update_job(job_id, progress=5, message=f"Installing {backend}...")
         logger.info(f"Starting Whisper install: {backend}")
 
-        # Resolve Python executable (frozen builds can't use sys.executable for pip)
-        from opencut.security import _find_system_python
-        if getattr(sys, "frozen", False):
-            _pip_python = _find_system_python() or sys.executable
-        else:
-            _pip_python = sys.executable
+        from opencut.security import (
+            install_python,
+            pip_install_variants,
+            target_import_env,
+            user_packages_dir,
+        )
+        _pip_python = install_python()
 
         # Permission fallback: --target to a writable directory
-        _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+        _target_dir = user_packages_dir()
         os.makedirs(_target_dir, exist_ok=True)
         if _target_dir not in sys.path:
             sys.path.append(_target_dir)
 
         # Build pip commands with permission fallbacks baked in
         def _pip_cmd(pkg, *extra_flags):
-            """Return list of pip commands: normal, --user, --target."""
+            """Return list of pip commands: normal, --user, --target (frozen: --target only)."""
             base = [_pip_python, "-m", "pip", "install"] + list(extra_flags) + [pkg]
-            return [
-                base + ["--progress-bar", "on"],
-                base + ["--user", "--progress-bar", "on"],
-                base + ["--target", _target_dir, "--progress-bar", "on"],
-            ]
+            return [cmd + ["--progress-bar", "on"] for cmd in pip_install_variants(base, _target_dir)]
 
         def _pip_pre(pkg, *extra_flags):
             """Return list of pre-install commands with fallbacks."""
             base = [_pip_python, "-m", "pip", "install"] + list(extra_flags) + [pkg, "--quiet"]
-            return [
-                base,
-                base + ["--user"],
-                base + ["--target", _target_dir],
-            ]
+            return pip_install_variants(base, _target_dir)
 
         # Strategy list - try each in order until one works
         strategies = []
@@ -222,13 +215,14 @@ def install_whisper(job_id, filepath, data):
                             continue
                         verify_cmd = [_pip_python, "-c", f"import {actual_backend}; print('ok')"]
 
-                # Also try importing directly in-process (for --target installs)
+                # The target directory is on the path, as it is for the server.
                 verify = _sp.run(
                     verify_cmd,
                     capture_output=True,
                     text=True,
                     timeout=30,
                     check=False,
+                    env=target_import_env(_target_dir),
                 )
 
                 if verify.returncode == 0 and "ok" in verify.stdout:
@@ -356,23 +350,25 @@ def whisper_reinstall(job_id, filepath, data):
     try:
         import subprocess as _sp
 
-        # Resolve Python executable (frozen builds can't use sys.executable for pip)
-        from opencut.security import _find_system_python
-        if getattr(sys, "frozen", False):
-            _pip_python = _find_system_python() or sys.executable
-        else:
-            _pip_python = sys.executable
+        from opencut.security import (
+            install_python,
+            pip_install_variants,
+            target_import_env,
+            user_packages_dir,
+        )
+        _pip_python = install_python()
+        frozen = bool(getattr(sys, "frozen", False))
 
-        _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+        _target_dir = user_packages_dir()
         os.makedirs(_target_dir, exist_ok=True)
         if _target_dir not in sys.path:
             sys.path.append(_target_dir)
 
         def _run_pip_with_fallback(args, timeout=300):
-            """Try pip command, then --user, then --target fallback."""
+            """Try pip command, then --user, then --target fallback (frozen: --target only)."""
             base = [_pip_python, "-m", "pip"] + args
             result = None
-            for variant in [base, base + ["--user"], base + ["--target", _target_dir]]:
+            for variant in pip_install_variants(base, _target_dir):
                 try:
                     result = _sp.run(
                         variant,
@@ -391,7 +387,9 @@ def whisper_reinstall(job_id, filepath, data):
         _update_job(job_id, progress=5, message="Uninstalling existing Whisper packages...")
         logger.info("Reinstall: Uninstalling existing packages")
 
-        uninstall_pkgs = ["faster-whisper", "openai-whisper", "whisperx"]
+        # A packaged server never loads the system Python's copies, so they
+        # belong to the user; the --target install below replaces OpenCut's own.
+        uninstall_pkgs = [] if frozen else ["faster-whisper", "openai-whisper", "whisperx"]
         for pkg in uninstall_pkgs:
             with suppress(Exception):
                 _sp.run(
@@ -462,11 +460,7 @@ def whisper_reinstall(job_id, filepath, data):
 
         # Try each permission variant for the main install
         install_ok = False
-        for install_cmd in [
-            [_pip_python, "-m", "pip"] + install_base,
-            [_pip_python, "-m", "pip"] + install_base + ["--user"],
-            [_pip_python, "-m", "pip"] + install_base + ["--target", _target_dir],
-        ]:
+        for install_cmd in pip_install_variants([_pip_python, "-m", "pip"] + install_base, _target_dir):
             proc = _sp.Popen(install_cmd, stdout=_sp.PIPE, stderr=_sp.STDOUT, text=True)
             _register_job_process(job_id, proc)
 
@@ -494,10 +488,14 @@ def whisper_reinstall(job_id, filepath, data):
             logger.warning("Reinstall pip variant failed, trying next")
 
         if not install_ok:
-            raise RuntimeError(
-                "pip install failed -- permission denied on all attempts. "
-                "Try running as administrator or: pip install faster-whisper --user --force-reinstall"
-            )
+            if frozen:
+                advice = (
+                    f'Try running: "{_pip_python}" -m pip install {backend} '
+                    f'--target "{_target_dir}" --upgrade'
+                )
+            else:
+                advice = f"Try running as administrator or: pip install {backend} --user --force-reinstall"
+            raise RuntimeError(f"pip install failed on every attempt. {advice}")
 
         # Step 5: Save CPU mode setting
         _update_job(job_id, progress=85, message="Saving settings...")
@@ -510,6 +508,8 @@ def whisper_reinstall(job_id, filepath, data):
 
         if backend == "faster-whisper":
             verify_cmd = [_pip_python, "-c", "from faster_whisper import WhisperModel; print('ok')"]
+        elif backend == "whisperx":
+            verify_cmd = [_pip_python, "-c", "import whisperx; print('ok')"]
         else:
             verify_cmd = [_pip_python, "-c", "import whisper; print('ok')"]
 
@@ -519,6 +519,7 @@ def whisper_reinstall(job_id, filepath, data):
             text=True,
             timeout=30,
             check=False,
+            env=target_import_env(_target_dir),
         )
 
         if verify.returncode == 0 and "ok" in verify.stdout:

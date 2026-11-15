@@ -363,21 +363,113 @@ def validate_path(path: str, allowed_base: str = None) -> str:
 # ---------------------------------------------------------------------------
 # Safe pip install
 # ---------------------------------------------------------------------------
+def user_packages_dir() -> str:
+    """``~/.opencut/packages``, where a packaged server finds add-on packages."""
+    return os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+
+
+_VERSION_PROBE = "import sys; print(sys.executable); print('%d.%d' % sys.version_info[:2])"
+
+
+def _probe_interpreter(cmd: list) -> Optional[Tuple[str, Tuple[int, int]]]:
+    """Return ``(real executable, (major, minor))`` for an interpreter command."""
+    try:
+        result = subprocess.run(
+            [*cmd, "-c", _VERSION_PROBE], capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    lines = [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
+    if result.returncode != 0 or len(lines) < 2:
+        return None
+    try:
+        major, minor = (int(part) for part in lines[-1].split("."))
+    except ValueError:
+        return None
+    return lines[-2], (major, minor)
+
+
 def _find_system_python() -> Optional[str]:
-    """Find system Python executable when running as a frozen (PyInstaller) build."""
-    for name in ("python", "python3", "py"):
+    """Find a Python that can install packages this frozen build will load.
+
+    A packaged server imports add-on packages from ``~/.opencut/packages`` with
+    its bundled CPython, so whatever installs them has to be the same minor
+    version. A native module built for another one doesn't raise ImportError,
+    it aborts the server on import, the way issue #8's server died. Returns the
+    interpreter's real executable, or None when no matching Python is present.
+    """
+    want = sys.version_info[:2]
+    tag = f"{want[0]}.{want[1]}"
+    candidates = []
+    launcher = shutil.which("py")
+    if launcher:
+        candidates.append([launcher, f"-{tag}"])
+    for name in (f"python{tag}", "python3", "python"):
         path = shutil.which(name)
         if path:
-            try:
-                result = subprocess.run(
-                    [path, "--version"], capture_output=True, text=True, timeout=10
-                )
-                if result.returncode == 0:
-                    logger.debug("Found system Python: %s (%s)", path, result.stdout.strip())
-                    return path
-            except Exception:
-                continue
+            candidates.append([path])
+    skipped = []
+    for cmd in candidates:
+        probed = _probe_interpreter(cmd)
+        if probed is None:
+            continue
+        executable, version = probed
+        if version == want:
+            logger.debug("Package installs use %s (Python %s)", executable, tag)
+            return executable
+        skipped.append(f"{executable} (Python {version[0]}.{version[1]})")
+    if skipped:
+        logger.info("No Python %s for package installs; skipped %s", tag, ", ".join(skipped))
     return None
+
+
+def frozen_install_requirement() -> str:
+    """Why a packaged build can't install add-on packages, for user-facing errors."""
+    tag = f"{sys.version_info[0]}.{sys.version_info[1]}"
+    return (
+        f"The packaged OpenCut server runs Python {tag} and loads add-on packages from "
+        f"{user_packages_dir()}, so installing them needs Python {tag}. "
+        f"Install Python {tag} from python.org, then try again."
+    )
+
+
+def install_python() -> str:
+    """The interpreter that runs pip for add-on packages.
+
+    From source that's this interpreter. A frozen build's ``sys.executable`` is
+    the server itself, so running it with ``-m pip`` starts another server.
+    """
+    if not getattr(sys, "frozen", False):
+        return sys.executable
+    python = _find_system_python()
+    if not python:
+        raise RuntimeError(f"Cannot install add-on packages. {frozen_install_requirement()}")
+    return python
+
+
+def pip_install_variants(base: list, target_dir: str) -> list:
+    """``pip install`` commands to try in order, from ``base`` (which names the packages).
+
+    A packaged server imports add-on packages only from ``target_dir``. An
+    install anywhere else succeeds and changes nothing, and without
+    ``--upgrade`` pip leaves an existing copy there untouched.
+    """
+    targeted = [*base, "--target", target_dir]
+    if getattr(sys, "frozen", False):
+        return [[*targeted, "--upgrade"]]
+    return [list(base), [*base, "--user"], targeted]
+
+
+def target_import_env(target_dir: str) -> dict:
+    """Environment for a verify subprocess that should see ``--target`` installs.
+
+    The directory goes last, matching the server, which appends it to sys.path.
+    """
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        part for part in (env.get("PYTHONPATH", ""), target_dir) if part
+    )
+    return env
 
 
 PILLOW_RUNTIME_REQUIREMENT = "Pillow>=12.3.0,<13"
@@ -466,8 +558,9 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
     3. ``pip install --user <package>``
     4. ``pip install --break-system-packages <package>``  (only inside a venv)
 
-    When running as a frozen (PyInstaller) build, uses system Python
-    from PATH instead of ``sys.executable`` (which points to the exe).
+    A frozen (PyInstaller) build runs pip with a system Python of its own
+    minor version, never ``sys.executable`` (the server exe), and installs
+    only with ``--target``: the packaged server reads nothing else.
 
     Permission errors (Errno 13) are caught and immediately skip to the
     next strategy instead of failing the entire install.
@@ -476,21 +569,18 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
     Raises ``RuntimeError`` if all strategies fail.
     """
     package = runtime_security_requirement(package)
+    frozen = bool(getattr(sys, "frozen", False))
 
-    # Frozen builds can't use sys.executable for pip — find system Python
-    if getattr(sys, "frozen", False):
+    if frozen:
         python = _find_system_python()
         if not python:
-            raise RuntimeError(
-                f"Cannot install {package}: Python not found in PATH. "
-                "Install Python from python.org and ensure it is on PATH."
-            )
+            raise RuntimeError(f"Cannot install {package}. {frozen_install_requirement()}")
     else:
         python = sys.executable
 
     # Prefer pre-built binary wheels (avoids needing Rust/C compilers)
     # ~/.opencut/packages — the ONLY directory guaranteed writable without admin
-    _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+    _target_dir = user_packages_dir()
     os.makedirs(_target_dir, exist_ok=True)
     # Append to sys.path so target installs are available without outranking
     # stdlib, bundled modules, or the active environment's site-packages.
@@ -506,8 +596,10 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
         ("--user install", _base + ["--user"]),
     ]
 
+    if frozen:
+        strategies = [("--target (user-local)", pip_install_variants(_base, _target_dir)[0])]
     # Only allow --break-system-packages inside a virtual environment
-    if _in_virtualenv():
+    elif _in_virtualenv():
         strategies.append(
             ("--break-system-packages", _base + ["--break-system-packages"])
         )
