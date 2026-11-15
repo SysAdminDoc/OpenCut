@@ -20,6 +20,7 @@ from opencut.core.caption_interchange import (
     export_caption_document,
 )
 from opencut.core.caption_line_breaks import caption_lines, timed_caption_chunks
+from opencut.core.timecode_utils import seconds_to_clock_time
 
 logger = logging.getLogger("opencut")
 
@@ -113,22 +114,12 @@ def _seconds_to_smpte(s: float, fps: float = 30.0) -> str:
 
 def _seconds_to_ttml(s: float) -> str:
     """Convert seconds to TTML timestamp HH:MM:SS.mmm."""
-    if s < 0:
-        s = 0.0
-    h = int(s // 3600)
-    m = int((s % 3600) // 60)
-    sec = s % 60
-    return f"{h:02d}:{m:02d}:{sec:06.3f}"
+    return seconds_to_clock_time(s)
 
 
 def _seconds_to_vtt(s: float) -> str:
     """Convert seconds to VTT timestamp HH:MM:SS.mmm."""
-    if s < 0:
-        s = 0.0
-    h = int(s // 3600)
-    m = int((s % 3600) // 60)
-    sec = s % 60
-    return f"{h:02d}:{m:02d}:{sec:06.3f}"
+    return seconds_to_clock_time(s)
 
 
 # ---------------------------------------------------------------------------

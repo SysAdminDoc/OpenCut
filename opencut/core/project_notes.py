@@ -17,6 +17,8 @@ import time
 import uuid
 from typing import List, Optional
 
+from opencut.core.timecode_utils import seconds_to_clock_time
+
 logger = logging.getLogger("opencut")
 
 _OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
@@ -259,7 +261,4 @@ def _export_csv(notes: List[dict]) -> str:
 
 def _fmt_timestamp(seconds: float) -> str:
     """Format seconds as HH:MM:SS.mmm."""
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = seconds % 60
-    return f"{h:02d}:{m:02d}:{s:06.3f}"
+    return seconds_to_clock_time(seconds)

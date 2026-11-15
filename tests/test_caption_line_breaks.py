@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import subprocess
 
@@ -377,3 +378,48 @@ def test_ffmpeg_drawtext_cjk_smoke_when_font_available(tmp_path):
     assert result.returncode == 0, result.stderr[-1000:]
     assert output.exists()
     assert output.stat().st_size > 0
+
+
+def test_positioned_webvtt_carries_a_rounded_second_into_the_minute(tmp_path):
+    from opencut.core.broadcast_caption import CaptionSegment as BroadcastSegment
+    from opencut.core.broadcast_caption import export_webvtt_positioned
+
+    text = " ".join(["abcd"] * 16 + ["efgh"] * 16)
+    output = tmp_path / "positioned.vtt"
+    export_webvtt_positioned(
+        [BroadcastSegment(index=1, start=49.9996, end=69.9996, text=text, row=15)], str(output)
+    )
+
+    stamps = [
+        stamp
+        for line in output.read_text(encoding="utf-8").splitlines()
+        if "-->" in line
+        for stamp in line.split()[:3:2]
+    ]
+    assert len(stamps) >= 4
+    assert all(re.fullmatch(r"\d{2}:[0-5]\d:[0-5]\d\.\d{3}", stamp) for stamp in stamps), stamps
+    assert "00:01:00.000" in stamps
+
+
+@pytest.mark.parametrize(
+    "module_name, func_name, mark",
+    [
+        ("opencut.core.broadcast_caption", "_seconds_to_vtt", "."),
+        ("opencut.core.broadcast_caption", "_seconds_to_ttml", "."),
+        ("opencut.core.subtitle_shot_aware", "_seconds_to_srt", ","),
+        ("opencut.core.subtitle_shot_aware", "_seconds_to_vtt", "."),
+        ("opencut.core.sdh_formatter", "_seconds_to_srt", ","),
+        ("opencut.core.sdh_formatter", "_seconds_to_vtt", "."),
+        ("opencut.core.multilang_subtitle", "_seconds_to_srt", ","),
+        ("opencut.core.multilang_subtitle", "_seconds_to_vtt", "."),
+        ("opencut.core.project_notes", "_fmt_timestamp", "."),
+        ("opencut.core.silence", "_format_time", "."),
+    ],
+)
+def test_clock_formatters_never_print_sixty_seconds(module_name, func_name, mark):
+    import importlib
+
+    fmt = getattr(importlib.import_module(module_name), func_name)
+    assert fmt(59.9996) == f"00:01:00{mark}000"
+    assert fmt(3599.9996) == f"01:00:00{mark}000"
+    assert fmt(61.25) == f"00:01:01{mark}250"

@@ -90,6 +90,11 @@ Notable changes to OpenCut. The git history carries the detailed record.
   flashes by. Each piece keeps the profile's minimum duration (0.833 s for
   Netflix) when the cue is long enough for that, and the pieces split the time
   evenly when it isn't.
+- A cue time a fraction of a millisecond short of a whole minute could be
+  written as `00:00:60.000`, which players reject. Positioned WebVTT, TTML,
+  the SDH, multi-language and shot-aware SRT and VTT exports, project note
+  exports and the silence summary now round the whole time first, so it
+  reads `00:01:00.000`.
 
 ### Fixed: EDL and ADR timecode at 23.976, 29.97 and 59.94
 

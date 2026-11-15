@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
 from opencut.core.caption_line_breaks import timed_caption_chunks, wrap_caption_text
+from opencut.core.timecode_utils import seconds_to_clock_time
 
 logger = logging.getLogger("opencut")
 
@@ -169,22 +170,12 @@ def _ts_to_seconds(ts: str) -> float:
 
 def _seconds_to_srt(s: float) -> str:
     """Convert seconds to SRT timestamp HH:MM:SS,mmm."""
-    if s < 0:
-        s = 0.0
-    h = int(s // 3600)
-    m = int((s % 3600) // 60)
-    sec = s % 60
-    return f"{h:02d}:{m:02d}:{sec:06.3f}".replace(".", ",")
+    return seconds_to_clock_time(s, ",")
 
 
 def _seconds_to_vtt(s: float) -> str:
     """Convert seconds to VTT timestamp HH:MM:SS.mmm."""
-    if s < 0:
-        s = 0.0
-    h = int(s // 3600)
-    m = int((s % 3600) // 60)
-    sec = s % 60
-    return f"{h:02d}:{m:02d}:{sec:06.3f}"
+    return seconds_to_clock_time(s)
 
 
 def _seconds_to_ass_ts(s: float) -> str:

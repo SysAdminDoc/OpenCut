@@ -11,6 +11,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
+from opencut.core.timecode_utils import seconds_to_clock_time
 from opencut.helpers import build_edge_fade_filter, get_ffmpeg_path
 
 from ..utils.config import SilenceConfig
@@ -724,10 +725,7 @@ def _format_time(seconds) -> str:
         s = 0.0
     if s != s or s in (float("inf"), float("-inf")) or s < 0:
         s = 0.0
-    hours = int(s // 3600)
-    minutes = int((s % 3600) // 60)
-    secs = s % 60
-    return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
+    return seconds_to_clock_time(s)
 
 
 # ---------------------------------------------------------------------------

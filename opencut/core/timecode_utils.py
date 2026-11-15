@@ -189,6 +189,24 @@ def ndf_timecode_to_seconds(timecode: str, fps: float) -> float:
     return timecode_to_frames(timecode, nominal, drop_frame=False) / float(fps)
 
 
+def seconds_to_clock_time(seconds: float, decimal_mark: str = ".") -> str:
+    """``HH:MM:SS.mmm`` (SRT passes ``decimal_mark=","``), rounded to the
+    millisecond.
+
+    The whole time is rounded before it is split, so 59.9996 s carries
+    into ``00:01:00.000`` instead of printing an invalid ``00:00:60.000``.
+    Negative times clamp to zero.
+    """
+    seconds = float(seconds)
+    if not math.isfinite(seconds):
+        raise ValueError(f"Time must be a finite number of seconds, got {seconds!r}")
+    millis = int(round(max(0.0, seconds) * 1000))
+    hours, millis = divmod(millis, 3_600_000)
+    minutes, millis = divmod(millis, 60_000)
+    secs, millis = divmod(millis, 1000)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}{decimal_mark}{millis:03d}"
+
+
 def _frames_to_ndf_timecode(frame_num: int, fps: float) -> str:
     """Non-drop-frame: simple division."""
     fps_int = round(fps)
