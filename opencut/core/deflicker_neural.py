@@ -76,8 +76,10 @@ def check_neural_deflicker_available() -> bool:
 
 
 def check_ffmpeg_deflicker_available() -> bool:
-    """FFmpeg deflicker is always available in bundled builds."""
-    return bool(get_ffmpeg_path())
+    """FFmpeg deflicker is available once the resolved FFmpeg clears the security floor."""
+    from opencut.checks import ffmpeg_security_available
+
+    return ffmpeg_security_available()
 
 
 # ---------------------------------------------------------------------------

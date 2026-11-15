@@ -281,8 +281,8 @@ def validate_imf_package(package_dir: str, *, timeout: int = 900) -> ValidationR
 # Loudness (ITU-R BS.1770 / EBU R 128)
 # ---------------------------------------------------------------------------
 def check_loudness_validator_available() -> bool:
-    from opencut.helpers import get_ffmpeg_path
-    return bool(get_ffmpeg_path())
+    from opencut.checks import ffmpeg_security_available
+    return ffmpeg_security_available()
 
 
 #: The fixed offset in the BS.1770 loudness equation.

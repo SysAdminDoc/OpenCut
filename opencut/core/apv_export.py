@@ -94,6 +94,11 @@ _AVAILABILITY_CACHE: Dict[str, Optional[bool]] = {APV_ENCODER: None, "decoder": 
 def _probe(kind: str, pattern: str, cache_key: str) -> bool:
     if _AVAILABILITY_CACHE[cache_key] is not None:
         return bool(_AVAILABILITY_CACHE[cache_key])
+    from opencut.checks import ffmpeg_security_available
+
+    # A refused binary isn't cached: replacing it should be picked up.
+    if not ffmpeg_security_available():
+        return False
     ff = get_ffmpeg_path()
     if not ff:
         _AVAILABILITY_CACHE[cache_key] = False

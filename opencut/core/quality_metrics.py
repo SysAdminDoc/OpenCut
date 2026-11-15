@@ -76,11 +76,17 @@ class QualityReport:
 
 def check_quality_metrics_available() -> bool:
     """FFmpeg is required; SSIM/PSNR are always available once FFmpeg is."""
-    return bool(get_ffmpeg_path())
+    from opencut.checks import ffmpeg_security_available
+
+    return ffmpeg_security_available()
 
 
 def check_vmaf_available() -> bool:
     """Probe FFmpeg's filter list for libvmaf."""
+    from opencut.checks import ffmpeg_security_available
+
+    if not ffmpeg_security_available():
+        return False
     ff = get_ffmpeg_path()
     if not ff:
         return False

@@ -76,6 +76,11 @@ def check_srt_available() -> bool:
     """Cache-lookup probe of FFmpeg for SRT protocol support."""
     if _AVAILABILITY_CACHE["libsrt"] is not None:
         return bool(_AVAILABILITY_CACHE["libsrt"])
+    from opencut.checks import ffmpeg_security_available
+
+    # A refused binary isn't cached: replacing it should be picked up.
+    if not ffmpeg_security_available():
+        return False
     ff = get_ffmpeg_path()
     if not ff:
         _AVAILABILITY_CACHE["libsrt"] = False

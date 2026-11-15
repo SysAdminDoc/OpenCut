@@ -122,6 +122,88 @@ def test_feature_checks_and_preflight_report_unsafe_ffmpeg_unavailable(monkeypat
     assert "8.1.3+" in result["fix"]
 
 
+_FEATURE_PROBES = (
+    ("opencut.core.apv_export", "check_apv_available"),
+    ("opencut.core.apv_export", "check_apv_decode_available"),
+    ("opencut.core.srt_streaming", "check_srt_available"),
+    ("opencut.core.vvc_export", "check_vvc_available"),
+    ("opencut.core.quality_metrics", "check_quality_metrics_available"),
+    ("opencut.core.quality_metrics", "check_vmaf_available"),
+    ("opencut.core.deflicker_neural", "check_ffmpeg_deflicker_available"),
+    ("opencut.core.standards_validators", "check_loudness_validator_available"),
+)
+_CACHED_PROBE_MODULES = (
+    "opencut.core.apv_export",
+    "opencut.core.srt_streaming",
+    "opencut.core.vvc_export",
+)
+
+
+def _clear_probe_caches():
+    for name in _CACHED_PROBE_MODULES:
+        cache = importlib.import_module(name)._AVAILABILITY_CACHE
+        for key in cache:
+            cache[key] = None
+
+
+def _install_ffmpeg_resolver(monkeypatch, resolver):
+    # Feature modules bind get_ffmpeg_path at import time, so each binding is
+    # replaced alongside the shared one.
+    monkeypatch.setattr(helpers, "get_ffmpeg_path", resolver)
+    for module_name, _ in _FEATURE_PROBES:
+        module = importlib.import_module(module_name)
+        if hasattr(module, "get_ffmpeg_path"):
+            monkeypatch.setattr(module, "get_ffmpeg_path", resolver)
+
+
+@pytest.mark.parametrize(("module_name", "probe_name"), _FEATURE_PROBES)
+def test_feature_probe_reports_a_refused_ffmpeg_unavailable(monkeypatch, module_name, probe_name):
+    grade = fp.check_security_floor(UNSAFE_BANNER)
+
+    def _refuse():
+        raise fp.FfmpegSecurityError("ffmpeg", grade)
+
+    _install_ffmpeg_resolver(monkeypatch, _refuse)
+    _clear_probe_caches()
+    checks.clear_check_failures()
+    try:
+        probe = getattr(importlib.import_module(module_name), probe_name)
+        assert probe() is False
+        assert "ffmpeg_security_floor" in checks.get_check_failures()
+    finally:
+        _clear_probe_caches()
+
+
+def test_a_refused_ffmpeg_is_not_cached_as_missing_once_it_is_replaced(monkeypatch):
+    grade = fp.check_security_floor(UNSAFE_BANNER)
+    state = {"safe": False}
+
+    def _resolve():
+        if not state["safe"]:
+            raise fp.FfmpegSecurityError("ffmpeg", grade)
+        return "replaced-ffmpeg"
+
+    listing = " V..... liboapv  APV\n V..... libvvenc  VVC\n V..... apv  APV\nsrt\n"
+    _install_ffmpeg_resolver(monkeypatch, _resolve)
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **_kwargs: subprocess.CompletedProcess(cmd, 0, listing, ""),
+    )
+    _clear_probe_caches()
+    try:
+        probes = [
+            getattr(importlib.import_module(module_name), probe_name)
+            for module_name, probe_name in _FEATURE_PROBES
+            if module_name in _CACHED_PROBE_MODULES
+        ]
+        assert [probe() for probe in probes] == [False] * len(probes)
+        state["safe"] = True
+        assert [probe() for probe in probes] == [True] * len(probes)
+    finally:
+        _clear_probe_caches()
+
+
 def test_capability_probe_reports_unsafe_binary_unavailable(monkeypatch, tmp_path):
     binary = tmp_path / "ffmpeg"
     binary.write_bytes(b"unsafe")
