@@ -519,3 +519,23 @@ def test_built_metadata_carries_the_licence_expression(tmp_path):
     assert metadata.get_all("License-File") == ["LICENSE"]
     # The legacy free-text header must not also be emitted.
     assert metadata.get("License") is None
+
+
+def test_runtime_rembg_install_keeps_the_advisory_floor_and_extras():
+    """rembg auto-installs (bg_replace_ai, greenscreen_free, video_ai) must
+    land on the same GHSA-qr6x-7v33-6qmg floor pyproject declares, and
+    ``rembg[gpu]`` must keep its extra."""
+    from opencut.security import runtime_security_requirement
+
+    optional = _pyproject()["project"]["optional-dependencies"]
+    declared = {
+        spec for specs in optional.values() for spec in specs if spec.startswith("rembg")
+    }
+    assert declared == {"rembg>=2.0.82,<3"}
+    floor = declared.pop()
+
+    assert runtime_security_requirement("rembg") == floor
+    assert runtime_security_requirement("rembg==2.0.50") == floor
+    assert runtime_security_requirement("rembg[gpu]") == "rembg[gpu]>=2.0.82,<3"
+    assert runtime_security_requirement("rembg[gpu]>=2.0") == "rembg[gpu]>=2.0.82,<3"
+    assert runtime_security_requirement("Pillow") == "Pillow>=13.0.0,<14"

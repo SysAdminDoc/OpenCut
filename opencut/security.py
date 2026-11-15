@@ -474,6 +474,7 @@ def target_import_env(target_dir: str) -> dict:
 
 # 13.0.0 fixes 43 advisories published after 12.3.0, five of them critical.
 PILLOW_RUNTIME_REQUIREMENT = "Pillow>=13.0.0,<14"
+REMBG_RUNTIME_REQUIREMENT = "rembg>=2.0.82,<3"
 OPENCV_RUNTIME_REQUIREMENT = "opencv-python==4.14.0.94"
 
 _SAFE_PACKAGE_RE = re.compile(
@@ -491,6 +492,7 @@ _RUNTIME_SECURITY_REQUIREMENTS = {
     # legacy feature bootstraps to the GUI-capable provider required by
     # PySceneDetect 0.7+.
     "opencv-python": OPENCV_RUNTIME_REQUIREMENT,
+    "rembg": REMBG_RUNTIME_REQUIREMENT,
 }
 
 
@@ -526,7 +528,15 @@ def runtime_security_requirement(package: str) -> str:
     if not support["supported"]:
         raise RuntimeError(support["reason"])
     name = re.split(r"[\[>=<!~]", normalized, maxsplit=1)[0].lower()
-    return _RUNTIME_SECURITY_REQUIREMENTS.get(name, normalized)
+    requirement = _RUNTIME_SECURITY_REQUIREMENTS.get(name)
+    if requirement is None:
+        return normalized
+    # Keep requested extras (``rembg[gpu]``) on the bounded requirement.
+    extras = re.match(r"[A-Za-z0-9._-]+(\[[A-Za-z0-9_,-]+\])", normalized)
+    if extras and "[" not in requirement:
+        base = re.split(r"[>=<!~]", requirement, maxsplit=1)[0]
+        requirement = base + extras.group(1) + requirement[len(base):]
+    return requirement
 
 
 def _verify_package_importable(python: str, package: str, target_dir: str = None) -> bool:

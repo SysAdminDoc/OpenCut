@@ -29,6 +29,7 @@ from opencut.helpers import (
     output_path,
     run_ffmpeg,
 )
+from opencut.security import runtime_security_requirement
 
 logger = logging.getLogger("opencut")
 
@@ -438,7 +439,10 @@ def _ensure_method_deps(method: str):
     """Ensure the dependencies for the given segmentation method are installed."""
     if method == "rembg":
         if not ensure_package("rembg", "rembg"):
-            raise RuntimeError("rembg is required but could not be installed. Run: pip install rembg")
+            raise RuntimeError(
+                "rembg is required but could not be installed. "
+                f'Run: pip install "{runtime_security_requirement("rembg")}"'
+            )
         if not ensure_package("PIL", "Pillow"):
             raise RuntimeError(
                 'Pillow is required. Run: pip install "Pillow>=13.0.0,<14"'

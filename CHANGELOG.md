@@ -15,6 +15,9 @@ Notable changes to OpenCut. The git history carries the detailed record.
   in only through huggingface-hub. They're declared directly now, so their
   floors can't slip. `docs/PYTHON_ADVISORIES.md` lists the advisory behind
   each floor.
+- When background removal installs rembg for you, it now asks for 2.0.82 or
+  newer too, GPU build included. Before, that install took whatever version
+  the package index offered.
 - The release locks and `pylock.toml` pin the fixed versions.
 - Packaged builds use PyInstaller 6.22.3. Version 6.20.0 still looked for
   SciPy's array helpers under their old pre-1.18 name, so in the packaged
