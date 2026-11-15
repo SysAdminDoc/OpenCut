@@ -298,7 +298,15 @@ def package(
     if extra_args:
         cmd += [str(a) for a in extra_args]
 
-    logger.debug("Shaka cmd: %s", " ".join(cmd))
+    def _without_key(text: str) -> str:
+        # The server log is written at DEBUG and goes into issue reports, so
+        # the content key never reaches it (the key id is public).
+        if not (drm_scheme and drm_key_hex):
+            return text
+        return text.replace(drm_key_hex, "[REDACTED]").replace(
+            drm_key_hex.lower(), "[REDACTED]").replace(drm_key_hex.upper(), "[REDACTED]")
+
+    logger.debug("Shaka cmd: %s", _without_key(" ".join(cmd)))
 
     try:
         proc = _sp.run(
@@ -313,7 +321,7 @@ def package(
     if proc.returncode != 0:
         raise RuntimeError(
             f"Shaka Packager failed (rc={proc.returncode}): "
-            f"{(proc.stderr or proc.stdout or '')[-600:]}"
+            f"{_without_key(proc.stderr or proc.stdout or '')[-600:]}"
         )
 
     if on_progress:

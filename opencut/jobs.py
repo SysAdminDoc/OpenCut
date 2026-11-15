@@ -84,7 +84,10 @@ _SENSITIVE_PAYLOAD_KEY_RE = re.compile(
     r"api[_\-\s]?key|authorization|auth[_\-\s]?token|bearer|credential|"
     r"client[_\-\s]?secret|secret|password|passwd|passphrase|"
     r"access[_\-\s]?token|refresh[_\-\s]?token|id[_\-\s]?token|token|"
-    r"private[_\-\s]?key|webhook[_\-\s]?secret|signing[_\-\s]?key"
+    r"private[_\-\s]?key|webhook[_\-\s]?secret|signing[_\-\s]?key|"
+    # Media encryption keys (``drm_key_hex`` on /delivery/shaka/package).
+    # The key id is public and stays readable, so ``*_key_id`` doesn't match.
+    r"(?:drm|content|encryption|cenc|aes)[_\-\s]?key(?![_\-\s.]?ids?([_\-\s.]|$))"
     r")([_\-\s.]|$)",
     re.IGNORECASE,
 )

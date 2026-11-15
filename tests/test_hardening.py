@@ -701,6 +701,113 @@ def test_jobs_sanitize_payload_redacts_sensitive_values():
     assert payload["api_key"] == "sk-live-secret"
 
 
+def test_jobs_sanitize_payload_redacts_media_encryption_keys():
+    """A DRM content key is a secret; its key id and musical keys are not."""
+    from opencut.jobs import _sanitize_payload_for_storage
+
+    payload = {
+        "drm_key_hex": "00112233445566778899aabbccddeeff",
+        "drm_key_id_hex": "abba0000000000000000000000000001",
+        "content_key": "c0ffee",
+        "encryption-key": "beef",
+        "cenc_key_ids": ["abba01"],
+        "key": "C# minor",
+        "musical_key": "A minor",
+        "keyframe_interval": 48,
+        "keyframes": [0, 24],
+        "sort_key": "name",
+    }
+
+    result = _sanitize_payload_for_storage(payload)
+
+    assert result["drm_key_hex"] == "[REDACTED]"
+    assert result["content_key"] == "[REDACTED]"
+    assert result["encryption-key"] == "[REDACTED]"
+    for name in ("drm_key_id_hex", "cenc_key_ids", "key", "musical_key",
+                 "keyframe_interval", "keyframes", "sort_key"):
+        assert result[name] == payload[name], name
+    assert "00112233445566778899aabbccddeeff" not in json.dumps(result)
+
+
+def test_shaka_job_keeps_the_drm_key_out_of_job_history(app, monkeypatch, tmp_path):
+    """POST /delivery/shaka/package must not write the content key to jobs.db."""
+    import opencut.job_store as store
+    import opencut.jobs as jobs_mod
+
+    store.close_all_connections()
+    monkeypatch.setattr(store, "_DB_PATH", str(tmp_path / "jobs.db"))
+    store._INITIALIZED = False
+    store._INITIALIZED_PATH = None
+    store._LOCAL = type(store._LOCAL)()
+    store._ALL_CONNECTIONS = {}
+
+    content_key = "00112233445566778899aabbccddeeff"
+    key_id = "abba0000000000000000000000000001"
+    client = app.test_client()
+    csrf = client.get("/health").get_json().get("csrf_token", "")
+    # No renditions, so the job fails fast once it starts; the request payload
+    # is persisted before the handler runs either way.
+    response = client.post(
+        "/delivery/shaka/package",
+        json={"renditions": [], "drm_scheme": "common_system",
+              "drm_key_hex": content_key, "drm_key_id_hex": key_id},
+        headers={"X-OpenCut-Token": csrf},
+    )
+    assert response.status_code == 200, response.get_data(as_text=True)
+    job_id = response.get_json()["job_id"]
+    with jobs_mod.job_lock:
+        future = jobs_mod.jobs[job_id]["_future"]
+    future.result(timeout=10)
+
+    persisted = store.get_job(job_id)
+    assert persisted["payload"]["drm_key_hex"] == "[REDACTED]"
+    assert persisted["payload"]["drm_key_id_hex"] == key_id
+    with open(tmp_path / "jobs.db", "rb") as fh:
+        assert content_key.encode() not in fh.read()
+    history = client.get(f"/status/{job_id}").get_data(as_text=True)
+    assert content_key not in history
+
+
+def test_shaka_package_keeps_the_drm_key_out_of_the_log_and_errors(
+    monkeypatch, tmp_path, caplog
+):
+    """The packager command is logged at DEBUG, which the server log keeps."""
+    import logging
+    import subprocess
+
+    import pytest
+
+    from opencut.core import shaka_pkg
+
+    content_key = "00112233445566778899AABBCCDDEEFF"
+    key_id = "abba0000000000000000000000000001"
+    source = tmp_path / "in.mp4"
+    source.write_bytes(b"\0")
+    monkeypatch.setattr(shaka_pkg, "resolve_packager_bin", lambda: "packager")
+
+    def failing_run(cmd, **kwargs):
+        assert any(content_key in part for part in cmd)  # the packager still gets it
+        return subprocess.CompletedProcess(
+            cmd, 1, "", f"bad --keys label=PRIMARY:key_id={key_id}:key={content_key.lower()}"
+        )
+
+    monkeypatch.setattr(shaka_pkg._sp, "run", failing_run)
+    caplog.set_level(logging.DEBUG, logger=shaka_pkg.logger.name)
+    with pytest.raises(RuntimeError) as failure:
+        shaka_pkg.package(
+            [shaka_pkg.PackagerRendition(input_path=str(source), kind="video")],
+            str(tmp_path / "out"),
+            drm_scheme="common_system",
+            drm_key_hex=content_key,
+            drm_key_id_hex=key_id,
+        )
+
+    assert "Shaka cmd:" in caplog.text
+    assert key_id in caplog.text
+    for text in (caplog.text, str(failure.value)):
+        assert content_key.lower() not in text.lower()
+
+
 def test_schedule_record_time_runs_sync_when_io_pool_closed(monkeypatch):
     import opencut.jobs as jobs_mod
 

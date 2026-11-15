@@ -6,6 +6,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Fixed
 
+- The DRM content key you give the Shaka packaging job no longer ends up on disk. Job history in `jobs.db` saved it in plain text, and the server log recorded it inside the packager command line, so it also went out with issue reports. Both now show `[REDACTED]`, and the key ID stays readable.
 - An OTIOZ export with media bundling turned off no longer copies every source file into the bundle. It looked for OTIO's media policy in a module that never existed, quietly fell back to the default, and either packed the media in anyway or failed when a source wasn't a local file.
 
 ### Release builds
