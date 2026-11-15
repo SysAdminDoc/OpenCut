@@ -47,10 +47,21 @@ _media_binary_security_cache = {}
 
 def _bundled_binary_path(binary: str) -> str | None:
     """Return a packaged FFmpeg-family binary before falling back to PATH."""
+    names = [binary]
+    if os.name == "nt":
+        names.append(f"{binary}.exe")
+
     candidates = []
     configured_dir = os.environ.get("OPENCUT_FFMPEG_DIR", "").strip()
     if configured_dir:
-        candidates.append(os.path.expanduser(os.path.expandvars(configured_dir)))
+        configured = os.path.expanduser(os.path.expandvars(configured_dir))
+        # The Linux launchers and build script name the folder holding the
+        # binaries; a parent with an ffmpeg/ folder is still accepted below.
+        for name in names:
+            path = os.path.join(configured, name)
+            if os.path.isfile(path) and os.access(path, os.X_OK):
+                return os.path.abspath(path)
+        candidates.append(configured)
 
     executable = getattr(_sys, "executable", "")
     if executable:
@@ -61,9 +72,6 @@ def _bundled_binary_path(binary: str) -> str | None:
     candidates.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     seen = set()
-    names = [binary]
-    if os.name == "nt":
-        names.append(f"{binary}.exe")
     for base in candidates:
         normalized = os.path.normcase(os.path.abspath(base))
         if normalized in seen:

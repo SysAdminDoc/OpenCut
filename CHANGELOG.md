@@ -131,6 +131,16 @@ Notable changes to OpenCut. The git history carries the detailed record.
   names them separately now, and the packaged app skips it rather than putting
   a copy of pip in `~/.opencut/packages`.
 
+### Fixed: `OPENCUT_FFMPEG_DIR` pointing at the FFmpeg folder was ignored
+
+- The Flatpak and AppImage launchers and the Linux build script set
+  `OPENCUT_FFMPEG_DIR` to the folder that holds `ffmpeg` and `ffprobe`, but the
+  server only looked for an `ffmpeg` folder inside it. Those packages still
+  found the right binaries because the launchers also put that folder on PATH.
+  Setting it by hand did nothing.
+- It now takes either the folder with the binaries or a folder that has an
+  `ffmpeg` folder inside.
+
 ### Added: crash records
 
 - `~/.opencut/crash.log` was read by the crash packet, the issue reporter and

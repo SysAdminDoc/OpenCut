@@ -134,6 +134,36 @@ def test_helpers_honor_launcher_data_dir_and_prefer_packaged_media(monkeypatch, 
     assert helpers.get_ffprobe_path() == "/bundled/ffprobe"
 
 
+def _fake_media_binaries(folder):
+    folder.mkdir(parents=True)
+    found = {}
+    for binary in ("ffmpeg", "ffprobe"):
+        exe = folder / (f"{binary}.exe" if os.name == "nt" else binary)
+        exe.write_bytes(b"")
+        exe.chmod(0o755)
+        found[binary] = os.path.normcase(os.path.abspath(exe))
+    return found
+
+
+def test_ffmpeg_dir_names_the_folder_that_holds_the_binaries(monkeypatch, tmp_path):
+    """The launchers and the build script set OPENCUT_FFMPEG_DIR to .../OpenCut-Server/ffmpeg."""
+    import opencut.helpers as helpers
+
+    media = _fake_media_binaries(tmp_path / "OpenCut-Server" / "ffmpeg")
+    monkeypatch.setenv("OPENCUT_FFMPEG_DIR", str(tmp_path / "OpenCut-Server" / "ffmpeg"))
+    for binary, expected in media.items():
+        assert os.path.normcase(helpers._bundled_binary_path(binary) or "") == expected
+
+
+def test_ffmpeg_dir_still_accepts_a_parent_with_an_ffmpeg_folder(monkeypatch, tmp_path):
+    import opencut.helpers as helpers
+
+    media = _fake_media_binaries(tmp_path / "OpenCut-Server" / "ffmpeg")
+    monkeypatch.setenv("OPENCUT_FFMPEG_DIR", str(tmp_path / "OpenCut-Server"))
+    for binary, expected in media.items():
+        assert os.path.normcase(helpers._bundled_binary_path(binary) or "") == expected
+
+
 def test_build_script_builds_appdir_appimage_and_flatpak_bundle():
     text = _read(BUILD_SCRIPT)
 
