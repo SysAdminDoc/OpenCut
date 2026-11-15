@@ -94,6 +94,114 @@ def _verify(node_bin: str, expected, observed) -> list:
     )["mismatches"]
 
 
+# A host whose createEmptySelection selection stops working once its callback
+# returns, as the Premiere 27.0 typings describe. `deferred` holds the callback
+# back instead, the way a host that answers late would.
+_SELECTION_HOST_JS = """
+const removed = new Set();
+const calls = { liveRemovals: 0, deadRemovals: 0, late: [] };
+const clip = (id, start, end) => ({
+  id,
+  getStartTime: async () => start,
+  getEndTime: async () => end,
+  getInPoint: async () => 0,
+  getOutPoint: async () => end - start,
+  getSpeed: async () => 1,
+  getNodeId: async () => id,
+  getName: async () => id,
+});
+const items = [clip("keep", 0, 1), clip("cutme", 2, 3)];
+const seq = { getVideoTrackList: async () => ({}), getAudioTrackList: async () => null };
+const newSelection = () => ({
+  alive: true,
+  items: [],
+  addItem(item) {
+    if (!this.alive) throw new Error("selection used outside its callback");
+    this.items.push(item);
+  },
+});
+const ppro = {
+  Constants: { MediaType: { ANY: 0 } },
+  SequenceEditor: { getEditor: () => ({
+    createRemoveItemsAction(selection) {
+      if (!selection.alive) {
+        calls.deadRemovals += 1;
+        throw new Error("selection used outside its callback");
+      }
+      calls.liveRemovals += 1;
+      const doomed = selection.items.map((item) => item.id);
+      return { apply: () => doomed.forEach((id) => removed.add(id)) };
+    },
+  }) },
+  TrackItemSelection: { createEmptySelection(callback) {
+    if (DEFERRED) { calls.late.push(callback); return true; }
+    const selection = newSelection();
+    callback(selection);
+    selection.alive = false;
+    return true;
+  } },
+};
+const proj = {
+  lockedAccess: (fn) => fn(),
+  executeTransaction(fn) {
+    const actions = [];
+    fn({ addAction: (action) => actions.push(action) });
+    actions.forEach((action) => action.apply());
+    return true;
+  },
+};
+const executor = mod.createCutExecutor({
+  getPPro: () => ppro,
+  getActiveSequence: async () => seq,
+  trackListEntries: async () => [{ track: {}, index: 0 }],
+  trackItems: async () => items.filter((item) => !removed.has(item.id)),
+  itemField: async (item, methods) => {
+    for (const name of methods) if (typeof item[name] === "function") return await item[name]();
+    return "";
+  },
+  timeValueToSeconds: (value) => value,
+  tickTimeFromSeconds: (seconds) => seconds,
+  secondsToTicks: (seconds) => seconds,
+  projectRoot: async () => ({ proj }),
+  sequenceTrackSnapshot: async () => null,
+  fingerprintDeltaCount: () => 0,
+  fingerprintAddedCount: () => 0,
+  verificationStatus: () => "unverified",
+  attachHostWriteVerification: async (result, info) => ({ ...result, info }),
+});
+(async () => {
+  const result = await executor.applyCuts([{ start: 1.5, end: 3.5 }]);
+  for (const callback of calls.late) callback(newSelection());
+  process.stdout.write(JSON.stringify({ result, calls: { ...calls, late: calls.late.length }, removed: [...removed] }));
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
+def _cut_with_selection_host(node_bin: str, deferred: bool) -> dict:
+    flag = "true" if deferred else "false"
+    return _run_node(node_bin, f"const DEFERRED = {flag};\n" + _SELECTION_HOST_JS)
+
+
+class TestSelectionLifetime:
+    """createEmptySelection's selection is only valid inside its callback."""
+
+    def test_the_removal_is_built_while_the_selection_is_valid(self, node_bin):
+        out = _cut_with_selection_host(node_bin, deferred=False)
+        assert out["result"]["ok"] is True, out["result"]
+        assert out["result"]["info"]["afterState"]["methods"]["remove_items_action"] == 1
+        assert out["calls"]["liveRemovals"] == 1
+        assert out["calls"]["deadRemovals"] == 0
+        assert out["removed"] == ["cutme"]
+
+    def test_a_late_selection_callback_edits_nothing(self, node_bin):
+        out = _cut_with_selection_host(node_bin, deferred=True)
+        assert out["result"]["ok"] is False
+        assert "createEmptySelection did not yield a usable selection." in out["result"]["reason"]
+        assert out["calls"]["late"] == 1
+        assert out["calls"]["liveRemovals"] == 0
+        assert out["removed"] == []
+
+
 def _item(id_, start, end):
     return {"id": id_, "start": start, "end": end}
 
@@ -366,7 +474,7 @@ class TestCutPathWiring:
     def test_trims_and_removals_share_one_transaction(self):
         """Two transactions could leave the timeline trimmed but not cut."""
         body = self._write_body()
-        transaction = body[body.index("const run = () =>"):body.index("let accepted = false;")]
+        transaction = body[body.index("const run = (selection) =>"):body.index("let accepted = false;")]
         assert "createSetEndAction" in transaction
         assert "createSetStartAction" in transaction
         assert "createRemoveItemsAction" in transaction

@@ -351,21 +351,9 @@ export function createCutExecutor({
       return { ok: false, reason: "Project.executeTransaction is unavailable in this runtime." };
     }
 
-    let selection = null;
-    if (plan.contained.length) {
-      ppro.TrackItemSelection.createEmptySelection((created) => { selection = created; });
-      if (!selection?.addItem) {
-        return { ok: false, reason: "createEmptySelection did not yield a usable selection." };
-      }
-      for (const entry of plan.contained) {
-        // skipDuplicateCheck: the planner already emitted each item once.
-        selection.addItem(entry.item, true);
-      }
-    }
-
     const mediaType = ppro?.Constants?.MediaType?.ANY ?? 0;
     // eslint-disable-next-line @adobe/premierepro/prefer-locked-access-wrapper -- run() is invoked inside lockedAccess() below whenever the host exposes it
-    const run = () => Boolean(context.proj.executeTransaction((compoundAction) => {
+    const run = (selection) => Boolean(context.proj.executeTransaction((compoundAction) => {
       for (const trim of plan.trims) {
         const item = trim.item.item;
         // Sequence boundary first, then the source point. Under the documented
@@ -386,11 +374,36 @@ export function createCutExecutor({
       }
     }, "OpenCut apply cuts"));
 
+    // A createEmptySelection selection is only valid inside its callback, so
+    // it is filled and handed to the transaction there, with nothing async in
+    // between. A callback that arrives after createEmptySelection returned is
+    // ignored: by then this cut has already been reported as refused.
+    let usable = !plan.contained.length;
+    const write = () => {
+      if (!plan.contained.length) return run(null);
+      let committed = false;
+      let open = true;
+      ppro.TrackItemSelection.createEmptySelection((selection) => {
+        if (!open || !selection?.addItem) return;
+        usable = true;
+        for (const entry of plan.contained) {
+          // skipDuplicateCheck: the planner already emitted each item once.
+          selection.addItem(entry.item, true);
+        }
+        committed = run(selection);
+      });
+      open = false;
+      return committed;
+    };
+
     let accepted = false;
     if (typeof context.proj.lockedAccess === "function") {
-      context.proj.lockedAccess(() => { accepted = run(); });
+      context.proj.lockedAccess(() => { accepted = write(); });
     } else {
-      accepted = run();
+      accepted = write();
+    }
+    if (!usable) {
+      return { ok: false, reason: "createEmptySelection did not yield a usable selection." };
     }
     if (!accepted) {
       return { ok: false, reason: "executeTransaction rejected the cut actions." };
