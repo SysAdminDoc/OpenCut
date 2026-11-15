@@ -257,6 +257,57 @@ def _reject_real_user_data_writes(monkeypatch):
         monkeypatch.setattr(os, name, guarded_operation)
 
 
+_PIP_MUTATING_VERBS = {"install", "uninstall"}
+
+
+def _pip_mutation(args) -> bool:
+    """True for ``python -m pip install|uninstall`` or ``pip install|uninstall``."""
+    if isinstance(args, (str, bytes, os.PathLike)):
+        tokens = os.fsdecode(args).split()
+    else:
+        tokens = [os.fsdecode(arg) if isinstance(arg, (bytes, os.PathLike)) else str(arg) for arg in args]
+    lowered = [token.strip('"').lower() for token in tokens]
+    for index, token in enumerate(lowered[:-2]):
+        if token == "-m" and lowered[index + 1] == "pip" and lowered[index + 2] in _PIP_MUTATING_VERBS:
+            return True
+    if len(lowered) > 1:
+        command = os.path.splitext(os.path.basename(lowered[0]))[0]
+        if command in {"pip", "pip3"} and lowered[1] in _PIP_MUTATING_VERBS:
+            return True
+    return False
+
+
+def _egress_guard_refuses_pip() -> bool:
+    # In local-only mode the product's own audit hook refuses pip before it
+    # spawns, and tests assert on that refusal, so it gets the call.
+    policy = sys.modules.get("opencut.network_policy")
+    return bool(policy and getattr(policy, "_hook_installed", False) and policy._local_only_active())
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _reject_real_package_changes():
+    """Keep tests from installing or uninstalling packages in this interpreter.
+
+    Install routes run their pip commands in a worker thread, so a route test
+    that only checks the status code still changed the interpreter that runs
+    the suite: ``/whisper/reinstall`` uninstalled faster-whisper and fetched it
+    again. The job can start after its test has finished, and the worker pool
+    shuts down without waiting, so the guard stays in place until the process
+    exits. Tests stub the subprocess layer to exercise those paths.
+    """
+    import subprocess
+
+    real_popen = subprocess.Popen
+
+    class GuardedPopen(real_popen):
+        def __init__(self, args, *popen_args, **popen_kwargs):
+            if _pip_mutation(args) and not _egress_guard_refuses_pip():
+                raise PermissionError(f"test tried to change installed packages: {args!r}")
+            super().__init__(args, *popen_args, **popen_kwargs)
+
+    subprocess.Popen = GuardedPopen
+
+
 @pytest.fixture(autouse=True)
 def _neutralize_machine_local_only(monkeypatch):
     """Keep tests hermetic against this machine's ``~/.opencut/local_only.json``.
