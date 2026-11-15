@@ -68,7 +68,7 @@ _PLAIN_TOKEN_KEY_RE = re.compile(_PLAIN_TOKEN_NAME, re.IGNORECASE)
 # A query name may carry a prefix (``api_token``, ``oauth_token``), but a
 # bare ``key`` or ``sig`` may not, so ``cache_key`` stays readable.
 _QUERY_SECRET_NAME = (
-    rf"(?:(?!{_PLAIN_TOKEN_NAME}\b)(?:[A-Za-z0-9]+[_-])*(?:{_SECRET_NAME}|token)|"
+    rf"(?:(?!{_PLAIN_TOKEN_NAME}(?![\w-]))(?:[A-Za-z0-9]+[_-])*(?:{_SECRET_NAME}|token)|"
     r"authorization|key|sig|x-amz-credential|"
     r"x-amz-security-token|x-amz-signature|x-api-key|x-auth-token|"
     r"x-goog-signature|x-opencut-token)"
@@ -79,20 +79,27 @@ _PRIVATE_KEY_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 # ``name: value`` and ``NAME=value`` (a WSGI environ), plus the
-# ``('Name', 'value')`` pair of a header list. The pair form needs the
-# opening bracket, so ``['Authorization', 'Content-Type']`` stays.
-# An environ ``HTTP_NAME=`` value runs to the end of the line. A bare
-# ``name=`` value stops where a query value would, keeping an auth
-# scheme and a cookie list, and a flag (``cookie=on``) is left alone.
+# ``('Name', 'value')`` pair of a header list, with ASGI's bytes too. The
+# pair form needs the opening bracket, so ``['Authorization',
+# 'Content-Type']`` stays. An environ ``HTTP_NAME=`` value runs to the
+# end of the line. A bare ``name=`` value stops where a query value
+# would, but keeps its auth scheme (a Digest or OAuth parameter list
+# runs to the end of the line), a ``name=value`` cookie list joined by
+# ``;``, ``,`` or spaces, and a dict or call repr. A flag that is the
+# whole value (``cookie=on``) is left alone.
 _SECRET_HEADER_RE = re.compile(
-    r"(?P<prefix>(?:(?P<open>\([ \t]*[\"'])|(?<![\w-]))(?P<env>http_)?(?:authorization|"
+    r"(?P<prefix>(?:(?P<open>\([ \t]*b?[\"'])|(?<![\w-]))(?P<env>http_)?(?:authorization|"
     r"proxy[-_]authorization|x[-_]api[-_]key|x[-_]auth[-_]token|x[-_]opencut[-_]token|"
     r"x[-_]amz[-_]security[-_]token|cookie|set[-_]cookie)"
-    r"(?:[\"']?[ \t]*(?::|(?P<eq>=))|(?(open)[\"'],|(?!)))[ \t]*+(?P<vq>[\"'])?)"
+    r"(?:[\"']?[ \t]*(?::|(?P<eq>=))|(?(open)[\"'],|(?!)))[ \t]*+(?:b?(?P<vq>[\"']))?)"
     r"(?P<value>(?(vq)(?:\\.|(?!(?P=vq))[^\r\n\\])*"
     r"|(?(eq)(?(env)[^\r\n]*"
-    r"|(?!(?:true|false|none|null|on|off|yes|no)\b)"
-    r"(?:(?:basic|bearer|digest|token)[ \t]+)?[^\s&,;]+(?:;[ \t]*[^\s&,;=]+=[^\s&,;]*)*)"
+    rf"|(?!{re.escape(REDACTION_MARKER)})(?!(?:true|false|none|null|on|off|yes|no)(?![^\s&,;\"')\]}}]))"
+    r"(?:(?:digest|oauth|hawk|aws4-hmac-sha256|vapid|mutual|hoba|scram-sha-(?:1|256))[ \t]+[^\r\n]*"
+    r"|(?:[{\[]|[A-Za-z_][\w.]*\()[^\r\n]*"
+    r"|(?:(?:basic|bearer|token|negotiate|ntlm|apikey|api-key|dpop|kerberos|sharedkey(?:lite)?)[ \t]+)?"
+    r"(?:[^\s&,;=]++=[^\s&,;]*+(?:[ \t]*[;,][ \t]*[^\s&,;=]++(?:=[^\s&,;]*+)?|[ \t]++[^\s&,;=]++=[^\s&,;]*+)*+"
+    r"|[^\s&,;]++(?:;[ \t]*[^\s&,;=]+=[^\s&,;]*)*)))"
     r"|[^\r\n]*)))",
     re.IGNORECASE,
 )
@@ -102,13 +109,15 @@ _URL_USERINFO_RE = re.compile(
     # "@". Taking the run whole, with no "@" required, means a long line
     # is read once however many "://" it holds. Digits after the first
     # ":" are a port when a query or the end follows, or a path does after
-    # a host (a dot or ``localhost``: "cdn.example.com:8443/logo@2x.png").
+    # a host (a dot or ``localhost``: "cdn.example.com:8443/logo@2x.png"),
+    # but not when the name holds an encoded "@" ("first.last%40corp.com").
     # After a bare name, "/" and then an "@" in that segment read as a
     # password ("admin:2024/pw@cam"), so "nas:445/a@b" is redacted too.
     # The user part never holds "[", so an IPv6 host's colons don't
     # start one.
     r"(?P<prefix>(?<![a-z0-9+.-])[a-z][a-z0-9+.-]*://)"
-    r"(?>(?P<host>localhost(?=:)|[^\s/@:\[\]\"'<>.]*\.)?)[^\s/@:\[\]\"'<>]*+:"
+    r"(?>(?P<host>(?![^\s/@:\[\]\"'<>]*%40)(?:localhost(?=:)|[^\s/@:\[\]\"'<>.]*\.))?)"
+    r"[^\s/@:\[\]\"'<>]*+:"
     r"(?!\d+(?:[?#\s\"'<>]|$|(?(host)/|/(?![^\s/?#\"'<>@]+@))))"
     r"(?P<rest>[^\s\"'<>]*)",
     re.IGNORECASE | re.MULTILINE,
@@ -127,16 +136,19 @@ _QUERY_SECRET_RE = re.compile(
 )
 # ``token`` alone is too common a word, so it counts as a secret name when
 # the key is quoted (``'api_token': ...``), the value is quoted
-# (``token = 'x'``), or it stands alone before a colon, a space and a
-# value of 8 or more characters (``token: 9f2c...``). So a parser's
+# (``token = 'x'``), or it stands alone before a colon and a value that
+# is 8 or more characters after a space (``token: 9f2c...``) or mixes
+# letters and digits (``token:Ab3x``). A logging prefix
+# (``WARNING:root:token: ...``) doesn't hide it. So a parser's
 # ``Unexpected token: punc``, drawtext's ``Token: 5`` and a namespaced
 # ``app:token:refresh-window`` stay.
 _TOKEN_NAME = (
     r"(?:(?(kq)token|(?!))|token(?=[ \t]*[:=][ \t]*(?:[bru]{1,2})?[\"'])"
-    r"|(?<![A-Za-z0-9_:-])token(?=[ \t]*:[ \t]+[^\s,;}\]\"']{8}))"
+    r"|(?<![A-Za-z0-9_-])token(?=[ \t]*:(?:[ \t]+[^\s,;}\]\"']{8}"
+    r"|[ \t]*+(?=[^\s,;}\]\"':]*[0-9])(?=[^\s,;}\]\"':]*[A-Za-z]))))"
 )
 _ASSIGNED_SECRET_RE = re.compile(
-    rf"(?P<prefix>(?P<kq>[\"'])?(?<![A-Za-z0-9_-])_*(?!{_PLAIN_TOKEN_NAME}\b)(?:[A-Za-z0-9]+[_-])*"
+    rf"(?P<prefix>(?P<kq>[\"'])?(?<![A-Za-z0-9_-])_*(?!{_PLAIN_TOKEN_NAME}(?![\w-]))(?:[A-Za-z0-9]+[_-])*"
     r"(?-i:(?:[a-z0-9]+(?:[A-Z][a-z0-9]+)*?(?=[A-Z]))?)"
     rf"(?:{_KNOWN_SECRET_ENV}|{_SECRET_NAME}|{_TOKEN_NAME})\b"
     r"(?(kq)(?P=kq))[ \t]*(?:(?P<colon>:)|=)[ \t]*+)"
@@ -149,9 +161,13 @@ _ASSIGNED_SECRET_RE = re.compile(
     r"(?(colon)[^,;\r\n}\]\"']+|[^\s,;\r\n}\]]+))",
     re.IGNORECASE,
 )
+# A quoted value (``-passphrase "correct horse"``) runs to its closing
+# quote, which stays. In an argument list (``"--api-key", "..."``) the
+# value is the next item, and an empty one is left alone.
 _CLI_SECRET_RE = re.compile(
     rf"(?P<prefix>(?<![\w-])--?(?:[A-Za-z0-9]+[_-])*{_SECRET_NAME}"
-    r"(?:=|[ \t]+|[\"'],[ \t]*[\"']))(?P<value>[^\s\"']+)",
+    r"(?:(?:=|[ \t]+)(?P<vq>[\"'])?|[\"'],[ \t]*[\"']))"
+    r"(?P<value>(?(vq)(?:\\.|(?!(?P=vq))[^\r\n\\])+|[^\s\"']+))",
     re.IGNORECASE,
 )
 _AUTH_SCHEME_RE = re.compile(
@@ -180,8 +196,12 @@ _PROVIDER_SECRET_PATTERNS = (
     re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b", re.IGNORECASE),
     re.compile(r"\b(?:sk|rk)_(?:live|test)_[0-9A-Za-z]{16,}\b", re.IGNORECASE),
     re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
-    # A start right after "-" would rescan the run it sits in.
-    re.compile(r"(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{8,}+\.[A-Za-z0-9_-]{8,}+\.[A-Za-z0-9_-]{8,}\b"),
+    # A start right after "-" reads at most 1,024 characters of the first
+    # segment, so a run of ``eyJ-`` can't make every start rescan the rest.
+    re.compile(
+        r"(?:(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{8,}+|(?<=-)eyJ[A-Za-z0-9_-]{8,1024}+)"
+        r"\.[A-Za-z0-9_-]{8,}+\.[A-Za-z0-9_-]{8,}\b"
+    ),
 )
 
 
@@ -200,11 +220,28 @@ def _redact_match_value(match: re.Match[str]) -> str:
 
 
 def _redact_url_userinfo(match: re.Match[str]) -> str:
-    """Redact everything between ``scheme://`` and the run's last ``@``."""
+    """Redact from ``scheme://`` to the ``@`` that ends the userinfo.
+
+    That is the last ``@`` before a ``?`` or ``#`` following the first
+    one, so ``?to=ops@example.com`` stays. An ``@`` right after ``/``
+    starts a path segment (``/media/@user/clip.mp4``) when an earlier
+    ``@`` can end the userinfo, and a password ending in ``/`` otherwise.
+    """
     rest = match.group("rest")
-    at = rest.rfind("@")
-    if at < 0:
+    first = rest.find("@")
+    if first < 0:
         return match.group(0)
+    stop = len(rest)
+    for mark in "?#":
+        found = rest.find(mark, first)
+        if found >= 0:
+            stop = min(stop, found)
+    at = rest.rfind("@", 0, stop)
+    while at > 0 and rest[at - 1] == "/":
+        earlier = rest.rfind("@", 0, at)
+        if earlier < 0:
+            break
+        at = earlier
     return f"{match.group('prefix')}{REDACTION_MARKER}{rest[at:]}"
 
 
@@ -309,19 +346,19 @@ def _redact_escaped_token(match: re.Match[str]) -> str:
     finds something, so ``frame_%04d.png`` and ``my%20clip.mp4`` keep
     their escapes. It is decoded up to three times, for a URL encoded
     again each time it was nested (``%253Ftoken%253D...``), and redacted
-    once at the deepest level, so a secret there is found even when a
-    shallower one is too, and a long run is redacted only once.
+    after each round, before the next one can turn an escaped ``&``,
+    ``#`` or space inside a secret into a separator that splits it.
     """
     token = match.group(0)
-    decoded = token
+    current = token
+    found = False
     for _ in range(3):
-        if not _PERCENT_ESCAPE_RE.search(decoded):
+        if not _PERCENT_ESCAPE_RE.search(current):
             break
-        decoded = urllib.parse.unquote(decoded)
-    if decoded == token:
-        return token
-    redacted = _redact_unescaped(decoded)
-    return token if redacted == decoded else redacted
+        decoded = urllib.parse.unquote(current)
+        current = _redact_unescaped(decoded)
+        found = found or current != decoded
+    return current if found else token
 
 
 def _redact_unescaped(text: str) -> str:

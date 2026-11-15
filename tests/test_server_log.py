@@ -669,3 +669,112 @@ def test_redacting_runs_that_restart_a_pattern_stays_fast():
         _redact_sensitive_text(line)
         _redact_sensitive_text(json.dumps({"message": line}))
     assert time.perf_counter() - start < 2
+
+
+# Forms the third round of fixes let through again, plus the encoded and
+# header forms around them.
+_FOURTH_REVIEW_LEAKS = {
+    "authorization= Negotiate": ("authorization=Negotiate {}", "LeakNegotiate52"),
+    "authorization= NTLM": ("authorization=NTLM {}", "LeakNtlm53"),
+    "authorization= ApiKey": ("authorization=ApiKey {}", "LeakApiKeyScheme54"),
+    "authorization= Digest response": (
+        'authorization=Digest username="admin", realm="IPC", uri="rtsp://cam/live", response="{}"',
+        "LeakDigest55",
+    ),
+    "cookie= list with commas": ("cookie=sid=abc, csrftoken={}", "LeakCookieComma56"),
+    "cookie= list with spaces": ("cookie=a=1 sid={}", "LeakCookieSpace57"),
+    "cookie= starting like a flag": ("cookie=no-{}", "LeakCookieFlag58"),
+    "cookie= dict repr": ("cookie={{'sessionid': '{}'}}", "LeakCookieDict59"),
+    "cookie= MultiDict repr": ("cookie=ImmutableMultiDict([('session', '{}')])", "LeakCookieMulti60"),
+    "set-cookie= attribute list": (
+        "set-cookie=sessionid=abc; Path=/; HttpOnly, csrftoken={}; Path=/",
+        "LeakSetCookie61",
+    ),
+    "ASGI bytes cookie": ("scope headers=[(b'cookie', b'sid={}')]", "LeakAsgiCookie62"),
+    "ASGI bytes authorization": ("scope headers=[(b'authorization', b'Negotiate {}')]", "LeakAsgiAuth63"),
+    "token: after a root logger prefix": ("WARNING:root:token: {}", "LeakRootToken64"),
+    "token: after a logger name": ("DEBUG:urllib3.connectionpool:token: {}", "LeakLoggerToken65"),
+    "token: without a space": ("token:{}", "LeakNoSpace66"),
+    "short token: value": ("token: {}", "Ab3x"),
+    "kebab name behind a plain token": ("end-token-secret: {}", "LeakKebab67"),
+    "kebab api key behind a page token": ("page-token-api-key: {}", "LeakKebab68"),
+    "encoded & in an encoded password": ("u=https%3A%2F%2Fh%2Fx%3Fpassword%3Dp%2526ss{}", "LeakEncAmp69"),
+    "encoded & two levels down": ("u=https%253A%252F%252Fh%252Fx%253Fpassword%253Dp%252526ss{}", "LeakEncAmp70"),
+    "encoded # in an encoded password": ("src=https%3A%2F%2Fh%2Fx%3Fpassword%3Dp%2523{}", "LeakEncHash71"),
+    "encoded spaces in an encoded passphrase": (
+        "u=srt%3A%2F%2Fh%3A9000%3Fpassphrase%3Dcorrect%2520horse%2520{}",
+        "LeakEncPhrase72",
+    ),
+    "encoded spaces two levels down": (
+        "u=srt%253A%252F%252Fh%253A9000%253Fpassphrase%253Dcorrect%252520horse%252520{}",
+        "LeakEncPhrase73",
+    ),
+    "encoded space in an encoded URL password": ("u=rtmp%3A%2F%2Fu%3Ap%2520{}%40host%2Flive", "LeakEncUrl74"),
+    "encoded space in a URL password two levels down": (
+        "u=rtmp%253A%252F%252Fu%253Ap%252520{}%2540host%252Flive",
+        "LeakEncUrl75",
+    ),
+    "encoded URL password after a bearer": (
+        "a=Bearer%20abcdefgh12345&src=rtmp%3A%2F%2Fu%3Ap%2520{}%40host%2Flive",
+        "LeakEncUrl76",
+    ),
+    "user with an encoded @ and a password of digits and a slash": (
+        "ftp://first.last%40corp.com:2024/{}@ftp.corp.com/x",
+        "LeakEmailUser77",
+    ),
+    "JWT after a dash": ("jwt-eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.{}", "LeakJwtDash78xyz"),
+    "quoted passphrase flag with spaces": ('ffmpeg -passphrase "correct horse {}" -i in.ts', "LeakQuoted82"),
+    "single-quoted api key flag": ("--api-key 'sk abc {}' -v", "LeakQuoted83"),
+    "quoted flag after =": ('-passphrase="two words {}"', "LeakQuoted84"),
+}
+
+
+@pytest.mark.parametrize("name", sorted(_FOURTH_REVIEW_LEAKS))
+def test_fourth_review_credential_forms_are_redacted(name):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    template, secret = _FOURTH_REVIEW_LEAKS[name]
+    line = template.format(secret)
+    assert secret in line
+    json_line = json.dumps({"level": "WARNING", "message": f"job-1 {line}"})
+
+    assert secret not in _redact_sensitive_text(line)
+    assert secret not in _redact_sensitive_text(json_line)
+
+
+@pytest.mark.parametrize(
+    ("line", "secret", "kept"),
+    [
+        (
+            "https://user:LeakPathAt79@cdn.example.com/media/@user/clip.mp4",
+            "LeakPathAt79",
+            "https://[REDACTED]@cdn.example.com/media/@user/clip.mp4",
+        ),
+        ("http://u:LeakQueryAt80@h/x?to=ops@example.com", "LeakQueryAt80", "http://[REDACTED]@h/x?to=ops@example.com"),
+        ("rtsp://admin:LeakSlashEnd81/@cam/stream", "LeakSlashEnd81", "rtsp://[REDACTED]@cam/stream"),
+    ],
+)
+def test_a_url_password_ends_at_the_at_sign_before_the_host(line, secret, kept):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    out = _redact_sensitive_text(line)
+    assert secret not in out
+    assert out == kept
+
+
+@pytest.mark.parametrize(
+    "ordinary",
+    [
+        '-metadata title="Key: value" -metadata comment="cookie=yes"',
+        "auth cookie=on for /admin",
+        "scope headers=[(b'content-type', b'video/mp4')]",
+        'cmd=["ffmpeg", "-passphrase", "", "-i", "in.ts"]',
+        'ffmpeg -passphrase "" -i in.ts',
+    ],
+)
+def test_fourth_review_ordinary_text_is_left_alone(ordinary):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    assert _redact_sensitive_text(ordinary) == ordinary
+    wrapped = json.dumps({"message": ordinary})
+    assert json.loads(_redact_sensitive_text(wrapped)) == {"message": ordinary}

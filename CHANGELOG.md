@@ -69,8 +69,8 @@ Notable changes to OpenCut. The git history carries the detailed record.
   `Authorization: Token ...`, URLs with a password in them (encoded or not),
   `--api-key` and `-passphrase` flags, names like `llm_api_key` or
   `llmApiKey`, header lists and request environments, and passphrases with
-  spaces in them. Frame patterns like `img_%04d.png` and URLs with a port
-  come through untouched.
+  spaces in them when they're quoted or encoded. Frame patterns like
+  `img_%04d.png` and URLs with a port come through untouched.
 - Job diagnostics keep a job's parameters as real data instead of a string,
   with secret values swapped out. The live log view in Settings is redacted
   the same way as the export, and its job filter only matches the redacted
@@ -79,7 +79,9 @@ Notable changes to OpenCut. The git history carries the detailed record.
   in a query, `HTTP_AUTHORIZATION=` from a request environment, a list of
   passwords, `-encryption_key`, a URL that was encoded twice, and a camera
   URL whose password starts with digits, ends in `/` or runs past 1,024
-  characters. A CORS header list keeps its other names, `hasPassword=true`
+  characters. So are Negotiate, NTLM and Digest credentials, cookie lists,
+  the byte-string headers an ASGI server logs and a `token:` right after a
+  logger name. A CORS header list keeps its other names, `hasPassword=true`
   and `has_api_key: false` stay readable, and an IPv6 address is no longer
   taken for a password.
 - Ordinary text stays as it was: a CDN link with a port and `logo@2x.png`,
