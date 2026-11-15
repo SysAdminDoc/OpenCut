@@ -88,10 +88,7 @@ _PRIVATE_KEY_RE = re.compile(
 # ``;``, ``,`` or spaces, and a dict or call repr. A flag that is the
 # whole value (``cookie=on``, ``cookie=off: disabled``) is left alone,
 # but not when anything other than a space, quote or closing bracket
-# follows its punctuation (``cookie=on.;sid=...``). A list item whose
-# ``=`` is followed by a space and then a word with no ``=`` ends the list
-# (``;password= ...``), so the assignment pattern still sees that name,
-# but an empty item before another pair (``;theme= sid=...``) doesn't.
+# follows its punctuation (``cookie=on.;sid=...``).
 _SECRET_HEADER_RE = re.compile(
     r"(?P<prefix>(?:(?P<open>\([ \t]*b?[\"'])|(?<![\w-]))(?P<env>http_)?(?:authorization|"
     r"proxy[-_]authorization|x[-_]api[-_]key|x[-_]auth[-_]token|x[-_]opencut[-_]token|"
@@ -104,9 +101,8 @@ _SECRET_HEADER_RE = re.compile(
     r"(?:(?:digest|oauth|hawk|aws4-hmac-sha256|vapid|mutual|hoba|scram-sha-(?:1|256))[ \t]+[^\r\n]*"
     r"|(?:[{\[]|[A-Za-z_][\w.]*\()[^\r\n]*"
     r"|(?:(?:basic|bearer|token|negotiate|ntlm|apikey|api-key|dpop|kerberos|sharedkey(?:lite)?)[ \t]+)?"
-    r"(?:[^\s&,;=]++=[^\s&,;]*+(?:[ \t]*[;,][ \t]*[^\s&,;=]++(?!=[ \t]++[^\s&,;=]++(?!=))(?:=[^\s&,;]*+)?"
-    r"|[ \t]++[^\s&,;=]++=(?![ \t]++[^\s&,;=]++(?!=))[^\s&,;]*+)*+"
-    r"|[^\s&,;]++(?:;[ \t]*[^\s&,;=]+=(?![ \t]++[^\s&,;=]++(?!=))[^\s&,;]*)*)))"
+    r"(?:[^\s&,;=]++=[^\s&,;]*+(?:[ \t]*[;,][ \t]*[^\s&,;=]++(?:=[^\s&,;]*+)?|[ \t]++[^\s&,;=]++=[^\s&,;]*+)*+"
+    r"|[^\s&,;]++(?:;[ \t]*[^\s&,;=]+=[^\s&,;]*)*)))"
     r"|[^\r\n]*)))",
     re.IGNORECASE,
 )
