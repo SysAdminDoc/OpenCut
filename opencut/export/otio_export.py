@@ -562,25 +562,16 @@ def export_otioz(
             adapter_name="otioz",
         )
     else:
-        try:
-            from opentimelineio.file_bundle_utils import MediaReferencePolicy
-            _policy = MediaReferencePolicy.AllMissing
-        except (ImportError, AttributeError):
-            # Very old OTIO releases didn't expose the policy enum; the
-            # plain write still produces a valid bundle, just with media
-            # copied in.
-            _policy = None
-        if _policy is not None:
-            otio.adapters.write_to_file(
-                timeline, output_path,
-                adapter_name="otioz",
-                media_policy=_policy,
-            )
-        else:
-            otio.adapters.write_to_file(
-                timeline, output_path,
-                adapter_name="otioz",
-            )
+        # The enum lives under ``adapters`` in every supported OTIO (>=0.17).
+        # No fallback: a plain write would copy every source file into a
+        # bundle the caller asked to keep media-free.
+        from opentimelineio.adapters.file_bundle_utils import MediaReferencePolicy
+
+        otio.adapters.write_to_file(
+            timeline, output_path,
+            adapter_name="otioz",
+            media_policy=MediaReferencePolicy.AllMissing,
+        )
     logger.info(
         "Exported OTIOZ bundle: %s (%d clips, media_bundled=%s)",
         output_path, len(speech_segments), bundle_media,

@@ -4,6 +4,10 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ## Unreleased
 
+### Fixed
+
+- An OTIOZ export with media bundling turned off no longer copies every source file into the bundle. It looked for OTIO's media policy in a module that never existed, quietly fell back to the default, and either packed the media in anyway or failed when a source wasn't a local file.
+
 ### Release builds
 
 - The installer's release composition now reads `opencut` from the checkout being packaged. It used to import whatever copy the build Python had installed, so a clean build environment failed with "No module named 'opencut'" and an editable install from another folder put that folder's code into the evidence.

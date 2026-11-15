@@ -409,9 +409,9 @@ def test_otioz_bundle_layout_and_media_policy(tmp_path):
     """
     import zipfile
 
-    from opentimelineio.file_bundle_utils import MediaReferencePolicy
+    from opentimelineio.adapters.file_bundle_utils import MediaReferencePolicy
 
-    from opencut.export.otio_export import export_timeline_otioz
+    from opencut.export.otio_export import export_otioz
 
     for name in ("ErrorIfNotFile", "MissingIfNotFile", "AllMissing"):
         assert hasattr(MediaReferencePolicy, name), (
@@ -421,14 +421,20 @@ def test_otioz_bundle_layout_and_media_policy(tmp_path):
 
     media = tmp_path / "clip.mov"
     media.write_bytes(b"not real media, but a resolvable local file")
-    clips = [{"path": str(media), "start": 0.0, "end": 1.0, "name": "clip"}]
-    bundle = tmp_path / "out.otioz"
+    segments = [TimeSegment(start=0.0, end=1.0, label="clip")]
 
-    export_timeline_otioz(clips, str(bundle), bundle_media=False)
+    def bundle_names(bundle_media):
+        bundle = tmp_path / f"out-{bundle_media}.otioz"
+        written = export_otioz(str(media), segments, str(bundle), bundle_media=bundle_media)
+        assert written == str(bundle)
+        with zipfile.ZipFile(bundle) as archive:
+            return archive.namelist()
 
-    assert bundle.is_file()
-    with zipfile.ZipFile(bundle) as archive:
-        names = archive.namelist()
-    assert "content.otio" in names, names
+    without_media = bundle_names(False)
+    assert "content.otio" in without_media, without_media
     # bundle_media=False must not copy the media in.
-    assert not any(name.startswith("media/") for name in names), names
+    assert not any(name.startswith("media/") for name in without_media), without_media
+
+    with_media = bundle_names(True)
+    assert "content.otio" in with_media, with_media
+    assert "media/clip.mov" in with_media, with_media
