@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Callable, Dict, Optional
 
 from opencut.core.face_detect_compat import get_shared_face_detector
-from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
+from opencut.helpers import _try_import, ensure_package, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -27,30 +27,18 @@ logger = logging.getLogger("opencut")
 # Availability
 # ---------------------------------------------------------------------------
 def check_mediapipe_available() -> bool:
-    try:
-        import mediapipe  # noqa: F401
-        return True
-    except ImportError:
-        return False
+    return _try_import("mediapipe") is not None
 
 
 def check_insightface_available() -> bool:
-    try:
-        import insightface  # noqa: F401
-        return True
-    except ImportError:
-        return False
+    return _try_import("insightface") is not None
 
 
 def check_face_tools_available() -> Dict:
     caps = {"mediapipe": check_mediapipe_available(), "insightface": check_insightface_available()}
-    try:
-        import cv2  # noqa: F401
-        caps["opencv"] = True
-        caps["haar"] = True
-    except ImportError:
-        caps["opencv"] = False
-        caps["haar"] = False
+    has_cv2 = _try_import("cv2") is not None
+    caps["opencv"] = has_cv2
+    caps["haar"] = has_cv2
     return caps
 
 

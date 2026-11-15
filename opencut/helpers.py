@@ -773,6 +773,10 @@ def get_video_info(filepath: str) -> dict:
 # repeats the damage.
 _IMPORT_FAILURES: dict = {}
 _IMPORT_FAILURES_LOCK = threading.Lock()
+# One lock per module name, so only one thread runs a first import. Python's
+# own import lock lets each waiting thread rerun a module whose import just
+# failed, which is the retry a broken torch can't survive.
+_IMPORT_LOCKS: dict = {}
 
 
 def _is_not_installed(name: str, exc: BaseException) -> bool:
@@ -799,13 +803,18 @@ def _try_import(name: str):
         if torch is None:
             return jsonify({"error": "torch not installed"}), 400
     """
-    loaded = _sys.modules.get(name)
-    if loaded is not None:
-        return loaded
     with _IMPORT_FAILURES_LOCK:
         if name in _IMPORT_FAILURES:
             return None
+        import_lock = _IMPORT_LOCKS.setdefault(name, threading.RLock())
+    import_lock.acquire()
     try:
+        with _IMPORT_FAILURES_LOCK:
+            if name in _IMPORT_FAILURES:
+                return None
+        # import_module rather than a sys.modules lookup: it waits for another
+        # thread that is still importing ``name`` instead of handing back a
+        # half-initialised module.
         return importlib.import_module(name)
     except Exception as exc:  # noqa: BLE001 -- optional imports fail in any way
         if _is_not_installed(name, exc):
@@ -828,6 +837,8 @@ def _try_import(name: str):
                 name, verdict["exception"], verdict["message"],
             )
         return None
+    finally:
+        import_lock.release()
 
 
 def forget_retryable_import_failures() -> None:

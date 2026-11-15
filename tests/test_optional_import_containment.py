@@ -180,3 +180,95 @@ def test_server_starts_with_a_torch_that_raises_oserror(fake_site, tmp_path):
     assert started == 1
     assert codes == [200, 200, 200]
     assert counts[1] == counts[0] and counts[2] == counts[0]
+
+
+_HEALTH_PROBED = ("whisperx", "kokoro", "pedalboard", "df", "cv2", "mediapipe", "insightface")
+
+
+def test_health_contains_every_optional_probe_it_runs(fake_site, client, csrf_token, monkeypatch):
+    """The availability checks in captions_enhanced, voice_gen, audio_pro and
+    face_tools caught only ImportError, so a broken native library escaped,
+    was imported again on every poll, and a broken kokoro hid edge_tts."""
+    attempts = {}
+    for name in _HEALTH_PROBED:
+        monkeypatch.delitem(sys.modules, name, raising=False)
+        attempts[name] = _broken_package(fake_site, name, f'OSError("[WinError 126] {name}.dll")')
+    monkeypatch.delitem(sys.modules, "edge_tts", raising=False)
+    (fake_site / "edge_tts.py").write_text("VALUE = 1\n", encoding="utf-8")
+    from opencut.routes import system
+
+    caps = None
+    for _ in range(3):
+        system.invalidate_caps_cache()
+        resp = client.get("/health")
+        assert resp.status_code == 200
+        caps = resp.get_json()["capabilities"]
+
+    assert caps["edge_tts"] is True
+    assert caps["kokoro"] is False
+    assert caps["whisperx"] is False
+    assert caps["pedalboard"] is False
+    assert caps["face_tools"]["opencv"] is False
+    assert caps["face_tools"]["mediapipe"] is False
+    assert caps["face_tools"]["insightface"] is False
+    failures = client.get("/system/check-failures", headers=csrf_headers(csrf_token)).get_json()["failures"]
+    for name in _HEALTH_PROBED:
+        assert attempts[name].read_text(encoding="utf-8") == "x", name
+        assert failures[f"import:{name}"]["exception"] == "OSError", name
+
+
+_SLOW_BROKEN_INIT = """\
+import pathlib
+import time
+_marker = pathlib.Path(__file__).with_name("attempts.txt")
+with _marker.open("a", encoding="utf-8") as fh:
+    fh.write("x")
+time.sleep(0.3)
+raise OSError("[WinError 126] slow.dll")
+"""
+
+
+def test_concurrent_first_probes_import_a_broken_module_once(fake_site):
+    import threading
+
+    pkg = fake_site / "f462_slow_broken"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text(_SLOW_BROKEN_INIT, encoding="utf-8")
+    barrier = threading.Barrier(4)
+    results = []
+
+    def probe():
+        barrier.wait()
+        results.append(helpers._try_import("f462_slow_broken"))
+
+    threads = [threading.Thread(target=probe) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=30)
+
+    assert results == [None, None, None, None]
+    assert (pkg / "attempts.txt").read_text(encoding="utf-8") == "x"
+
+
+def test_a_probe_during_another_threads_import_gets_the_finished_module(fake_site):
+    import importlib
+    import threading
+    import time
+
+    (fake_site / "f462_slow_ok.py").write_text("import time\ntime.sleep(0.6)\nREADY = True\n", encoding="utf-8")
+    loader = threading.Thread(target=importlib.import_module, args=("f462_slow_ok",))
+    loader.start()
+    try:
+        deadline = time.monotonic() + 10
+        while "f462_slow_ok" not in sys.modules and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert "f462_slow_ok" in sys.modules
+
+        module = helpers._try_import("f462_slow_ok")
+
+        assert module is not None
+        assert module.READY is True
+    finally:
+        loader.join(timeout=30)
+        sys.modules.pop("f462_slow_ok", None)

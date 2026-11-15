@@ -135,11 +135,8 @@ def resolve_translation_backend(backend: str = "auto", *, allow_restricted: bool
 # Availability Checks
 # ---------------------------------------------------------------------------
 def check_whisperx_available() -> bool:
-    try:
-        import whisperx  # noqa: F401
-        return True
-    except ImportError:
-        return False
+    # whisperx imports torch, so a broken torch fails it with OSError.
+    return _try_import("whisperx") is not None
 
 
 def check_nllb_available() -> bool:

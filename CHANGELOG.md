@@ -31,6 +31,13 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - `GET /system/check-failures` lists each one as `import:<module>` with the
   error it raised, so you can see why a feature is missing. A package that was
   only missing a dependency gets another try after you install something.
+- The health checks for WhisperX, Kokoro, Edge TTS, Pedalboard, DeepFilterNet,
+  OpenCV, MediaPipe and InsightFace now get the same treatment. Before, a
+  broken Kokoro also made Edge TTS show as missing.
+- When several requests probe the same broken package at once, it's imported
+  one time instead of once per request. A check that lands while another
+  thread is still loading a package waits for it rather than getting a
+  half-loaded copy.
 
 ### Fixed: issue reports and crash packets carry the server log again
 

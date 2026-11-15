@@ -16,7 +16,7 @@ import re
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import ensure_package
+from opencut.helpers import _try_import, ensure_package
 
 logger = logging.getLogger("opencut")
 
@@ -43,19 +43,11 @@ def _run_async_sync(coro, *, timeout: int = 120):
 # Availability
 # ---------------------------------------------------------------------------
 def check_edge_tts_available() -> bool:
-    try:
-        import edge_tts  # noqa: F401
-        return True
-    except ImportError:
-        return False
+    return _try_import("edge_tts") is not None
 
 
 def check_kokoro_available() -> bool:
-    try:
-        import kokoro  # noqa: F401
-        return True
-    except ImportError:
-        return False
+    return _try_import("kokoro") is not None
 
 
 # ---------------------------------------------------------------------------

@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import ensure_package, get_ffmpeg_path, run_ffmpeg
+from opencut.helpers import _try_import, ensure_package, get_ffmpeg_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -30,27 +30,21 @@ logger = logging.getLogger("opencut")
 # Pedalboard availability
 # ---------------------------------------------------------------------------
 def check_pedalboard_available() -> bool:
-    try:
-        import pedalboard  # noqa: F401
-        return True
-    except ImportError:
-        return False
+    return _try_import("pedalboard") is not None
 
 
 def check_deepfilter_available() -> bool:
-    try:
-        import df  # noqa: F401
+    if _try_import("df") is not None:
         return True
-    except ImportError:
-        # Also check CLI
-        try:
-            result = subprocess.run(
-                ["deep-filter", "--version"],
-                capture_output=True, timeout=10,
-            )
-            return result.returncode == 0
-        except Exception:
-            return False
+    # Also check CLI
+    try:
+        result = subprocess.run(
+            ["deep-filter", "--version"],
+            capture_output=True, timeout=10,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
 
 
 # ---------------------------------------------------------------------------
