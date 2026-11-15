@@ -2,7 +2,7 @@
 
 Notable changes to OpenCut. The git history carries the detailed record.
 
-## Unreleased
+## 1.56.0: Security floors and packaged-app fixes
 
 ### Security: Pillow 13 and newer floors for seven other packages
 
@@ -182,8 +182,8 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - Every release built with PyInstaller was missing all sixteen files under
   `opencut/_generated`, because `collect_data_files` gathers one subpackage at
   a time and the spec named only `opencut.data`. Route validation, feature
-  readiness, extended MCP tools and the CLI route allowlist all quietly fell
-  back to defaults, and the only visible sign was one warning about
+  readiness, extended MCP tools and the CLI route allowlist all fell back
+  to defaults, and the only visible sign was one warning about
   `route_manifest.json`. Reported in issue #8.
 - The spec now derives the data-bearing subpackages from the source tree, so a
   new one cannot be forgotten, and the server reports every missing manifest at
@@ -235,7 +235,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
   it in a production deployment." on every start, plus a second copy of the
   address OpenCut had already printed. One user pasted that into a bug report
   about something else entirely.
-- The same threaded server still handles loopback traffic; it is just built
+- Loopback traffic still goes through the same threaded server, now built
   without the banner. `/system/status` now reports which server is running, so
   a bug report can say. Remote binds still use Waitress.
 
@@ -353,7 +353,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 - Selecting an RTX 50-series card failed every job with "GPU index 0 is not
   available", while listing index 0 as available in the same sentence. The
-  adapter was fine; the installed PyTorch build simply had no kernels for it.
+  adapter was fine. The installed PyTorch build had no kernels for it.
   Reported in issue #7.
 - Adapters now carry their compute capability on both detection paths, and
   OpenCut checks it against the architectures the installed build was compiled
