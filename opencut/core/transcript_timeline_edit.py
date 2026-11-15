@@ -16,6 +16,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.core.timecode_utils import seconds_to_ndf_timecode
 from opencut.helpers import (
     FFmpegCmd,
     build_edge_fade_filter,
@@ -866,15 +867,8 @@ def export_edl(
 
 
 def _seconds_to_tc(seconds: float, fps: float = 30.0) -> str:
-    """Convert seconds to SMPTE timecode HH:MM:SS:FF."""
-    seconds = max(0.0, seconds)
-    total_frames = int(seconds * fps)
-    ff = total_frames % int(fps)
-    total_seconds = total_frames // int(fps)
-    ss = total_seconds % 60
-    mm = (total_seconds // 60) % 60
-    hh = total_seconds // 3600
-    return f"{hh:02d}:{mm:02d}:{ss:02d}:{ff:02d}"
+    """Convert seconds to non-drop SMPTE timecode HH:MM:SS:FF."""
+    return seconds_to_ndf_timecode(seconds, fps)
 
 
 # ---------------------------------------------------------------------------

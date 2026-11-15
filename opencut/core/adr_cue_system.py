@@ -24,6 +24,7 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Callable, List, Optional
 
+from opencut.core.timecode_utils import ndf_timecode_to_seconds, seconds_to_ndf_timecode
 from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
@@ -44,27 +45,16 @@ CSV_COLUMNS = ("Cue#", "Character", "Reel", "TC In", "TC Out", "Line", "Reason")
 # Timecode Helpers
 # ---------------------------------------------------------------------------
 def _seconds_to_timecode(seconds: float, fps: float = 24.0) -> str:
-    """Convert seconds to SMPTE timecode HH:MM:SS:FF."""
-    if seconds < 0:
-        seconds = 0.0
-    total_frames = int(round(seconds * fps))
-    ff = total_frames % int(fps)
-    total_seconds = total_frames // int(fps)
-    ss = total_seconds % 60
-    total_minutes = total_seconds // 60
-    mm = total_minutes % 60
-    hh = total_minutes // 60
-    return f"{hh:02d}:{mm:02d}:{ss:02d}:{ff:02d}"
+    """Convert seconds to non-drop SMPTE timecode HH:MM:SS:FF."""
+    return seconds_to_ndf_timecode(seconds, fps)
 
 
 def _timecode_to_seconds(tc: str, fps: float = 24.0) -> float:
-    """Convert SMPTE timecode HH:MM:SS:FF to seconds."""
+    """Convert non-drop SMPTE timecode HH:MM:SS:FF to seconds."""
     parts = tc.replace(";", ":").split(":")
     if len(parts) != 4:
         raise ValueError(f"Invalid timecode format: {tc}")
-    hh, mm, ss, ff = (int(p) for p in parts)
-    total_frames = hh * 3600 * fps + mm * 60 * fps + ss * fps + ff
-    return total_frames / fps
+    return ndf_timecode_to_seconds(":".join(parts), fps)
 
 
 # ---------------------------------------------------------------------------

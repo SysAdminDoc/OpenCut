@@ -15,6 +15,7 @@ Uses FFmpeg/ffprobe only -- no additional dependencies required.
 
 import json
 import logging
+import math
 import re
 import subprocess
 from dataclasses import dataclass
@@ -146,6 +147,40 @@ def frames_to_timecode(
     if drop_frame and _is_drop_frame_rate(fps):
         return _frames_to_df_timecode(frame_num, fps)
     return _frames_to_ndf_timecode(frame_num, fps)
+
+
+def nominal_timecode_rate(fps: float) -> int:
+    """Return the frames per timecode second that non-drop timecode counts.
+
+    An integer rate counts itself. An NTSC rate (23.976, 29.97, 59.94 and the
+    exact x/1.001 values) counts the next whole number. Any other rate has no
+    SMPTE timecode, so it raises ``ValueError`` instead of mislabeling frames.
+    """
+    fps = float(fps)
+    if not (fps > 0 and math.isfinite(fps)):
+        raise ValueError(f"Frame rate must be a positive number, got {fps!r}")
+    for candidate in (fps, fps * 1.001):
+        nominal = round(candidate)
+        if nominal > 0 and abs(candidate - nominal) < 0.01:
+            return int(nominal)
+    raise ValueError(f"{fps:g} fps has no SMPTE timecode; use a whole-number or NTSC frame rate")
+
+
+def seconds_to_ndf_timecode(seconds: float, fps: float) -> str:
+    """Non-drop timecode for a time in seconds.
+
+    The frame count comes from the true rate and is labeled at the nominal
+    rate, so one hour at 29.97 reads ``00:59:56:12``.
+    """
+    nominal = nominal_timecode_rate(fps)
+    frame = int(round(max(0.0, float(seconds)) * float(fps)))
+    return _frames_to_ndf_timecode(frame, nominal)
+
+
+def ndf_timecode_to_seconds(timecode: str, fps: float) -> float:
+    """Seconds for a non-drop timecode, the inverse of ``seconds_to_ndf_timecode``."""
+    nominal = nominal_timecode_rate(fps)
+    return timecode_to_frames(timecode, nominal, drop_frame=False) / float(fps)
 
 
 def _frames_to_ndf_timecode(frame_num: int, fps: float) -> str:

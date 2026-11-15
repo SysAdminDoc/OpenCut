@@ -11,6 +11,8 @@ import re
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
+from opencut.core.timecode_utils import ndf_timecode_to_seconds, seconds_to_ndf_timecode
+
 logger = logging.getLogger("opencut")
 
 # CMX3600 timecode pattern  HH:MM:SS:FF
@@ -47,27 +49,16 @@ class EDLImportResult:
 
 
 def _seconds_to_tc(seconds: float, fps: float = 30.0) -> str:
-    """Convert seconds to timecode string HH:MM:SS:FF."""
-    if seconds < 0:
-        seconds = 0.0
-    total_frames = int(round(seconds * fps))
-    ff = total_frames % int(fps)
-    total_seconds = total_frames // int(fps)
-    ss = total_seconds % 60
-    total_minutes = total_seconds // 60
-    mm = total_minutes % 60
-    hh = total_minutes // 60
-    return f"{hh:02d}:{mm:02d}:{ss:02d}:{ff:02d}"
+    """Convert seconds to non-drop timecode HH:MM:SS:FF."""
+    return seconds_to_ndf_timecode(seconds, fps)
 
 
 def _tc_to_seconds(tc: str, fps: float = 30.0) -> float:
-    """Convert timecode string HH:MM:SS:FF to seconds."""
+    """Convert non-drop timecode HH:MM:SS:FF to seconds."""
     m = _TC_PATTERN.match(tc)
     if not m:
         raise ValueError(f"Invalid timecode: {tc}")
-    hh, mm, ss, ff = int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4))
-    total_frames = hh * 3600 * fps + mm * 60 * fps + ss * fps + ff
-    return total_frames / fps
+    return ndf_timecode_to_seconds(m.group(0), fps)
 
 
 def export_edl(

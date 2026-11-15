@@ -15,6 +15,17 @@ Notable changes to OpenCut. The git history carries the detailed record.
   when there are any and by character count when there aren't. A word too long
   for one cue is split across cues instead of being clipped.
 
+### Fixed: EDL and ADR timecode at 23.976, 29.97 and 59.94
+
+- The EDL export, the transcript edit EDL and the ADR cue sheet counted
+  29.97 as 29 frames per timecode second (23.976 as 23, 59.94 as 59). An hour
+  of 29.97 footage ended at `01:02:00:12` instead of `00:59:56:12`, so late
+  events landed about two minutes off while the header said non-drop.
+- All three now share one converter that counts frames at the real rate and
+  labels them at 24, 30 or 60. EDL import reads them back to the same frame.
+  A rate that has no SMPTE timecode, like 12.5, is refused with an error
+  instead of being written wrong.
+
 ### Fixed: the packaged server shipped without its generated manifests
 
 - Every release built with PyInstaller was missing all sixteen files under

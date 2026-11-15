@@ -273,6 +273,66 @@ class TestTimecodeToSeconds:
             assert abs(back - secs) < 0.05, f"Roundtrip failed for {secs}s"
 
 
+# One hour of real time holds 107892 frames at 30000/1001, 86314 at 24000/1001
+# and 215784 at 60000/1001. Non-drop timecode counts them at 30, 24 and 60.
+_NTSC_HOUR = [
+    (30000 / 1001, "00:59:56:12"),
+    (29.97, "00:59:56:12"),
+    (24000 / 1001, "00:59:56:10"),
+    (23.976, "00:59:56:10"),
+    (60000 / 1001, "00:59:56:24"),
+    (59.94, "00:59:56:24"),
+]
+
+
+class TestNtscNonDropTimecode:
+    """NTSC rates count frames at the true rate and label them at the nominal rate."""
+
+    @pytest.mark.parametrize("fps, expected", _NTSC_HOUR)
+    def test_every_writer_labels_one_hour_at_the_nominal_rate(self, fps, expected):
+        from opencut.core.adr_cue_system import _seconds_to_timecode
+        from opencut.core.edl_aaf import _seconds_to_tc
+        from opencut.core.transcript_timeline_edit import _seconds_to_tc as _transcript_tc
+
+        assert _seconds_to_tc(3600.0, fps) == expected
+        assert _transcript_tc(3600.0, fps) == expected
+        assert _seconds_to_timecode(3600.0, fps) == expected
+
+    @pytest.mark.parametrize("fps", [24000 / 1001, 30000 / 1001, 60000 / 1001, 24.0, 25.0, 30.0])
+    def test_import_and_export_round_trip_to_the_same_frame(self, fps):
+        from opencut.core.adr_cue_system import _seconds_to_timecode, _timecode_to_seconds
+        from opencut.core.edl_aaf import _seconds_to_tc, _tc_to_seconds
+
+        for frame in (0, 1, 29, 1799, 107891, 215783, 431567):
+            seconds = frame / fps
+            assert round(_tc_to_seconds(_seconds_to_tc(seconds, fps), fps) * fps) == frame
+            assert round(_timecode_to_seconds(_seconds_to_timecode(seconds, fps), fps) * fps) == frame
+
+    def test_exported_edl_places_the_last_event_at_its_real_frame(self, tmp_path):
+        from opencut.core.edl_aaf import export_edl, import_edl
+
+        fps = 30000 / 1001
+        path = tmp_path / "hour.edl"
+        export_edl(
+            [{"source_in": 3590.0, "source_out": 3600.0, "record_in": 3590.0, "record_out": 3600.0}],
+            str(path),
+            fps=fps,
+        )
+
+        text = path.read_text(encoding="utf-8")
+        assert "FCM: NON-DROP FRAME" in text
+        assert "00:59:56:12" in text
+        event = import_edl(str(path), fps=fps).cuts[0]
+        assert event["record_out_seconds"] == pytest.approx(3600.0, abs=0.5 / fps)
+
+    @pytest.mark.parametrize("fps", [12.5, 29.5, 0.0, -24.0])
+    def test_rates_without_a_timecode_are_refused(self, fps):
+        from opencut.core.edl_aaf import _seconds_to_tc
+
+        with pytest.raises(ValueError):
+            _seconds_to_tc(10.0, fps)
+
+
 class TestExportEdl:
     """Tests for export_edl content generation."""
 
