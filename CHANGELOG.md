@@ -78,11 +78,18 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - More forms are caught too: `token = '...'`, `api_token` and `oauth_token`
   in a query, `HTTP_AUTHORIZATION=` from a request environment, a list of
   passwords, `-encryption_key`, a URL that was encoded twice, and a camera
-  URL whose password starts with digits. A CORS header list keeps its
-  other names, `hasPassword=true` stays readable, and an IPv6 address is no
-  longer taken for a password.
+  URL whose password starts with digits, ends in `/` or runs past 1,024
+  characters. A CORS header list keeps its other names, `hasPassword=true`
+  and `has_api_key: false` stay readable, and an IPv6 address is no longer
+  taken for a password.
+- Ordinary text stays as it was: a CDN link with a port and `logo@2x.png`,
+  `cookie=on` and the rest of its line, tokenizer settings like `bos_token`
+  and `next_page_token`, a parser's `Unexpected token: punc` and a drawtext
+  `Token: 5` caption. A bare host with a port and an `@` in the next path
+  segment (`nas:445/media@archive`) still reads as a password, since it
+  looks just like `admin:2024/pw@cam`.
 - A long log line used to take up to 18 seconds to clean. It's now a small
-  fraction of a second.
+  fraction of a second, including lines with a repeated `eyJ-` or `token:[`.
 - Job diagnostics still come out when a job parameter can't be printed, and
   the live log view no longer splits a record at an unusual line separator.
 

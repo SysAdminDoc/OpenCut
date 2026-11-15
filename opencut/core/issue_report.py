@@ -58,10 +58,18 @@ _KNOWN_SECRET_ENV = (
     r"OPENCUT_API_TOKEN|OPENCUT_REMOTE_AUTH_TOKEN|REPLICATE_API_TOKEN|"
     r"SLACK_TOKEN|STRIPE_SECRET_KEY)"
 )
+# Names that end in "token" but hold no credential: tokenizer specials
+# (``bos_token``, ``pad_token``), stop words and pagination cursors.
+_PLAIN_TOKEN_NAME = (
+    r"(?:bos|eos|pad|unk|sep|cls|mask|stop|start|end|eot|special|"
+    r"(?:next[_-]?)?page|continuation|cancel(?:lation)?)[_-]?token"
+)
+_PLAIN_TOKEN_KEY_RE = re.compile(_PLAIN_TOKEN_NAME, re.IGNORECASE)
 # A query name may carry a prefix (``api_token``, ``oauth_token``), but a
 # bare ``key`` or ``sig`` may not, so ``cache_key`` stays readable.
 _QUERY_SECRET_NAME = (
-    rf"(?:(?:[A-Za-z0-9]+[_-])*(?:{_SECRET_NAME}|token)|authorization|key|sig|x-amz-credential|"
+    rf"(?:(?!{_PLAIN_TOKEN_NAME}\b)(?:[A-Za-z0-9]+[_-])*(?:{_SECRET_NAME}|token)|"
+    r"authorization|key|sig|x-amz-credential|"
     r"x-amz-security-token|x-amz-signature|x-api-key|x-auth-token|"
     r"x-goog-signature|x-opencut-token)"
 )
@@ -73,53 +81,68 @@ _PRIVATE_KEY_RE = re.compile(
 # ``name: value`` and ``NAME=value`` (a WSGI environ), plus the
 # ``('Name', 'value')`` pair of a header list. The pair form needs the
 # opening bracket, so ``['Authorization', 'Content-Type']`` stays.
+# An environ ``HTTP_NAME=`` value runs to the end of the line. A bare
+# ``name=`` value stops where a query value would, keeping an auth
+# scheme and a cookie list, and a flag (``cookie=on``) is left alone.
 _SECRET_HEADER_RE = re.compile(
-    r"(?P<prefix>(?:(?P<open>\([ \t]*[\"'])|(?<![\w-]))(?:http_)?(?:authorization|"
+    r"(?P<prefix>(?:(?P<open>\([ \t]*[\"'])|(?<![\w-]))(?P<env>http_)?(?:authorization|"
     r"proxy[-_]authorization|x[-_]api[-_]key|x[-_]auth[-_]token|x[-_]opencut[-_]token|"
     r"x[-_]amz[-_]security[-_]token|cookie|set[-_]cookie)"
-    r"(?:[\"']?[ \t]*[:=]|(?(open)[\"'],|(?!)))[ \t]*(?P<vq>[\"'])?)"
-    r"(?P<value>(?(vq)(?:\\.|(?!(?P=vq))[^\r\n\\])*|[^\r\n]*))",
+    r"(?:[\"']?[ \t]*(?::|(?P<eq>=))|(?(open)[\"'],|(?!)))[ \t]*+(?P<vq>[\"'])?)"
+    r"(?P<value>(?(vq)(?:\\.|(?!(?P=vq))[^\r\n\\])*"
+    r"|(?(eq)(?(env)[^\r\n]*"
+    r"|(?!(?:true|false|none|null|on|off|yes|no)\b)"
+    r"(?:(?:basic|bearer|digest|token)[ \t]+)?[^\s&,;]+(?:;[ \t]*[^\s&,;=]+=[^\s&,;]*)*)"
+    r"|[^\r\n]*)))",
     re.IGNORECASE,
 )
 _URL_USERINFO_RE = re.compile(
-    # The user may be empty and the password may hold "@" or "/", so run to
-    # the last "@" that a host follows, within 1,024 characters so a long
-    # line can't make every "://" rescan it. Digits after the first ":" are
-    # a port when a path, query or the end follows ("host:8443/a/@b"), but
-    # not when "/" and then an "@" do ("admin:2024/pw@cam"). A password
-    # never ends in "/" ("bucket:prefix/@2x"), and the user part never
-    # holds "[", so an IPv6 host's colons don't start one.
-    r"(?P<prefix>(?<![a-z0-9+.-])[a-z][a-z0-9+.-]*://)[^\s/@:\[\]\"'<>]*:"
-    r"(?!\d+(?:[?#\s\"'<>]|$|/(?![^\s/?#\"'<>@]+@)))[^\s\"'<>]{0,1024}(?<!/)@"
-    r"(?=[^\s/@?#\"'<>]*(?:[/?#\s\"'<>]|$))",
+    # The user may be empty and the password may hold "@" or "/", so the
+    # match takes the whole run and _redact_url_userinfo cuts at its last
+    # "@". Taking the run whole, with no "@" required, means a long line
+    # is read once however many "://" it holds. Digits after the first
+    # ":" are a port when a query or the end follows, or a path does after
+    # a host (a dot or ``localhost``: "cdn.example.com:8443/logo@2x.png").
+    # After a bare name, "/" and then an "@" in that segment read as a
+    # password ("admin:2024/pw@cam"), so "nas:445/a@b" is redacted too.
+    # The user part never holds "[", so an IPv6 host's colons don't
+    # start one.
+    r"(?P<prefix>(?<![a-z0-9+.-])[a-z][a-z0-9+.-]*://)"
+    r"(?>(?P<host>localhost(?=:)|[^\s/@:\[\]\"'<>.]*\.)?)[^\s/@:\[\]\"'<>]*+:"
+    r"(?!\d+(?:[?#\s\"'<>]|$|(?(host)/|/(?![^\s/?#\"'<>@]+@))))"
+    r"(?P<rest>[^\s\"'<>]*)",
     re.IGNORECASE | re.MULTILINE,
 )
 # Besides query strings, a bare ``token=`` after whitespace, a quote or a
 # bracket counts, and so does ``:key=`` right behind a hex key id, which is
-# Shaka Packager's ``--keys label=X:key_id=...:key=...`` list.
+# Shaka Packager's ``--keys label=X:key_id=...:key=...`` list. An empty
+# value is left for the assignment pattern, which reads ``key= value``.
 _QUERY_SECRET_RE = re.compile(
     r"(?P<prefix>(?:[?&;]|&amp;|(?<![^\s\"'(\[,])|key_id=[0-9A-Fa-f]+:|"
     r"label=[^:=&\s\"']*:)"
     rf"{_QUERY_SECRET_NAME}=)"
     r"(?P<value>(?:[bru]{1,2})?(?P<vq>[\"'])(?:\\.|(?!(?P=vq))[^\r\n\\])*(?P=vq)"
-    r"|[^&#\s\"'<>\r\n]*)",
+    r"|[^&#\s\"'<>\r\n]+)",
     re.IGNORECASE,
 )
 # ``token`` alone is too common a word, so it counts as a secret name when
 # the key is quoted (``'api_token': ...``), the value is quoted
-# (``token = 'x'``), or it stands alone before a colon (``token: x``).
+# (``token = 'x'``), or it stands alone before a colon, a space and a
+# value of 8 or more characters (``token: 9f2c...``). So a parser's
+# ``Unexpected token: punc``, drawtext's ``Token: 5`` and a namespaced
+# ``app:token:refresh-window`` stay.
 _TOKEN_NAME = (
     r"(?:(?(kq)token|(?!))|token(?=[ \t]*[:=][ \t]*(?:[bru]{1,2})?[\"'])"
-    r"|(?<![A-Za-z0-9_-])token(?=[ \t]*:[ \t]*[^\s]))"
+    r"|(?<![A-Za-z0-9_:-])token(?=[ \t]*:[ \t]+[^\s,;}\]\"']{8}))"
 )
 _ASSIGNED_SECRET_RE = re.compile(
-    rf"(?P<prefix>(?P<kq>[\"'])?(?<![A-Za-z0-9_-])_*(?:[A-Za-z0-9]+[_-])*"
+    rf"(?P<prefix>(?P<kq>[\"'])?(?<![A-Za-z0-9_-])_*(?!{_PLAIN_TOKEN_NAME}\b)(?:[A-Za-z0-9]+[_-])*"
     r"(?-i:(?:[a-z0-9]+(?:[A-Z][a-z0-9]+)*?(?=[A-Z]))?)"
     rf"(?:{_KNOWN_SECRET_ENV}|{_SECRET_NAME}|{_TOKEN_NAME})\b"
-    r"(?(kq)(?P=kq))[ \t]*(?:(?P<colon>:)|=)[ \t]*)"
+    r"(?(kq)(?P=kq))[ \t]*(?:(?P<colon>:)|=)[ \t]*+)"
     # A list value goes whole. A bytes or raw string keeps its quotes.
     # An unquoted true/false/none/null is a flag (``hasPassword=true``).
-    r"(?P<value>\[[^\]\r\n]*\]"
+    r"(?P<value>\[[^\[\]\r\n]*\]"
     rf"|(?:[bru]{{1,2}})?(?P<vq>[\"'])(?!{re.escape(REDACTION_MARKER)})"
     r"(?:\\.|(?!(?P=vq))[^\r\n\\])*(?P=vq)"
     rf"|(?![\"']?{re.escape(REDACTION_MARKER)})(?!(?:true|false|none|null)\b)"
@@ -157,7 +180,8 @@ _PROVIDER_SECRET_PATTERNS = (
     re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b", re.IGNORECASE),
     re.compile(r"\b(?:sk|rk)_(?:live|test)_[0-9A-Za-z]{16,}\b", re.IGNORECASE),
     re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
-    re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"),
+    # A start right after "-" would rescan the run it sits in.
+    re.compile(r"(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{8,}+\.[A-Za-z0-9_-]{8,}+\.[A-Za-z0-9_-]{8,}\b"),
 )
 
 
@@ -173,6 +197,15 @@ def _scrub_paths(text: str) -> str:
 def _redact_match_value(match: re.Match[str]) -> str:
     """Keep a credential label or URL prefix while removing its value."""
     return f"{match.group('prefix')}{REDACTION_MARKER}"
+
+
+def _redact_url_userinfo(match: re.Match[str]) -> str:
+    """Redact everything between ``scheme://`` and the run's last ``@``."""
+    rest = match.group("rest")
+    at = rest.rfind("@")
+    if at < 0:
+        return match.group(0)
+    return f"{match.group('prefix')}{REDACTION_MARKER}{rest[at:]}"
 
 
 def _redact_assigned_value(match: re.Match[str]) -> str:
@@ -239,7 +272,8 @@ def _redact_structure(value: Any) -> Any:
         out = {}
         for key, item in value.items():
             name = _redact_plain_text(key) if isinstance(key, str) else key
-            secret = bool(_SECRET_KEY_RE.search(_CAMEL_BOUNDARY_RE.sub("_", str(key))))
+            snake = _CAMEL_BOUNDARY_RE.sub("_", str(key))
+            secret = bool(_SECRET_KEY_RE.search(snake)) and not _PLAIN_TOKEN_KEY_RE.fullmatch(snake)
             if secret and isinstance(item, str) and item:
                 out[name] = REDACTION_MARKER
             elif secret and isinstance(item, list):
@@ -273,8 +307,10 @@ def _redact_escaped_token(match: re.Match[str]) -> str:
 
     The token is replaced by its decoded, redacted form only when that
     finds something, so ``frame_%04d.png`` and ``my%20clip.mp4`` keep
-    their escapes. Up to three rounds of decoding, for a URL encoded
-    again each time it was nested (``%253Ftoken%253D...``).
+    their escapes. It is decoded up to three times, for a URL encoded
+    again each time it was nested (``%253Ftoken%253D...``), and redacted
+    once at the deepest level, so a secret there is found even when a
+    shallower one is too, and a long run is redacted only once.
     """
     token = match.group(0)
     decoded = token
@@ -282,20 +318,17 @@ def _redact_escaped_token(match: re.Match[str]) -> str:
         if not _PERCENT_ESCAPE_RE.search(decoded):
             break
         decoded = urllib.parse.unquote(decoded)
-        redacted = _redact_unescaped(decoded)
-        if redacted != decoded:
-            return redacted
-    return token
+    if decoded == token:
+        return token
+    redacted = _redact_unescaped(decoded)
+    return token if redacted == decoded else redacted
 
 
 def _redact_unescaped(text: str) -> str:
     redacted = _scrub_paths(text)
     redacted = _PRIVATE_KEY_RE.sub(REDACTION_MARKER, redacted)
     redacted = _SECRET_HEADER_RE.sub(_redact_match_value, redacted)
-    redacted = _URL_USERINFO_RE.sub(
-        lambda match: f"{match.group('prefix')}{REDACTION_MARKER}@",
-        redacted,
-    )
+    redacted = _URL_USERINFO_RE.sub(_redact_url_userinfo, redacted)
     redacted = _QUERY_SECRET_RE.sub(_redact_match_value, redacted)
     redacted = _ASSIGNED_SECRET_RE.sub(_redact_assigned_value, redacted)
     redacted = _CLI_SECRET_RE.sub(_redact_match_value, redacted)

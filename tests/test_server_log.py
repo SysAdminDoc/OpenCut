@@ -490,7 +490,7 @@ def test_second_review_credential_forms_are_redacted(name):
         "POST http://[::1]:8443/v1/notify?to=ops@example.com",
         "CORS allow_headers=['Authorization', 'Content-Type']",
         "user hasPassword=true for job",
-        "s3://bucket:prefix/@2x/thumb.png",
+        "s3://bucket/prefix/@2x/thumb.png",
         "GET /x?cache_key=thumbs",
     ],
 )
@@ -578,3 +578,94 @@ def test_log_tail_job_filter_cannot_confirm_a_redacted_job_id(client, tmp_path, 
     monkeypatch.setattr(server_module, "LOG_FILE", str(log_file))
 
     assert client.get(f"/logs/tail?job_id={secret_id}").get_json()["total"] == 0
+
+
+# Forms the second round of fixes leaked, mangled or made slow.
+_THIRD_REVIEW_LEAKS = {
+    "password ending in a slash": ("rtsp://admin:{}/@cam/stream", "LeakSlashEnd43"),
+    "password ending in a slash before a port": ("http://user:{}/@host:8080/x", "LeakSlashPort44"),
+    "password over 1,024 characters": ("rtsp://admin:{}@cam/stream", "LeakLong45" + "a" * 1100),
+    "space after a prefixed key's =": ("has_api_key= {}", "LeakSpacedEq46"),
+    "query two levels down after a bearer": (
+        "?a=Bearer%20abcdefgh12345&next=%253Ftoken%253D{}",
+        "LeakDeepRound47",
+    ),
+    "authorization= with a scheme": ("authorization=Bearer {}", "LeakEqBearer48"),
+    "cookie= with a cookie list": ("cookie=sid=abc; csrftoken={}", "LeakEqCookie49"),
+    "JWT behind a key": ("id_token: eyJhbGciOiJIUzI1.eyJzdWIiOiIxMjM0.{}", "LeakJwtSig50xyz"),
+}
+
+
+@pytest.mark.parametrize("name", sorted(_THIRD_REVIEW_LEAKS))
+def test_third_review_credential_forms_are_redacted(name):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    template, secret = _THIRD_REVIEW_LEAKS[name]
+    line = template.format(secret)
+    assert secret in line
+    json_line = json.dumps({"level": "WARNING", "message": f"job-1 {line}"})
+
+    assert secret not in _redact_sensitive_text(line)
+    assert secret not in _redact_sensitive_text(json_line)
+
+
+@pytest.mark.parametrize(
+    "ordinary",
+    [
+        "https://cdn.example.com:8443/logo@2x.png",
+        "rtsp://cam.local:554/live@main",
+        "http://localhost:4873/pkg@1.2.0/index.js",
+        "cookie=on codec=h264 file=clip.mp4",
+        "{'bos_token': '<s>', 'eos_token': '</s>'}",
+        "next_page_token = 'CAoQAA'",
+        r"stop_token: '\n'",
+        "GET /v1/items?next_page_token=CAoQAA&limit=50",
+        "SyntaxError: Unexpected token: punc (})",
+        "lexer token: IDENT (frame_rate)",
+        "token:refresh-window",
+        "opencut:token:refresh-window",
+        "drawtext=fontfile=a.ttf:text='Token: 5':x=10",
+        "has_api_key: false",
+    ],
+)
+def test_third_review_ordinary_text_is_left_alone(ordinary):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    assert _redact_sensitive_text(ordinary) == ordinary
+    wrapped = json.dumps({"message": ordinary})
+    assert json.loads(_redact_sensitive_text(wrapped)) == {"message": ordinary}
+
+
+@pytest.mark.parametrize(
+    ("line", "tail"),
+    [
+        ("authorization=false retries=3 codec=h264", " retries=3 codec=h264"),
+        ("GET /a?authorization=none&clip=a.mp4 status=200", "&clip=a.mp4 status=200"),
+        ("cookie=abc123 codec=h264 file=clip.mp4", " codec=h264 file=clip.mp4"),
+    ],
+)
+def test_a_bare_header_name_with_equals_keeps_the_rest_of_the_line(line, tail):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    assert _redact_sensitive_text(line).endswith(tail)
+
+
+def test_token_names_that_are_not_credentials_keep_their_values_in_a_structure():
+    from opencut.core.issue_report import REDACTION_MARKER, _redact_structure
+
+    out = _redact_structure({"bos_token": "<s>", "nextPageToken": "CAoQAA", "api_token": "LeakKey51"})
+    assert out == {"bos_token": "<s>", "nextPageToken": "CAoQAA", "api_token": REDACTION_MARKER}
+
+
+def test_redacting_runs_that_restart_a_pattern_stays_fast():
+    """A run of ``eyJ-`` with a triple-encoded escape took 6.5 seconds, and
+    repeated ``token:[,`` about 1 second, because every start rescanned
+    the rest of the run."""
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    lines = ["eyJ-" * 25_000 + "%25252541", "token:[," * 12_500, "'token':[," * 10_000]
+    start = time.perf_counter()
+    for line in lines:
+        _redact_sensitive_text(line)
+        _redact_sensitive_text(json.dumps({"message": line}))
+    assert time.perf_counter() - start < 2
