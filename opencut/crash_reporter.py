@@ -29,7 +29,10 @@ import traceback
 
 logger = logging.getLogger("opencut")
 
-OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
+from opencut.server_log import opencut_data_dir  # noqa: E402
+
+# Same folder as server.log, which /logs/export and the clear-logs route read.
+OPENCUT_DIR = opencut_data_dir()
 CRASH_LOG = os.path.join(OPENCUT_DIR, "crash.log")
 
 #: Keep the file bounded. A crash loop must not fill the user's disk, and the

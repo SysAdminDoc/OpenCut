@@ -1,6 +1,7 @@
 """Where the server writes its log, and how diagnostics read it back.
 
-``opencut.server`` logs to ``~/.opencut/server.log`` through a
+``opencut.server`` logs to ``server.log`` in the OpenCut data folder
+(``OPENCUT_HOME``, else ``~/.opencut``) through a
 ``RotatingFileHandler``, which renames a full file to ``server.log.1`` and
 shifts older ones up to ``server.log.3``. Issue reports, crash packets, job
 diagnostics and ``/logs/export`` all take the location from here, so the
@@ -19,10 +20,24 @@ SERVER_LOG_BACKUP_COUNT = 3
 DEFAULT_TAIL_BYTES = 4 * 1024 * 1024
 
 
-def server_log_path(home: Optional[str] = None) -> str:
-    """Path of the live server log under ``home`` (the user's home by default)."""
+def opencut_data_dir(home: Optional[str] = None) -> str:
+    """The OpenCut data folder: ``OPENCUT_HOME`` when set, else ``<home>/.opencut``.
+
+    ``home`` stands in for the user's home and only counts when
+    ``OPENCUT_HOME`` is unset, the precedence ``opencut.helpers`` uses for
+    settings and caches, so the logs sit next to the data they describe.
+    """
+    if os.environ.get("OPENCUT_HOME", "").strip():
+        from opencut.helpers import _resolve_opencut_dir
+
+        return _resolve_opencut_dir()
     base = os.path.expanduser("~") if home is None else home
-    return os.path.join(base, ".opencut", SERVER_LOG_NAME)
+    return os.path.join(base, ".opencut")
+
+
+def server_log_path(home: Optional[str] = None) -> str:
+    """Path of the live server log in the OpenCut data folder."""
+    return os.path.join(opencut_data_dir(home), SERVER_LOG_NAME)
 
 
 def server_log_files(home: Optional[str] = None) -> List[str]:
@@ -81,6 +96,7 @@ __all__ = [
     "SERVER_LOG_BACKUP_COUNT",
     "SERVER_LOG_MAX_BYTES",
     "SERVER_LOG_NAME",
+    "opencut_data_dir",
     "server_log_files",
     "server_log_path",
     "server_log_tail",

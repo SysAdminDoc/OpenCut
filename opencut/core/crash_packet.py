@@ -39,7 +39,7 @@ from typing import List, Optional
 
 from opencut.core.issue_report import _redact_sensitive_text, _tail_file
 from opencut.openapi_registry import openapi_response_schema
-from opencut.server_log import SERVER_LOG_NAME, server_log_tail
+from opencut.server_log import SERVER_LOG_NAME, opencut_data_dir, server_log_tail
 
 logger = logging.getLogger("opencut")
 
@@ -153,7 +153,7 @@ def build_packet(
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    data_dir = Path(os.path.expanduser("~")) / ".opencut"
+    data_dir = Path(opencut_data_dir())
     crash_log = data_dir / "crash.log"
 
     crash_text = _redact_sensitive_text(_tail_file(str(crash_log), max_bytes=crash_tail_bytes)) if crash_log.exists() else ""

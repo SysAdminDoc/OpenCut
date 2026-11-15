@@ -24,6 +24,8 @@ from opencut import server_log
 def fake_home(tmp_path, monkeypatch):
     home = tmp_path / "home"
     (home / ".opencut").mkdir(parents=True)
+    # OPENCUT_HOME outranks the user's home for the data folder.
+    monkeypatch.delenv("OPENCUT_HOME", raising=False)
     real_expanduser = os.path.expanduser
     monkeypatch.setattr(
         "os.path.expanduser",
@@ -54,6 +56,57 @@ def server_logger(fake_home):
     finally:
         logger.removeHandler(handler)
         handler.close()
+
+
+def test_server_log_follows_opencut_home(fake_home, tmp_path, monkeypatch):
+    assert server_log.server_log_path() == str(fake_home / ".opencut" / "server.log")
+
+    data = tmp_path / "custom-data"
+    monkeypatch.setenv("OPENCUT_HOME", str(data))
+    assert server_log.server_log_path() == str(data / "server.log")
+    assert server_log.server_log_files()[1] == str(data / "server.log.1")
+    # OPENCUT_HOME outranks a home passed in, as it outranks ~ for settings.
+    assert server_log.server_log_path(str(fake_home)) == str(data / "server.log")
+    monkeypatch.delenv("OPENCUT_HOME")
+    assert server_log.server_log_path(str(tmp_path)) == str(tmp_path / ".opencut" / "server.log")
+
+
+def test_server_started_with_opencut_home_leaves_the_profile_alone(tmp_path):
+    """The log and the packages fallback both land in OPENCUT_HOME."""
+    import subprocess
+    import sys
+
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data = tmp_path / "custom-data"
+    profile = tmp_path / "profile"
+    profile.mkdir()
+    env = dict(os.environ)
+    env.update({
+        "OPENCUT_HOME": str(data),
+        "USERPROFILE": str(profile),
+        "HOME": str(profile),
+        "PYTHONPATH": repo_root,
+    })
+    probe = (
+        "import json, sys\n"
+        "import opencut.server as s\n"
+        "from opencut import crash_reporter\n"
+        "print(json.dumps({'log': s.LOG_FILE, 'handler': s._file_handler.baseFilename,"
+        " 'crash': crash_reporter.CRASH_LOG,"
+        " 'packages': [p for p in sys.path if p.endswith('packages')]}))\n"
+    )
+    done = subprocess.run(
+        [sys.executable, "-c", probe], cwd=str(tmp_path), env=env,
+        capture_output=True, text=True, timeout=180, check=False,
+    )
+    assert done.returncode == 0, done.stderr[-2000:]
+    found = json.loads(done.stdout.strip().splitlines()[-1])
+
+    assert found["log"] == str(data / "server.log")
+    assert found["handler"] == str(data / "server.log")
+    assert found["crash"] == str(data / "crash.log")
+    assert str(data / "packages") in found["packages"]
+    assert not (profile / ".opencut").exists()
 
 
 def test_server_writes_the_shared_path():

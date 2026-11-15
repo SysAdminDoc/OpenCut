@@ -295,13 +295,16 @@ def _append_site_packages_from(python: str) -> int:
     return added
 
 
-# Ensure ~/.opencut/packages (pip --target fallback) is importable EARLY as a
-# low-priority fallback. It must not outrank stdlib or bundled app modules.
-_opencut_packages = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+# Ensure <data folder>/packages (pip --target fallback) is importable EARLY as
+# a low-priority fallback. It must not outrank stdlib or bundled app modules.
+# The data folder is OPENCUT_HOME when set, else ~/.opencut.
+from opencut.helpers import OPENCUT_DIR as _OPENCUT_DATA_DIR  # noqa: E402
+
+_opencut_packages = os.path.join(_OPENCUT_DATA_DIR, "packages")
 os.makedirs(_opencut_packages, exist_ok=True)
 if _opencut_packages not in sys.path:
     sys.path.append(_opencut_packages)
-    logger.info("  Added ~/.opencut/packages to sys.path (fallback)")
+    logger.info("  Added %s to sys.path (fallback)", _opencut_packages)
 
 # Arm crash capture before any optional dependency is imported: a module built
 # against the wrong CPython ABI aborts the process on import, and only an

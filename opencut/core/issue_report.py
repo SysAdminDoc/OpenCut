@@ -21,7 +21,7 @@ import re
 import urllib.parse
 from typing import Any, Dict, List
 
-from opencut.server_log import server_log_tail
+from opencut.server_log import opencut_data_dir, server_log_tail
 
 logger = logging.getLogger("opencut")
 
@@ -442,7 +442,7 @@ def bundle(
     body is capped at ~60 KB and both fields are URL-encoded.
     """
     log_tail_lines = max(10, min(int(log_tail_lines or 200), 2000))
-    data_dir = os.path.join(_HOME, ".opencut")
+    data_dir = opencut_data_dir(_HOME)
     crash_path = os.path.join(data_dir, "crash.log")
 
     try:
