@@ -272,3 +272,81 @@ def test_rvm_rgba_frames_keep_their_pixels(tmp_path, monkeypatch):
         12, 11, 10, 63, 15, 14, 13, 191, 18, 17, 16, 25,
     ])
     assert written == {"frame_000000.png": ("RGBA", (3, 2), expected)}
+
+
+# ---------------------------------------------------------------------------
+# ONNX frame writers: DDColor, neural deflicker and VRT pass "RGB" positionally
+# ---------------------------------------------------------------------------
+# The model's C x H x W output for one row of two pixels, in 0..1.
+_CHW_OUT = np.array([[[0.0, 0.25]], [[0.5, 0.75]], [[1.0, 0.1]]], dtype=np.float32)
+# value * 255, truncated, per pixel: (0, 127, 255) and (63, 191, 25)
+_RGB_OUT = bytes([0, 127, 255, 63, 191, 25])
+
+
+def _fake_onnx(monkeypatch, env_var, output):
+    import opencut.gpu
+
+    class FakeInput:
+        name = "frames"
+
+    class FakeSession:
+        def __init__(self, _path, providers=None):
+            pass
+
+        def get_inputs(self):
+            return [FakeInput()]
+
+        def run(self, _names, _feeds):
+            return [output]
+
+    fake_ort = types.ModuleType("onnxruntime")
+    fake_ort.InferenceSession = FakeSession
+    monkeypatch.setitem(sys.modules, "onnxruntime", fake_ort)
+    monkeypatch.setattr(opencut.gpu, "selected_onnx_providers", lambda *a, **k: ["CPUExecutionProvider"])
+    monkeypatch.setenv(env_var, "model.onnx")
+
+
+def _one_frame(tmp_path):
+    path = tmp_path / "frame_000000.png"
+    Image.new("RGB", (2, 1), (9, 9, 9)).save(path)
+    return [str(path)]
+
+
+def _window_output():
+    # 1 x T x C x H x W with only the centre of the 7-frame window set.
+    out = np.zeros((1, 7, 3, 1, 2), dtype=np.float32)
+    out[0, 3] = _CHW_OUT
+    return out
+
+
+def test_ddcolor_onnx_frames_keep_their_pixels(tmp_path, monkeypatch):
+    from opencut.core import colorize_ddcolor
+
+    _fake_onnx(monkeypatch, "OPENCUT_DDCOLOR_ONNX", _CHW_OUT[None])
+    frames = _one_frame(tmp_path)
+
+    colorize_ddcolor._colourise_onnx(frames, None)
+
+    assert _png(frames[0]) == ("RGB", (2, 1), _RGB_OUT)
+
+
+def test_neural_deflicker_frames_keep_their_pixels(tmp_path, monkeypatch):
+    from opencut.core import deflicker_neural
+
+    _fake_onnx(monkeypatch, "OPENCUT_DEFLICKER_ONNX", _window_output())
+    frames = _one_frame(tmp_path)
+
+    deflicker_neural._deflicker_neural_onnx(frames, None)
+
+    assert _png(frames[0]) == ("RGB", (2, 1), _RGB_OUT)
+
+
+def test_vrt_restored_frames_keep_their_pixels(tmp_path, monkeypatch):
+    from opencut.core import restore_vrt
+
+    _fake_onnx(monkeypatch, "OPENCUT_VRT_ONNX", _window_output())
+    frames = _one_frame(tmp_path)
+
+    restore_vrt._infer_onnx(frames, 7, None)
+
+    assert _png(frames[0]) == ("RGB", (2, 1), _RGB_OUT)
