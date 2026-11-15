@@ -11,7 +11,11 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.core.timecode_utils import frames_to_timecode, timecode_to_frames
+from opencut.core.timecode_utils import (
+    frames_to_timecode,
+    seconds_to_ndf_timecode,
+    timecode_to_frames,
+)
 from opencut.helpers import (
     get_video_info,
 )
@@ -100,12 +104,6 @@ def _is_drop_frame_timecode(*timecodes: object) -> bool:
 def _frames_to_seconds(frames: int, fps: float) -> float:
     """Convert frame count to seconds."""
     return frames / max(fps, 0.001)
-
-
-def _seconds_to_tc(seconds: float, fps: float) -> str:
-    """Convert seconds to timecode string."""
-    frame_num = int(seconds * fps)
-    return _frames_to_tc(frame_num, fps)
 
 
 # ---------------------------------------------------------------------------
@@ -460,6 +458,7 @@ def _build_edl_timeline(
     fps: float,
 ) -> str:
     """Build an EDL (Edit Decision List) string."""
+    fps = _coerce_fps(fps)
     lines = []
     lines.append("TITLE: OpenCut TC Sync")
     lines.append("FCM: NON-DROP FRAME")
@@ -474,9 +473,12 @@ def _build_edl_timeline(
         end_tc = src.get("end_tc", "00:00:00:00")
 
         # Record start/end in timeline (accounting for offset)
-        rec_start = _frames_to_tc(offset_frames, fps)
+        # Record times go through the shared non-drop converter, so a rate
+        # with no SMPTE timecode (12.5) is refused and hours past 23 keep
+        # counting.
+        rec_start = seconds_to_ndf_timecode(offset_frames / fps, fps)
         end_frame = _tc_to_frames(end_tc, fps) - _tc_to_frames(start_tc, fps) + offset_frames
-        rec_end = _frames_to_tc(end_frame, fps)
+        rec_end = seconds_to_ndf_timecode(end_frame / fps, fps)
 
         edit_num = idx + 1
         reel = os.path.splitext(os.path.basename(fp))[0][:8].ljust(8)

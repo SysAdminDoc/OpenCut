@@ -403,6 +403,105 @@ class TestNtscNonDropTimecode:
         # seconds with frames counted at the rounded rate.
         assert "00:01:01:00" in edl
 
+    @pytest.mark.parametrize("fps", [100.0, 120.0, 120000 / 1001, 1000.0, 90000.0])
+    def test_rates_whose_frames_need_three_digits_are_refused(self, fps):
+        from opencut.core.timecode_utils import nominal_timecode_rate, seconds_to_ndf_timecode
+
+        with pytest.raises(ValueError):
+            nominal_timecode_rate(fps)
+        with pytest.raises(ValueError):
+            seconds_to_ndf_timecode(1.995, fps)
+
+    @pytest.mark.parametrize("seconds", [float("nan"), float("inf"), float("-inf"), 1e308, 100 * 3600.0])
+    def test_times_a_timecode_cannot_hold_are_refused(self, seconds):
+        from opencut.core.timecode_utils import seconds_to_ndf_timecode
+
+        with pytest.raises(ValueError):
+            seconds_to_ndf_timecode(seconds, 30.0)
+
+    def test_the_last_two_digit_hour_still_writes(self):
+        from opencut.core.timecode_utils import seconds_to_ndf_timecode
+
+        assert seconds_to_ndf_timecode(359999.9, 30.0) == "99:59:59:27"
+
+    def test_edl_import_refuses_a_three_digit_frame_field(self, tmp_path):
+        from opencut.core.edl_aaf import _tc_to_seconds, import_edl
+
+        with pytest.raises(ValueError, match="Invalid timecode"):
+            _tc_to_seconds("00:00:01:119", 30.0)
+        path = tmp_path / "bad.edl"
+        path.write_text(
+            "TITLE: bad\nFCM: NON-DROP FRAME\n\n"
+            "001  AX       V     C        00:00:00:00 00:00:01:00 00:00:00:00 00:00:01:119\n",
+            encoding="utf-8",
+        )
+        with pytest.raises(ValueError, match="Invalid timecode"):
+            import_edl(str(path), fps=30.0)
+
+    def test_transcript_edit_keeps_the_render_when_the_edl_cannot_be_written(self, tmp_path, monkeypatch):
+        from opencut.core import transcript_timeline_edit as tte
+
+        source = tmp_path / "talk.mp4"
+        source.write_bytes(b"not really a video")
+        (tmp_path / "talk_edited.edl").mkdir()
+        rendered = []
+        monkeypatch.setattr(tte, "get_video_info", lambda _p: {"fps": 30000 / 1001, "duration": 10.0})
+        monkeypatch.setattr(tte, "run_ffmpeg", lambda cmd, **_kw: rendered.append(cmd))
+
+        result = tte.apply_edits(str(source), [tte.CutEntry(source_start=1.0, source_end=4.0)],
+                                 output_dir=str(tmp_path))
+
+        assert rendered, "the edit should still render"
+        assert result.new_duration == pytest.approx(3.0)
+        assert (tmp_path / "talk_edited.otio.json").is_file()
+
+    def test_transcript_edit_removes_an_older_edl_it_could_not_replace(self, tmp_path, monkeypatch):
+        from opencut.core import transcript_timeline_edit as tte
+
+        source = tmp_path / "talk.mp4"
+        source.write_bytes(b"not really a video")
+        stale = tmp_path / "talk_edited.edl"
+        stale.write_text("TITLE: an earlier render\n", encoding="utf-8")
+        monkeypatch.setattr(tte, "get_video_info", lambda _p: {"fps": 12.5, "duration": 10.0})
+        monkeypatch.setattr(tte, "run_ffmpeg", lambda cmd, **_kw: None)
+
+        tte.apply_edits(str(source), [tte.CutEntry(source_start=1.0, source_end=4.0)],
+                        output_dir=str(tmp_path))
+
+        assert not stale.exists()
+
+    @pytest.mark.parametrize("end", [float("inf"), float("nan"), 1e308, 100 * 3600.0])
+    def test_transcript_edit_refuses_a_cut_end_it_cannot_label_before_rendering(self, tmp_path, monkeypatch, end):
+        from opencut.core import transcript_timeline_edit as tte
+
+        source = tmp_path / "talk.mp4"
+        source.write_bytes(b"not really a video")
+
+        def _no_render(*_args, **_kwargs):
+            raise AssertionError("rendered before the cut times were checked")
+
+        monkeypatch.setattr(tte, "get_video_info", lambda _p: {"fps": 30.0, "duration": 10.0})
+        monkeypatch.setattr(tte, "run_ffmpeg", _no_render)
+
+        with pytest.raises(ValueError, match="finite"):
+            tte.apply_edits(str(source), [tte.CutEntry(source_start=1.0, source_end=end)],
+                            output_dir=str(tmp_path))
+
+    def test_timecode_sync_edl_counts_past_a_day_and_refuses_12_5(self, tmp_path):
+        from opencut.core.tc_sync import generate_synced_timeline
+
+        source = {"filepath": "cam_a.mov", "start_tc": "00:00:00:00", "end_tc": "25:03:04:05"}
+        out = tmp_path / "sync.edl"
+        generate_synced_timeline([dict(source, fps=30000 / 1001)], {"cam_a.mov": {"offset_frames": 0}},
+                                 str(out), format="edl")
+        event = next(line for line in out.read_text(encoding="utf-8").splitlines() if line.startswith("001"))
+        assert event.split()[-2:] == ["00:00:00:00", "25:03:04:05"]
+
+        refused = tmp_path / "refused.edl"
+        with pytest.raises(ValueError, match="SMPTE"):
+            generate_synced_timeline([dict(source, fps=12.5)], {}, str(refused), format="edl")
+        assert not refused.exists()
+
 
 class TestExportEdl:
     """Tests for export_edl content generation."""

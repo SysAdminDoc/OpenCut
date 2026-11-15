@@ -109,10 +109,20 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - Auto rough cut, template assembly and the review bundle's marker EDL and
   Premiere marker CSV had their own copies of the old math and now use the
   same converter. Rough cut and template assembly check the rate before they
-  look at any media. Review markers still get a label at 12.5 fps.
+  look at any media. Review markers still get a label at 12.5 fps. At 24, 25,
+  30 and other whole-number rates their frames now round to the nearest
+  frame instead of always rounding down, so some events move by one frame.
+- The multicam timecode sync EDL uses the same converter, so it refuses
+  12.5 fps and counts past 24 hours too. Rates of 100 fps and up are
+  refused, since their frame numbers don't fit an EDL. A time that isn't a
+  number, or that runs past 99 hours, is an error instead of `00:00:00:00`.
+- EDL import refuses a timecode with a three-digit frame field instead of
+  reading `00:00:01:119` as frame 11.
 - A transcript edit on footage whose rate has no timecode (12.5 fps, or an
   odd phone rate) renders again. It used to fail at the very end over the
-  EDL. Now it skips just that file and still writes the OTIO sidecar.
+  EDL. Now it skips just that file and still writes the OTIO sidecar. The
+  same goes for an EDL that can't be written, and an EDL left over from an
+  earlier render of the same name is removed.
 - Timecode past 24 hours keeps counting (`25:03:04:05`) instead of wrapping
   back to `01:03:04:05`, so a long timeline reads back to the right frame.
 

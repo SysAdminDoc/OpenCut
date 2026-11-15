@@ -155,13 +155,15 @@ def nominal_timecode_rate(fps: float) -> int:
     An integer rate counts itself. An NTSC rate (23.976, 29.97, 59.94 and the
     exact x/1.001 values) counts the next whole number. Any other rate has no
     SMPTE timecode, so it raises ``ValueError`` instead of mislabeling frames.
+    So does a rate of 100 or more, whose frame numbers don't fit the
+    two-digit frame field.
     """
     fps = float(fps)
     if not (fps > 0 and math.isfinite(fps)):
         raise ValueError(f"Frame rate must be a positive number, got {fps!r}")
     for candidate in (fps, fps * 1.001):
         nominal = round(candidate)
-        if nominal > 0 and abs(candidate - nominal) < 0.01:
+        if 0 < nominal < 100 and abs(candidate - nominal) < 0.01:
             return int(nominal)
     raise ValueError(f"{fps:g} fps has no SMPTE timecode; use a whole-number or NTSC frame rate")
 
@@ -172,11 +174,17 @@ def seconds_to_ndf_timecode(seconds: float, fps: float) -> str:
     The frame count comes from the true rate and is labeled at the nominal
     rate, so one hour at 29.97 reads ``00:59:56:12``. Hours keep counting
     past 23 instead of wrapping, so a timeline longer than a day reads back
-    to the same time.
+    to the same time. A time that isn't finite, or that needs more than two
+    hour digits, raises ``ValueError``. Negative times clamp to zero.
     """
     nominal = nominal_timecode_rate(fps)
-    frame = int(round(max(0.0, float(seconds)) * float(fps)))
+    seconds = float(seconds)
+    if not (math.isfinite(seconds) and math.isfinite(seconds * float(fps))):
+        raise ValueError(f"Time must be a finite number of seconds, got {seconds!r}")
+    frame = int(round(max(0.0, seconds) * float(fps)))
     whole_seconds, frames = divmod(frame, nominal)
+    if whole_seconds >= 100 * 3600:
+        raise ValueError(f"{seconds:g} s is past 99:59:59, the last timecode HH:MM:SS:FF can hold")
     return (
         f"{whole_seconds // 3600:02d}:{whole_seconds // 60 % 60:02d}:"
         f"{whole_seconds % 60:02d}:{frames:02d}"

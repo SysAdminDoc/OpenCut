@@ -12,6 +12,7 @@ rearrangement, segment duplication, pause insertion, and multi-format export.
 import copy
 import json
 import logging
+import math
 import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
@@ -943,6 +944,10 @@ def export_otio_json(
 # ---------------------------------------------------------------------------
 # Apply edits to video via FFmpeg
 # ---------------------------------------------------------------------------
+# Timecode stops at 99:59:59, so the EDL sidecar can't hold a later cut.
+_MAX_CUT_SECONDS = 100 * 3600.0
+
+
 def apply_edits(
     source_file: str,
     cuts: List[CutEntry],
@@ -962,6 +967,17 @@ def apply_edits(
     """
     if not cuts:
         raise ValueError("No cuts to apply")
+    for cut in cuts:
+        # Checked before rendering: an infinite end (JSON Infinity) would
+        # render to the end of the source and then fail in the sidecars.
+        if not all(
+            math.isfinite(t) and abs(t) < _MAX_CUT_SECONDS
+            for t in (cut.source_start, cut.source_end)
+        ):
+            raise ValueError(
+                f"Cut times must be finite and under 100 hours, got "
+                f"{cut.source_start!r} to {cut.source_end!r}"
+            )
     if not os.path.isfile(source_file):
         raise FileNotFoundError(f"Source file not found: {source_file}")
 
@@ -1008,14 +1024,20 @@ def apply_edits(
     edl_path = out_path.rsplit(".", 1)[0] + ".edl"
     try:
         edl_content = export_edl(cuts, fps=fps)
-    except ValueError as exc:
-        # The edit is already rendered. A source whose rate has no SMPTE
-        # timecode (12.5 fps, variable-rate phone video) only loses the
-        # EDL sidecar. The OTIO sidecar below carries the rate as it is.
-        logger.warning("No EDL sidecar for %s: %s", source_file, exc)
-    else:
         with open(edl_path, "w", encoding="utf-8") as f:
             f.write(edl_content)
+    except (ValueError, OSError) as exc:
+        # The edit is already rendered. A source whose rate has no SMPTE
+        # timecode (12.5 fps, variable-rate phone video) or an EDL path
+        # that can't be written only loses the EDL sidecar. The OTIO
+        # sidecar below carries the rate as it is.
+        logger.warning("No EDL sidecar for %s: %s", source_file, exc)
+        # Don't leave an EDL from an earlier render (or half of this one)
+        # next to the new file.
+        try:
+            os.remove(edl_path)
+        except OSError:
+            pass
 
     otio_path = out_path.rsplit(".", 1)[0] + ".otio.json"
     otio_data = export_otio_json(cuts, source_file=source_file, fps=fps)

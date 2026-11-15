@@ -55,7 +55,9 @@ def _seconds_to_tc(seconds: float, fps: float = 30.0) -> str:
 
 def _tc_to_seconds(tc: str, fps: float = 30.0) -> float:
     """Convert non-drop timecode HH:MM:SS:FF to seconds."""
-    m = _TC_PATTERN.match(tc)
+    # fullmatch, so a three-digit frame field ("00:00:01:119") is an
+    # error instead of being read as frame 11.
+    m = _TC_PATTERN.fullmatch(tc.strip())
     if not m:
         raise ValueError(f"Invalid timecode: {tc}")
     return ndf_timecode_to_seconds(m.group(0), fps)
@@ -186,10 +188,13 @@ def import_edl(
         r"(\S+)\s+"                  # reel
         r"([VBAB12]+\d*)\s+"        # channel
         r"(\S+)\s+"                  # transition type
-        r"(\d{2}:\d{2}:\d{2}:\d{2})\s+"  # source in
-        r"(\d{2}:\d{2}:\d{2}:\d{2})\s+"  # source out
-        r"(\d{2}:\d{2}:\d{2}:\d{2})\s+"  # record in
-        r"(\d{2}:\d{2}:\d{2}:\d{2})"     # record out
+        # Hours and frames take any width here, so an out-of-range field
+        # reaches _tc_to_seconds and fails there instead of the event
+        # being skipped or cut short.
+        r"(\d+:\d{2}:\d{2}:\d+)\s+"  # source in
+        r"(\d+:\d{2}:\d{2}:\d+)\s+"  # source out
+        r"(\d+:\d{2}:\d{2}:\d+)\s+"  # record in
+        r"(\d+:\d{2}:\d{2}:\d+)(?!\S)"  # record out
     )
 
     for line in lines:
