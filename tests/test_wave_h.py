@@ -313,7 +313,7 @@ class TestIssueReport(unittest.TestCase):
 
         with (
             patch.object(issue_report, "_tail_file", return_value=crash_tail),
-            patch.object(issue_report, "_tail_lines", return_value=log_tail),
+            patch.object(issue_report, "server_log_tail", return_value=log_tail.splitlines()),
             patch.object(issue_report, "logger") as mocked_logger,
         ):
             result = issue_report.bundle(

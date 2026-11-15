@@ -1986,7 +1986,7 @@ def job_diagnostics(job_id: str):
     """Return a diagnostic payload for ``job_id`` (F010).
 
     Combines the persisted job store row with the in-memory job state
-    and a relevant slice of ``opencut.log`` filtered to lines that
+    and a relevant slice of ``server.log`` filtered to lines that
     mention the job_id or its request_id. The response is scrubbed of
     home directory paths via :mod:`opencut.core.issue_report`.
     """

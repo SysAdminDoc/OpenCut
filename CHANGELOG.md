@@ -4,6 +4,18 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ## Unreleased
 
+### Fixed: issue reports and crash packets carry the server log again
+
+- The server writes `~/.opencut/server.log`, but the issue report, the crash
+  packet and the job diagnostics all read `~/.opencut/opencut.log`, a file
+  nothing writes. Every bundle went out with no log at all, and the help text
+  sent people looking for that missing file too.
+- All of them now read `server.log`. When the live file is short because it
+  just rotated, the older lines come from `server.log.1` and the files after it.
+- Settings > Export logs used to download only the crash log. It now saves one
+  text file with the recent server log and the crash log, with your home
+  folder shown as `~`.
+
 ### Fixed: SRT and VTT captions no longer lose words
 
 - A cue that fit the character budget on paper could still need a third line

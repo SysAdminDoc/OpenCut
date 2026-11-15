@@ -724,7 +724,7 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
             records: [],
             targets: [
               { name: "crash.log", path: "C:/OpenCut/crash.log", bytes: 5 },
-              { name: "opencut.log", path: "C:/OpenCut/opencut.log", bytes: 10 },
+              { name: "server.log", path: "C:/OpenCut/server.log", bytes: 10 },
             ],
             reversible: false,
           },
@@ -787,7 +787,7 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
           "/workflow/delete": { success: true, deleted: body.name },
           "/logs/clear": {
             success: true,
-            cleared: ["crash.log", "opencut.log"],
+            cleared: ["crash.log", "server.log"],
             total_bytes: 15,
           },
         };
@@ -2699,7 +2699,7 @@ test("CEP destructive controls preview signed plans before confirmation", async 
   await clearLogs.click();
   await expect(dialog).toContainText("Clear diagnostic logs?");
   await expect(dialog).toContainText("crash.log");
-  await expect(dialog).toContainText("opencut.log");
+  await expect(dialog).toContainText("server.log");
   await expect(dialog).toContainText("5 bytes");
   await expect(dialog).toContainText("10 bytes");
   await expect(dialog).toContainText("permanent and cannot be undone");

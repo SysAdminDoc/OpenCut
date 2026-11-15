@@ -682,7 +682,7 @@ _DOCUMENTATION: Dict[str, Dict[str, str]] = {
             "Common issues: FFmpeg not found (install FFmpeg and add to PATH), "
             "GPU out of memory (reduce batch size or use CPU mode), "
             "model download failed (check internet connection, retry). "
-            "Logs are stored in ~/.opencut/opencut.log."
+            "Logs are stored in ~/.opencut/server.log."
         ),
     },
 }

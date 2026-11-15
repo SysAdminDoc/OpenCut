@@ -73,8 +73,8 @@ body:
     attributes:
       label: Logs / screenshots
       description: |
-        Paste a relevant excerpt from `~/.opencut/logs/opencut.log` (Windows:
-        `%USERPROFILE%\.opencut\logs\`) or attach a screenshot. The panel
+        Paste a relevant excerpt from `~/.opencut/server.log` (Windows:
+        `%USERPROFILE%\.opencut\server.log`) or attach a screenshot. The panel
         also has a "Send log" button under Settings that bundles a redacted
         report.
       render: text

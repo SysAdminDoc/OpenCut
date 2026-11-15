@@ -20,14 +20,20 @@ from contextlib import suppress
 from flask import Flask, request
 from flask_cors import CORS
 
+from opencut.server_log import (
+    SERVER_LOG_BACKUP_COUNT,
+    SERVER_LOG_MAX_BYTES,
+    server_log_path,
+)
+
 _TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
 
 # ---------------------------------------------------------------------------
 # Logging Setup
 # ---------------------------------------------------------------------------
-LOG_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
+LOG_FILE = server_log_path()
+LOG_DIR = os.path.dirname(LOG_FILE)
 os.makedirs(LOG_DIR, exist_ok=True)
-LOG_FILE = os.path.join(LOG_DIR, "server.log")
 
 logger = logging.getLogger("opencut")
 logger.setLevel(logging.DEBUG)
@@ -64,7 +70,10 @@ except ImportError:
     _json_formatter = None
 
 _file_handler = logging.handlers.RotatingFileHandler(
-    LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+    LOG_FILE,
+    maxBytes=SERVER_LOG_MAX_BYTES,
+    backupCount=SERVER_LOG_BACKUP_COUNT,
+    encoding="utf-8",
 )
 _file_handler.setLevel(logging.DEBUG)
 if _json_formatter:

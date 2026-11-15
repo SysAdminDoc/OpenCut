@@ -11,7 +11,7 @@ The data sources are:
   metadata.
 * :mod:`opencut.jobs` (in-memory dict) for the live status of any job
   that hasn't yet been flushed to the store.
-* The opencut log file under ``~/.opencut/opencut.log`` for the actual
+* The server log under ``~/.opencut/server.log`` for the actual
   log slice — we tail the last N MB and filter for lines containing
   either the ``job_id`` or, when known, the ``request_id``.
 
@@ -30,13 +30,14 @@ from pathlib import Path
 from typing import Iterable, List, Optional
 
 from opencut.core.issue_report import _scrub_paths
+from opencut.server_log import server_log_path, server_log_tail
 
 logger = logging.getLogger("opencut")
 
 
 @dataclass
 class LogSlice:
-    """Tail-filtered slice of opencut.log relevant to a job/request."""
+    """Tail-filtered slice of server.log relevant to a job/request."""
 
     source: str
     line_count: int
@@ -69,7 +70,6 @@ class JobDiagnostic:
         return payload
 
 
-_LOG_PATH = Path(os.path.expanduser("~")) / ".opencut" / "opencut.log"
 _MAX_TAIL_BYTES = 4 * 1024 * 1024  # 4 MB cap on the log slice scan
 RESOURCE_METADATA_FIELDS = ("peak_vram_mb", "peak_cpu_pct", "peak_rss_mb")
 EXIT_REASONS = frozenset({
@@ -317,17 +317,7 @@ class JobResourceSampler:
 
 
 def _tail_log(max_bytes: int = _MAX_TAIL_BYTES) -> List[str]:
-    if not _LOG_PATH.exists():
-        return []
-    try:
-        size = _LOG_PATH.stat().st_size
-        with _LOG_PATH.open("rb") as fh:
-            fh.seek(max(0, size - max_bytes))
-            data = fh.read()
-    except OSError as exc:
-        logger.debug("job_diagnostics: cannot read log: %s", exc)
-        return []
-    return data.decode("utf-8", errors="replace").splitlines()
+    return server_log_tail(max_bytes=max_bytes)
 
 
 def _filter_lines(lines: Iterable[str], tokens: Iterable[str]) -> List[str]:
@@ -421,7 +411,7 @@ def build_diagnostic(job_id: str, *, log_tail_lines: int = 200) -> JobDiagnostic
             cap = max(10, int(log_tail_lines))
             body = "\n".join(matches[-cap:])
             diag.log_slice = LogSlice(
-                source=str(_LOG_PATH),
+                source=server_log_path(),
                 line_count=len(matches),
                 body=_scrub_paths(body),
             )

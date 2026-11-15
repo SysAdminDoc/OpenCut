@@ -21,6 +21,8 @@ import re
 import urllib.parse
 from typing import Any, Dict, List
 
+from opencut.server_log import server_log_tail
+
 logger = logging.getLogger("opencut")
 
 GITHUB_REPO = "SysAdminDoc/OpenCut"
@@ -172,18 +174,6 @@ def _tail_file(path: str, max_bytes: int = 20_000) -> str:
     return data.decode("utf-8", errors="replace")
 
 
-def _tail_lines(path: str, max_lines: int = 200) -> str:
-    """Return the last ``max_lines`` of ``path``."""
-    if not os.path.isfile(path):
-        return ""
-    try:
-        with open(path, "r", encoding="utf-8", errors="replace") as fh:
-            lines = fh.readlines()
-    except OSError as exc:
-        return f"[could not read {os.path.basename(path)}: {exc}]"
-    return "".join(lines[-max_lines:])
-
-
 def bundle(
     title: str = "",
     description: str = "",
@@ -199,7 +189,6 @@ def bundle(
     """
     log_tail_lines = max(10, min(int(log_tail_lines or 200), 2000))
     data_dir = os.path.join(_HOME, ".opencut")
-    log_path = os.path.join(data_dir, "opencut.log")
     crash_path = os.path.join(data_dir, "crash.log")
 
     try:
@@ -246,7 +235,7 @@ def bundle(
                          + _redact_sensitive_text(tail) + "\n```\n")
 
     if include_logs:
-        tail = _tail_lines(log_path, max_lines=log_tail_lines)
+        tail = "\n".join(server_log_tail(max_lines=log_tail_lines, home=_HOME))
         if tail:
             parts.append("## Recent logs\n\n```\n"
                          + _redact_sensitive_text(tail) + "\n```\n")

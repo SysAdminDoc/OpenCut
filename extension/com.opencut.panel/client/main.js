@@ -13171,7 +13171,7 @@
             exportLogsBtn.addEventListener("click", function () {
                 var a = document.createElement("a");
                 a.href = BACKEND + "/logs/export";
-                a.download = "opencut_crash.log";
+                a.download = "opencut_logs.txt";
                 a.click();
             });
         }

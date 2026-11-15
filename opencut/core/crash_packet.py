@@ -11,7 +11,8 @@ Bundle contents:
 * ``manifest.json`` — version, generated_at, python+platform, scrubbed
   paths to the source artefacts, sizes.
 * ``crash.log`` — tail of ``~/.opencut/crash.log`` (scrubbed).
-* ``opencut.log`` — last 500 lines of ``~/.opencut/opencut.log``
+* ``server.log`` — last 500 lines of ``~/.opencut/server.log``, reaching
+  into its rotated siblings when the live file is short
   (scrubbed, cap configurable).
 * ``environment.txt`` — Python + platform + bundled FFmpeg version +
   installed pip distributions (names only; no versions, to avoid
@@ -36,8 +37,9 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
-from opencut.core.issue_report import _scrub_paths, _tail_file, _tail_lines
+from opencut.core.issue_report import _scrub_paths, _tail_file
 from opencut.openapi_registry import openapi_response_schema
+from opencut.server_log import SERVER_LOG_NAME, server_log_tail
 
 logger = logging.getLogger("opencut")
 
@@ -153,10 +155,9 @@ def build_packet(
 
     data_dir = Path(os.path.expanduser("~")) / ".opencut"
     crash_log = data_dir / "crash.log"
-    opencut_log = data_dir / "opencut.log"
 
     crash_text = _scrub_paths(_tail_file(str(crash_log), max_bytes=crash_tail_bytes)) if crash_log.exists() else ""
-    log_text = _scrub_paths(_tail_lines(str(opencut_log), max_lines=log_tail_lines)) if opencut_log.exists() else ""
+    log_text = _scrub_paths("\n".join(server_log_tail(max_lines=log_tail_lines)))
     environment_text = _environment_block()
     jobs_text = _recent_jobs_block() if include_jobs else None
 
@@ -170,7 +171,7 @@ def build_packet(
     if crash_text:
         pre_entries.append(_entry("crash.log", crash_text.encode("utf-8")))
     if log_text:
-        pre_entries.append(_entry("opencut.log", log_text.encode("utf-8")))
+        pre_entries.append(_entry(SERVER_LOG_NAME, log_text.encode("utf-8")))
     if jobs_text:
         pre_entries.append(_entry("recent_jobs.json", jobs_text.encode("utf-8")))
 

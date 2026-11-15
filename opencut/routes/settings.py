@@ -5,6 +5,7 @@ Presets, favorites, workflows, settings import/export, job time estimation,
 log export, job retry.
 """
 
+import io
 import json
 import logging
 import os
@@ -14,6 +15,7 @@ from importlib import resources
 from flask import Blueprint, jsonify, request, send_file
 
 from opencut import __version__, credential_store
+from opencut.core.issue_report import _scrub_paths, _tail_file
 from opencut.core.workflow import compile_workflow_template, validate_workflow_steps
 from opencut.errors import safe_error
 from opencut.helpers import OPENCUT_DIR, compute_estimate
@@ -27,6 +29,7 @@ from opencut.security import (
     safe_int,
     verify_destructive_confirm_token,
 )
+from opencut.server_log import SERVER_LOG_NAME, server_log_tail
 from opencut.user_data import (
     build_user_data_destructive_record,
     create_user_tombstone,
@@ -679,14 +682,32 @@ def estimate_job_time():
 # ---------------------------------------------------------------------------
 # Log Export
 # ---------------------------------------------------------------------------
+LOG_EXPORT_MAX_LINES = 5000
+LOG_EXPORT_CRASH_BYTES = 2 * 1024 * 1024
+
+
 @settings_bp.route("/logs/export", methods=["GET"])
 def export_logs():
-    """Export the crash log file for debugging."""
-    crash_log = os.path.join(OPENCUT_DIR, "crash.log")
-    if not os.path.isfile(crash_log):
-        return jsonify({"error": "No crash log found"}), 404
-    return send_file(crash_log, mimetype="text/plain", as_attachment=True,
-                     download_name="opencut_crash.log")
+    """Export the server log tail and the crash log as one text file.
+
+    The server log tail reaches into the rotated ``server.log.N`` files
+    when the live one is short. Home paths are replaced with ``~``.
+    """
+    sections = []
+    server_lines = server_log_tail(max_lines=LOG_EXPORT_MAX_LINES)
+    if server_lines:
+        sections.append(
+            f"===== {SERVER_LOG_NAME} (last {len(server_lines)} lines) =====\n"
+            + "\n".join(server_lines)
+        )
+    crash_text = _tail_file(os.path.join(OPENCUT_DIR, "crash.log"), max_bytes=LOG_EXPORT_CRASH_BYTES)
+    if crash_text:
+        sections.append("===== crash.log =====\n" + crash_text.rstrip("\n"))
+    if not sections:
+        return jsonify({"error": "No logs found"}), 404
+    payload = _scrub_paths("\n\n".join(sections) + "\n").encode("utf-8")
+    return send_file(io.BytesIO(payload), mimetype="text/plain", as_attachment=True,
+                     download_name="opencut_logs.txt")
 
 
 @settings_bp.route("/logs/tail", methods=["GET"])

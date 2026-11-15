@@ -40,7 +40,7 @@ def test_packet_includes_crash_log_when_present(tmp_path, monkeypatch):
     fake_data = fake_home / ".opencut"
     fake_data.mkdir(parents=True)
     (fake_data / "crash.log").write_text("traceback line\nanother line\n", encoding="utf-8")
-    (fake_data / "opencut.log").write_text("info line\n", encoding="utf-8")
+    (fake_data / "server.log").write_text("info line\n", encoding="utf-8")
 
     monkeypatch.setattr(cp, "_scrub_paths", lambda s: s)
     monkeypatch.setattr("os.path.expanduser", lambda p: str(fake_home) if p == "~" else p)
@@ -49,7 +49,7 @@ def test_packet_includes_crash_log_when_present(tmp_path, monkeypatch):
     with zipfile.ZipFile(result.output_path) as zf:
         names = zf.namelist()
         assert "crash.log" in names
-        assert "opencut.log" in names
+        assert "server.log" in names
         crash = zf.read("crash.log").decode("utf-8")
         assert "traceback line" in crash
 
@@ -58,7 +58,7 @@ def test_packet_scrubs_home_paths(tmp_path, monkeypatch):
     fake_home = tmp_path / "home"
     fake_data = fake_home / ".opencut"
     fake_data.mkdir(parents=True)
-    (fake_data / "opencut.log").write_text(
+    (fake_data / "server.log").write_text(
         f"reading from {fake_home}/projects/clip.mp4\n", encoding="utf-8"
     )
 
@@ -78,10 +78,9 @@ def test_packet_scrubs_home_paths(tmp_path, monkeypatch):
 
     result = cp.build_packet(output_path=tmp_path / "packet.zip", include_jobs=False)
     with zipfile.ZipFile(result.output_path) as zf:
-        if "opencut.log" in zf.namelist():
-            log_text = zf.read("opencut.log").decode("utf-8")
-            assert str(fake_home) not in log_text
-            assert "~/projects/clip.mp4" in log_text
+        log_text = zf.read("server.log").decode("utf-8")
+        assert str(fake_home) not in log_text
+        assert "~/projects/clip.mp4" in log_text
 
 
 def test_packet_manifest_lists_only_pre_entries(tmp_path):
