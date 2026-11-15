@@ -29,7 +29,7 @@ from opencut.helpers import (
     output_path,
     run_ffmpeg,
 )
-from opencut.security import runtime_security_requirement
+from opencut.security import REMBG_RUNTIME_REQUIREMENT
 
 logger = logging.getLogger("opencut")
 
@@ -441,7 +441,7 @@ def _ensure_method_deps(method: str):
         if not ensure_package("rembg", "rembg"):
             raise RuntimeError(
                 "rembg is required but could not be installed. "
-                f'Run: pip install "{runtime_security_requirement("rembg")}"'
+                f'Run: pip install "{REMBG_RUNTIME_REQUIREMENT}"'
             )
         if not ensure_package("PIL", "Pillow"):
             raise RuntimeError(

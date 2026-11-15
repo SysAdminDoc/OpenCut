@@ -539,3 +539,23 @@ def test_runtime_rembg_install_keeps_the_advisory_floor_and_extras():
     assert runtime_security_requirement("rembg[gpu]") == "rembg[gpu]>=2.0.82,<3"
     assert runtime_security_requirement("rembg[gpu]>=2.0") == "rembg[gpu]>=2.0.82,<3"
     assert runtime_security_requirement("Pillow") == "Pillow>=13.0.0,<14"
+
+
+def test_rembg_install_hints_survive_a_platform_without_the_ai_extra(monkeypatch):
+    """The manual-install hint is built while reporting a failed install, so it
+    must not itself raise where the ``ai`` extra is unsupported (macOS)."""
+    import opencut.security as security
+    from opencut import dependency_support
+    from opencut.core import greenscreen_free, video_ai
+
+    monkeypatch.setattr(dependency_support, "normalise_platform", lambda value=None: "darwin")
+    monkeypatch.setattr(greenscreen_free, "ensure_package", lambda *a, **k: False)
+    monkeypatch.setattr(video_ai, "ensure_package", lambda *a, **k: False)
+
+    with pytest.raises(RuntimeError) as plain:
+        greenscreen_free._ensure_method_deps("rembg")
+    assert f'pip install "{security.REMBG_RUNTIME_REQUIREMENT}"' in str(plain.value)
+
+    with pytest.raises(RuntimeError) as gpu:
+        video_ai.remove_background("in.mp4")
+    assert 'pip install "rembg[gpu]>=2.0.82,<3"' in str(gpu.value)

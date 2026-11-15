@@ -21,7 +21,7 @@ from typing import Callable, Dict, Optional
 
 from opencut.helpers import _try_import, ensure_package, get_ffmpeg_path, get_video_info, run_ffmpeg
 from opencut.helpers import output_path as _output_path
-from opencut.security import runtime_security_requirement
+from opencut.security import REMBG_RUNTIME_REQUIREMENT
 
 logger = logging.getLogger("opencut")
 
@@ -240,7 +240,7 @@ def remove_background(
     if not ensure_package("rembg", "rembg[gpu]", on_progress):
         raise RuntimeError(
             "Failed to install rembg. Install manually: "
-            f'pip install "{runtime_security_requirement("rembg[gpu]")}"'
+            f'pip install "{REMBG_RUNTIME_REQUIREMENT.replace("rembg", "rembg[gpu]", 1)}"'
         )
     if not ensure_package("cv2", "opencv-python", on_progress):
         raise RuntimeError("Failed to install opencv-python. Install manually: pip install opencv-python")
