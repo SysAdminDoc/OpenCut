@@ -125,6 +125,15 @@ Notable changes to OpenCut. The git history carries the detailed record.
   earlier render of the same name is removed.
 - Timecode past 24 hours keeps counting (`25:03:04:05`) instead of wrapping
   back to `01:03:04:05`, so a long timeline reads back to the right frame.
+- The other writers that still did their own 30 fps math count at the real
+  rate now. That covers the AI rough cut EDL (at the rendered file's rate),
+  the transcript editor's EDL export, the paper edit EDL and text list (at
+  the clip's rate when the request names one), the narrative assembly's
+  edit list, and SCC and MCC captions, which always run at 29.97. With a
+  rate that has no timecode, the rough cut skips its EDL, the EDL exports
+  refuse before creating a file, and the text lists fall back to clock time.
+- SRT times from the broadcast caption tools round to the millisecond. 2.3
+  seconds used to come out as `00:00:02.299`.
 
 ### Fixed: the packaged server shipped without its generated manifests
 

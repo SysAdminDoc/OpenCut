@@ -11,6 +11,11 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.core.timecode_utils import (
+    nominal_timecode_rate,
+    seconds_to_clock_time,
+    seconds_to_ndf_timecode,
+)
 from opencut.helpers import FFmpegCmd, get_video_info, output_path, run_ffmpeg, write_concat_list
 
 logger = logging.getLogger("opencut")
@@ -235,6 +240,7 @@ def export_paper_edit(
     format: str = "json",
     output_path_str: str = "",
     on_progress: Optional[Callable] = None,
+    fps: float = 30.0,
 ) -> Dict:
     """Export a paper edit to various formats.
 
@@ -243,6 +249,7 @@ def export_paper_edit(
         format: Export format — "json", "txt", "edl".
         output_path_str: Output file path.
         on_progress: Optional callback(pct, msg).
+        fps: Frame rate of the source, which the txt and edl timecodes count at.
 
     Returns:
         Dict with output_path and format.
@@ -253,6 +260,10 @@ def export_paper_edit(
     format = format.lower()
     if format not in ("json", "txt", "edl"):
         raise ValueError(f"Unsupported format: {format}. Use json, txt, or edl")
+
+    if format == "edl":
+        # Refuse a rate with no SMPTE timecode before creating the file.
+        nominal_timecode_rate(fps)
 
     if on_progress:
         on_progress(10, f"Exporting paper edit as {format}...")
@@ -289,7 +300,7 @@ def export_paper_edit(
         lines.append("-" * 60 + "\n")
         for s in paper_edit.selections:
             lines.append(
-                f"[{s.order + 1}] {_fmt_tc(s.start)} → {_fmt_tc(s.end)} "
+                f"[{s.order + 1}] {_fmt_tc(s.start, fps)} → {_fmt_tc(s.end, fps)} "
                 f"({s.duration:.1f}s)\n"
             )
             if s.speaker:
@@ -307,8 +318,8 @@ def export_paper_edit(
             record_out = record_in + s.duration
             lines.append(
                 f"{i + 1:03d}  AX  V  C  "
-                f"{_fmt_tc(s.start)} {_fmt_tc(s.end)} "
-                f"{_fmt_tc(record_in)} {_fmt_tc(record_out)}\n"
+                f"{_fmt_tc(s.start, fps)} {_fmt_tc(s.end, fps)} "
+                f"{_fmt_tc(record_in, fps)} {_fmt_tc(record_out, fps)}\n"
             )
             if s.text:
                 lines.append(f"* {s.text[:80]}\n")
@@ -327,10 +338,10 @@ def export_paper_edit(
     }
 
 
-def _fmt_tc(seconds: float) -> str:
-    """Format seconds as HH:MM:SS:FF (30fps)."""
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    f = int((seconds % 1) * 30)
-    return f"{h:02d}:{m:02d}:{s:02d}:{f:02d}"
+def _fmt_tc(seconds: float, fps: float = 30.0) -> str:
+    """Timecode at ``fps``, or clock time at a rate SMPTE can't label (12.5 fps, say)."""
+    try:
+        nominal_timecode_rate(fps)
+    except ValueError:
+        return seconds_to_clock_time(seconds)
+    return seconds_to_ndf_timecode(seconds, fps)

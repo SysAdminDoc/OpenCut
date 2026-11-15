@@ -394,9 +394,15 @@ def paper_edit_export(job_id, filepath, data):
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
 
+    # With the source clip, timecodes count at its rate instead of 30 fps.
+    fps = 30.0
+    if filepath:
+        from opencut.helpers import get_video_info
+        fps = get_video_info(filepath).get("fps") or 30.0
+
     result = export_paper_edit(
         paper_edit, format=fmt, output_path_str=output_path_str,
-        on_progress=_progress,
+        on_progress=_progress, fps=fps,
     )
 
     return result

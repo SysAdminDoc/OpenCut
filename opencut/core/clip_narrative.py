@@ -19,6 +19,11 @@ import subprocess
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
+from opencut.core.timecode_utils import (
+    nominal_timecode_rate,
+    seconds_to_clock_time,
+    seconds_to_ndf_timecode,
+)
 from opencut.helpers import (
     get_ffmpeg_path,
     get_video_info,
@@ -508,11 +513,13 @@ def _generate_edl(
     """Generate a text-based edit decision list."""
     lines = ["TITLE: OpenCut Narrative Assembly", ""]
     running_time = 0.0
+    # The first clip with a known rate sets the timeline rate.
+    fps = next((clips[ci].fps for ci in order if clips[ci].fps > 0), 30.0)
 
     for seq, ci in enumerate(order):
         clip = clips[ci]
-        tc_in = _format_tc(running_time)
-        tc_out = _format_tc(running_time + clip.duration)
+        tc_in = _format_tc(running_time, fps)
+        tc_out = _format_tc(running_time + clip.duration, fps)
 
         lines.append(f"{seq + 1:03d}  {clip.filename:<40s}  V  C  {tc_in} {tc_out}")
         lines.append(f"     * Role: {clip.narrative_role} | Mood: {clip.mood} | "
@@ -526,17 +533,17 @@ def _generate_edl(
         lines.append("")
         running_time += clip.duration
 
-    lines.append(f"TOTAL DURATION: {_format_tc(running_time)}")
+    lines.append(f"TOTAL DURATION: {_format_tc(running_time, fps)}")
     return "\n".join(lines)
 
 
-def _format_tc(seconds: float) -> str:
-    """Format seconds as HH:MM:SS:FF (at 30fps)."""
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    f = int((seconds % 1) * 30)
-    return f"{h:02d}:{m:02d}:{s:02d}:{f:02d}"
+def _format_tc(seconds: float, fps: float = 30.0) -> str:
+    """Timecode at ``fps``, or clock time at a rate SMPTE can't label (12.5 fps, say)."""
+    try:
+        nominal_timecode_rate(fps)
+    except ValueError:
+        return seconds_to_clock_time(seconds)
+    return seconds_to_ndf_timecode(seconds, fps)
 
 
 # ---------------------------------------------------------------------------

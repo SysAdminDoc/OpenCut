@@ -13,6 +13,7 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
+from opencut.core.timecode_utils import seconds_to_ndf_timecode
 from opencut.helpers import FFmpegCmd, get_video_info, output_path, run_ffmpeg, write_concat_list
 
 logger = logging.getLogger("opencut")
@@ -696,17 +697,22 @@ def execute_plan(
             except Exception as e:
                 logger.warning("Caption generation failed: %s", e)
 
-        # Generate EDL
+        # Generate EDL, labeled at the rate of the file it describes
+        persist_edl = out_path.rsplit(".", 1)[0] + ".edl"
         try:
             edl_path = os.path.join(tmp_dir, "rough_cut.edl")
-            _export_plan_edl(plan, edl_path)
+            _export_plan_edl(plan, edl_path, get_video_info(out_path).get("fps") or 30.0)
             # Copy to persistent location
-            persist_edl = out_path.rsplit(".", 1)[0] + ".edl"
             import shutil
             shutil.copy2(edl_path, persist_edl)
             result.edl_path = persist_edl
         except Exception as e:
             logger.warning("EDL export failed: %s", e)
+            # An EDL from an earlier render of this name would describe the wrong cut.
+            try:
+                os.remove(persist_edl)
+            except OSError:
+                pass
 
         if on_progress:
             on_progress(100, f"Rough cut complete: {result.duration:.1f}s, {result.clip_count} clips")
@@ -764,8 +770,8 @@ def _fmt_srt_time(seconds: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 
-def _export_plan_edl(plan: RoughCutPlan, edl_path: str) -> None:
-    """Export rough cut plan as CMX 3600 EDL."""
+def _export_plan_edl(plan: RoughCutPlan, edl_path: str, fps: float = 30.0) -> None:
+    """Export rough cut plan as CMX 3600 EDL, with timecode counted at ``fps``."""
     lines = ["TITLE: AI Rough Cut\nFCM: NON-DROP FRAME\n\n"]
     record_in = 0.0
 
@@ -774,8 +780,8 @@ def _export_plan_edl(plan: RoughCutPlan, edl_path: str) -> None:
         filename = os.path.basename(clip.source_file)
         lines.append(
             f"{i + 1:03d}  AX  V  C  "
-            f"{_fmt_edl_tc(clip.start)} {_fmt_edl_tc(clip.end)} "
-            f"{_fmt_edl_tc(record_in)} {_fmt_edl_tc(record_out)}\n"
+            f"{_fmt_edl_tc(clip.start, fps)} {_fmt_edl_tc(clip.end, fps)} "
+            f"{_fmt_edl_tc(record_in, fps)} {_fmt_edl_tc(record_out, fps)}\n"
         )
         lines.append(f"* FROM CLIP NAME: {filename}\n")
         if clip.justification:
@@ -787,13 +793,9 @@ def _export_plan_edl(plan: RoughCutPlan, edl_path: str) -> None:
         f.writelines(lines)
 
 
-def _fmt_edl_tc(seconds: float) -> str:
-    """Format seconds as EDL timecode HH:MM:SS:FF (30fps)."""
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    f = int((seconds % 1) * 30)
-    return f"{h:02d}:{m:02d}:{s:02d}:{f:02d}"
+def _fmt_edl_tc(seconds: float, fps: float = 30.0) -> str:
+    """Format seconds as EDL timecode HH:MM:SS:FF counted at ``fps``."""
+    return seconds_to_ndf_timecode(seconds, fps)
 
 
 # ---------------------------------------------------------------------------

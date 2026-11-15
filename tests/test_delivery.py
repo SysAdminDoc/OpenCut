@@ -513,6 +513,12 @@ Second line"""
         self.assertEqual(_secs_to_media_time(0), "00:00:00.000")
         self.assertEqual(_secs_to_media_time(3661.5), "01:01:01.500")
 
+    def test_secs_to_media_time_rounds_to_the_millisecond(self):
+        from opencut.core.broadcast_cc import _secs_to_media_time
+        # 2.3 % 1 * 1000 is 299.99..., which used to truncate to .299.
+        self.assertEqual(_secs_to_media_time(2.3), "00:00:02.300")
+        self.assertEqual(_secs_to_media_time(59.9996), "00:01:00.000")
+
     def test_secs_to_timecode(self):
         from opencut.core.broadcast_cc import _secs_to_timecode
         result = _secs_to_timecode(0)

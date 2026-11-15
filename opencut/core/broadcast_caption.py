@@ -20,7 +20,7 @@ from opencut.core.caption_interchange import (
     export_caption_document,
 )
 from opencut.core.caption_line_breaks import caption_lines, timed_caption_chunks
-from opencut.core.timecode_utils import seconds_to_clock_time
+from opencut.core.timecode_utils import seconds_to_clock_time, seconds_to_ndf_timecode
 
 logger = logging.getLogger("opencut")
 
@@ -101,15 +101,13 @@ class CaptionExportResult:
 # ---------------------------------------------------------------------------
 # Timestamp formatting
 # ---------------------------------------------------------------------------
-def _seconds_to_smpte(s: float, fps: float = 30.0) -> str:
-    """Convert seconds to SMPTE timecode HH:MM:SS:FF."""
-    if s < 0:
-        s = 0.0
-    h = int(s // 3600)
-    m = int((s % 3600) // 60)
-    sec = int(s % 60)
-    frames = int((s % 1) * fps)
-    return f"{h:02d}:{m:02d}:{sec:02d}:{frames:02d}"
+# SCC and MCC caption data runs at NTSC's 29.97 frames a second.
+_CAPTION_FRAME_RATE = 30000 / 1001
+
+
+def _seconds_to_smpte(s: float, fps: float = _CAPTION_FRAME_RATE) -> str:
+    """Convert seconds to non-drop SMPTE timecode HH:MM:SS:FF counted at ``fps``."""
+    return seconds_to_ndf_timecode(s, fps)
 
 
 def _seconds_to_ttml(s: float) -> str:

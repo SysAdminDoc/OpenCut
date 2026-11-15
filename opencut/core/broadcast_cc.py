@@ -22,6 +22,7 @@ from opencut.core.caption_interchange import (
     export_caption_document,
     normalize_profile,
 )
+from opencut.core.timecode_utils import seconds_to_clock_time, seconds_to_ndf_timecode
 from opencut.helpers import (
     FFmpegCmd,
     run_ffmpeg,
@@ -196,21 +197,13 @@ def _to_interchange_document(
 # ---------------------------------------------------------------------------
 
 def _secs_to_timecode(seconds: float, frame_rate: float = 30.0) -> str:
-    """Convert seconds to HH:MM:SS:FF timecode."""
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    f = int((seconds % 1) * frame_rate)
-    return f"{h:02d}:{m:02d}:{s:02d}:{f:02d}"
+    """Convert seconds to HH:MM:SS:FF timecode counted at ``frame_rate``."""
+    return seconds_to_ndf_timecode(seconds, frame_rate)
 
 
 def _secs_to_media_time(seconds: float) -> str:
     """Convert seconds to HH:MM:SS.mmm media time."""
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    ms = int((seconds % 1) * 1000)
-    return f"{h:02d}:{m:02d}:{s:02d}.{ms:03d}"
+    return seconds_to_clock_time(seconds)
 
 
 # ---------------------------------------------------------------------------

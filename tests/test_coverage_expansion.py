@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import pathlib
 import tempfile
 import time
 from dataclasses import asdict
@@ -486,6 +487,139 @@ class TestNtscNonDropTimecode:
         with pytest.raises(ValueError, match="finite"):
             tte.apply_edits(str(source), [tte.CutEntry(source_start=1.0, source_end=end)],
                             output_dir=str(tmp_path))
+
+    def test_rough_cut_edl_counts_at_the_rendered_rate(self, tmp_path, monkeypatch):
+        from opencut.core import rough_cut
+
+        source = tmp_path / "a.mp4"
+        source.write_bytes(b"not really a video")
+        monkeypatch.setattr(rough_cut, "run_ffmpeg", lambda *_a, **_kw: None)
+        monkeypatch.setattr(rough_cut, "get_video_info", lambda _p: {"fps": 30000 / 1001, "duration": 1.0})
+        plan = rough_cut.RoughCutPlan(clips=[
+            rough_cut.PlannedClip(source_file=str(source), start=3600.0, end=3601.0),
+        ])
+
+        result = rough_cut.execute_plan(plan, str(tmp_path / "cut.mp4"))
+
+        edl = pathlib.Path(result.edl_path).read_text(encoding="utf-8")
+        event = next(line for line in edl.splitlines() if line.startswith("001"))
+        assert event.split()[4:] == ["00:59:56:12", "00:59:57:12", "00:00:00:00", "00:00:01:00"]
+
+    def test_rough_cut_drops_the_edl_at_a_rate_timecode_cannot_label(self, tmp_path, monkeypatch):
+        from opencut.core import rough_cut
+
+        source = tmp_path / "a.mp4"
+        source.write_bytes(b"not really a video")
+        stale = tmp_path / "cut.edl"
+        stale.write_text("TITLE: an earlier render\n", encoding="utf-8")
+        monkeypatch.setattr(rough_cut, "run_ffmpeg", lambda *_a, **_kw: None)
+        monkeypatch.setattr(rough_cut, "get_video_info", lambda _p: {"fps": 12.5, "duration": 1.0})
+        plan = rough_cut.RoughCutPlan(clips=[
+            rough_cut.PlannedClip(source_file=str(source), start=1.0, end=2.0),
+        ])
+
+        result = rough_cut.execute_plan(plan, str(tmp_path / "cut.mp4"))
+
+        assert result.output_path == str(tmp_path / "cut.mp4")
+        assert result.edl_path == ""
+        assert not stale.exists()
+
+    def test_transcript_edit_edl_counts_at_the_source_rate(self, tmp_path, monkeypatch):
+        from opencut.core import transcript_edit as te
+
+        source = tmp_path / "talk.mp4"
+        source.write_bytes(b"not really a video")
+        tmap = te.build_transcript_map({"segments": [{
+            "text": "one hour in", "start": 3600.0, "end": 3601.0,
+            "words": [{"word": "one", "start": 3600.0, "end": 3601.0}],
+        }]})
+        out = tmp_path / "edit.edl"
+
+        monkeypatch.setattr(te, "get_video_info", lambda _p: {"fps": 30000 / 1001, "duration": 4000.0})
+        te.export_edited_sequence(str(source), tmap, [te.TextEdit(edit_type="keep")],
+                                  format="edl", out_path=str(out))
+        event = next(line for line in out.read_text(encoding="utf-8").splitlines() if line.startswith("001"))
+        assert event.split()[4:6] == ["00:59:56:12", "00:59:57:12"]
+
+        refused = tmp_path / "refused.edl"
+        monkeypatch.setattr(te, "get_video_info", lambda _p: {"fps": 12.5, "duration": 4000.0})
+        with pytest.raises(ValueError, match="SMPTE"):
+            te.export_edited_sequence(str(source), tmap, [te.TextEdit(edit_type="keep")],
+                                      format="edl", out_path=str(refused))
+        assert not refused.exists()
+
+    def test_paper_edit_timecodes_count_at_the_given_rate(self, tmp_path):
+        from opencut.core.paper_edit import PaperEdit, PaperEditSelection, export_paper_edit
+
+        paper = PaperEdit(selections=[PaperEditSelection(start=3600.0, end=3601.0, text="one hour in")])
+        edl = tmp_path / "paper.edl"
+        export_paper_edit(paper, "edl", str(edl), fps=30000 / 1001)
+        assert "00:59:56:12 00:59:57:12 00:00:00:00 00:00:01:00" in edl.read_text(encoding="utf-8")
+
+        # A text list still gets labels at 12.5 fps, as clock time.
+        txt = tmp_path / "paper.txt"
+        export_paper_edit(paper, "txt", str(txt), fps=12.5)
+        assert "01:00:00.000 → 01:00:01.000" in txt.read_text(encoding="utf-8")
+
+        refused = tmp_path / "refused.edl"
+        with pytest.raises(ValueError, match="SMPTE"):
+            export_paper_edit(paper, "edl", str(refused), fps=12.5)
+        assert not refused.exists()
+
+    def test_paper_edit_export_route_counts_at_the_source_clip_rate(self, client, csrf_token, tmp_path, monkeypatch):
+        from tests.conftest import csrf_headers
+
+        source = tmp_path / "talk.mp4"
+        source.write_bytes(b"not really a video")
+        out = tmp_path / "paper.edl"
+        monkeypatch.setattr("opencut.helpers.get_video_info", lambda _p: {"fps": 30000 / 1001, "duration": 4000.0})
+
+        resp = client.post("/paper-edit/export", headers=csrf_headers(csrf_token), json={
+            "filepath": str(source),
+            "format": "edl",
+            "output_path": str(out),
+            "selections": [{"start": 3600.0, "end": 3601.0, "text": "one hour in"}],
+        })
+        assert resp.status_code == 200, resp.get_json()
+        job_id = resp.get_json()["job_id"]
+        deadline = time.time() + 10
+        while True:
+            job = client.get(f"/status/{job_id}").get_json()
+            if job["status"] in ("complete", "error", "cancelled") or time.time() > deadline:
+                break
+            time.sleep(0.05)
+
+        assert job["status"] == "complete", job
+        assert "00:59:56:12 00:59:57:12" in out.read_text(encoding="utf-8")
+
+    def test_narrative_edl_counts_at_the_first_known_clip_rate(self):
+        from opencut.core.clip_narrative import ClipInfo, _generate_edl
+
+        clips = [
+            ClipInfo(index=0, filename="unknown.mov", duration=0.0, fps=0.0),
+            ClipInfo(index=1, filename="a.mov", duration=3600.0, fps=30000 / 1001),
+            ClipInfo(index=2, filename="b.mov", duration=1.0, fps=25.0),
+        ]
+        assert _generate_edl(clips, [0, 1, 2], []).endswith("TOTAL DURATION: 00:59:57:12")
+
+        odd = [ClipInfo(index=0, filename="c.mov", duration=3600.0, fps=12.5)]
+        assert _generate_edl(odd, [0], []).endswith("TOTAL DURATION: 01:00:00.000")
+
+    @pytest.mark.parametrize("ext", ["scc", "mcc"])
+    def test_broadcast_caption_timecodes_count_at_29_97(self, tmp_path, ext):
+        from opencut.core.broadcast_caption import CaptionSegment, export_cea608, export_cea708
+
+        export = export_cea608 if ext == "scc" else export_cea708
+        path = tmp_path / f"captions.{ext}"
+        export([CaptionSegment(index=1, start=3600.0, end=3601.0, text="One hour in")], str(path))
+
+        stamps = [line.split("\t")[0] for line in path.read_text(encoding="utf-8").splitlines() if "\t" in line]
+        assert stamps == ["00:59:56:12", "00:59:57:12"]
+
+    def test_broadcast_cc_timecode_counts_at_its_rate(self):
+        from opencut.core.broadcast_cc import _secs_to_timecode
+
+        assert _secs_to_timecode(3600.0, 30000 / 1001) == "00:59:56:12"
 
     def test_timecode_sync_edl_counts_past_a_day_and_refuses_12_5(self, tmp_path):
         from opencut.core.tc_sync import generate_synced_timeline

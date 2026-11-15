@@ -15,6 +15,7 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
+from opencut.core.timecode_utils import nominal_timecode_rate, seconds_to_ndf_timecode
 from opencut.helpers import FFmpegCmd, get_video_info, output_path, run_ffmpeg, write_concat_list
 
 logger = logging.getLogger("opencut")
@@ -775,6 +776,13 @@ def export_edited_sequence(
     if on_progress:
         on_progress(50, f"Exporting {len(segments)} segments as {format}...")
 
+    fps = 30.0
+    if format == "edl":
+        if video_path and os.path.isfile(video_path):
+            fps = get_video_info(video_path).get("fps") or 30.0
+        # Refuse a rate with no SMPTE timecode before creating the file.
+        nominal_timecode_rate(fps)
+
     if not out_path:
         ext_map = {"otio": ".otio", "edl": ".edl", "json": ".json"}
         fd, out_path = tempfile.mkstemp(
@@ -785,7 +793,7 @@ def export_edited_sequence(
     filename = os.path.basename(video_path) if video_path else "source"
 
     if format == "edl":
-        _export_edl(segments, filename, out_path)
+        _export_edl(segments, filename, out_path, fps)
     elif format == "otio":
         _export_otio(segments, filename, video_path, out_path)
     elif format == "json":
@@ -805,8 +813,9 @@ def _export_edl(
     segments: List[CutSegment],
     filename: str,
     out_path: str,
+    fps: float = 30.0,
 ) -> None:
-    """Export segments as CMX 3600 EDL."""
+    """Export segments as CMX 3600 EDL, with timecode counted at ``fps``."""
     lines = ["TITLE: Transcript Edit\nFCM: NON-DROP FRAME\n\n"]
     record_in = 0.0
 
@@ -814,8 +823,8 @@ def _export_edl(
         record_out = record_in + seg.duration
         lines.append(
             f"{i + 1:03d}  AX  V  C  "
-            f"{_fmt_tc(seg.start)} {_fmt_tc(seg.end)} "
-            f"{_fmt_tc(record_in)} {_fmt_tc(record_out)}\n"
+            f"{_fmt_tc(seg.start, fps)} {_fmt_tc(seg.end, fps)} "
+            f"{_fmt_tc(record_in, fps)} {_fmt_tc(record_out, fps)}\n"
         )
         lines.append(f"* FROM CLIP NAME: {filename}\n\n")
         record_in = record_out
@@ -931,10 +940,6 @@ def _export_json(
         json.dump(data, f, indent=2)
 
 
-def _fmt_tc(seconds: float) -> str:
-    """Format seconds as HH:MM:SS:FF (30fps)."""
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    f = int((seconds % 1) * 30)
-    return f"{h:02d}:{m:02d}:{s:02d}:{f:02d}"
+def _fmt_tc(seconds: float, fps: float = 30.0) -> str:
+    """Format seconds as HH:MM:SS:FF counted at ``fps``."""
+    return seconds_to_ndf_timecode(seconds, fps)
