@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.core.caption_line_breaks import wrap_caption_text
+from opencut.core.caption_line_breaks import timed_caption_chunks, wrap_caption_text
 
 logger = logging.getLogger("opencut")
 
@@ -424,15 +424,31 @@ def _enforce_line_limits(
     segments: List[SubtitleSegment],
     max_chars: int,
     max_lines: int,
-) -> int:
-    """Wrap subtitle text to fit within character/line constraints."""
+) -> tuple:
+    """Wrap subtitle text to fit within character/line constraints.
+
+    A subtitle that needs more than ``max_lines`` lines is split into
+    consecutive subtitles with its time shared by character count, so no
+    text is dropped.
+    """
+    result: List[SubtitleSegment] = []
     wrap_count = 0
     for seg in segments:
         original = seg.text
-        seg.text = _wrap_text(seg.text, max_chars, max_lines)
-        if seg.text != original:
+        chunks = timed_caption_chunks(seg.text, seg.start, seg.end, max_chars, max_lines)
+        if len(chunks) <= 1:
+            seg.text = _wrap_text(seg.text, max_chars, max_lines)
+            result.append(seg)
+        else:
+            for chunk, chunk_start, chunk_end in chunks:
+                result.append(SubtitleSegment(
+                    index=0, start=chunk_start, end=chunk_end,
+                    text=_wrap_text(chunk, max_chars, max_lines),
+                    position=seg.position, style=seg.style,
+                ))
+        if len(chunks) > 1 or seg.text != original:
             wrap_count += 1
-    return wrap_count
+    return result, wrap_count
 
 
 def _reindex(segments: List[SubtitleSegment]) -> List[SubtitleSegment]:
@@ -508,7 +524,7 @@ def process_shot_aware(
         on_progress(75)
 
     # Step 6: Line wrapping
-    wrap_count = _enforce_line_limits(working, max_chars, max_lines)
+    working, wrap_count = _enforce_line_limits(working, max_chars, max_lines)
     if on_progress:
         on_progress(90)
 

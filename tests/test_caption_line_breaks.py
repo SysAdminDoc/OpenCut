@@ -111,6 +111,130 @@ def test_export_vtt_uses_same_cjk_wrapping_policy(tmp_path):
     assert all_lines_within(payload_lines, 7)
 
 
+_F459_TEXT = (
+    "every microphone tested camera a we afterwards it single production a understand "
+    "and then the interview recording continued until the production schedule ended"
+)
+
+
+def _timed_segment(tokens, step=0.4):
+    from opencut.core.captions import Word
+
+    words = [Word(text=tok, start=i * step, end=i * step + step * 0.9) for i, tok in enumerate(tokens)]
+    return CaptionSegment(text=" ".join(tokens), start=0.0, end=len(tokens) * step, words=words)
+
+
+def _exported_cues(path):
+    """Return ``(start, end, lines)`` for every cue in an SRT or VTT file."""
+    def _seconds(stamp):
+        hms, frac = stamp.replace(",", ".").rsplit(".", 1)
+        h, m, s = (int(part) for part in hms.split(":"))
+        return h * 3600 + m * 60 + s + int(frac) / 1000.0
+
+    cues = []
+    for block in path.read_text(encoding="utf-8").split("\n\n"):
+        lines = [line for line in block.splitlines() if line and line != "WEBVTT"]
+        for index, line in enumerate(lines):
+            if "-->" in line:
+                start, end = (part.strip() for part in line.split("-->"))
+                cues.append((_seconds(start), _seconds(end), lines[index + 1:]))
+                break
+    return cues
+
+
+@pytest.mark.parametrize("exporter, suffix", [(export_srt, ".srt"), (export_vtt, ".vtt")])
+def test_export_keeps_every_word_of_a_long_timed_segment(tmp_path, exporter, suffix):
+    tokens = _F459_TEXT.split()
+    segment = _timed_segment(tokens)
+    output = tmp_path / f"f459{suffix}"
+
+    exporter(TranscriptionResult(segments=[segment], duration=segment.end), str(output))
+
+    cues = _exported_cues(output)
+    written = " ".join(" ".join(lines) for _, _, lines in cues).split()
+    assert written == tokens
+    assert "..." not in output.read_text(encoding="utf-8")
+    for start, end, lines in cues:
+        assert 1 <= len(lines) <= 2
+        assert all_lines_within(lines, 42)
+        cue_words = " ".join(lines).split()
+        first = segment.words[written.index(cue_words[0])]
+        assert start == pytest.approx(first.start, abs=0.001)
+        assert end > start
+
+
+@pytest.mark.parametrize("exporter, suffix", [(export_srt, ".srt"), (export_vtt, ".vtt")])
+@pytest.mark.parametrize("timed", [True, False])
+def test_export_never_drops_words_across_random_cues(tmp_path, exporter, suffix, timed):
+    import random
+
+    rng = random.Random(459)
+    vocabulary = [
+        "a", "we", "it", "and", "the", "until", "camera", "tested", "single",
+        "schedule", "production", "microphone", "afterwards", "understand",
+        "interview", "recording", "continued", "documentary",
+    ]
+    for case in range(300):
+        max_line_length = rng.randint(12, 42)
+        max_lines = rng.randint(1, 3)
+        tokens = [rng.choice(vocabulary) for _ in range(rng.randint(1, 40))]
+        if timed:
+            segment = _timed_segment(tokens)
+        else:
+            segment = CaptionSegment(text=" ".join(tokens), start=0.0, end=len(tokens) * 0.4)
+        output = tmp_path / f"case{case}{suffix}"
+
+        exporter(
+            TranscriptionResult(segments=[segment], duration=segment.end),
+            str(output),
+            max_line_length=max_line_length,
+            max_lines=max_lines,
+        )
+
+        cues = _exported_cues(output)
+        written = " ".join(" ".join(lines) for _, _, lines in cues).split()
+        assert written == tokens, (case, max_line_length, max_lines)
+        for _, _, lines in cues:
+            assert 1 <= len(lines) <= max_lines, (case, lines)
+            assert all_lines_within(lines, max_line_length), (case, lines)
+
+
+def test_export_keeps_a_word_longer_than_a_whole_cue(tmp_path):
+    token = "x" * 30
+    segment = _timed_segment(["see", token, "now"])
+    output = tmp_path / "long.srt"
+
+    export_srt(TranscriptionResult(segments=[segment], duration=segment.end), str(output),
+               max_line_length=8, max_lines=2)
+
+    cues = _exported_cues(output)
+    assert "".join("".join(lines) for _, _, lines in cues) == "see" + token + "now"
+    for start, end, lines in cues:
+        assert 1 <= len(lines) <= 2
+        assert all_lines_within(lines, 8)
+        assert end > start
+
+
+def test_shot_aware_line_limits_split_instead_of_dropping_lines():
+    from opencut.core.subtitle_shot_aware import SubtitleSegment, _enforce_line_limits
+
+    tokens = _F459_TEXT.split()
+    segments = [SubtitleSegment(index=1, start=2.0, end=11.2, text=" ".join(tokens))]
+
+    adjusted, wraps = _enforce_line_limits(segments, 42, 2)
+
+    assert wraps == 1
+    assert len(adjusted) > 1
+    assert " ".join(seg.text.replace("\n", " ") for seg in adjusted).split() == tokens
+    assert adjusted[0].start == 2.0 and adjusted[-1].end == 11.2
+    for previous, current in zip(adjusted, adjusted[1:]):
+        assert current.start == pytest.approx(previous.end)
+    for seg in adjusted:
+        lines = seg.text.splitlines()
+        assert 1 <= len(lines) <= 2
+        assert all_lines_within(lines, 42)
+
+
 def test_shot_aware_wrap_uses_unicode_line_breaker():
     from opencut.core.subtitle_shot_aware import _wrap_text
 

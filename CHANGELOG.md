@@ -4,6 +4,17 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ## Unreleased
 
+### Fixed: SRT and VTT captions no longer lose words
+
+- A cue that fit the character budget on paper could still need a third line
+  once it wrapped at word boundaries, and the exporter cut that line off with
+  "...". On a 23-word sentence the SRT came out with 21 words. The shot-aware
+  subtitle cleanup dropped extra lines the same way, without the ellipsis.
+- Cues are now sized by how they actually wrap. A cue that needs more lines is
+  split into another cue at a word boundary, timed from the word timestamps
+  when there are any and by character count when there aren't. A word too long
+  for one cue is split across cues instead of being clipped.
+
 ### Fixed: the packaged server shipped without its generated manifests
 
 - Every release built with PyInstaller was missing all sixteen files under

@@ -12,7 +12,7 @@ that should stay attached to neighbouring text.
 from __future__ import annotations
 
 import unicodedata
-from typing import Iterable, List
+from typing import Iterable, List, Tuple
 
 OPENING_PUNCTUATION = set("([{<“‘「『【（［｛〈《")
 CLOSING_PUNCTUATION = set(")]}>.,!?;:、。，．！？；：”’」』】）］｝〉》")
@@ -103,6 +103,57 @@ def split_caption_text_chunks(text: str, max_chars: int) -> List[str]:
     return chunks
 
 
+def caption_lines(text: str, max_line_length: int) -> List[str]:
+    """Wrap caption text into display lines without dropping any of it.
+
+    Blank source lines are left out, because a blank line ends an SRT cue.
+    """
+    if max_line_length <= 0:
+        raise ValueError("max_line_length must be greater than zero")
+    lines: List[str] = []
+    for source_line in str(text or "").strip().splitlines():
+        lines.extend(split_caption_text_chunks(source_line, max_line_length))
+    return lines
+
+
+def timed_caption_chunks(
+    text: str,
+    start: float,
+    end: float,
+    max_line_length: int,
+    max_lines: int,
+) -> List[Tuple[str, float, float]]:
+    """Split caption text into cues that each wrap into at most ``max_lines`` lines.
+
+    Returns ``(text, start, end)`` per cue. A cue's text runs from its first
+    wrapped line to its last in the source, so no-space CJK text gains no
+    spaces and nothing is dropped. Time is shared out by character count.
+    """
+    if max_lines <= 0:
+        raise ValueError("max_lines must be greater than zero")
+    text = str(text or "").strip()
+    spans: List[Tuple[int, int]] = []
+    position = 0
+    for line in caption_lines(text, max_line_length):
+        line_start = text.find(line, position)
+        position = line_start + len(line)
+        spans.append((line_start, position))
+    chunks = [
+        text[group[0][0]:group[-1][1]]
+        for group in (spans[i:i + max_lines] for i in range(0, len(spans), max_lines))
+    ]
+    total_chars = sum(len(chunk) for chunk in chunks) or 1
+    consumed = 0
+    cue_start = start
+    cues: List[Tuple[str, float, float]] = []
+    for index, chunk in enumerate(chunks):
+        consumed += len(chunk)
+        cue_end = end if index == len(chunks) - 1 else start + (end - start) * consumed / total_chars
+        cues.append((chunk, cue_start, cue_end))
+        cue_start = cue_end
+    return cues
+
+
 def wrap_caption_text(
     text: str,
     max_line_length: int,
@@ -110,7 +161,11 @@ def wrap_caption_text(
     *,
     ellipsis: bool = True,
 ) -> str:
-    """Wrap caption text without relying on whitespace-only tokenization."""
+    """Wrap caption text without relying on whitespace-only tokenization.
+
+    Lines past ``max_lines`` are dropped, so subtitle exporters split cues with
+    :func:`caption_lines` instead of calling this.
+    """
     if max_line_length <= 0:
         raise ValueError("max_line_length must be greater than zero")
     if max_lines <= 0:
@@ -120,13 +175,7 @@ def wrap_caption_text(
     if len(normalized) <= max_line_length and normalized.count("\n") + 1 <= max_lines:
         return normalized
 
-    if "\n" in normalized:
-        lines: List[str] = []
-        for source_line in normalized.splitlines():
-            chunks = split_caption_text_chunks(source_line, max_line_length)
-            lines.extend(chunks or [""])
-    else:
-        lines = split_caption_text_chunks(normalized, max_line_length)
+    lines = caption_lines(normalized, max_line_length)
     if len(lines) <= max_lines:
         return "\n".join(lines)
 

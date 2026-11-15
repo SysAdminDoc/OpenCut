@@ -8,7 +8,7 @@ legacy Windows players that require a UTF-8 signature.
 from typing import List, Optional
 
 from ..core.asr_provenance import provenance_to_dict
-from ..core.caption_line_breaks import split_caption_text_chunks, wrap_caption_text
+from ..core.caption_line_breaks import caption_lines, timed_caption_chunks
 from ..core.captions import CaptionSegment, TranscriptionResult, caption_segment_to_dict
 
 UTF8_NO_BOM = "utf-8"
@@ -46,7 +46,7 @@ def export_srt(
     for i, entry in enumerate(entries, 1):
         start_tc = _format_srt_time(entry.start)
         end_tc = _format_srt_time(entry.end)
-        text = _wrap_text(entry.text.strip(), max_line_length, max_lines)
+        text = _wrap_text(entry.text.strip(), max_line_length)
 
         lines.append(f"{i}")
         lines.append(f"{start_tc} --> {end_tc}")
@@ -82,7 +82,7 @@ def export_vtt(
     for i, entry in enumerate(entries, 1):
         start_tc = _format_vtt_time(entry.start)
         end_tc = _format_vtt_time(entry.end)
-        text = _wrap_text(entry.text.strip(), max_line_length, max_lines)
+        text = _wrap_text(entry.text.strip(), max_line_length)
 
         lines.append(f"{i}")
         lines.append(f"{start_tc} --> {end_tc}")
@@ -330,107 +330,84 @@ def _format_vtt_time(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
 
 
+def _derived_segment(seg: CaptionSegment, text: str, start: float, end: float, words=None) -> CaptionSegment:
+    return CaptionSegment(
+        text=text,
+        start=start,
+        end=end,
+        words=list(words or []),
+        speaker=getattr(seg, "speaker", None),
+        language=getattr(seg, "language", None),
+        language_confidence=getattr(seg, "language_confidence", 1.0),
+        confidence=getattr(seg, "confidence", 1.0),
+        human_review_recommended=getattr(seg, "human_review_recommended", False),
+        review_reasons=list(getattr(seg, "review_reasons", []) or []),
+    )
+
+
+def _proportional_cues(
+    seg: CaptionSegment,
+    text: str,
+    start: float,
+    end: float,
+    max_line_length: int,
+    max_lines: int,
+) -> List[CaptionSegment]:
+    return [
+        _derived_segment(seg, chunk, chunk_start, chunk_end)
+        for chunk, chunk_start, chunk_end in timed_caption_chunks(text, start, end, max_line_length, max_lines)
+    ]
+
+
 def _split_segments(
     segments: List[CaptionSegment],
     max_line_length: int,
     max_lines: int,
 ) -> List[CaptionSegment]:
-    """
-    Split long segments into shorter ones suitable for subtitle display.
-    """
-    result = []
+    """Split segments so every cue wraps into at most ``max_lines`` lines.
 
+    No text is dropped. A segment that needs more lines is split at word
+    boundaries, timed from its word timestamps when it has them and
+    proportionally otherwise. A single word too long for one cue is split
+    across cues within its own timing.
+    """
+    def fits(text: str) -> bool:
+        return len(caption_lines(text, max_line_length)) <= max_lines
+
+    def words_text(words) -> str:
+        return " ".join(w.text.strip() for w in words if w.text.strip())
+
+    result = []
     for seg in segments:
         text = seg.text.strip()
-
-        # If it fits, keep as-is
-        if len(text) <= max_line_length * max_lines:
+        if fits(text):
             result.append(seg)
             continue
 
-        # Split by words, respecting timestamps
-        if seg.words:
-            # Use word-level timestamps for precise splitting
-            current_words = []
-            current_text = ""
+        if not seg.words:
+            result.extend(_proportional_cues(seg, text, seg.start, seg.end, max_line_length, max_lines))
+            continue
 
-            for word in seg.words:
-                test_text = (current_text + " " + word.text).strip()
-                if len(test_text) > max_line_length * max_lines and current_words:
-                    # Emit current group
-                    result.append(CaptionSegment(
-                        text=current_text.strip(),
-                        start=current_words[0].start,
-                        end=current_words[-1].end,
-                        words=list(current_words),
-                        speaker=getattr(seg, "speaker", None),
-                        language=getattr(seg, "language", None),
-                        language_confidence=getattr(seg, "language_confidence", 1.0),
-                        confidence=getattr(seg, "confidence", 1.0),
-                        human_review_recommended=getattr(seg, "human_review_recommended", False),
-                        review_reasons=list(getattr(seg, "review_reasons", []) or []),
-                    ))
-                    current_words = [word]
-                    current_text = word.text
-                else:
-                    current_words.append(word)
-                    current_text = test_text
-
-            # Emit remaining
-            if current_words:
-                result.append(CaptionSegment(
-                    text=current_text.strip(),
-                    start=current_words[0].start,
-                    end=current_words[-1].end,
-                    words=list(current_words),
-                    speaker=getattr(seg, "speaker", None),
-                    language=getattr(seg, "language", None),
-                    language_confidence=getattr(seg, "language_confidence", 1.0),
-                    confidence=getattr(seg, "confidence", 1.0),
-                    human_review_recommended=getattr(seg, "human_review_recommended", False),
-                    review_reasons=list(getattr(seg, "review_reasons", []) or []),
-                ))
-        else:
-            # No word timestamps — split by Unicode-aware caption breakpoints
-            # with proportional timing. This handles no-space CJK text instead
-            # of treating the whole cue as one unbreakable word.
-            total_chars = len(text)
-            if total_chars == 0:
-                result.append(seg)
+        group = []
+        for word in seg.words:
+            if fits(words_text(group + [word])):
+                group.append(word)
                 continue
-            chunk_size = max_line_length * max_lines
-            chunk_start_ratio = 0.0
-            consumed_chars = 0
-            chunks = split_caption_text_chunks(text, chunk_size)
-            for index, chunk in enumerate(chunks):
-                consumed_chars += len(chunk)
-                end_ratio = min(1.0, consumed_chars / total_chars)
-                t_start = seg.start + (seg.duration * chunk_start_ratio)
-                t_end = seg.end if index == len(chunks) - 1 else seg.start + (seg.duration * end_ratio)
-                result.append(CaptionSegment(
-                    text=chunk.strip(),
-                    start=t_start,
-                    end=t_end,
-                    speaker=getattr(seg, "speaker", None),
-                    language=getattr(seg, "language", None),
-                    language_confidence=getattr(seg, "language_confidence", 1.0),
-                    confidence=getattr(seg, "confidence", 1.0),
-                    human_review_recommended=getattr(seg, "human_review_recommended", False),
-                    review_reasons=list(getattr(seg, "review_reasons", []) or []),
+            if group:
+                result.append(_derived_segment(seg, words_text(group), group[0].start, group[-1].end, group))
+                group = []
+            if fits(words_text([word])):
+                group = [word]
+            else:
+                result.extend(_proportional_cues(
+                    seg, word.text.strip(), word.start, word.end, max_line_length, max_lines,
                 ))
-                chunk_start_ratio = end_ratio
+        if group:
+            result.append(_derived_segment(seg, words_text(group), group[0].start, group[-1].end, group))
 
     return result
 
 
-def _wrap_text(text: str, max_line_length: int, max_lines: int) -> str:
-    """Wrap text to fit within line length constraints.
-
-    When the wrapped output would exceed ``max_lines``, the last line is
-    truncated with an ellipsis so the user can see that text was clipped
-    instead of silently losing content. This normally never fires because
-    ``_split_segments`` pre-chunks by word count — the ellipsis is a
-    defensive footprint for unusual inputs (e.g. a single unbreakable
-    token longer than the line limit).
-    """
-    return wrap_caption_text(text, max_line_length, max_lines)
+def _wrap_text(text: str, max_line_length: int) -> str:
+    """Wrap a cue that ``_split_segments`` already sized, keeping all of it."""
+    return "\n".join(caption_lines(text, max_line_length))
