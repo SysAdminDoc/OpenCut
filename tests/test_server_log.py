@@ -726,6 +726,19 @@ _FOURTH_REVIEW_LEAKS = {
     "quoted passphrase flag with spaces": ('ffmpeg -passphrase "correct horse {}" -i in.ts', "LeakQuoted82"),
     "single-quoted api key flag": ("--api-key 'sk abc {}' -v", "LeakQuoted83"),
     "quoted flag after =": ('-passphrase="two words {}"', "LeakQuoted84"),
+    "credential URL in another URL's query": (
+        "https://u:p@h.example.com/x?next=https://v:{}@k.example.com/y",
+        "LeakNested85",
+    ),
+    "credential URL in another URL's fragment": (
+        "https://u:p@h.example.com/x?r=1#https://v:{}@k.example.com/y",
+        "LeakNested86",
+    ),
+    "password holding @ then #": ("rtsp://admin:Ab@12#{}@192.168.1.10:554/stream", "LeakHashPw87"),
+    "password holding @ then ?": ("rtsp://admin:Ab@12?{}@cam.local/stream", "LeakQueryPw88"),
+    "encoded password holding @ then ?": ("u=rtmp%3A%2F%2Fu%3Ap%40ss%3F{}%40host%2Flive", "LeakEncQ89"),
+    "password holding @ and ending in /": ("https://user:P@{}/@host/x", "Ssw0rdLeak90"),
+    "single-label host before a query @": ("http://u:{}@h/x?to=ops@example.com", "LeakQueryAt91"),
 }
 
 
@@ -750,7 +763,11 @@ def test_fourth_review_credential_forms_are_redacted(name):
             "LeakPathAt79",
             "https://[REDACTED]@cdn.example.com/media/@user/clip.mp4",
         ),
-        ("http://u:LeakQueryAt80@h/x?to=ops@example.com", "LeakQueryAt80", "http://[REDACTED]@h/x?to=ops@example.com"),
+        (
+            "http://u:LeakQueryAt80@h.example.com/x?to=ops@example.com",
+            "LeakQueryAt80",
+            "http://[REDACTED]@h.example.com/x?to=ops@example.com",
+        ),
         ("rtsp://admin:LeakSlashEnd81/@cam/stream", "LeakSlashEnd81", "rtsp://[REDACTED]@cam/stream"),
     ],
 )
@@ -770,6 +787,16 @@ def test_a_url_password_ends_at_the_at_sign_before_the_host(line, secret, kept):
         "scope headers=[(b'content-type', b'video/mp4')]",
         'cmd=["ffmpeg", "-passphrase", "", "-i", "in.ts"]',
         'ffmpeg -passphrase "" -i in.ts',
+        "cookie=on.",
+        "cookie=off: disabled",
+        "cookie=yes!",
+        "cookie=on/off",
+        "cookie=none&gt;",
+        "Token: 5a",
+        "Unexpected token: 0x",
+        "max token: 4k",
+        "app:token:v2",
+        "GET /v1/token:exchange2",
     ],
 )
 def test_fourth_review_ordinary_text_is_left_alone(ordinary):

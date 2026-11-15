@@ -86,7 +86,7 @@ _PRIVATE_KEY_RE = re.compile(
 # would, but keeps its auth scheme (a Digest or OAuth parameter list
 # runs to the end of the line), a ``name=value`` cookie list joined by
 # ``;``, ``,`` or spaces, and a dict or call repr. A flag that is the
-# whole value (``cookie=on``) is left alone.
+# whole value (``cookie=on``, ``cookie=off: disabled``) is left alone.
 _SECRET_HEADER_RE = re.compile(
     r"(?P<prefix>(?:(?P<open>\([ \t]*b?[\"'])|(?<![\w-]))(?P<env>http_)?(?:authorization|"
     r"proxy[-_]authorization|x[-_]api[-_]key|x[-_]auth[-_]token|x[-_]opencut[-_]token|"
@@ -94,7 +94,8 @@ _SECRET_HEADER_RE = re.compile(
     r"(?:[\"']?[ \t]*(?::|(?P<eq>=))|(?(open)[\"'],|(?!)))[ \t]*+(?:b?(?P<vq>[\"']))?)"
     r"(?P<value>(?(vq)(?:\\.|(?!(?P=vq))[^\r\n\\])*"
     r"|(?(eq)(?(env)[^\r\n]*"
-    rf"|(?!{re.escape(REDACTION_MARKER)})(?!(?:true|false|none|null|on|off|yes|no)(?![^\s&,;\"')\]}}]))"
+    rf"|(?!{re.escape(REDACTION_MARKER)})(?!(?:true|false|none|null|on|off|yes|no)"
+    r"(?:[.:!?]|/(?:true|false|none|null|on|off|yes|no))?(?![^\s&,;\"')\]}]))"
     r"(?:(?:digest|oauth|hawk|aws4-hmac-sha256|vapid|mutual|hoba|scram-sha-(?:1|256))[ \t]+[^\r\n]*"
     r"|(?:[{\[]|[A-Za-z_][\w.]*\()[^\r\n]*"
     r"|(?:(?:basic|bearer|token|negotiate|ntlm|apikey|api-key|dpop|kerberos|sharedkey(?:lite)?)[ \t]+)?"
@@ -106,7 +107,8 @@ _SECRET_HEADER_RE = re.compile(
 _URL_USERINFO_RE = re.compile(
     # The user may be empty and the password may hold "@" or "/", so the
     # match takes the whole run and _redact_url_userinfo cuts at its last
-    # "@". Taking the run whole, with no "@" required, means a long line
+    # "@", or earlier only where a plain host and path follow. Taking the
+    # run whole, with no "@" required, means a long line
     # is read once however many "://" it holds. Digits after the first
     # ":" are a port when a query or the end follows, or a path does after
     # a host (a dot or ``localhost``: "cdn.example.com:8443/logo@2x.png"),
@@ -138,14 +140,14 @@ _QUERY_SECRET_RE = re.compile(
 # the key is quoted (``'api_token': ...``), the value is quoted
 # (``token = 'x'``), or it stands alone before a colon and a value that
 # is 8 or more characters after a space (``token: 9f2c...``) or mixes
-# letters and digits (``token:Ab3x``). A logging prefix
-# (``WARNING:root:token: ...``) doesn't hide it. So a parser's
-# ``Unexpected token: punc``, drawtext's ``Token: 5`` and a namespaced
-# ``app:token:refresh-window`` stay.
+# letters and digits in 4 or more (``token:Ab3x``). A logging prefix
+# (``WARNING:root:token: ...``) doesn't hide it, but a path's
+# ``/token:`` does. So a parser's ``Unexpected token: punc``, drawtext's
+# ``Token: 5a`` and a namespaced ``app:token:refresh-window`` stay.
 _TOKEN_NAME = (
     r"(?:(?(kq)token|(?!))|token(?=[ \t]*[:=][ \t]*(?:[bru]{1,2})?[\"'])"
-    r"|(?<![A-Za-z0-9_-])token(?=[ \t]*:(?:[ \t]+[^\s,;}\]\"']{8}"
-    r"|[ \t]*+(?=[^\s,;}\]\"':]*[0-9])(?=[^\s,;}\]\"':]*[A-Za-z]))))"
+    r"|(?<![A-Za-z0-9_/-])token(?=[ \t]*:(?:[ \t]+[^\s,;}\]\"']{8}"
+    r"|[ \t]*+(?=[^\s,;}\]\"':]{4})(?=[^\s,;}\]\"':]*[0-9])(?=[^\s,;}\]\"':]*[A-Za-z]))))"
 )
 _ASSIGNED_SECRET_RE = re.compile(
     rf"(?P<prefix>(?P<kq>[\"'])?(?<![A-Za-z0-9_-])_*(?!{_PLAIN_TOKEN_NAME}(?![\w-]))(?:[A-Za-z0-9]+[_-])*"
@@ -219,18 +221,37 @@ def _redact_match_value(match: re.Match[str]) -> str:
     return f"{match.group('prefix')}{REDACTION_MARKER}"
 
 
+# What may follow the ``@`` that ends a userinfo cut short of the run's
+# last ``@``: a dotted host, ``localhost`` or an IP, a port, then a path.
+_URL_HOST_PATH_RE = re.compile(
+    r"(?:localhost|[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+|\[[0-9A-Fa-f:.]+\])(?::\d+)?/"
+)
+
+
 def _redact_url_userinfo(match: re.Match[str]) -> str:
     """Redact from ``scheme://`` to the ``@`` that ends the userinfo.
 
-    That is the last ``@`` before a ``?`` or ``#`` following the first
-    one, so ``?to=ops@example.com`` stays. An ``@`` right after ``/``
-    starts a path segment (``/media/@user/clip.mp4``) when an earlier
-    ``@`` can end the userinfo, and a password ending in ``/`` otherwise.
+    The run's last ``@`` always ends it or comes after it, so cutting
+    there can't leak. An earlier ``@`` is used only when a plain host
+    and path follow it and no other URL does, which keeps
+    ``?to=ops@example.com`` and ``/media/@user/clip.mp4`` readable.
     """
     rest = match.group("rest")
-    first = rest.find("@")
-    if first < 0:
+    last = rest.rfind("@")
+    if last < 0:
         return match.group(0)
+    at = _readable_userinfo_end(rest)
+    if at is None:
+        at = last
+    return f"{match.group('prefix')}{REDACTION_MARKER}{rest[at:]}"
+
+
+def _readable_userinfo_end(rest: str) -> int | None:
+    """The last ``@`` before a ``?`` or ``#`` that follows the first one,
+    stepping back past an ``@`` that starts a path segment, or ``None``
+    when the text after it isn't plainly a host and path.
+    """
+    first = rest.find("@")
     stop = len(rest)
     for mark in "?#":
         found = rest.find(mark, first)
@@ -242,7 +263,11 @@ def _redact_url_userinfo(match: re.Match[str]) -> str:
         if earlier < 0:
             break
         at = earlier
-    return f"{match.group('prefix')}{REDACTION_MARKER}{rest[at:]}"
+    if at == rest.rfind("@"):
+        return at
+    if "://" in rest[at:] or not _URL_HOST_PATH_RE.match(rest, at + 1):
+        return None
+    return at
 
 
 def _redact_assigned_value(match: re.Match[str]) -> str:
