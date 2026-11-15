@@ -724,6 +724,14 @@ publishes a compatible dependency lane.
 pip install "torch>=2.10" "torchvision>=0.25" torchaudio --index-url https://download.pytorch.org/whl/cu128
 ```
 
+That command is for a source install. The packaged Windows app runs its own Python 3.13 and loads add-ons only from `%USERPROFILE%\.opencut\packages`, so install the GPU build there with a matching Python:
+
+```bat
+py -3.13 -m pip install --upgrade --target "%USERPROFILE%\.opencut\packages" "torch>=2.10" "torchvision>=0.25" torchaudio --index-url https://download.pytorch.org/whl/cu128
+```
+
+RTX 50-series cards need this CUDA 12.8 build. Older CUDA builds have no kernels for them, and OpenCut says so in Settings before a job starts.
+
 GPU-heavy routes have built-in rate limiting (one GPU job at a time) and cancellation support. Choose the active CUDA adapter from the CEP or UXP Settings panel, or set `OPENCUT_GPU_INDEX` to a non-negative device index before starting the server. The selected adapter is reported by `/system/status`; invalid indexes return the available-device list instead of silently falling back.
 
 ---

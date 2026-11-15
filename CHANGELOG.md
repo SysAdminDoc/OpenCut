@@ -113,6 +113,20 @@ Notable changes to OpenCut. The git history carries the detailed record.
   `OPENCUT_EXTERNAL_SITE_PACKAGES`, and even then its Python version has to
   match the build's.
 
+### Fixed: add-on installs in the packaged app landed where the server couldn't load them
+
+- The packaged server imports add-ons only from `~/.opencut/packages`, using
+  its own bundled Python 3.13. Installing one, Whisper for example, ran the
+  first `python` on PATH. A 3.12 interpreter filled that folder with 3.12
+  wheels the server then crashed importing, and the plain and `--user`
+  attempts put packages where the server never looks. With no Python found at
+  all, it ran the server executable itself in place of pip. Also reported in
+  issue #8.
+- Installs now look for a Python with the same minor version, the `py`
+  launcher first, and install only into `~/.opencut/packages`. When there isn't
+  one, the error says which version to install. Reinstalling Whisper no longer
+  uninstalls anything from your own Python.
+
 ### Added: crash records
 
 - `~/.opencut/crash.log` was read by the crash packet, the issue reporter and
@@ -152,6 +166,22 @@ Notable changes to OpenCut. The git history carries the detailed record.
   job starts, and the message names the wheel that would work instead of
   suggesting a different device. ONNX Runtime is no longer asked for a CUDA
   provider that a CPU-only install does not have.
+- That check by itself still failed every job on such a card, FFmpeg-only work
+  and faster-whisper captions included, though neither one touches PyTorch.
+  Only PyTorch work is affected now. With the GPU left on automatic it runs on
+  the CPU and logs why once, faster-whisper and ONNX Runtime keep the card, and
+  an explicit selection gets an error with the install command in it. In the
+  packaged app that command installs into `~/.opencut/packages` with the
+  matching Python, since a plain `pip install torch` never reaches it.
+
+### Fixed: feature checks crashed on a refused FFmpeg
+
+- When FFmpeg doesn't clear the security floor, looking up its path raises.
+  Several availability checks (loudness validation, deflicker, quality metrics
+  and VMAF, APV, VVC and SRT output) let that error escape instead of reporting
+  the feature as unavailable. They report it unavailable now. The ones that
+  cache their answer skip caching this one, so a replaced FFmpeg is picked up
+  without a restart.
 
 ## 1.55.1: Installer crash fix
 
