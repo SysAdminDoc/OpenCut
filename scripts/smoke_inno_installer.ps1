@@ -180,6 +180,9 @@ try {
         throw "Registry InstallPath mismatch: expected $installFull, got $registryInstallPath"
     }
 
+    # The installed server answers /health before its capability probes finish.
+    & (Join-Path $PSScriptRoot "smoke_server_health.ps1") -ServerExe (Join-Path $installFull "server\OpenCut-Server.exe") -DataDir $userDataDir
+
     $uninstaller = Get-ChildItem -LiteralPath $installFull -Filter "unins*.exe" |
         Sort-Object Name |
         Select-Object -First 1
