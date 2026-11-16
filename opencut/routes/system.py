@@ -114,7 +114,8 @@ WHISPER_MODELS_DIR = os.environ.get("WHISPER_MODELS_DIR", None)
 # ---------------------------------------------------------------------------
 # Models list cache (TTL-based)
 # ---------------------------------------------------------------------------
-_models_cache = {"data": None, "ts": 0}
+# "gen" counts forgets, so a list that read the disk before one isn't stored.
+_models_cache = {"data": None, "ts": 0, "gen": 0}
 _models_cache_lock = threading.Lock()
 _MODELS_CACHE_TTL = 300  # 5 minutes
 
@@ -124,6 +125,7 @@ def _forget_models_list() -> None:
     with _models_cache_lock:
         _models_cache["data"] = None
         _models_cache["ts"] = 0
+        _models_cache["gen"] += 1
 
 # ---------------------------------------------------------------------------
 # Server Start Time (for uptime calculation)

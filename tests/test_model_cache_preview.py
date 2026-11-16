@@ -378,6 +378,40 @@ def test_models_list_drops_what_a_partial_delete_removed(client, csrf_token, mon
     assert listed_size() == [0.0]
 
 
+def test_models_list_running_during_a_delete_doesnt_cache_what_it_read(client, csrf_token, monkeypatch, tmp_path):
+    """A list that read the disk before a delete finished stored what it
+    read after the delete had cleared the cache, so the gone model stayed
+    listed for 5 minutes."""
+    import opencut.routes.system as system
+    import opencut.routes.system_model_routes as model_routes
+    from opencut.core import model_weights
+
+    _isolate_whisper_caches(monkeypatch, tmp_path)
+    hub = tmp_path / "hub"
+    monkeypatch.setenv("HF_HUB_CACHE", str(hub))
+    repo = hub / "models--org--speech"
+    repo.mkdir(parents=True)
+    (repo / "model.bin").write_bytes(b"x")
+    monkeypatch.setitem(model_routes._models_cache, "data", None)
+    real_torch_hub_dir = model_weights.torch_hub_dir
+
+    def torch_hub_dir_after_a_delete():
+        # The list has read the Hub cache by now. Delete the repo it found.
+        if repo.exists():
+            assert system._delete_cache_target(str(repo)) == (True, None)
+        return real_torch_hub_dir()
+
+    monkeypatch.setattr(model_weights, "torch_hub_dir", torch_hub_dir_after_a_delete)
+
+    def listed_paths():
+        models = client.get("/models/list", headers=_headers(csrf_token)).get_json()["models"]
+        return {model["path"] for model in models}
+
+    assert str(repo) in listed_paths()
+    assert not repo.exists()
+    assert str(repo) not in listed_paths()
+
+
 def test_whisper_clear_cache_drops_cleared_models_from_the_list(client, csrf_token, monkeypatch, tmp_path):
     """Clear cache deletes Hub folders the model list shows, but never reset
     the list cache, so they stayed listed for 5 minutes."""

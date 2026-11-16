@@ -116,6 +116,7 @@ def list_models():
     with _models_cache_lock:
         if _models_cache["data"] is not None and (now - _models_cache["ts"]) < _MODELS_CACHE_TTL:
             return jsonify(_models_cache["data"])
+        generation = _models_cache["gen"]
 
     from opencut.core import model_weights
 
@@ -159,8 +160,10 @@ def list_models():
 
     result = {"models": models, "total_mb": round(sum(m["size_mb"] for m in models), 1)}
     with _models_cache_lock:
-        _models_cache["data"] = result
-        _models_cache["ts"] = now
+        # A delete that finished while this read the disk makes it stale.
+        if _models_cache["gen"] == generation:
+            _models_cache["data"] = result
+            _models_cache["ts"] = now
     return jsonify(result)
 
 @system_bp.route("/models/delete", methods=["POST"])
