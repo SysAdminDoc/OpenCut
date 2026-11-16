@@ -10,6 +10,7 @@ Endpoints for advanced object AI features:
 """
 
 import logging
+import os
 
 from flask import Blueprint, jsonify
 
@@ -19,6 +20,42 @@ from opencut.security import require_csrf, safe_bool, safe_float, safe_int, vali
 logger = logging.getLogger("opencut")
 
 object_intel_bp = Blueprint("object_intel", __name__)
+
+
+def _readable_clip_paths(data):
+    """Split ``clip_paths`` into validated files and the ones skipped, with why.
+
+    One offline, moved or rejected clip in a project mustn't fail a visual
+    search or index of every other clip. Skipped paths are never opened.
+    """
+    clip_paths = data.get("clip_paths", [])
+    if not isinstance(clip_paths, list) or not clip_paths:
+        raise ValueError("clip_paths must be a non-empty list of file paths")
+
+    usable, skipped = [], []
+    for cp in clip_paths:
+        if not isinstance(cp, str) or not cp.strip():
+            continue
+        try:
+            usable.append(validate_filepath(cp.strip()))
+        except ValueError as exc:
+            skipped.append({
+                "clip_path": cp.strip(),
+                "clip_name": os.path.basename(cp.strip()),
+                "reason": str(exc),
+            })
+
+    if not usable:
+        if skipped:
+            raise ValueError(f"None of the clips can be read. {skipped[0]['reason']}")
+        raise ValueError("No valid clip paths provided")
+    return usable, skipped
+
+
+def _with_route_skips(result, skipped):
+    if skipped and isinstance(result, dict):
+        result["skipped_clips"] = skipped + list(result.get("skipped_clips") or [])
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -365,18 +402,7 @@ def semantic_search_route(job_id, filepath, data):
     """Search video clips by text query or image similarity."""
     from opencut.core.semantic_video_search import semantic_search
 
-    clip_paths = data.get("clip_paths", [])
-    if not isinstance(clip_paths, list) or not clip_paths:
-        raise ValueError("clip_paths must be a non-empty list of file paths")
-
-    # Validate each clip path
-    validated_paths = []
-    for cp in clip_paths:
-        if isinstance(cp, str) and cp.strip():
-            validated_paths.append(validate_filepath(cp.strip()))
-
-    if not validated_paths:
-        raise ValueError("No valid clip paths provided")
+    validated_paths, skipped = _readable_clip_paths(data)
 
     query = (data.get("query") or "").strip()
     query_image = (data.get("query_image") or "").strip()
@@ -411,7 +437,7 @@ def semantic_search_route(job_id, filepath, data):
         project_dir=project_dir,
     )
 
-    return result
+    return _with_route_skips(result, skipped)
 
 
 # ---------------------------------------------------------------------------
@@ -434,17 +460,7 @@ def semantic_index_route(job_id, filepath, data):
     """Pre-build a visual embedding index for a set of clips."""
     from opencut.core.semantic_video_search import build_clip_index
 
-    clip_paths = data.get("clip_paths", [])
-    if not isinstance(clip_paths, list) or not clip_paths:
-        raise ValueError("clip_paths must be a non-empty list of file paths")
-
-    validated_paths = []
-    for cp in clip_paths:
-        if isinstance(cp, str) and cp.strip():
-            validated_paths.append(validate_filepath(cp.strip()))
-
-    if not validated_paths:
-        raise ValueError("No valid clip paths provided")
+    validated_paths, skipped = _readable_clip_paths(data)
 
     frames_per_clip = safe_int(data.get("frames_per_clip"), 12, 1, 100)
     force_rebuild = safe_bool(data.get("force_rebuild"), False)
@@ -466,7 +482,7 @@ def semantic_index_route(job_id, filepath, data):
         project_dir=project_dir,
     )
 
-    return result
+    return _with_route_skips(result, skipped)
 
 
 # ---------------------------------------------------------------------------

@@ -80,6 +80,8 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - `--install-tools cuda12` works with any 64-bit Python 3 on the PC. It asked for the exact Python version the packaged server bundles, but the CUDA 12 runtime is plain DLLs that pip downloads the same way from any of them.
 - A `cuda12` download that takes most of an hour no longer fails at the very end with a misleading "in use" error. The folder for the old runtime was made before the download started, so another install could clean it up as stale in the meantime. If an install gets killed halfway through swapping the runtimes, the next run puts the old one back instead of downloading 1.3 GB again.
 - Transcription reads CPU mode through the same settings loader as the rest of OpenCut. It used to open the file itself, so a settings file from before CPU mode had its own switch (`"device": "cpu"`) only counted once the server had converted it.
+- One offline, moved or damaged clip no longer fails a whole visual search or **Build Visual Index** run. Those clips are skipped and the rest are searched, and the result lists each skipped clip with the reason under `skipped_clips`. When none of the clips can be read, the error names the first one and why. The index count in both panels only counts clips that were actually indexed.
+- A project folder the visual index can't be written to (read-only, offline or full) no longer fails the job after every clip was indexed. The embeddings still land in the local cache, so later searches don't index again, and `sidecar_error` says why the project copy wasn't saved.
 
 ### Tests
 

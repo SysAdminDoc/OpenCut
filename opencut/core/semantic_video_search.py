@@ -133,6 +133,10 @@ class SemanticSearchResult:
     total_frames_searched: int = 0
     search_time_ms: int = 0
     index_cached: bool = False
+    # Clips left out because they were missing or FFmpeg couldn't read them.
+    skipped_clips: List[Dict] = field(default_factory=list)
+    # Why the project sidecar couldn't be written ("" when it was, or unused).
+    sidecar_error: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -715,13 +719,26 @@ def _index_clip(
     frames_per_clip: int = FRAMES_PER_CLIP,
     work_prefix: str = "clipidx_",
     on_progress: Optional[Callable] = None,
+    skipped: Optional[List[Dict]] = None,
 ) -> Optional[Dict]:
-    """Extract, embed and thumbnail one clip. Returns cache data or None."""
+    """Extract, embed and thumbnail one clip.
+
+    Returns cache data, or None when no frames could be read, after adding
+    the clip and the reason to *skipped*.
+    """
     work_dir = tempfile.mkdtemp(prefix=work_prefix)
     try:
-        frames, timestamps = _extract_key_frames(clip_path, work_dir, count=frames_per_clip)
+        try:
+            frames, timestamps = _extract_key_frames(clip_path, work_dir, count=frames_per_clip)
+        except RuntimeError as exc:
+            # run_ffmpeg's failure: a damaged, unsupported or half-copied clip
+            # is skipped so it can't fail the search of every other clip.
+            logger.warning("Skipping %s, FFmpeg couldn't read its frames: %s", clip_path, exc)
+            _skip_clip(skipped, clip_path, f"FFmpeg couldn't read its frames: {str(exc)[:300]}")
+            return None
         if not frames:
             logger.warning("No frames extracted from %s", clip_path)
+            _skip_clip(skipped, clip_path, "No frames could be extracted")
             return None
 
         embeddings = _compute_frame_embeddings(
@@ -745,6 +762,42 @@ def _index_clip(
         }
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
+
+
+def _skip_clip(skipped: Optional[List[Dict]], clip_path: str, reason: str) -> None:
+    if skipped is not None:
+        skipped.append({
+            "clip_path": os.path.abspath(clip_path),
+            "clip_name": os.path.basename(clip_path),
+            "reason": reason,
+        })
+
+
+def _missing_clips(clip_paths: List[str]) -> List[Dict]:
+    skipped: List[Dict] = []
+    for path in clip_paths:
+        if not os.path.isfile(path):
+            _skip_clip(skipped, path, "File not found")
+    return skipped
+
+
+def _no_clip_readable(skipped: List[Dict]) -> RuntimeError:
+    first = skipped[0]
+    return RuntimeError(f"None of the clips could be read. {first['clip_name']}: {first['reason']}")
+
+
+def _save_sidecar_or_warn(project_dir: str, clip_path: str, data: Dict, engine: str) -> str:
+    """Save one clip to the project sidecar. Returns "" or why it couldn't.
+
+    A read-only, offline or full project folder mustn't fail a job whose
+    embeddings are already in the local cache.
+    """
+    try:
+        save_sidecar_embeddings(project_dir, clip_path, data, engine)
+    except OSError as exc:
+        logger.warning("Couldn't write the visual search index in %s: %s", project_dir, exc)
+        return str(exc)
+    return ""
 
 
 def _reuse_sidecar_entry(
@@ -788,8 +841,12 @@ def build_clip_index(
             or relinked is deterministically reused without re-indexing.
 
     Returns:
-        Dict with clip_count, total_frames, cached_count, rebuilt_count, engine,
-        and (when a project_dir is given) relinked_count.
+        Dict with clip_count (clips now searchable), total_frames, cached_count,
+        rebuilt_count, relinked_count, engine, skipped_clips (clip_path,
+        clip_name and reason for each clip left out) and sidecar_error.
+
+    Raises:
+        RuntimeError: when not one of the clips could be read.
     """
     if engine not in SEARCH_ENGINES:
         engine = DEFAULT_ENGINE
@@ -800,6 +857,8 @@ def build_clip_index(
     valid_paths = [p for p in clip_paths if os.path.isfile(p)]
     if not valid_paths:
         raise FileNotFoundError("None of the provided clip paths exist")
+    skipped = _missing_clips(clip_paths)
+    sidecar_error = ""
 
     if on_progress:
         eng_label = SEARCH_ENGINES[engine]["label"]
@@ -847,15 +906,17 @@ def build_clip_index(
             frames_per_clip=frames_per_clip,
             work_prefix=f"clipidx_{ci}_",
             on_progress=_emb_progress,
+            skipped=skipped,
         )
         if cache_data is None:
             continue
 
         _save_cached_embeddings(clip_hash, cache_data, engine)
-        if project_dir:
+        if project_dir and not sidecar_error:
             # Persist to the portable sidecar; this both records the entry
             # and, when the content changed, overwrites the stale signature.
-            save_sidecar_embeddings(project_dir, clip_path, cache_data, engine)
+            # One refusal means the folder can't be written, so stop trying.
+            sidecar_error = _save_sidecar_or_warn(project_dir, clip_path, cache_data, engine)
 
         rebuilt_count += 1
         total_frames += cache_data["frame_count"]
@@ -864,16 +925,22 @@ def build_clip_index(
             pct = 5 + int(90 * (ci + 1) / len(valid_paths))
             on_progress(pct, f"Indexed clip {ci+1}/{len(valid_paths)}: {os.path.basename(clip_path)}")
 
+    indexed = cached_count + rebuilt_count + relinked_count
+    if not indexed:
+        raise _no_clip_readable(skipped)
+
     if on_progress:
-        on_progress(100, f"Index complete: {len(valid_paths)} clips, {total_frames} frames")
+        on_progress(100, f"Index complete: {indexed} clips, {total_frames} frames")
 
     return {
-        "clip_count": len(valid_paths),
+        "clip_count": indexed,
         "total_frames": total_frames,
         "cached_count": cached_count,
         "rebuilt_count": rebuilt_count,
         "relinked_count": relinked_count,
         "engine": engine,
+        "skipped_clips": skipped,
+        "sidecar_error": sidecar_error,
     }
 
 
@@ -911,6 +978,10 @@ def semantic_search(
     Returns:
         SemanticSearchResult as dict. Each result carries ``thumbnail_path``
         (empty when the file is gone) and an inline ``thumbnail`` data URI.
+        ``skipped_clips`` lists the clips left out and why.
+
+    Raises:
+        RuntimeError: when not one of the clips could be read.
     """
     if engine not in SEARCH_ENGINES:
         engine = DEFAULT_ENGINE
@@ -924,6 +995,8 @@ def semantic_search(
     valid_paths = [p for p in clip_paths if os.path.isfile(p)]
     if not valid_paths:
         raise FileNotFoundError("None of the provided clip paths exist")
+    skipped = _missing_clips(clip_paths)
+    sidecar_error = ""
 
     start_time = time.time()
     query_type = "text" if query else "image"
@@ -944,6 +1017,7 @@ def semantic_search(
 
     all_results = []
     total_frames_searched = 0
+    clips_searched = 0
     any_cached = False
 
     for ci, clip_path in enumerate(valid_paths):
@@ -960,12 +1034,13 @@ def semantic_search(
             cached = _index_clip(
                 clip_path, clip_hash, engine, model, processor, torch_mod, engine_cfg,
                 work_prefix=f"search_idx_{ci}_",
+                skipped=skipped,
             )
             if cached is None:
                 continue
             _save_cached_embeddings(clip_hash, cached, engine)
-            if project_dir:
-                save_sidecar_embeddings(project_dir, clip_path, cached, engine)
+            if project_dir and not sidecar_error:
+                sidecar_error = _save_sidecar_or_warn(project_dir, clip_path, cached, engine)
         else:
             logger.warning("Clip not indexed and auto_index=False: %s", clip_path)
             continue
@@ -979,6 +1054,7 @@ def semantic_search(
         clip_fps = cached.get("fps", 30.0)
         frame_count = cached.get("frame_count", 0)
         total_frames_searched += frame_count
+        clips_searched += 1
 
         # Compute similarities
         sims = (embeddings @ query_embed.T).squeeze(-1)
@@ -1007,6 +1083,9 @@ def semantic_search(
             pct = 15 + int(80 * (ci + 1) / len(valid_paths))
             on_progress(pct, f"Searched {ci+1}/{len(valid_paths)} clips")
 
+    if not clips_searched and len(skipped) == len(clip_paths):
+        raise _no_clip_readable(skipped)
+
     # Sort by score descending
     all_results.sort(key=lambda r: r.score, reverse=True)
     all_results = all_results[:max_results]
@@ -1022,9 +1101,11 @@ def semantic_search(
         query=query or f"image:{os.path.basename(query_image)}",
         query_type=query_type,
         results=[r.to_dict() for r in all_results],
-        total_clips_searched=len(valid_paths),
+        total_clips_searched=clips_searched,
         total_frames_searched=total_frames_searched,
         search_time_ms=elapsed_ms,
         index_cached=any_cached,
+        skipped_clips=skipped,
+        sidecar_error=sidecar_error,
     )
     return result.to_dict()

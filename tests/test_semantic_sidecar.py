@@ -10,6 +10,7 @@ import os
 import shutil
 
 import numpy as np
+import pytest
 
 from opencut.core import semantic_video_search as svs
 
@@ -307,3 +308,142 @@ def test_thumbnail_data_uri_only_reads_cache_jpegs(tmp_path, monkeypatch):
     assert svs._thumbnail_data_uri(str(outside)) == ""
     assert svs._thumbnail_data_uri(str(not_jpeg)) == ""
     assert svs._thumbnail_data_uri("") == ""
+
+
+# --- one unreadable clip or an unwritable project ---------------------------
+# A project with one offline, damaged or unsupported clip, or a project folder
+# the index can't be written to, still searches every clip it can read.
+
+def _break_extract_for(monkeypatch, bad_clip):
+    working = svs._extract_key_frames
+
+    def extract(video_path, out_dir, count=svs.FRAMES_PER_CLIP):
+        if video_path == bad_clip:
+            raise RuntimeError("FFmpeg error (code 1): moov atom not found")
+        return working(video_path, out_dir, count=count)
+
+    monkeypatch.setattr(svs, "_extract_key_frames", extract)
+
+
+def _refuse_sidecar_writes(monkeypatch):
+    attempts = []
+
+    def refuse(project_dir, clip_path, data, engine=svs.DEFAULT_ENGINE):
+        attempts.append(clip_path)
+        raise PermissionError(13, "Access is denied", os.path.join(project_dir, svs.SIDECAR_DIRNAME))
+
+    monkeypatch.setattr(svs, "save_sidecar_embeddings", refuse)
+    return attempts
+
+
+def test_index_skips_a_clip_ffmpeg_cannot_read(tmp_path, monkeypatch):
+    _stub_clip_pipeline(monkeypatch, tmp_path / "cache", [])
+    bad = _write_clip(str(tmp_path / "media" / "bad.mp4"), b"broken " * 400)
+    good = _write_clip(str(tmp_path / "media" / "good.mp4"), b"shot " * 400)
+    _break_extract_for(monkeypatch, bad)
+
+    result = svs.build_clip_index([bad, good])
+
+    assert result["clip_count"] == 1
+    assert result["rebuilt_count"] == 1
+    assert [s["clip_name"] for s in result["skipped_clips"]] == ["bad.mp4"]
+    assert result["skipped_clips"][0]["clip_path"] == os.path.abspath(bad)
+    assert "moov atom not found" in result["skipped_clips"][0]["reason"]
+
+
+def test_search_skips_a_clip_ffmpeg_cannot_read(tmp_path, monkeypatch):
+    _stub_clip_pipeline(monkeypatch, tmp_path / "cache", [])
+    bad = _write_clip(str(tmp_path / "media" / "bad.mp4"), b"broken " * 400)
+    good = _write_clip(str(tmp_path / "media" / "good.mp4"), b"shot " * 400)
+    _break_extract_for(monkeypatch, bad)
+
+    found = svs.semantic_search([bad, good], query="a dog")
+
+    assert [r["clip_path"] for r in found["results"]] == [good, good]
+    assert found["total_clips_searched"] == 1
+    assert [s["clip_name"] for s in found["skipped_clips"]] == ["bad.mp4"]
+
+
+@pytest.mark.parametrize("run", [
+    lambda clip: svs.build_clip_index([clip]),
+    lambda clip: svs.semantic_search([clip], query="a dog"),
+], ids=["index", "search"])
+def test_job_fails_with_the_reason_when_no_clip_can_be_read(tmp_path, monkeypatch, run):
+    _stub_clip_pipeline(monkeypatch, tmp_path / "cache", [])
+    bad = _write_clip(str(tmp_path / "media" / "bad.mp4"), b"broken " * 400)
+    _break_extract_for(monkeypatch, bad)
+
+    with pytest.raises(RuntimeError, match=r"None of the clips could be read\. bad\.mp4: .*moov atom not found"):
+        run(bad)
+
+
+def test_read_only_project_folder_still_builds_the_local_index(tmp_path, monkeypatch):
+    _stub_clip_pipeline(monkeypatch, tmp_path / "cache", [])
+    project = str(tmp_path / "proj")
+    os.makedirs(project)
+    first = _write_clip(str(tmp_path / "media" / "a.mp4"), b"first " * 400)
+    second = _write_clip(str(tmp_path / "media" / "b.mp4"), b"second " * 400)
+    attempts = _refuse_sidecar_writes(monkeypatch)
+
+    result = svs.build_clip_index([first, second], project_dir=project)
+
+    assert result["clip_count"] == 2
+    assert "Access is denied" in result["sidecar_error"]
+    assert attempts == [first]  # one refusal stops the retries for this run
+    found = svs.semantic_search([first, second], query="a dog", auto_index=False)
+    assert len(found["results"]) == 4  # both clips came from the local cache
+
+
+def test_read_only_project_folder_still_returns_search_results(tmp_path, monkeypatch):
+    _stub_clip_pipeline(monkeypatch, tmp_path / "cache", [])
+    project = str(tmp_path / "proj")
+    os.makedirs(project)
+    clip = _write_clip(str(tmp_path / "media" / "shot.mp4"), b"shot " * 400)
+    _refuse_sidecar_writes(monkeypatch)
+
+    found = svs.semantic_search([clip], query="a dog", project_dir=project)
+
+    assert len(found["results"]) == 2
+    assert "Access is denied" in found["sidecar_error"]
+
+
+def _route_body(name):
+    from opencut.routes import object_intel_routes
+
+    return getattr(object_intel_routes, name).__wrapped__.__wrapped__
+
+
+@pytest.mark.parametrize("route,core,data", [
+    ("semantic_search_route", "semantic_search", {"query": "a dog"}),
+    ("semantic_index_route", "build_clip_index", {}),
+], ids=["search", "index"])
+def test_semantic_routes_skip_a_missing_clip(tmp_path, monkeypatch, route, core, data):
+    from opencut.security import validate_filepath
+
+    present = _write_clip(str(tmp_path / "media" / "here.mp4"), b"shot " * 400)
+    offline = str(tmp_path / "offline" / "gone.mp4")
+    seen = []
+
+    def fake_core(clip_paths, **kwargs):
+        seen.append(clip_paths)
+        return {"skipped_clips": [{"clip_path": "damaged.mp4", "clip_name": "damaged.mp4", "reason": "core"}]}
+
+    monkeypatch.setattr(svs, core, fake_core)
+
+    result = _route_body(route)("job_test", "", {"clip_paths": [offline, present], **data})
+
+    assert seen == [[validate_filepath(present)]]
+    assert [s["clip_name"] for s in result["skipped_clips"]] == ["gone.mp4", "damaged.mp4"]
+    assert result["skipped_clips"][0]["clip_path"] == offline
+    assert "File not found" in result["skipped_clips"][0]["reason"]
+
+
+@pytest.mark.parametrize("route,data", [
+    ("semantic_search_route", {"query": "a dog"}),
+    ("semantic_index_route", {}),
+], ids=["search", "index"])
+def test_semantic_routes_name_the_reason_when_no_clip_exists(tmp_path, route, data):
+    offline = str(tmp_path / "offline" / "gone.mp4")
+
+    with pytest.raises(ValueError, match=r"None of the clips can be read\. File not found"):
+        _route_body(route)("job_test", "", {"clip_paths": [offline], **data})
