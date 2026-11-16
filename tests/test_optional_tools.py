@@ -516,7 +516,7 @@ def cuda12(monkeypatch, data_dir):
 
     target = data_dir / "cuda12"
     monkeypatch.setattr(gpu_lanes, "cuda12_runtime_dir", lambda: str(target))
-    monkeypatch.setattr(security, "install_python", lambda: "C:/Python313/python.exe")
+    monkeypatch.setattr(security, "platform_wheel_python", lambda _what: "C:/Python313/python.exe")
 
     def pip(**runtime):
         fake = _Pip(**runtime)
@@ -600,6 +600,94 @@ def test_a_runtime_in_use_stays_whole(cuda12, data_dir, monkeypatch):
     assert lines[-1].startswith(f"[failed] cuda12: {target} is in use, so it wasn't replaced. Close OpenCut")
     assert optional_tools.cuda12_problems(str(target)) == ["nvidia-cudnn-cu12 is 9.1.0.70, not ==9.10.2.21"]
     assert _leftover_staging(data_dir) == []
+
+
+class _PipThenSweep(_Pip):
+    """pip, then another install sweeping folders over an hour old.
+
+    A 50-minute download plus a wait on the store lock gets there, and the
+    sweep is the store's own.
+    """
+
+    def __call__(self, cmd, timeout, on_start=None):
+        result = super().__call__(cmd, timeout, on_start)
+        mine = Path(cmd[cmd.index("--target") + 1])
+        two_hours_ago = time.time() - 2 * 3600
+        for entry in mine.parent.iterdir():
+            if entry != mine and "staging" in entry.name:
+                os.utime(entry, (two_hours_ago, two_hours_ago))
+        package_store._sweep_leftovers(str(mine.parent))
+        return result
+
+
+def test_a_long_download_still_swaps_the_old_runtime_out(cuda12, data_dir, monkeypatch):
+    target, _pip = cuda12
+    _write_cuda12(target, versions=("12.9.1.4", "9.1.0.70"))
+    monkeypatch.setattr(package_store, "_run", _PipThenSweep())
+    lines = []
+
+    assert optional_tools.install_tools(["cuda12"], lines.append) == 0, lines
+    assert optional_tools.cuda12_problems(str(target)) == []
+    assert _leftover_staging(data_dir) == []
+
+
+def test_a_runtime_a_killed_swap_set_aside_comes_back_without_a_download(cuda12, data_dir):
+    target, pip = cuda12
+    _write_cuda12(data_dir / ".cuda12-staging-k1ll3d" / "cuda12")
+    fake = pip()
+    lines = []
+
+    assert optional_tools.install_tools(["cuda12"], lines.append) == 0, lines
+    assert fake.calls == []
+    assert optional_tools.cuda12_problems(str(target)) == []
+    assert _leftover_staging(data_dir) == []
+
+
+def _only_python_on_path(monkeypatch, version=None):
+    """A packaged server on a machine whose one Python (if any) is ``version`` for this platform."""
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    exe = rf"C:\Python{version.replace('.', '')}\python.exe" if version else None
+    monkeypatch.setattr(security.shutil, "which", lambda name: exe if name == "python" else None)
+    abi = security.runtime_abi().replace(
+        sys.implementation.cache_tag, f"cpython-{(version or '').replace('.', '')}"
+    )
+
+    def probe(cmd, **_kwargs):
+        if cmd[0] != exe:
+            pytest.fail(f"ran {cmd}")
+        return subprocess.CompletedProcess(cmd, 0, f"{exe}\n{version}\n{abi}\n", "")
+
+    monkeypatch.setattr(security.subprocess, "run", probe)
+    return exe
+
+
+def test_cuda12_downloads_with_a_python_of_another_version(monkeypatch, data_dir):
+    """Its wheels are py3-none DLL bundles, so any Python for this platform fetches the same files."""
+    from opencut import gpu_lanes
+
+    target = data_dir / "cuda12"
+    monkeypatch.setattr(gpu_lanes, "cuda12_runtime_dir", lambda: str(target))
+    exe = _only_python_on_path(monkeypatch, f"{sys.version_info[0]}.{sys.version_info[1] - 1}")
+    fake = _Pip()
+    monkeypatch.setattr(package_store, "_run", fake)
+    lines = []
+
+    assert optional_tools.install_tools(["cuda12"], lines.append) == 0, lines
+    assert [cmd[0] for cmd in fake.calls] == [exe]
+    assert optional_tools.cuda12_problems(str(target)) == []
+
+
+def test_cuda12_without_a_python_asks_for_one_of_any_version(monkeypatch, data_dir):
+    from opencut import gpu_lanes
+
+    monkeypatch.setattr(gpu_lanes, "cuda12_runtime_dir", lambda: str(data_dir / "cuda12"))
+    _only_python_on_path(monkeypatch)
+    monkeypatch.setattr(package_store, "_run", lambda *a, **k: pytest.fail("ran pip"))
+    lines = []
+
+    assert optional_tools.install_tools(["cuda12"], lines.append) == 1
+    assert lines[-1].startswith("[failed] cuda12: ")
+    assert re.search(r"needs a .+ Python 3(?![.\d]) from python\.org", lines[-1]), lines[-1]
 
 
 def test_removing_cuda12_deletes_its_folder(cuda12):

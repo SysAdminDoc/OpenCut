@@ -427,7 +427,7 @@ def _probe_interpreter(cmd: list) -> Optional[Tuple[str, Tuple[int, int], str]]:
     return lines[-3], (major, minor), lines[-1]
 
 
-def _find_system_python() -> Optional[str]:
+def _find_system_python(any_version: bool = False) -> Optional[str]:
     """Find a Python that can install packages this frozen build will load.
 
     A packaged server imports add-on packages from :func:`user_packages_dir`
@@ -436,10 +436,14 @@ def _find_system_python() -> Optional[str]:
     ImportError, it aborts the server on import, the way issue #8's server
     died. Returns the interpreter's real executable, or None when no matching
     Python is present.
+
+    ``any_version`` settles for any Python 3 on this platform when none shares
+    the ABI, for wheels that name only a platform (``py3-none-win_amd64``).
     """
     want = sys.version_info[:2]
     tag = f"{want[0]}.{want[1]}"
     abi = runtime_abi()
+    platform = f"-{sysconfig.get_platform()}"
     candidates = []
     launcher = shutil.which("py")
     if launcher:
@@ -448,7 +452,10 @@ def _find_system_python() -> Optional[str]:
         path = shutil.which(name)
         if path:
             candidates.append([path])
+    if launcher and any_version:
+        candidates += [[launcher, "-3-64"], [launcher]]
     skipped = []
+    fallback = None
     for cmd in candidates:
         probed = _probe_interpreter(cmd)
         if probed is None:
@@ -457,7 +464,13 @@ def _find_system_python() -> Optional[str]:
         if version == want and candidate_abi == abi:
             logger.debug("Package installs use %s (%s)", executable, abi)
             return executable
+        if any_version and fallback is None and version[0] == 3 and candidate_abi.endswith(platform):
+            fallback = executable
+            continue
         skipped.append(f"{executable} ({candidate_abi})")
+    if fallback:
+        logger.debug("Platform wheel installs use %s", fallback)
+        return fallback
     if skipped:
         logger.info("No %s Python for package installs; skipped %s", abi, ", ".join(skipped))
     return None
@@ -496,6 +509,26 @@ def install_python() -> str:
     python = _find_system_python()
     if not python:
         raise RuntimeError(f"Cannot install add-on packages. {frozen_install_requirement()}")
+    return python
+
+
+def platform_wheel_python(what: str) -> str:
+    """The interpreter that runs pip for ``what``, whose wheels name only a platform.
+
+    The CUDA 12 runtime's wheels are ``py3-none-win_amd64`` DLL bundles, so
+    any Python 3 for this platform downloads the same files. From source
+    that's this interpreter. A frozen build takes one sharing its ABI first.
+    """
+    if not getattr(sys, "frozen", False):
+        return sys.executable
+    python = _find_system_python(any_version=True)
+    if not python:
+        platform = sysconfig.get_platform()
+        name = _INSTALLER_NAMES.get(platform, f"{struct.calcsize('P') * 8}-bit {platform}")
+        raise RuntimeError(
+            f"Downloading {what} needs a {name} Python 3 from python.org, any version. "
+            "Install one, then try again."
+        )
     return python
 
 

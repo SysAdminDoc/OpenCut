@@ -19,6 +19,7 @@ so a packaged install and the server share one set of pins and one target:
 from __future__ import annotations
 
 import errno
+import glob
 import hashlib
 import logging
 import os
@@ -57,6 +58,8 @@ TOOL_NAMES: tuple[str, ...] = (*INSTALLER_TOOLS, "cuda12")
 
 # Below package_store's _LEFTOVER_AGE, so no sweep takes a download in progress.
 CUDA12_TIMEOUT = 50 * 60
+# Matches the store's staging pattern, so a killed run's folders get swept.
+_CUDA12_STAGING = ".cuda12-staging-"
 
 Report = Callable[[str], None]
 
@@ -200,15 +203,16 @@ def install_cuda12_runtime(report: Report = _print) -> str:
     from opencut.gpu_lanes import CT2_CUDA12_RUNTIME, cuda12_runtime_dir
 
     target = cuda12_runtime_dir()
+    data_dir = os.path.dirname(target)
+    if not os.path.lexists(target):
+        _restore_cuda12_set_aside(target, report)
     if os.path.isdir(target) and not cuda12_problems(target):
         report(f"The CUDA 12 runtime is already in {target}")
         return target
-    python = security.install_python()
-    data_dir = os.path.dirname(target)
+    python = security.platform_wheel_python("the CUDA 12 runtime")
     os.makedirs(data_dir, exist_ok=True)
-    # Named like the store's staging folders so a killed run's copy gets swept.
-    staging = tempfile.mkdtemp(prefix=".cuda12-staging-", dir=data_dir)
-    aside = tempfile.mkdtemp(prefix=".cuda12-staging-", dir=data_dir)
+    staging = tempfile.mkdtemp(prefix=_CUDA12_STAGING, dir=data_dir)
+    aside: str | None = None
     try:
         report(f"Downloading the CUDA 12 runtime for faster-whisper (about 1.3 GB) with {python}...")
         try:
@@ -229,6 +233,9 @@ def install_cuda12_runtime(report: Report = _print) -> str:
         if problems:
             raise RuntimeError(f"pip's CUDA 12 runtime is incomplete: {'; '.join(problems)}")
         with package_store.store_lock(report):
+            # Made under the lock, the store's sweeps hold it too, so the
+            # old runtime's folder can't be swept as stale mid-download.
+            aside = tempfile.mkdtemp(prefix=_CUDA12_STAGING, dir=data_dir)
             old = os.path.join(aside, "cuda12")
             had_old = os.path.lexists(target)
             if had_old:
@@ -246,8 +253,31 @@ def install_cuda12_runtime(report: Report = _print) -> str:
                 raise
     finally:
         shutil.rmtree(staging, ignore_errors=True)
-        shutil.rmtree(aside, ignore_errors=True)
+        if aside:
+            shutil.rmtree(aside, ignore_errors=True)
     return target
+
+
+def _restore_cuda12_set_aside(target: str, report: Report) -> None:
+    """Put back a runtime an install killed mid-swap had moved aside.
+
+    The swap holds the store lock, so under it a ``cuda12`` folder in a
+    staging folder is one no running install still owns. That saves a 1.3 GB
+    download when the old runtime was still whole.
+    """
+    data_dir = os.path.dirname(target)
+    with package_store.store_lock(report):
+        if os.path.lexists(target):
+            return
+        for old in sorted(glob.glob(os.path.join(glob.escape(data_dir), f"{_CUDA12_STAGING}*", "cuda12"))):
+            try:
+                os.replace(old, target)
+            except OSError as exc:
+                logger.debug("Left %s in place: %s", old, exc)
+                continue
+            shutil.rmtree(os.path.dirname(old), ignore_errors=True)
+            report(f"Put back the CUDA 12 runtime an interrupted install had set aside in {target}")
+            return
 
 
 def remove_cuda12_runtime(report: Report = _print) -> bool:
