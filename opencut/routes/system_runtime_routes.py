@@ -75,6 +75,14 @@ def shutdown_server():
     def _die():
         time.sleep(0.2)
         logger.info("Server shutting down NOW")
+        # os._exit skips atexit, which is what stops a probe child that's
+        # still running (and the helpers it started).
+        try:
+            from opencut.core import capability_probe
+
+            capability_probe.stop_active()
+        except Exception as exc:  # noqa: BLE001 - shutting down regardless
+            logger.debug("Could not stop the capability probe: %s", exc)
         os._exit(0)
 
     threading.Thread(target=_die, daemon=True).start()

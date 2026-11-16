@@ -374,3 +374,143 @@ def test_describe_exit_names_windows_crash_codes():
     assert capability_probe.describe_exit(0xC0000409) == "exit code 0xC0000409 (fast fail (stack buffer overrun))"
     assert capability_probe.describe_exit(5) == "exit code 5"
     assert capability_probe.describe_exit(None) == "no exit code"
+
+
+# A probe import that starts a long-lived helper process handing it the
+# child's real stdout, the way a library might start a compile server.
+_HELPER_BODY = """\
+import subprocess, sys
+_helper = subprocess.Popen(
+    [sys.executable, "-c", "import time; time.sleep(90)"],
+    stdin=subprocess.DEVNULL, stdout=sys.__stdout__.fileno(), stderr=subprocess.DEVNULL,
+    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+)
+pathlib.Path(__file__).with_name("helper.pid").write_text(str(_helper.pid), encoding="utf-8")
+"""
+
+
+def _alive(pid: int) -> bool:
+    if os.name != "nt":  # pragma: no cover - the suite runs on Windows
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return False
+        return True
+    import ctypes
+
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.OpenProcess.restype = ctypes.c_void_p
+    handle = k32.OpenProcess(0x00100000, False, pid)  # SYNCHRONIZE
+    if not handle:
+        return False
+    try:
+        return k32.WaitForSingleObject(ctypes.c_void_p(handle), 0) == 0x102  # WAIT_TIMEOUT
+    finally:
+        k32.CloseHandle(ctypes.c_void_p(handle))
+
+
+def _dies(pid: int, within: float = 5.0) -> bool:
+    deadline = time.monotonic() + within
+    while time.monotonic() < deadline:
+        if not _alive(pid):
+            return True
+        time.sleep(0.1)
+    return False
+
+
+@pytest.fixture
+def helper_pid(fake_site):
+    """The helper's PID once the probe started it; killed if it outlives the test."""
+    path = fake_site / "helper.pid"
+    read = []
+
+    def get():
+        deadline = time.monotonic() + 60
+        while not path.exists() and time.monotonic() < deadline:
+            time.sleep(0.1)
+        pid = int(path.read_text(encoding="utf-8"))
+        read.append(pid)
+        return pid
+
+    yield get
+    for pid in read:
+        if _alive(pid):
+            subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True, creationflags=_NO_WINDOW)
+
+
+def test_a_helper_holding_the_probe_pipe_doesnt_stall_discovery(fake_site, make_discovery, helper_pid):
+    """The child finishes every probe and exits, but the helper keeps its
+    stdout open, so EOF never came: discovery sat out the probe timeout and
+    then blocked closing the pipe until the helper quit."""
+    (fake_site / "opentimelineio.py").write_text(_MARK + _HELPER_BODY, encoding="utf-8")
+    (fake_site / "edge_tts.py").write_text("VALUE = 1\n", encoding="utf-8")
+    discovery = make_discovery(("otio", "edge_tts"), install=False, probe_timeout=60)
+
+    started = time.monotonic()
+    assert discovery.ensure_started()
+    assert discovery.wait(45), "discovery stalled behind the helper"
+    assert time.monotonic() - started < 30
+    snap = discovery.snapshot()
+    assert snap["state"] == "ready"
+    assert snap["failed"] == {}
+    assert discovery.capabilities()["otio"] is True
+    assert discovery.spawn_count == 1
+    assert _dies(helper_pid()), "the helper outlived its probe child"
+
+
+def test_a_hung_probe_and_the_helper_it_started_are_killed_together(
+    fake_site, crash_log, make_discovery, helper_pid
+):
+    (fake_site / "opentimelineio.py").write_text(
+        _MARK + _HELPER_BODY + "import time\ntime.sleep(120)\n", encoding="utf-8",
+    )
+    discovery = make_discovery(("otio",), install=False, probe_timeout=6)
+
+    started = time.monotonic()
+    assert discovery.ensure_started()
+    assert discovery.wait(45), "discovery stalled behind the helper"
+    assert time.monotonic() - started < 30
+    failed = discovery.snapshot()["failed"]["otio"]
+    assert failed["state"] == "timeout"
+    assert failed["reason"] == "no answer within 6 seconds"
+    assert _dies(helper_pid()), "killing the hung child left its helper running"
+
+
+def test_a_probe_that_prints_without_a_newline_still_reports(fake_site, make_discovery):
+    """Output with no trailing newline ran into the result line, so the
+    result was lost and the probe read as crashed with exit code 0."""
+    (fake_site / "opentimelineio.py").write_text(
+        _MARK + "import os\nprint('printed', end='')\nos.write(1, b'written to fd 1')\n",
+        encoding="utf-8",
+    )
+    discovery = make_discovery(("otio",), install=False)
+
+    assert discovery.ensure_started()
+    assert discovery.wait(60)
+    assert discovery.snapshot()["failed"] == {}
+    assert discovery.capabilities()["otio"] is True
+
+
+def test_shutdown_stops_a_running_probe_child(app, csrf_token, make_discovery, monkeypatch):
+    """/shutdown ends the server with os._exit, which skips the atexit hook
+    that kills the probe child, so a hung probe outlived the server."""
+    discovery = make_discovery(("otio",))
+    child = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(90)"],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        creationflags=_NO_WINDOW,
+    )
+    try:
+        with discovery._lock:
+            discovery._active = child
+        exited = threading.Event()
+        monkeypatch.setattr(os, "_exit", lambda code: exited.set())
+
+        resp = app.test_client().post("/shutdown", headers=csrf_headers(csrf_token))
+        assert resp.status_code == 200
+        assert exited.wait(10), "the shutdown thread never reached os._exit"
+        assert _dies(child.pid), "the probe child outlived the server"
+    finally:
+        if child.poll() is None:
+            child.kill()
+        child.wait(10)

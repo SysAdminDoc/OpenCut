@@ -26,12 +26,14 @@ vets an optional tool before it's installed:
 from __future__ import annotations
 
 import atexit
+import functools
 import hashlib
 import importlib
 import json
 import logging
 import os
 import queue
+import signal
 import subprocess
 import sys
 import threading
@@ -62,6 +64,9 @@ RESULT_MAX_AGE = 24 * 3600.0
 UNKNOWN_RETRY = 300.0
 #: How often ``ensure_started`` re-reads the package fingerprint.
 FINGERPRINT_RECHECK = 15.0
+#: How long after the child exits its pipe may stay open (held by a helper
+#: process it started) before the parent stops waiting for EOF.
+EXIT_GRACE = 2.0
 
 STATE_OK = "ok"
 #: The probe raised a Python exception; reported by the child.
@@ -255,19 +260,28 @@ def _run_one(name: str) -> dict:
     }
 
 
-def _emit(line: str) -> None:
-    sys.stdout.write(line + "\n")
-    sys.stdout.flush()
+def _emit(stream, line: str) -> None:
+    # A leading newline ends whatever a probe printed without one, so the
+    # mark always starts its own line.
+    stream.write("\n" + line + "\n")
+    stream.flush()
 
 
 def run_child(names_arg: str) -> int:
     """``--capability-probe NAMES``: run each probe and report it on stdout."""
     _quiet_error_dialogs()
     _apply_forwarded_sys_path()
-    for name in [n.strip() for n in (names_arg or "").split(",") if n.strip()]:
-        _emit(START_MARK + name)
-        result = _run_one(name)
-        _emit(RESULT_MARK + json.dumps(result, ensure_ascii=True, sort_keys=True, default=str))
+    # What the probes print goes to stderr, which the parent keeps as
+    # evidence, so stdout carries only the protocol.
+    protocol = sys.stdout
+    sys.stdout = sys.stderr
+    try:
+        for name in [n.strip() for n in (names_arg or "").split(",") if n.strip()]:
+            _emit(protocol, START_MARK + name)
+            result = _run_one(name)
+            _emit(protocol, RESULT_MARK + json.dumps(result, ensure_ascii=True, sort_keys=True, default=str))
+    finally:
+        sys.stdout = protocol
     return 0
 
 
@@ -332,7 +346,122 @@ def _default_cache_path() -> str:
     return os.path.join(OPENCUT_DIR, CACHE_FILENAME)
 
 
+# ---------------------------------------------------------------------------
+# Process trees
+#
+# A probe's import can start helper processes of its own. Killing only the
+# child leaves them running and holding its stdout, so the pipe never reaches
+# EOF and closing it blocks behind the reader thread. On Windows each child
+# goes into a job object that kills everything in it when it's terminated or
+# when the server's handle closes, which also covers ``os._exit``. Elsewhere
+# the child leads its own session and ``killpg`` reaches its helpers.
+# ---------------------------------------------------------------------------
+_JOB_ATTR = "_opencut_probe_job"
+_job_lock = threading.Lock()
+_JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000
+_JOB_OBJECT_EXTENDED_LIMIT_INFORMATION = 9
+
+
+@functools.lru_cache(maxsize=1)
+def _job_api():
+    import ctypes
+    from ctypes import wintypes
+
+    class BasicLimit(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_int64),
+            ("PerJobUserTimeLimit", ctypes.c_int64),
+            ("LimitFlags", wintypes.DWORD),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", wintypes.DWORD),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", wintypes.DWORD),
+            ("SchedulingClass", wintypes.DWORD),
+        ]
+
+    class IoCounters(ctypes.Structure):
+        _fields_ = [(name, ctypes.c_uint64) for name in (
+            "ReadOperationCount", "WriteOperationCount", "OtherOperationCount",
+            "ReadTransferCount", "WriteTransferCount", "OtherTransferCount",
+        )]
+
+    class ExtendedLimit(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", BasicLimit),
+            ("IoInfo", IoCounters),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateJobObjectW.argtypes = (wintypes.LPVOID, wintypes.LPCWSTR)
+    k32.CreateJobObjectW.restype = wintypes.HANDLE
+    k32.SetInformationJobObject.argtypes = (
+        wintypes.HANDLE, ctypes.c_int, ctypes.POINTER(ExtendedLimit), wintypes.DWORD,
+    )
+    k32.SetInformationJobObject.restype = wintypes.BOOL
+    k32.AssignProcessToJobObject.argtypes = (wintypes.HANDLE, wintypes.HANDLE)
+    k32.AssignProcessToJobObject.restype = wintypes.BOOL
+    k32.TerminateJobObject.argtypes = (wintypes.HANDLE, wintypes.UINT)
+    k32.TerminateJobObject.restype = wintypes.BOOL
+    k32.CloseHandle.argtypes = (wintypes.HANDLE,)
+    k32.CloseHandle.restype = wintypes.BOOL
+    return ctypes, k32, ExtendedLimit
+
+
+def _popen_tree_kwargs() -> dict:
+    if os.name == "nt":
+        return {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
+    return {"start_new_session": True}
+
+
+def _attach_job(proc: subprocess.Popen) -> None:
+    """Put a Windows child in a kill-on-close job. Best effort."""
+    if os.name != "nt":
+        return
+    try:
+        ctypes, k32, ExtendedLimit = _job_api()
+        job = k32.CreateJobObjectW(None, None)
+        if not job:
+            raise ctypes.WinError(ctypes.get_last_error())
+        info = ExtendedLimit()
+        info.BasicLimitInformation.LimitFlags = _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        if not (
+            k32.SetInformationJobObject(job, _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
+                                        ctypes.byref(info), ctypes.sizeof(info))
+            and k32.AssignProcessToJobObject(job, int(getattr(proc, "_handle")))
+        ):
+            error = ctypes.WinError(ctypes.get_last_error())
+            k32.CloseHandle(job)
+            raise error
+    except Exception as exc:  # noqa: BLE001 - without a job, killing the child alone still works
+        logger.debug("Could not put probe process %s in a job object: %s", proc.pid, exc)
+        return
+    setattr(proc, _JOB_ATTR, job)
+
+
+def _close_job(proc: subprocess.Popen) -> None:
+    """Release the child's job, killing anything still in it."""
+    with _job_lock:
+        job = proc.__dict__.pop(_JOB_ATTR, None)
+        if job:
+            _job_api()[1].CloseHandle(job)
+
+
 def _kill(proc: subprocess.Popen) -> None:
+    """Stop the probe child and every process it started."""
+    with _job_lock:
+        job = getattr(proc, _JOB_ATTR, None)
+        if job:
+            _job_api()[1].TerminateJobObject(job, 1)
+    if not job and os.name != "nt":
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except OSError:
+            pass
     if proc.poll() is None:
         try:
             proc.kill()
@@ -359,12 +488,14 @@ class CapabilityDiscovery:
         probes: Optional[tuple] = None,
         startup_timeout: float = STARTUP_TIMEOUT,
         probe_timeout: float = PROBE_TIMEOUT,
+        exit_grace: float = EXIT_GRACE,
         env: Optional[dict] = None,
     ) -> None:
         self.cache_path = cache_path if cache_path is not None else _default_cache_path()
         self.probe_names = tuple(probes) if probes is not None else PROBE_NAMES
         self.startup_timeout = float(startup_timeout)
         self.probe_timeout = float(probe_timeout)
+        self.exit_grace = float(exit_grace)
         self._env = dict(env or {})
         self._lock = threading.Lock()
         self._results: dict = {}
@@ -645,10 +776,11 @@ class CapabilityDiscovery:
                 text=True,
                 encoding="utf-8",
                 errors="replace",
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                **_popen_tree_kwargs(),
             )
         except OSError as exc:
             return set(), f"couldn't start the probe process: {exc}"
+        _attach_job(proc)
         with self._lock:
             self._active = proc
             self.spawn_count += 1
@@ -658,6 +790,7 @@ class CapabilityDiscovery:
                 stale = False
         if stale:
             _kill(proc)
+            _close_job(proc)
             with self._lock:
                 self._active = None
             return set(), None
@@ -691,6 +824,7 @@ class CapabilityDiscovery:
         done: set = set()
         fatal = None
         current = None
+        exited_at = None
         deadline = time.monotonic() + self.startup_timeout
         try:
             while True:
@@ -708,7 +842,17 @@ class CapabilityDiscovery:
                 try:
                     line = lines.get(timeout=min(left, 1.0))
                 except queue.Empty:
-                    continue
+                    if proc.poll() is None:
+                        continue
+                    # The child is gone, but a process it started still holds
+                    # stdout, so EOF won't come. Once what was buffered has
+                    # been read, settle it as if the pipe had closed.
+                    now = time.monotonic()
+                    if exited_at is None:
+                        exited_at = now
+                    if now - exited_at < self.exit_grace:
+                        continue
+                    line = None
                 if line is None:
                     # stdout closes as the child exits; let it finish so the
                     # exit code is the crash's, not the one a kill would set.
@@ -725,6 +869,8 @@ class CapabilityDiscovery:
                         fatal = f"the probe process exited with {describe_exit(code)} before running a probe"
                     break
                 line = line.rstrip("\r\n")
+                if not line:
+                    continue
                 if line.startswith(START_MARK):
                     current = line[len(START_MARK):].strip()
                     deadline = time.monotonic() + self.probe_timeout
@@ -737,15 +883,21 @@ class CapabilityDiscovery:
                 else:
                     output.append(line)
         finally:
-            if proc.poll() is None:
-                _kill(proc)
+            # Always, even after a clean exit: helpers the probes started are
+            # still in the job and may hold the pipes.
+            _kill(proc)
             for reader in readers:
                 reader.join(5)
-            for stream in (proc.stdout, proc.stderr):
+            for reader, stream in zip(readers, (proc.stdout, proc.stderr)):
+                if reader.is_alive():
+                    # A process outside the job still holds this pipe. Closing
+                    # it would block behind the reader, so leave both be.
+                    continue
                 try:
                     stream.close()
                 except (OSError, ValueError):
                     pass
+            _close_job(proc)
             with self._lock:
                 if self._active is proc:
                     self._active = None
@@ -839,7 +991,12 @@ def reported_failures() -> dict:
     return discovery.failures() if discovery is not None else {}
 
 
-def _close_at_exit() -> None:
+def stop_active() -> None:
+    """Stop discovery and kill the running probe child with its helpers.
+
+    Registered with ``atexit``. ``/shutdown`` ends the server with
+    ``os._exit``, which skips ``atexit``, so it calls this first.
+    """
     with _discovery_lock:
         discovery = _discovery
     if discovery is not None:
@@ -850,4 +1007,4 @@ def _close_at_exit() -> None:
             _kill(proc)
 
 
-atexit.register(_close_at_exit)
+atexit.register(stop_active)
