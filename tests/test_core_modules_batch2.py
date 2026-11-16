@@ -18,8 +18,21 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+@pytest.fixture(autouse=True)
+def _trusted_media_binaries(monkeypatch):
+    """Several tests here patch ``subprocess.run``, which every module shares,
+    so the FFmpeg security probe would read the mock's output and refuse the
+    binary unless an earlier test file had already graded it. The probe has
+    its own tests."""
+    from opencut import helpers
+
+    monkeypatch.setattr(helpers, "_require_safe_media_binary", lambda binary: binary)
 
 
 # ============================================================
