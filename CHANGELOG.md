@@ -99,6 +99,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - The dormant Bolt WebView scaffold for the UXP panel is type-checked now. `npm run typecheck:bolt` in the CEP panel folder compiles it in strict mode against Adobe's published Premiere typings, and the Python suite runs the same check, so a host call with the wrong shape fails before the WebView cutover instead of inside Premiere.
 - The visual search cache test checks what its name says. It used to pass even when the cache folder was never created, and now it points the cache at a fresh folder and fails unless that folder exists.
 - The UXP compatibility, surface ratchet and README badge checks pass again after the visual search panels landed. The compatibility metadata now points at the moved `main.js` lines, the ratchet floor goes up from 19.8% to 19.9% because the two visual search routes have a panel now, and the README counts the 394 test files that exist.
+- `npm run lint` in the CEP panel checks every file in `client/` now. The script and the ESLint config each kept their own hand-written list, so twelve modules (the format, string, lookup and i18n helpers split out of `main.js` among them) never ran through `npm run lint`, and five more were linted with no rules switched on. Both use a `client/*.js` glob now, with Adobe's vendored `CSInterface.js` left out. All 34 files pass.
 
 ### Release builds
 

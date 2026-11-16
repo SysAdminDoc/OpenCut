@@ -2,29 +2,14 @@ import globals from "globals";
 
 export default [
   {
-    ignores: ["dist/**", "node_modules/**"],
+    // CSInterface.js is Adobe's vendored CEP library, not ours to lint.
+    ignores: ["dist/**", "node_modules/**", "client/CSInterface.js"],
   },
   {
-    files: [
-      "client/main.js",
-      "client/panel-state.js",
-      "client/backend-client.js",
-      "client/job-runtime.js",
-      "client/host-write-verification.js",
-      "client/component-utils.js",
-      "client/announce-utils.js",
-      "client/cep-theme.js",
-      "client/timeline-utils.js",
-      "client/bootstrap.js",
-      "client/update-controller.js",
-      "client/results-controller.js",
-      "client/settings-diagnostics-controller.js",
-      "client/navigation-controller.js",
-      "client/collapsible-cards.js",
-      "client/disabled-reasons.js",
-      "client/capability-status.js",
-      "client/visual-search-controller.js",
-    ],
+    // A glob, not a list: a hand-kept list missed every module split out of
+    // main.js after it was written, and a file no config block matches is
+    // linted with no rules at all, so it passes without being checked.
+    files: ["client/*.js"],
     languageOptions: {
       ecmaVersion: 2021,
       sourceType: "script",
