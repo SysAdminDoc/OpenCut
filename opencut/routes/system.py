@@ -239,12 +239,16 @@ def _build_whisper_cache_plan() -> dict:
                 errors.append(f"{cache_dir}: {exc}")
         else:
             entries.append(_cache_plan_entry(cache_dir, category=category))
+    # A folder it couldn't list hides what's inside from the clear. A file it
+    # couldn't size (a broken link, say) still goes with its folder.
+    listing_errors = list(errors)
     for entry in entries:
         errors.extend(entry.get("errors", []))
     return {
         "entries": entries,
         "total_bytes": sum(int(entry.get("bytes", 0)) for entry in entries),
         "errors": errors,
+        "listing_errors": listing_errors,
     }
 
 

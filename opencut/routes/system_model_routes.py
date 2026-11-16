@@ -244,9 +244,9 @@ def delete_model():
         return jsonify(destructive_confirmation_required_response(plan)), 409
 
     deleted, delete_error = _delete_cache_target(path)
-    errors = list(plan_entry.get("errors", []))
-    if delete_error:
-        errors.append(delete_error)
+    # A file the preview couldn't size (it stays listed in the plan entry)
+    # went with the folder, so only what the delete left counts.
+    errors = [delete_error] if delete_error else []
     try:
         if errors or not deleted:
             return jsonify({

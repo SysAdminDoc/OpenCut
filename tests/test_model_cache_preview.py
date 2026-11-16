@@ -355,6 +355,69 @@ def test_whisper_clear_cache_deletes_past_a_locked_file(client, csrf_token, monk
     assert not paths["whisper"].exists()
 
 
+def _cant_size(monkeypatch, name):
+    """Make one file unsizable, the way a broken Hub cache link is."""
+    real_getsize = os.path.getsize
+
+    def getsize(target):
+        if os.path.basename(str(target)) == name:
+            raise FileNotFoundError(2, "No such file or directory", str(target))
+        return real_getsize(target)
+
+    monkeypatch.setattr(os.path, "getsize", getsize)
+
+
+def test_whisper_clear_cache_succeeds_past_a_file_it_couldnt_size(client, csrf_token, monkeypatch, tmp_path):
+    """A file the preview couldn't size failed the whole clear, though the
+    delete took it with its folder."""
+    _system_routes, paths = _isolate_whisper_caches(monkeypatch, tmp_path)
+    broken = paths["hf_whisper"] / "broken-link.bin"
+    broken.write_bytes(b"x")
+    _cant_size(monkeypatch, broken.name)
+
+    preview = client.post("/whisper/clear-cache", json={"dry_run": True}, headers=_headers(csrf_token)).get_json()
+    # The preview still says which file it couldn't size.
+    assert any(broken.name in error for error in preview["errors"]), preview["errors"]
+    response = client.post(
+        "/whisper/clear-cache",
+        json={"confirm_token": preview["confirm_token"]},
+        headers=_headers(csrf_token),
+    )
+
+    data = response.get_json()
+    assert data["success"] is True, data["errors"]
+    assert data["errors"] == []
+    assert str(paths["hf_whisper"]) in data["cleared"]
+    assert not paths["hf_whisper"].exists()
+
+
+def test_models_delete_succeeds_past_a_file_it_couldnt_size(client, csrf_token, monkeypatch, tmp_path):
+    """The same file made a model delete answer 500 after the model was gone."""
+    _isolate_whisper_caches(monkeypatch, tmp_path)
+    hub = tmp_path / "hub"
+    monkeypatch.setenv("HF_HUB_CACHE", str(hub))
+    repo = hub / "models--org--speech"
+    repo.mkdir(parents=True)
+    broken = repo / "broken-link.bin"
+    broken.write_bytes(b"x")
+    (repo / "weights.bin").write_bytes(b"w")
+    _cant_size(monkeypatch, broken.name)
+
+    preview = client.post("/models/delete", json={"path": str(repo), "dry_run": True}, headers=_headers(csrf_token)).get_json()
+    assert any(broken.name in error for error in preview["errors"]), preview["errors"]
+    response = client.post(
+        "/models/delete",
+        json={"path": str(repo), "confirm_token": preview["confirm_token"]},
+        headers=_headers(csrf_token),
+    )
+
+    data = response.get_json()
+    assert response.status_code == 200, data
+    assert data["success"] is True and data["errors"] == []
+    assert data["deleted"] == [str(repo)]
+    assert not repo.exists()
+
+
 def test_models_list_drops_what_a_partial_delete_removed(client, csrf_token, monkeypatch, tmp_path):
     """A delete that left one locked file answered 500 without resetting the
     list cache, so the model list showed the full old size for 5 minutes."""

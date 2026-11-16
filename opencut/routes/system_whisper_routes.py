@@ -220,7 +220,8 @@ def whisper_clear_cache():
         return jsonify(destructive_confirmation_required_response(plan)), 409
 
     cleared = []
-    errors = list(cache_plan["errors"])
+    # The plan entries keep their sizing errors, and those don't fail a clear.
+    errors = list(cache_plan["listing_errors"])
     for entry in plan["targets"]:
         path = str(entry.get("path", ""))
         deleted, error = _delete_cache_target(path)
