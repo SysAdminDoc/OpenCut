@@ -174,6 +174,14 @@ def pytest_configure(config):
     # The server copies the panel bootstrap secret into Premiere's UXP plugin
     # storage under %APPDATA%, which the fake home doesn't cover.
     patch.setenv("OPENCUT_UXP_PLUGIN_STORAGE", os.path.join(isolated_home, "uxp-plugin-storage"))
+    # Clear cache plans %LOCALAPPDATA%\OpenCut\models and whatever Hub, torch
+    # and whisper caches these name. Left real, a test's answer depended on
+    # the developer's own caches (a 409 wherever OpenCut was installed).
+    local_appdata = os.path.join(isolated_home, "localappdata")
+    os.makedirs(local_appdata, exist_ok=True)
+    patch.setenv("LOCALAPPDATA", local_appdata)
+    for name in ("HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE", "HF_HOME", "XDG_CACHE_HOME", "TORCH_HOME"):
+        patch.delenv(name, raising=False)
     _present_bootstrap_secret_on_health(patch)
     _session_home_patch = patch
 

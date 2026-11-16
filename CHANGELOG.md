@@ -62,6 +62,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Tests
 
+- The test suite no longer reads your own model caches. `LOCALAPPDATA` points inside the run's temporary home, and the Hugging Face, torch and XDG cache variables are cleared, so the Clear cache smoke test gives the same answer on a machine with OpenCut installed as on one without.
 - `npm run test:rendered` builds and checks the panel before Playwright starts. The suite's signed-build test boots `client/dist`, the bundle Premiere loads, and it used to get whatever the last build left there, so a change could pass that test against an old bundle.
 - Both installer smoke runs now start the installed server on a free port and check that `/health` answers while its capability probes are still pending. They then wait for the probes to finish and fail if any of them crashed or timed out. The server's PID file and panel secret stay in the smoke's throwaway folder, so a run on a machine with OpenCut already set up leaves that install alone.
 - A new rendered panel test boots the built panel, the page Premiere actually loads, and fails when that bundle throws while loading. Every other rendered test still loads the source page, which is how the v1.56.0 bundle shipped without its live-updates helper.
