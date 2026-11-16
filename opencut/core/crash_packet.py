@@ -17,8 +17,10 @@ Bundle contents:
 * ``environment.txt`` — Python + platform + bundled FFmpeg version +
   installed pip distributions (names only; no versions, to avoid
   fingerprinting private wheels).
-* ``recent_jobs.json`` — last 50 entries from the job store (best
-  effort; missing when the in-process job store isn't available).
+* ``recent_jobs.json``: newest 50 jobs from ``jobs.db`` with the live
+  state of in-memory jobs laid over them, each record redacted field by
+  field (secret-named values, home paths). Missing when
+  ``include_jobs=False`` or when neither job source can be read.
 
 The module is stdlib-only.
 """
@@ -37,7 +39,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
-from opencut.core.issue_report import _redact_sensitive_text, _tail_file
+from opencut.core.issue_report import _redact_sensitive_text, _redact_structure, _tail_file
 from opencut.openapi_registry import openapi_response_schema
 from opencut.server_log import SERVER_LOG_NAME, opencut_data_dir, server_log_tail
 
@@ -124,22 +126,62 @@ def _environment_block() -> str:
     return body
 
 
-def _recent_jobs_block(limit: int = 50) -> Optional[str]:
-    try:
-        from opencut.job_store import iter_recent_jobs  # type: ignore[attr-defined]
-    except Exception:
-        try:
-            from opencut.jobs import _jobs
+def _redacted_job(record: dict) -> dict:
+    """One job record with secret-named values and home paths redacted.
 
-            entries = list(_jobs.values())[-limit:]
-            return _redact_sensitive_text(json.dumps(entries, default=str, indent=2)) + "\n"
-        except Exception:
-            return None
+    The record goes through a JSON round trip first so values JSON can't
+    hold become text; a record that can't be encoded at all keeps only a
+    placeholder rather than costing the whole packet.
+    """
     try:
-        entries = list(iter_recent_jobs(limit))
-        return _redact_sensitive_text(json.dumps(entries, default=str, indent=2)) + "\n"
+        return _redact_structure(json.loads(json.dumps(record, default=str)))
     except Exception:
+        logger.debug("Job record %r has no JSON form", record.get("id"), exc_info=True)
+        return {"id": _redact_sensitive_text(str(record.get("id", ""))), "unreadable": True}
+
+
+def _recent_jobs_block(limit: int = 50) -> Optional[str]:
+    """The newest ``limit`` jobs as redacted JSON, or None when neither
+    job source can be read.
+
+    Finished jobs come from ``jobs.db`` (``opencut.job_store``), which keeps
+    them after the in-memory registry drops them. Jobs still in memory
+    (``opencut.jobs``) are laid over their stored row so a running job, or
+    one whose final state hasn't been written yet, shows its live state.
+    """
+    records: dict = {}
+    readable = False
+    try:
+        from opencut.job_store import list_jobs
+
+        for row in list_jobs(limit=limit):
+            if isinstance(row, dict) and row.get("id"):
+                records[row["id"]] = row
+        readable = True
+    except Exception:
+        logger.debug("Job store unavailable for the crash packet", exc_info=True)
+    try:
+        from opencut.jobs import _list_jobs_copy
+
+        for live in _list_jobs_copy():
+            job_id = live.get("id") if isinstance(live, dict) else None
+            if job_id:
+                records[job_id] = {**records.get(job_id, {}), **live}
+        readable = True
+    except Exception:
+        logger.debug("In-memory jobs unavailable for the crash packet", exc_info=True)
+    if not readable:
         return None
+
+    def _created(record: dict) -> float:
+        try:
+            return float(record.get("created") or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    newest = sorted(records.values(), key=_created, reverse=True)[:max(0, int(limit))]
+    entries = [_redacted_job(record) for record in newest]
+    return json.dumps(entries, indent=2, ensure_ascii=False) + "\n"
 
 
 def build_packet(
