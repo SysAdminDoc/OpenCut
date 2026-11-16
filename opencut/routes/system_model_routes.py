@@ -2,6 +2,8 @@
 
 from urllib.parse import urlsplit
 
+from opencut.security import is_path_within
+
 __all__ = [
     "install_demucs",
     "install_watermark",
@@ -192,16 +194,24 @@ def delete_model():
     from opencut.core import model_weights
 
     # The folders /models/list reads, plus the default roots above them.
-    allowed_roots = [
-        os.path.join(os.path.expanduser("~"), ".cache", "huggingface"),
-        os.path.join(os.path.expanduser("~"), ".cache", "torch"),
-        model_weights.hf_cache_dir(),
-        model_weights.torch_hub_dir(),
-    ]
+    default_hf = os.path.join(os.path.expanduser("~"), ".cache", "huggingface")
+    default_torch = os.path.join(os.path.expanduser("~"), ".cache", "torch")
+    allowed_roots = [default_hf, default_torch, model_weights.hf_cache_dir(), model_weights.torch_hub_dir()]
     if WHISPER_MODELS_DIR:
         allowed_roots.append(WHISPER_MODELS_DIR)
+    # An empty XDG_CACHE_HOME or HF_HOME resolves a cache relative to the
+    # server's cwd, and that must not make the cwd deletable.
+    allowed_roots = [root for root in allowed_roots if os.path.isabs(root)]
     if not is_path_within_any(path, allowed_roots):
         return jsonify({"error": "Cannot delete files outside of model cache directories"}), 403
+    # One model at a time: never a cache folder itself or one that holds a listed folder.
+    listed_folders = allowed_roots + [
+        os.path.join(default_hf, "hub"),
+        os.path.join(default_torch, "hub", "checkpoints"),
+        os.path.join(model_weights.torch_hub_dir(), "checkpoints"),
+    ]
+    if any(is_path_within(folder, path) for folder in listed_folders if os.path.isabs(folder)):
+        return jsonify({"error": "Cannot delete a whole model cache folder, only a model inside it"}), 403
     if not os.path.isdir(path) and not os.path.isfile(path):
         return jsonify({"error": "Path not found"}), 404
 

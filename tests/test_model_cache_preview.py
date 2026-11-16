@@ -179,6 +179,61 @@ def test_models_list_and_delete_follow_hf_hub_cache_and_torch_home(client, csrf_
         assert target.exists()
 
 
+def test_models_delete_refuses_a_cache_folder_itself(client, csrf_token, monkeypatch, tmp_path):
+    """A cache root counted as inside itself, so one call could delete the
+    whole Hub cache, every torch checkpoint, or the Whisper models folder."""
+    import opencut.routes.system_model_routes as model_routes
+
+    _isolate_whisper_caches(monkeypatch, tmp_path)
+    hub = tmp_path / "hub"
+    torch_home = tmp_path / "torch-home"
+    whisper_models = tmp_path / "whisper-models"
+    home_hf = tmp_path / "home" / ".cache" / "huggingface"
+    monkeypatch.setenv("HF_HUB_CACHE", str(hub))
+    monkeypatch.setenv("TORCH_HOME", str(torch_home))
+    monkeypatch.setattr(model_routes, "WHISPER_MODELS_DIR", str(whisper_models))
+    repo = hub / "models--org--speech"
+    folders = [hub, torch_home / "hub", torch_home / "hub" / "checkpoints", whisper_models, home_hf, home_hf / "hub"]
+    for folder in [*folders, repo]:
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "model.bin").write_bytes(b"x")
+
+    for folder in folders:
+        response = client.post(
+            "/models/delete",
+            json={"path": str(folder), "dry_run": True},
+            headers=_headers(csrf_token),
+        )
+        assert response.status_code == 403, (str(folder), response.get_json())
+    response = client.post(
+        "/models/delete",
+        json={"path": str(repo), "dry_run": True},
+        headers=_headers(csrf_token),
+    )
+    assert response.status_code == 200, response.get_json()
+
+
+def test_models_delete_refuses_the_cwd_when_xdg_cache_home_is_empty(client, csrf_token, monkeypatch, tmp_path):
+    """XDG_CACHE_HOME="" made the Hub and torch roots relative, which resolved
+    against the server's cwd and let /models/delete reach folders there."""
+    _isolate_whisper_caches(monkeypatch, tmp_path)
+    monkeypatch.setenv("XDG_CACHE_HOME", "")
+    cwd = tmp_path / "cwd"
+    stray = cwd / "huggingface" / "hub" / "models--org--speech"
+    stray.mkdir(parents=True)
+    (stray / "model.bin").write_bytes(b"x")
+    monkeypatch.chdir(cwd)
+
+    response = client.post(
+        "/models/delete",
+        json={"path": str(stray), "dry_run": True},
+        headers=_headers(csrf_token),
+    )
+
+    assert response.status_code == 403, response.get_json()
+    assert stray.exists()
+
+
 def test_whisper_clear_cache_reports_per_path_delete_errors(client, csrf_token, monkeypatch, tmp_path):
     system_routes, paths = _isolate_whisper_caches(monkeypatch, tmp_path)
     preview = client.post(
