@@ -106,6 +106,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - The UXP Search page screenshot test has a current baseline with the new "Search by" row. The old picture was from 1.54.0, before that row existed, so the test failed on every run.
 - The live bridge stop tests hold the backend's answer until the test has seen the panel's "stopping" state. A fixed 150 ms delay let a slow run miss that state and fail.
 - The High Contrast test for disabled buttons reads the disabled and enabled button in one step. It used to read them one after the other, so on a slow run the panel could disable the second button in between and both came back gray.
+- The rendered tests that visit every panel tab get four minutes instead of the default 90 seconds. Each one runs dozens of accessibility scans, one per tab at every scroll position, and at 1200 px they ran out of time on a busy machine without anything being wrong.
 
 ### Release builds
 

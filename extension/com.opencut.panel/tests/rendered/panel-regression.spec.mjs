@@ -1299,6 +1299,9 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
       test(`${surfaceName} renders every tab at ${width}px in ${theme}`, async ({
         page,
       }) => {
+        // Every tab gets an axe scan at each scroll offset, dozens per test,
+        // which outruns the default 90 s on a loaded machine.
+        test.setTimeout(240_000);
         const { pageErrors } = await openSurface(
           page,
           surfaceName,
