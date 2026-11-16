@@ -91,3 +91,60 @@ def test_auto_index_reports_up_to_date_noop_in_job_result(
     assert job["result"]["message"] == "All files are up to date"
     assert job["result"]["queued"] == 0
     assert job["result"]["skipped"] == 1
+
+
+def _capture_semantic_search(monkeypatch):
+    import opencut.core.semantic_video_search as svs
+
+    captured = {}
+
+    def fake_search(**kwargs):
+        captured.update(kwargs)
+        return {"query": kwargs.get("query", ""), "results": []}
+
+    monkeypatch.setattr(svs, "semantic_search", fake_search)
+    return captured
+
+
+def test_visual_search_route_passes_project_dir_for_the_sidecar(
+    client, csrf_token, monkeypatch, tmp_path
+):
+    import os
+
+    captured = _capture_semantic_search(monkeypatch)
+    media = tmp_path / "clip.mp4"
+    media.write_bytes(b"test media")
+    project = tmp_path / "project"
+    project.mkdir()
+
+    response = client.post(
+        "/search/semantic",
+        json={"clip_paths": [str(media)], "query": "a dog", "project_dir": str(project)},
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert response.status_code == 200
+    job = _wait_for_job(client, response.get_json()["job_id"])
+    assert job["status"] == "complete", job
+    assert os.path.normcase(captured["project_dir"]) == os.path.normcase(
+        os.path.realpath(str(project))
+    )
+
+
+def test_visual_search_route_without_project_dir_skips_the_sidecar(
+    client, csrf_token, monkeypatch, tmp_path
+):
+    captured = _capture_semantic_search(monkeypatch)
+    media = tmp_path / "clip.mp4"
+    media.write_bytes(b"test media")
+
+    response = client.post(
+        "/search/semantic",
+        json={"clip_paths": [str(media)], "query": "a dog"},
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert response.status_code == 200
+    job = _wait_for_job(client, response.get_json()["job_id"])
+    assert job["status"] == "complete", job
+    assert captured["project_dir"] is None

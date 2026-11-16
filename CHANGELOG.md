@@ -34,6 +34,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Fixed
 
+- Visual search results carry their frame thumbnails again. Indexing kept the key frames in a temporary folder and deleted it straight after, so every result pointed at a file that was already gone. Small copies of those frames now sit next to the index cache, and each result comes back with its picture inline. Search also checks the project's portable index when you give it the project folder, so a clip you moved or relinked doesn't get indexed all over again just to answer a query.
 - The UXP panel's migration dashboard now lists the CEP panel's delete and clear actions (Clear cache, deleting a model, preset or workflow, and clearing the queue or the logs) as still to port. It had missed every action that goes through the delete preview.
 
 - A cache delete (Clear cache, the Whisper reinstall, or deleting one from the model list) now carries on past a file that's still open, and Clear cache and the model list say what stayed. Before, it stopped at the first file Windows had locked, so one model a running job had loaded left the rest of the folder on disk. The model list catches up straight away, too. It reloads by itself after Clear cache and after you delete a model, even one that stopped partway or was already gone, and Refresh after the reinstall shows what's left. Before, it kept showing the old models and sizes for up to 5 minutes.

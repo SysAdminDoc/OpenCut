@@ -391,6 +391,10 @@ def semantic_search_route(job_id, filepath, data):
     min_score = safe_float(data.get("min_score"), 0.15, 0.0, 1.0)
     auto_index = safe_bool(data.get("auto_index"), True)
     engine = (data.get("engine") or "clip-vit-b32").strip()
+    # Same portable sidecar as /search/semantic/index, so a moved or relinked
+    # clip reuses its embeddings instead of being indexed again at search time.
+    project_dir = data.get("project_dir") or ""
+    project_dir = validate_path(project_dir) if project_dir else None
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -404,6 +408,7 @@ def semantic_search_route(job_id, filepath, data):
         auto_index=auto_index,
         engine=engine,
         on_progress=_progress,
+        project_dir=project_dir,
     )
 
     return result

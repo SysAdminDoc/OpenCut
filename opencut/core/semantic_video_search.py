@@ -15,10 +15,13 @@ Functions:
     semantic_search   - Search clips by text or image query
 """
 
+import base64
 import hashlib
 import json
 import logging
 import os
+import re
+import shutil
 import tempfile
 import time
 from dataclasses import asdict, dataclass, field
@@ -91,6 +94,14 @@ MIN_SIMILARITY = 0.15
 THUMB_WIDTH = 320
 THUMB_HEIGHT = 180
 
+# Key frames are extracted into a temp dir that is removed after embedding,
+# so a small copy of each frame is kept next to the npz cache for results.
+PERSISTED_THUMB_WIDTH = 160
+PERSISTED_THUMB_QUALITY = 70
+# Results carry the thumbnail inline as a data URI; skip anything larger.
+MAX_INLINE_THUMB_BYTES = 64 * 1024
+_THUMB_NAME_RE = re.compile(r"^thumb_\d{4}\.jpg$")
+
 
 # ---------------------------------------------------------------------------
 # Dataclasses
@@ -104,6 +115,9 @@ class SearchResult:
     timestamp: float = 0.0
     score: float = 0.0
     thumbnail_path: str = ""
+    # Inline ``data:image/jpeg;base64,...`` copy of the thumbnail so a panel
+    # can show it without reading local files. Empty when there is none.
+    thumbnail: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -208,9 +222,103 @@ def _save_cached_embeddings(clip_hash: str, data: Dict, engine: str = DEFAULT_EN
 def clear_clip_cache():
     """Remove all cached clip embeddings."""
     if os.path.isdir(CACHE_DIR):
-        import shutil
         shutil.rmtree(CACHE_DIR, ignore_errors=True)
         logger.info("Cleared CLIP embedding cache at %s", CACHE_DIR)
+
+
+# ---------------------------------------------------------------------------
+# Persisted thumbnails
+# ---------------------------------------------------------------------------
+def _thumb_dir(clip_hash: str, engine: str = DEFAULT_ENGINE) -> str:
+    """Return the durable thumbnail folder for a clip, next to its npz cache."""
+    return os.path.join(os.path.dirname(_cache_path(clip_hash, engine)), f"thumbs_{clip_hash}")
+
+
+def _write_small_jpeg(src: str, dest: str) -> None:
+    """Write a PERSISTED_THUMB_WIDTH-wide JPEG copy of *src* to *dest*."""
+    tmp = dest + ".tmp"
+    try:
+        from PIL import Image
+    except ImportError:
+        shutil.copyfile(src, tmp)
+    else:
+        with Image.open(src) as img:
+            if img.format == "JPEG" and img.width <= PERSISTED_THUMB_WIDTH:
+                # Already a small JPEG (a persisted thumb being relinked).
+                shutil.copyfile(src, tmp)
+            else:
+                frame = img.convert("RGB")
+                if frame.width > PERSISTED_THUMB_WIDTH:
+                    height = max(1, round(frame.height * PERSISTED_THUMB_WIDTH / frame.width))
+                    frame = frame.resize((PERSISTED_THUMB_WIDTH, height))
+                frame.save(tmp, "JPEG", quality=PERSISTED_THUMB_QUALITY)
+    os.replace(tmp, dest)
+
+
+def _persist_thumbnails(frame_paths: List[str], dest_dir: str) -> List[str]:
+    """Copy each frame into *dest_dir* as a small JPEG.
+
+    Returns a list aligned with *frame_paths*; an entry is ``""`` when that
+    frame is missing or could not be written, so frame indices stay valid.
+    """
+    os.makedirs(dest_dir, exist_ok=True)
+    persisted: List[str] = []
+    for idx, src in enumerate(frame_paths or []):
+        dest = os.path.join(dest_dir, f"thumb_{idx:04d}.jpg")
+        if not src or not os.path.isfile(src):
+            persisted.append("")
+            continue
+        if os.path.normcase(os.path.abspath(src)) == os.path.normcase(os.path.abspath(dest)):
+            persisted.append(dest)
+            continue
+        try:
+            _write_small_jpeg(src, dest)
+        except (OSError, ValueError) as e:
+            logger.warning("Failed to persist thumbnail %s: %s", src, e)
+            if os.path.exists(dest + ".tmp"):
+                os.remove(dest + ".tmp")
+            persisted.append("")
+            continue
+        persisted.append(dest)
+
+    # Drop thumbnails left over from an older, longer index of this clip.
+    keep = {os.path.basename(p) for p in persisted if p}
+    try:
+        for name in os.listdir(dest_dir):
+            if _THUMB_NAME_RE.match(name) and name not in keep:
+                os.remove(os.path.join(dest_dir, name))
+    except OSError:
+        pass
+    return persisted
+
+
+def _is_within(path: str, root: str) -> bool:
+    try:
+        real_path = os.path.normcase(os.path.realpath(path))
+        real_root = os.path.normcase(os.path.realpath(root))
+        return os.path.commonpath([real_path, real_root]) == real_root
+    except ValueError:
+        return False
+
+
+def _thumbnail_data_uri(path: str) -> str:
+    """Return a ``data:image/jpeg;base64,...`` URI for a persisted thumbnail.
+
+    Only small JPEGs under CACHE_DIR are inlined, so cache metadata can never
+    turn a search result into a reader for arbitrary local files.
+    """
+    if not path or not os.path.isfile(path) or not _is_within(path, CACHE_DIR):
+        return ""
+    try:
+        if os.path.getsize(path) > MAX_INLINE_THUMB_BYTES:
+            return ""
+        with open(path, "rb") as f:
+            payload = f.read()
+    except OSError:
+        return ""
+    if not payload.startswith(b"\xff\xd8"):
+        return ""
+    return "data:image/jpeg;base64," + base64.b64encode(payload).decode("ascii")
 
 
 # ---------------------------------------------------------------------------
@@ -264,6 +372,10 @@ def _sidecar_npz(project_dir: str, signature: str, engine: str = DEFAULT_ENGINE)
     return os.path.join(_sidecar_engine_dir(project_dir, engine), f"clip_{signature}.npz")
 
 
+def _sidecar_thumb_dir(project_dir: str, signature: str, engine: str = DEFAULT_ENGINE) -> str:
+    return os.path.join(_sidecar_engine_dir(project_dir, engine), f"thumbs_{signature}")
+
+
 def _sidecar_manifest_path(project_dir: str) -> str:
     return os.path.join(project_dir, SIDECAR_DIRNAME, "manifest.json")
 
@@ -302,9 +414,16 @@ def save_sidecar_embeddings(
     import numpy as np
 
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    metadata = {key: value for key, value in data.items() if key != "embeddings"}
+    metadata = {
+        key: value for key, value in data.items() if key not in ("embeddings", "frame_paths")
+    }
     metadata["signature"] = signature
     metadata["clip_name"] = os.path.basename(clip_path)
+    # Thumbnails travel with the sidecar; store bare names, never local paths.
+    thumbs = _persist_thumbnails(
+        data.get("frame_paths") or [], _sidecar_thumb_dir(project_dir, signature, engine)
+    )
+    metadata["thumb_names"] = [os.path.basename(p) if p else "" for p in thumbs]
     embeddings = data.get("embeddings")
     if embeddings is None:
         embeddings = np.zeros((0, 512), dtype="float32")
@@ -346,10 +465,22 @@ def load_sidecar_embeddings(
         with np.load(path, allow_pickle=False) as cache:
             metadata = json.loads(str(cache["metadata"].item()))
             metadata["embeddings"] = cache["embeddings"]
-            return metadata
     except Exception as e:
         logger.warning("Failed to load sidecar entry %s: %s", path, e)
         return None
+
+    # Older sidecars stored machine-local frame paths; only trust bare
+    # thumbnail names resolved inside this sidecar's own thumbnail folder.
+    metadata.pop("frame_paths", None)
+    names = metadata.pop("thumb_names", None)
+    thumb_dir = _sidecar_thumb_dir(project_dir, signature, engine)
+    metadata["frame_paths"] = [
+        os.path.join(thumb_dir, name)
+        if isinstance(name, str) and _THUMB_NAME_RE.match(name)
+        else ""
+        for name in (names if isinstance(names, list) else [])
+    ]
+    return metadata
 
 
 def sidecar_relink_status(
@@ -573,6 +704,65 @@ def list_search_engines() -> List[Dict]:
     return engines
 
 
+def _index_clip(
+    clip_path: str,
+    clip_hash: str,
+    engine: str,
+    model,
+    processor,
+    torch_mod,
+    engine_cfg: Optional[Dict],
+    frames_per_clip: int = FRAMES_PER_CLIP,
+    work_prefix: str = "clipidx_",
+    on_progress: Optional[Callable] = None,
+) -> Optional[Dict]:
+    """Extract, embed and thumbnail one clip. Returns cache data or None."""
+    work_dir = tempfile.mkdtemp(prefix=work_prefix)
+    try:
+        frames, timestamps = _extract_key_frames(clip_path, work_dir, count=frames_per_clip)
+        if not frames:
+            logger.warning("No frames extracted from %s", clip_path)
+            return None
+
+        embeddings = _compute_frame_embeddings(
+            frames, model, processor, torch_mod,
+            engine_cfg=engine_cfg,
+            on_progress=on_progress,
+        )
+        # The work dir is deleted below, so keep durable copies for results.
+        thumbs = _persist_thumbnails(frames, _thumb_dir(clip_hash, engine))
+        info = get_video_info(clip_path)
+        return {
+            "clip_path": os.path.abspath(clip_path),
+            "clip_hash": clip_hash,
+            "frame_count": len(frames),
+            "fps": info.get("fps", 30.0),
+            "duration": info.get("duration", 0),
+            "timestamps": timestamps,
+            "frame_paths": thumbs,
+            "embeddings": embeddings,
+            "engine": engine,
+        }
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+
+def _reuse_sidecar_entry(
+    project_dir: str, clip_path: str, clip_hash: str, engine: str
+) -> Optional[Dict]:
+    """Load a moved or relinked clip from the sidecar into the local cache."""
+    relinked = load_sidecar_embeddings(project_dir, clip_path, engine)
+    if relinked is None:
+        return None
+    relinked["clip_path"] = os.path.abspath(clip_path)
+    relinked["clip_hash"] = clip_hash
+    relinked["frame_paths"] = _persist_thumbnails(
+        relinked.get("frame_paths") or [], _thumb_dir(clip_hash, engine)
+    )
+    _save_cached_embeddings(clip_hash, relinked, engine)
+    return relinked
+
+
 def build_clip_index(
     clip_paths: List[str],
     frames_per_clip: int = FRAMES_PER_CLIP,
@@ -638,63 +828,41 @@ def build_clip_index(
             # Portable sidecar: a content-signature hit means the clip was moved
             # or relinked — reuse the embeddings and repopulate the local cache.
             if project_dir:
-                relinked = load_sidecar_embeddings(project_dir, clip_path, engine)
+                relinked = _reuse_sidecar_entry(project_dir, clip_path, clip_hash, engine)
                 if relinked is not None:
                     relinked_count += 1
                     total_frames += relinked.get("frame_count", 0)
-                    _save_cached_embeddings(clip_hash, relinked, engine)
                     if on_progress:
                         pct = 5 + int(90 * (ci + 1) / len(valid_paths))
                         on_progress(pct, f"Clip {ci+1}/{len(valid_paths)} (relinked)")
                     continue
 
-        work_dir = tempfile.mkdtemp(prefix=f"clipidx_{ci}_")
-        try:
-            frames, timestamps = _extract_key_frames(clip_path, work_dir, count=frames_per_clip)
-
-            if not frames:
-                logger.warning("No frames extracted from %s", clip_path)
-                continue
-
-            def _emb_progress(pct_inner, msg=""):
-                if on_progress:
-                    base = 5 + int(90 * ci / len(valid_paths))
-                    on_progress(base, msg)
-
-            embeddings = _compute_frame_embeddings(
-                frames, model, processor, torch_mod,
-                engine_cfg=engine_cfg,
-                on_progress=_emb_progress,
-            )
-
-            info = get_video_info(clip_path)
-
-            cache_data = {
-                "clip_path": os.path.abspath(clip_path),
-                "clip_hash": clip_hash,
-                "frame_count": len(frames),
-                "fps": info.get("fps", 30.0),
-                "duration": info.get("duration", 0),
-                "timestamps": timestamps,
-                "frame_paths": frames,
-                "embeddings": embeddings,
-                "engine": engine,
-            }
-            _save_cached_embeddings(clip_hash, cache_data, engine)
-            if project_dir:
-                # Persist to the portable sidecar; this both records the entry
-                # and, when the content changed, overwrites the stale signature.
-                save_sidecar_embeddings(project_dir, clip_path, cache_data, engine)
-
-            rebuilt_count += 1
-            total_frames += len(frames)
-
+        def _emb_progress(pct_inner, msg="", _ci=ci):
             if on_progress:
-                pct = 5 + int(90 * (ci + 1) / len(valid_paths))
-                on_progress(pct, f"Indexed clip {ci+1}/{len(valid_paths)}: {os.path.basename(clip_path)}")
-        finally:
-            import shutil
-            shutil.rmtree(work_dir, ignore_errors=True)
+                base = 5 + int(90 * _ci / len(valid_paths))
+                on_progress(base, msg)
+
+        cache_data = _index_clip(
+            clip_path, clip_hash, engine, model, processor, torch_mod, engine_cfg,
+            frames_per_clip=frames_per_clip,
+            work_prefix=f"clipidx_{ci}_",
+            on_progress=_emb_progress,
+        )
+        if cache_data is None:
+            continue
+
+        _save_cached_embeddings(clip_hash, cache_data, engine)
+        if project_dir:
+            # Persist to the portable sidecar; this both records the entry
+            # and, when the content changed, overwrites the stale signature.
+            save_sidecar_embeddings(project_dir, clip_path, cache_data, engine)
+
+        rebuilt_count += 1
+        total_frames += cache_data["frame_count"]
+
+        if on_progress:
+            pct = 5 + int(90 * (ci + 1) / len(valid_paths))
+            on_progress(pct, f"Indexed clip {ci+1}/{len(valid_paths)}: {os.path.basename(clip_path)}")
 
     if on_progress:
         on_progress(100, f"Index complete: {len(valid_paths)} clips, {total_frames} frames")
@@ -721,10 +889,13 @@ def semantic_search(
     auto_index: bool = True,
     engine: str = DEFAULT_ENGINE,
     on_progress: Optional[Callable] = None,
+    project_dir: Optional[str] = None,
 ) -> dict:
     """Search video clips by text query or image similarity.
 
-    If clips haven't been indexed yet and auto_index is True, indexes them first.
+    Each clip is read from the local cache first, then from the portable
+    project sidecar (when *project_dir* is set), and only then indexed when
+    auto_index is True. A fresh index is saved to both stores.
 
     Args:
         clip_paths: List of video file paths to search.
@@ -735,9 +906,11 @@ def semantic_search(
         auto_index: Auto-build index if missing.
         engine: Search engine ID from SEARCH_ENGINES registry.
         on_progress: Progress callback(pct, msg).
+        project_dir: Project folder holding the ``.opencut_index`` sidecar.
 
     Returns:
-        SemanticSearchResult as dict.
+        SemanticSearchResult as dict. Each result carries ``thumbnail_path``
+        (empty when the file is gone) and an inline ``thumbnail`` data URI.
     """
     if engine not in SEARCH_ENGINES:
         engine = DEFAULT_ENGINE
@@ -776,40 +949,26 @@ def semantic_search(
     for ci, clip_path in enumerate(valid_paths):
         clip_hash = _clip_file_hash(clip_path)
         cached = _load_cached_embeddings(clip_hash, engine)
+        if cached is None and project_dir:
+            cached = _reuse_sidecar_entry(project_dir, clip_path, clip_hash, engine)
 
-        if cached is None:
-            if auto_index:
-                if on_progress:
-                    on_progress(15, f"Indexing {os.path.basename(clip_path)}...")
-                work_dir = tempfile.mkdtemp(prefix=f"search_idx_{ci}_")
-                try:
-                    frames, timestamps = _extract_key_frames(clip_path, work_dir)
-                    if not frames:
-                        continue
-                    embeddings = _compute_frame_embeddings(
-                        frames, model, processor, torch_mod, engine_cfg=engine_cfg,
-                    )
-                    info = get_video_info(clip_path)
-                    cached = {
-                        "clip_path": os.path.abspath(clip_path),
-                        "clip_hash": clip_hash,
-                        "frame_count": len(frames),
-                        "fps": info.get("fps", 30.0),
-                        "duration": info.get("duration", 0),
-                        "timestamps": timestamps,
-                        "frame_paths": frames,
-                        "embeddings": embeddings,
-                        "engine": engine,
-                    }
-                    _save_cached_embeddings(clip_hash, cached, engine)
-                finally:
-                    import shutil
-                    shutil.rmtree(work_dir, ignore_errors=True)
-            else:
-                logger.warning("Clip not indexed and auto_index=False: %s", clip_path)
-                continue
-        else:
+        if cached is not None:
             any_cached = True
+        elif auto_index:
+            if on_progress:
+                on_progress(15, f"Indexing {os.path.basename(clip_path)}...")
+            cached = _index_clip(
+                clip_path, clip_hash, engine, model, processor, torch_mod, engine_cfg,
+                work_prefix=f"search_idx_{ci}_",
+            )
+            if cached is None:
+                continue
+            _save_cached_embeddings(clip_hash, cached, engine)
+            if project_dir:
+                save_sidecar_embeddings(project_dir, clip_path, cached, engine)
+        else:
+            logger.warning("Clip not indexed and auto_index=False: %s", clip_path)
+            continue
 
         embeddings = cached.get("embeddings")
         if embeddings is None or len(embeddings) == 0:
@@ -830,6 +989,10 @@ def semantic_search(
 
             ts = timestamps[fi] if fi < len(timestamps) else fi / clip_fps
             thumb = frame_paths[fi] if fi < len(frame_paths) else ""
+            if thumb and not os.path.isfile(thumb):
+                # Caches written before thumbnails were persisted point at
+                # frames in a temp dir that no longer exists.
+                thumb = ""
 
             all_results.append(SearchResult(
                 clip_path=clip_path,
@@ -847,6 +1010,8 @@ def semantic_search(
     # Sort by score descending
     all_results.sort(key=lambda r: r.score, reverse=True)
     all_results = all_results[:max_results]
+    for r in all_results:
+        r.thumbnail = _thumbnail_data_uri(r.thumbnail_path)
 
     elapsed_ms = int((time.time() - start_time) * 1000)
 
