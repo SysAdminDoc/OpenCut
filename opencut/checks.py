@@ -57,11 +57,17 @@ def get_check_failures() -> dict[str, dict[str, Any]]:
 
     Optional modules that failed to import are listed as ``import:<module>``.
     Those last for the process, because the module is never imported again.
+    Capability probes that crashed, hung or raised in their child process are
+    ``probe:<name>``, next to the import failures that child reported.
     """
     with _CHECK_FAILURES_LOCK:
         failures = {k: dict(v) for k, v in _CHECK_FAILURES.items()}
     for module, verdict in import_failures().items():
         failures[f"import:{module}"] = verdict
+    from opencut.core import capability_probe
+
+    for name, entry in capability_probe.reported_failures().items():
+        failures.setdefault(name, entry)
     return failures
 
 

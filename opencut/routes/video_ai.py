@@ -45,10 +45,19 @@ def _denoise_rate_limit_key(data):
 # ---------------------------------------------------------------------------
 @video_ai_bp.route("/video/ai/capabilities", methods=["GET"])
 def video_ai_capabilities():
-    """Return available AI video capabilities."""
+    """Return available AI video capabilities.
+
+    Answered from the capability probe child, the same as ``/health``, so
+    asking never imports torch in the server. Until that probe has finished
+    the answer is ``{"pending": true}``.
+    """
     try:
-        from opencut.core.video_ai import get_ai_capabilities
-        return jsonify(get_ai_capabilities())
+        from opencut.routes.system import current_capabilities
+
+        video_ai = current_capabilities()[0].get("video_ai")
+        if isinstance(video_ai, dict):
+            return jsonify(video_ai)
+        return jsonify({"pending": True})
     except Exception as e:
         return safe_error(e, "video_ai_capabilities")
 

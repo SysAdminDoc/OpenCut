@@ -263,6 +263,15 @@ class TestNewChecks(unittest.TestCase):
         self.assertIsInstance(result, bool)
 
 
+def _reported_capabilities(data):
+    """Probed capability keys plus the probes /health is still waiting on.
+
+    Optional capabilities are probed in a child process, so a key appears
+    once its probe has run; until then the probe is listed as pending.
+    """
+    return set(data["capabilities"]) | set(data["capability_discovery"]["pending"])
+
+
 # ============================================================
 # TestHealthCapabilities
 # ============================================================
@@ -278,17 +287,17 @@ class TestHealthCapabilities(unittest.TestCase):
         resp = self.client.get("/health")
         data = resp.get_json()
         self.assertIn("capabilities", data)
-        self.assertIn("silero_vad", data["capabilities"])
+        self.assertIn("silero_vad", _reported_capabilities(data))
 
     def test_health_includes_crisper_whisper(self):
         resp = self.client.get("/health")
         data = resp.get_json()
-        self.assertIn("crisper_whisper", data["capabilities"])
+        self.assertIn("crisper_whisper", _reported_capabilities(data))
 
     def test_health_includes_otio(self):
         resp = self.client.get("/health")
         data = resp.get_json()
-        self.assertIn("otio", data["capabilities"])
+        self.assertIn("otio", _reported_capabilities(data))
 
 
 # ============================================================
@@ -618,17 +627,17 @@ class TestNewHealthCapabilities(unittest.TestCase):
     def test_health_includes_depth_effects(self):
         resp = self.client.get("/health")
         data = resp.get_json()
-        self.assertIn("depth_effects", data["capabilities"])
+        self.assertIn("depth_effects", _reported_capabilities(data))
 
     def test_health_includes_resolve(self):
         resp = self.client.get("/health")
         data = resp.get_json()
-        self.assertIn("resolve", data["capabilities"])
+        self.assertIn("resolve", _reported_capabilities(data))
 
     def test_health_includes_multimodal_diarize(self):
         resp = self.client.get("/health")
         data = resp.get_json()
-        self.assertIn("multimodal_diarize", data["capabilities"])
+        self.assertIn("multimodal_diarize", _reported_capabilities(data))
 
 
 # ============================================================

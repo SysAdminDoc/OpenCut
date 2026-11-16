@@ -77,17 +77,29 @@ def _local_only(monkeypatch):
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def addon_packages(monkeypatch):
-    """Every add-on's Python packages report installed."""
-    from opencut import checks
+def addon_packages(monkeypatch, tmp_path):
+    """Every add-on's Python packages report installed.
 
-    for name in (
-        "check_depth_available",
-        "check_crisper_whisper_available",
-        "check_deepface_available",
-        "check_multimodal_diarize_available",
-    ):
-        monkeypatch.setattr(checks, name, lambda: True)
+    /health takes these flags from the capability probe, which runs the
+    checks in a child process, so the probe's answers are stubbed here.
+    """
+    from opencut.core import capability_probe
+
+    class ProbedDiscovery(capability_probe.CapabilityDiscovery):
+        def capabilities(self):
+            return {
+                "depth_effects": True,
+                "crisper_whisper": True,
+                "deepface": True,
+                "multimodal_diarize": True,
+            }
+
+        def ensure_started(self):
+            return False
+
+    previous = capability_probe.set_discovery(
+        ProbedDiscovery(cache_path=str(tmp_path / "probe-cache.json"), probes=())
+    )
     real_find_spec = model_weights.importlib.util.find_spec
     monkeypatch.setattr(
         model_weights.importlib.util,
@@ -98,6 +110,7 @@ def addon_packages(monkeypatch):
 
     invalidate_caps_cache()
     yield
+    capability_probe.set_discovery(previous)
     invalidate_caps_cache()
 
 

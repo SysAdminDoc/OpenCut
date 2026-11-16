@@ -79,9 +79,11 @@ def _workflow_runtime_capabilities():
         return copy.deepcopy(cached)
     capabilities = {}
     try:
-        from opencut.routes.system import _build_capabilities
+        from opencut.routes.system import current_capabilities
 
-        capabilities.update(_build_capabilities())
+        # Probed capabilities that aren't known yet stay out, and preflight
+        # reports them as checked at run time.
+        capabilities.update(current_capabilities()[0])
     except Exception as exc:  # pragma: no cover - defensive in minimal installs
         logger.debug("Workflow capability registry unavailable: %s", exc)
     try:

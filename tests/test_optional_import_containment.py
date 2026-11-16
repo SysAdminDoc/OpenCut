@@ -4,6 +4,8 @@ Discussion #10 showed a Torch DLL failure raising ``FileNotFoundError``
 (WinError 206) through ``_try_import`` into ``/health``. torch 2.15 also
 raises on a second ``import torch`` after a failed first one, so the
 verdict has to be remembered instead of re-probed every health poll.
+The /health side of this lives in test_capability_probe.py, since the
+probes now run in a child process.
 """
 
 from __future__ import annotations
@@ -14,7 +16,6 @@ import sys
 import pytest
 
 from opencut import checks, helpers
-from tests.conftest import csrf_headers
 
 _BROKEN_INIT = """\
 import pathlib
@@ -92,129 +93,6 @@ def test_an_install_retries_import_errors_but_not_broken_native_modules(fake_sit
     remaining = helpers.import_failures()
     assert "f462_missing_dep" not in remaining
     assert remaining["f462_bad_dll"]["retryable"] is False
-
-
-def test_health_survives_a_torch_that_raises_oserror_and_never_reimports_it(fake_site, client, csrf_token):
-    attempts = _broken_package(
-        fake_site, "torch", 'OSError("[WinError 206] The filename or extension is too long")'
-    )
-    from opencut.routes import system
-
-    def poll():
-        system.invalidate_caps_cache()
-        resp = client.get("/health")
-        assert resp.status_code == 200
-        caps = resp.get_json()["capabilities"]
-        assert caps["silero_vad"] is False
-        assert caps["video_ai"]["rvm"] is False
-        return attempts.read_text(encoding="utf-8")
-
-    after_first = poll()
-    # A package importing torch for the first time (ctranslate2 does) can try
-    # it during that first poll too. After it, no poll imports torch again.
-    assert after_first
-    assert poll() == after_first
-    assert poll() == after_first
-
-    failures = client.get("/system/check-failures", headers=csrf_headers(csrf_token)).get_json()["failures"]
-    assert failures["import:torch"]["exception"] == "OSError"
-    assert "WinError 206" in failures["import:torch"]["message"]
-
-
-_STARTUP_PROBE = """\
-import json
-import pathlib
-import sys
-
-from opencut.config import OpenCutConfig
-from opencut.routes import system
-from opencut.server import create_app
-
-attempts = pathlib.Path(sys.argv[1])
-
-
-def count():
-    return len(attempts.read_text(encoding="utf-8")) if attempts.exists() else 0
-
-
-client = create_app(config=OpenCutConfig(), testing=True).test_client()
-started = count()
-codes = []
-counts = []
-for _ in range(3):
-    system.invalidate_caps_cache()
-    codes.append(client.get("/health").status_code)
-    counts.append(count())
-print("RESULT " + json.dumps([started, codes, counts]))
-"""
-
-
-def test_server_starts_with_a_torch_that_raises_oserror(fake_site, tmp_path):
-    """gpu.py imports torch when the server starts. An OSError there used to
-    stop the server before it served anything."""
-    import os
-    import subprocess
-
-    attempts = _broken_package(fake_site, "torch", 'OSError("[WinError 206] c10.dll")')
-    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    home = tmp_path / "home"
-    home.mkdir()
-    env = dict(os.environ)
-    env.update({
-        "PYTHONPATH": os.pathsep.join([str(fake_site), repo]),
-        "HOME": str(home),
-        "USERPROFILE": str(home),
-    })
-    env.pop("OPENCUT_HOME", None)
-    proc = subprocess.run(
-        [sys.executable, "-c", _STARTUP_PROBE, str(attempts)],
-        cwd=str(tmp_path),
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=180,
-    )
-    assert proc.returncode == 0, proc.stderr[-2000:]
-    result = next(line for line in proc.stdout.splitlines() if line.startswith("RESULT "))
-    started, codes, counts = json.loads(result[len("RESULT "):])
-    assert started == 1
-    assert codes == [200, 200, 200]
-    assert counts[1] == counts[0] and counts[2] == counts[0]
-
-
-_HEALTH_PROBED = ("whisperx", "kokoro", "pedalboard", "df", "cv2", "mediapipe", "insightface")
-
-
-def test_health_contains_every_optional_probe_it_runs(fake_site, client, csrf_token, monkeypatch):
-    """The availability checks in captions_enhanced, voice_gen, audio_pro and
-    face_tools caught only ImportError, so a broken native library escaped,
-    was imported again on every poll, and a broken kokoro hid edge_tts."""
-    attempts = {}
-    for name in _HEALTH_PROBED:
-        monkeypatch.delitem(sys.modules, name, raising=False)
-        attempts[name] = _broken_package(fake_site, name, f'OSError("[WinError 126] {name}.dll")')
-    monkeypatch.delitem(sys.modules, "edge_tts", raising=False)
-    (fake_site / "edge_tts.py").write_text("VALUE = 1\n", encoding="utf-8")
-    from opencut.routes import system
-
-    caps = None
-    for _ in range(3):
-        system.invalidate_caps_cache()
-        resp = client.get("/health")
-        assert resp.status_code == 200
-        caps = resp.get_json()["capabilities"]
-
-    assert caps["edge_tts"] is True
-    assert caps["kokoro"] is False
-    assert caps["whisperx"] is False
-    assert caps["pedalboard"] is False
-    assert caps["face_tools"]["opencv"] is False
-    assert caps["face_tools"]["mediapipe"] is False
-    assert caps["face_tools"]["insightface"] is False
-    failures = client.get("/system/check-failures", headers=csrf_headers(csrf_token)).get_json()["failures"]
-    for name in _HEALTH_PROBED:
-        assert attempts[name].read_text(encoding="utf-8") == "x", name
-        assert failures[f"import:{name}"]["exception"] == "OSError", name
 
 
 _SLOW_BROKEN_INIT = """\

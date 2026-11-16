@@ -82,18 +82,8 @@ def _trim_if_oversized(path: str) -> None:
         pass
 
 
-def write_crash_record(kind: str, exc_type, exc_value, exc_tb, *, thread: str = "") -> str:
-    """Append one structured record and return the path it was written to."""
+def _append_record(record: str) -> str:
     os.makedirs(OPENCUT_DIR, exist_ok=True)
-    where = thread or threading.current_thread().name
-    body = "".join(traceback.format_exception(exc_type, exc_value, exc_tb)).rstrip()
-    record = (
-        f"\n===== {kind} at {_utc_now()} =====\n"
-        f"  thread: {where}\n"
-        f"  pid: {os.getpid()}\n"
-        f"{_environment_block()}\n"
-        f"  traceback:\n{body}\n"
-    )
     with _lock:
         try:
             with open(CRASH_LOG, "a", encoding="utf-8", errors="replace") as handle:
@@ -102,6 +92,37 @@ def write_crash_record(kind: str, exc_type, exc_value, exc_tb, *, thread: str = 
         except OSError as write_error:  # pragma: no cover - disk full / permissions
             logger.error("Could not write crash record to %s: %s", CRASH_LOG, write_error)
     return CRASH_LOG
+
+
+def write_crash_record(kind: str, exc_type, exc_value, exc_tb, *, thread: str = "") -> str:
+    """Append one structured record and return the path it was written to."""
+    where = thread or threading.current_thread().name
+    body = "".join(traceback.format_exception(exc_type, exc_value, exc_tb)).rstrip()
+    return _append_record(
+        f"\n===== {kind} at {_utc_now()} =====\n"
+        f"  thread: {where}\n"
+        f"  pid: {os.getpid()}\n"
+        f"{_environment_block()}\n"
+        f"  traceback:\n{body}\n"
+    )
+
+
+def write_probe_record(probe: str, state: str, detail: str, output: str = "") -> str:
+    """Record a capability probe child that crashed or hung.
+
+    The server itself kept running, so this is the only trace of which
+    optional stack took the child down. The child's own faulthandler output,
+    when it got that far, sits just above this record in the same file.
+    """
+    lines = [f"    {line}" for line in (output or "").splitlines()] or ["    (none)"]
+    return _append_record(
+        f"\n===== capability probe {state} at {_utc_now()} =====\n"
+        f"  probe: {probe}\n"
+        f"  server pid: {os.getpid()}\n"
+        f"  detail: {detail}\n"
+        f"{_environment_block()}\n"
+        f"  child output (last lines):\n" + "\n".join(lines) + "\n"
+    )
 
 
 def _excepthook(exc_type, exc_value, exc_tb):

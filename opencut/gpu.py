@@ -164,7 +164,7 @@ def torch_supported_capabilities(torch_module=None) -> set[tuple[int, int]]:
     ``sm_`` entries are counted: PTX JIT is what fails on Blackwell in the
     field, so treating it as support would restore the bug this replaces.
     """
-    module = torch_module if torch_module is not None else torch
+    module = torch_module if torch_module is not None else _load_torch()
     if module is None:
         return set()
     try:
@@ -412,6 +412,7 @@ def list_gpu_devices() -> list[dict]:
     if smi_devices:
         return [_annotate_gpu_device(record) for record in smi_devices]
 
+    _load_torch()
     if not _HAS_TORCH:
         return []
     try:
@@ -528,7 +529,7 @@ def save_gpu_selection(value, devices: list[dict] | None = None) -> dict:
 
 def activate_selected_gpu(*, torch_module=None, devices: list[dict] | None = None):
     """Make the configured adapter current for the calling worker thread."""
-    module = torch_module if torch_module is not None else torch
+    module = torch_module if torch_module is not None else _load_torch()
     configured = _configured_gpu_index()
     if module is None:
         if configured is not None:
@@ -695,13 +696,32 @@ def onnx_cuda_provider_available() -> bool:
 # ---------------------------------------------------------------------------
 # Optional torch import
 # ---------------------------------------------------------------------------
-# _try_import contains any import failure, not just ImportError: a torch
-# whose DLLs won't load raises OSError here, and this module is imported at
-# server start, so an escaped error kept the whole server from starting.
+# This module is imported at server start, so torch is imported on first use
+# instead: a torch build whose native code aborts during import would
+# otherwise take the server down before /health could answer. _try_import
+# contains every Python-level failure (a torch whose DLLs won't load raises
+# OSError) and remembers it, so a broken torch is tried once per process.
+import threading  # noqa: E402
+
 from opencut.helpers import _try_import  # noqa: E402
 
-torch = _try_import("torch")
-_HAS_TORCH = torch is not None
+torch = None
+_HAS_TORCH = False
+_torch_import_attempted = False
+_torch_import_lock = threading.Lock()
+
+
+def _load_torch():
+    """Import torch the first time a GPU helper needs it. Returns it or None."""
+    global torch, _HAS_TORCH, _torch_import_attempted
+    if torch is not None or _torch_import_attempted:
+        return torch
+    with _torch_import_lock:
+        if torch is None and not _torch_import_attempted:
+            module = _try_import("torch")
+            torch, _HAS_TORCH = module, module is not None
+            _torch_import_attempted = True
+    return torch
 
 
 # ---------------------------------------------------------------------------
@@ -713,6 +733,7 @@ def _cuda_available() -> bool:
     (mismatched runtime, kernel mode driver crash, blacklisted device) can't
     raise a hard exception and take down the request handler. We only need
     a boolean answer; treat every error as "no GPU"."""
+    _load_torch()
     if not _HAS_TORCH:
         return False
     try:
@@ -836,6 +857,7 @@ class GPUContext:
     @property
     def device(self):
         """Return a ``torch.device`` if torch is available, else the string."""
+        _load_torch()
         if _HAS_TORCH:
             return torch.device(self._device_str)
         return self._device_str
@@ -850,7 +872,7 @@ class GPUContext:
 
     def __enter__(self):
         if self._device_str == "cuda":
-            activate_selected_gpu(torch_module=torch)
+            activate_selected_gpu(torch_module=_load_torch())
             self.available_gb, self.total_gb = check_vram(self._min_vram_gb)
             logger.info(
                 "GPUContext entered: %.2f / %.2f GB VRAM free",

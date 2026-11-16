@@ -2577,6 +2577,10 @@
                 setConnectionBadge("online", t("conn.connected", "Connected"));
                 if (data.csrf_token) setCsrfToken(data.csrf_token);
                 if (data.capabilities) capabilities = data.capabilities;
+                var probeNotice = capabilityStatus.probeFailureNotice(data.capability_discovery);
+                if (probeNotice) showToast(probeNotice, "warning");
+                var probedGpu = capabilityStatus.probedGpuName();
+                if (probedGpu) setConnectionBadge("online", replaceTemplateValue(t("conn.connected_gpu", "Connected ({gpu})"), "{gpu}", probedGpu));
                 el.backendPort.textContent = t("conn.port", "Port {port}")
                     .replace("{port}", BACKEND.replace("http://127.0.0.1:", ""));
                 syncSettingsBackendSummary(true);
@@ -8737,12 +8741,37 @@
         }
 
         var caps = healthData.capabilities || {};
+        var whisperProbe = capabilityStatus.whisperProbe(healthData);
         var backendName = caps.whisper_backend || t("whisper.backend_default", "Whisper");
         var installed = !!caps.captions;
         var cpuMode = !!caps.whisper_cpu_mode;
         var deviceLabel = cpuMode
             ? t("whisper.cpu_forced", "CPU forced")
             : t("whisper.auto_gpu_device", "Auto (GPU if available)");
+
+        if (whisperProbe.checking) {
+            if (el.whisperStatusText) {
+                el.whisperStatusText.textContent = t("hint.tone_checking", "Checking");
+                el.whisperStatusText.setAttribute("data-state", "working");
+                el.whisperStatusText.title = t("whisper.checking_title", "The backend is still checking whether Whisper is installed.");
+            }
+            if (el.whisperDeviceText) {
+                el.whisperDeviceText.textContent = deviceLabel;
+                el.whisperDeviceText.setAttribute("data-state", "idle");
+            }
+            setStatusLine(
+                "whisperStatusLine",
+                t("whisper.checking_readiness_status", "Checking transcription readiness for captions, search, and chapter generation."),
+                "working"
+            );
+            setSettingsStudioState(
+                "speech",
+                t("whisper.checking_label", "Checking transcription"),
+                "working",
+                t("settings.studio_speech_checking_title", "Checking transcription readiness.")
+            );
+            return;
+        }
 
         if (installed) {
             if (el.whisperStatusText) {
@@ -8783,7 +8812,9 @@
         if (el.whisperStatusText) {
             el.whisperStatusText.textContent = t("whisper.not_installed", "Not installed");
             el.whisperStatusText.setAttribute("data-state", "error");
-            el.whisperStatusText.title = t("whisper.install_status_title", "Install Whisper to transcribe.");
+            el.whisperStatusText.title = whisperProbe.failureReason
+                ? replaceTemplateValue(t("whisper.check_failed_title", "The Whisper check didn't finish ({reason}). crash.log has the details."), "{reason}", whisperProbe.failureReason)
+                : t("whisper.install_status_title", "Install Whisper to transcribe.");
         }
         if (el.whisperDeviceText) {
             el.whisperDeviceText.textContent = t("whisper.install_required", "Install required");

@@ -65,6 +65,9 @@ class HealthResult:
     version: str = ""
     csrf_token: str = ""
     capabilities: Dict[str, Any] = field(default_factory=dict)
+    #: Progress of the out-of-process optional capability probes:
+    #: ``state``, ``pending`` probe names, ``failed`` probes with a reason.
+    capability_discovery: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return _strip_none(asdict(self))

@@ -25,8 +25,9 @@ except ImportError:
     psutil = None
 
 from opencut import __version__
+from opencut.core import capability_probe
 from opencut.errors import safe_error
-from opencut.helpers import _try_import, _try_import_from, forget_retryable_import_failures, get_ffmpeg_path
+from opencut.helpers import _try_import, forget_retryable_import_failures, get_ffmpeg_path
 from opencut.jobs import (
     _cancel_running_jobs,
     _is_cancelled,
@@ -209,22 +210,12 @@ def check_demucs_available():
     return _try_import("demucs") is not None
 
 
-def check_watermark_available():
-    """Check if watermark removal dependencies are installed."""
-    transformers = _try_import("transformers")
-    if transformers is None:
-        return False
-    sli = _try_import("simple_lama_inpainting")
-    if sli is None:
-        return False
-    return hasattr(sli, "SimpleLama")
-
-
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
-# Capabilities change only when deps are installed/uninstalled — no need to
-# re-probe 20+ modules on every 4-second health check.  Cache for 30 s.
+# The cheap capability facts only change with settings; cache them for 30 s.
+# Optional native stacks are probed in a child process instead
+# (opencut.core.capability_probe), so nothing here can crash the server.
 _caps_cache = {"data": None, "ts": 0.0}
 _caps_cache_lock = threading.Lock()
 _CAPS_CACHE_TTL = 30.0
@@ -244,6 +235,8 @@ def invalidate_caps_cache():
         _caps_cache["ts"] = 0.0
     # An install can supply a dependency an optional module was missing.
     forget_retryable_import_failures()
+    # ...and changes what the probe child can import, so probe again.
+    capability_probe.invalidate()
     # Also clear the /system/dependencies TTL cache so the next render
     # reflects the new install. _deps_cache and _deps_cache_lock live in
     # system_runtime_routes and are imported at the bottom of this module;
@@ -261,143 +254,35 @@ def invalidate_caps_cache():
 
 
 def _build_capabilities():
-    """Probe all optional dependencies and return a capabilities dict."""
-    caps = {"silence": True, "zoom": True, "ffmpeg": True,
-            "audio_suite": True, "scene_detect": True}
+    """Capability facts that need no optional import.
+
+    Everything here is a constant, a setting or a file lookup. The optional
+    native stacks (Torch, ONNX Runtime, TensorFlow and what sits on them) are
+    probed in a child process by :mod:`opencut.core.capability_probe`, so a
+    library that aborts on import takes down that child, not the server.
+    """
+    caps = {
+        "silence": True,
+        "zoom": True,
+        "ffmpeg": True,
+        "audio_suite": True,
+        "scene_detect": True,
+        # FFmpeg-based, always available.
+        "video_fx": True,
+        "burnin": True,
+        # OpenCV DNN, a core dependency.
+        "style_transfer": True,
+    }
     try:
-        check_whisper_available = _try_import_from("opencut.core.captions", "check_whisper_available")
-        if check_whisper_available:
-            available, backend = check_whisper_available()
-            caps["captions"] = available
-            caps["whisper_backend"] = backend
-        else:
-            caps["captions"] = False
-            caps["whisper_backend"] = "none"
-    except Exception:
-        caps["captions"] = False
-        caps["whisper_backend"] = "none"
-
-    # Check Silero VAD availability (neural silence detection)
-    from opencut.checks import check_crisper_whisper_available, check_otio_available, check_silero_vad_available
-    caps["silero_vad"] = check_silero_vad_available()
-    caps["crisper_whisper"] = check_crisper_whisper_available()
-    caps["otio"] = check_otio_available()
-
-    # Stem separation is available through either backend; the maintained one
-    # is python-audio-separator (Demucs was archived upstream 2024-04-24).
-    from opencut.checks import check_stem_separation_available
-    caps["separation"] = check_stem_separation_available()
-
-    # Check watermark removal availability
-    caps["watermark_removal"] = check_watermark_available()
-
-    # Include Whisper settings
-    try:
-        whisper_settings = load_whisper_settings()
-        caps["whisper_cpu_mode"] = whisper_settings.get("cpu_mode", False)
+        caps["whisper_cpu_mode"] = load_whisper_settings().get("cpu_mode", False)
     except Exception:
         caps["whisper_cpu_mode"] = False
 
-    # Check video AI availability
-    try:
-        get_ai_capabilities = _try_import_from("opencut.core.video_ai", "get_ai_capabilities")
-        if get_ai_capabilities:
-            caps["video_ai"] = get_ai_capabilities()
-        else:
-            caps["video_ai"] = {}
-    except Exception:
-        caps["video_ai"] = {}
-
-    # Check pedalboard availability
-    try:
-        check_pedalboard_available = _try_import_from("opencut.core.audio_pro", "check_pedalboard_available")
-        check_deepfilter_available = _try_import_from("opencut.core.audio_pro", "check_deepfilter_available")
-        if check_pedalboard_available:
-            caps["pedalboard"] = check_pedalboard_available()
-            caps["deepfilter"] = check_deepfilter_available()
-        else:
-            caps["pedalboard"] = False
-            caps["deepfilter"] = False
-    except Exception:
-        caps["pedalboard"] = False
-        caps["deepfilter"] = False
-
-    # Video effects always available (FFmpeg-based)
-    caps["video_fx"] = True
-
-    # Face tools
-    try:
-        check_face_tools_available = _try_import_from("opencut.core.face_tools", "check_face_tools_available")
-        if check_face_tools_available:
-            caps["face_tools"] = check_face_tools_available()
-        else:
-            caps["face_tools"] = {}
-    except Exception:
-        caps["face_tools"] = {}
-
-    # Style transfer (always available via OpenCV DNN)
-    caps["style_transfer"] = True
-
-    # Enhanced captions
-    try:
-        check_whisperx_available = _try_import_from("opencut.core.captions_enhanced", "check_whisperx_available")
-        check_nllb_available = _try_import_from("opencut.core.captions_enhanced", "check_nllb_available")
-        if check_whisperx_available:
-            caps["whisperx"] = check_whisperx_available()
-            caps["nllb"] = check_nllb_available()
-        else:
-            caps["whisperx"] = False
-            caps["nllb"] = False
-    except Exception:
-        caps["whisperx"] = False
-        caps["nllb"] = False
-
-    # Voice generation
-    try:
-        check_edge_tts_available = _try_import_from("opencut.core.voice_gen", "check_edge_tts_available")
-        check_kokoro_available = _try_import_from("opencut.core.voice_gen", "check_kokoro_available")
-        if check_edge_tts_available:
-            caps["edge_tts"] = check_edge_tts_available()
-            caps["kokoro"] = check_kokoro_available()
-        else:
-            caps["edge_tts"] = False
-            caps["kokoro"] = False
-    except Exception:
-        caps["edge_tts"] = False
-        caps["kokoro"] = False
-
-    # Caption burn-in always available (FFmpeg-based)
-    caps["burnin"] = True
-
-    # Depth effects (Depth Anything V2)
-    from opencut.checks import check_depth_available
-    caps["depth_effects"] = check_depth_available()
-
-    # DaVinci Resolve bridge
-    from opencut.checks import check_resolve_available
-    caps["resolve"] = check_resolve_available()
-
-    # Emotion analysis (deepface)
-    from opencut.checks import check_deepface_available
-    caps["deepface"] = check_deepface_available()
-
-    # Multimodal diarization (audio + face recognition)
-    from opencut.checks import check_multimodal_diarize_available
-    caps["multimodal_diarize"] = check_multimodal_diarize_available()
-
-    # AI B-roll generation (text-to-video)
-    from opencut.checks import check_broll_generate_available
-    caps["broll_generate"] = check_broll_generate_available()
-
-    # WebSocket bridge
-    from opencut.checks import check_websocket_available
-    caps["websocket"] = check_websocket_available()
-
-    # Social media posting
+    # Social posting depends on saved credentials, not on an optional import.
     from opencut.checks import check_social_post_available
     caps["social_post"] = check_social_post_available()
 
-    # Engine registry status
+    # Engine registry status (find_spec lookups only, no imports).
     try:
         from opencut.core.engine_registry import get_registry
         reg = get_registry()
@@ -408,12 +293,49 @@ def _build_capabilities():
     except Exception:
         caps["engine_registry"] = {}
 
-    # Weights the add-ons load: a feature whose packages are installed but
-    # whose model isn't on disk reports false, with the reason alongside.
+    return caps
+
+
+def _cached_core_capabilities():
+    with _caps_cache_lock:
+        if _caps_cache["data"] is not None and (time.time() - _caps_cache["ts"]) < _CAPS_CACHE_TTL:
+            return _caps_cache["data"]
+    caps = _build_capabilities()
+    with _caps_cache_lock:
+        _caps_cache["data"] = caps
+        _caps_cache["ts"] = time.time()
+    return caps
+
+
+def _capability_discovery_allowed() -> bool:
+    """Discovery spawns child processes, so test apps opt in explicitly."""
+    from flask import current_app, has_app_context
+
+    if not has_app_context():
+        return False
+    configured = current_app.config.get("OPENCUT_CAPABILITY_DISCOVERY")
+    if configured is not None:
+        return bool(configured)
+    return not current_app.config.get("TESTING", False)
+
+
+def current_capabilities():
+    """Cheap facts plus every probed capability known so far.
+
+    Never waits for discovery: a probe that hasn't finished leaves its keys
+    out, which clients read as "not known yet". Returns ``(caps, discovery)``.
+    """
+    discovery = capability_probe.get_discovery()
+    if _capability_discovery_allowed():
+        discovery.ensure_started()
+    caps = dict(_cached_core_capabilities())
+    caps.update(discovery.capabilities())
+    # Weights come last: they read the probed package results, and a feature
+    # whose packages are installed but whose model isn't on disk turns false.
+    # File stats and package metadata only, so this stays import-free.
     from opencut.core import model_weights
     model_weights.apply_to_capabilities(caps)
-
-    return caps
+    return caps, discovery
 
 
 def _record_bootstrap_withheld(origin: str, *, token_presented: bool) -> None:
@@ -485,23 +407,14 @@ def _health_should_expose_csrf_token() -> bool:
 
 @system_bp.route("/health", methods=["GET"])
 def health():
-    # Serve cached capabilities; rebuild at most once per 30 s.
-    with _caps_cache_lock:
-        if _caps_cache["data"] is not None and (time.time() - _caps_cache["ts"]) < _CAPS_CACHE_TTL:
-            caps = _caps_cache["data"]
-        else:
-            caps = None
-
-    if caps is None:
-        caps = _build_capabilities()
-        with _caps_cache_lock:
-            _caps_cache["data"] = caps
-            _caps_cache["ts"] = time.time()
-
+    # Liveness first: this answers from cheap facts and never imports an
+    # optional native package. Discovery runs (once) in a child process.
+    caps, discovery = current_capabilities()
     payload = {
         "status": "ok",
         "version": __version__,
         "capabilities": caps,
+        "capability_discovery": discovery.snapshot(),
     }
     if _health_should_expose_csrf_token():
         payload["csrf_token"] = get_csrf_token()

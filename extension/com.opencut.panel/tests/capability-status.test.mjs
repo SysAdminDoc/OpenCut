@@ -72,6 +72,63 @@ function statusFor(getCapabilities, copyNodes = new Map()) {
   });
 }
 
+describe("capability status: probe results", () => {
+  it("warns once per feature whose check crashed or hung", () => {
+    const status = statusFor(() => ({}));
+    const discovery = {
+      state: "partial",
+      failed: {
+        captions: { state: "crashed", reason: "access violation", exit_code: 3221225477 },
+        depth_effects: { state: "timeout", reason: "no answer in 30 s" },
+        otio: { state: "unknown", reason: "child never reached it" },
+      },
+    };
+    expect(status.probeFailureNotice(discovery)).toBe(
+      "Optional feature check failed for captions, depth_effects. Those stay off, and the backend is still running. crash.log has the details.",
+    );
+    expect(status.probeFailureNotice(discovery)).toBe("");
+
+    discovery.failed.silero_vad = { state: "crashed" };
+    expect(status.probeFailureNotice(discovery)).toBe(
+      "Optional feature check failed for silero_vad. Those stay off, and the backend is still running. crash.log has the details.",
+    );
+    expect(status.probeFailureNotice(null)).toBe("");
+    expect(status.probeFailureNotice({ failed: "nope" })).toBe("");
+  });
+
+  it("takes the GPU name from the video AI probe once it reports", () => {
+    let caps = { captions: true };
+    const status = statusFor(() => caps);
+    expect(status.probedGpuName()).toBe("");
+    caps = { video_ai: { gpu_name: "NVIDIA GeForce RTX 4070" } };
+    expect(status.probedGpuName()).toBe("NVIDIA GeForce RTX 4070");
+    caps = null;
+    expect(status.probedGpuName()).toBe("");
+  });
+
+  it("reads Whisper as checking until the probe reports or fails", () => {
+    const status = statusFor(() => ({}));
+    expect(status.whisperProbe({ capabilities: {} })).toEqual({ checking: true, failureReason: "" });
+    expect(status.whisperProbe({ capabilities: { captions: false } })).toEqual({ checking: false, failureReason: "" });
+    expect(status.whisperProbe({ capabilities: { captions: true } })).toEqual({ checking: false, failureReason: "" });
+    expect(status.whisperProbe({
+      capabilities: {},
+      capability_discovery: { failed: { captions: { state: "timeout", reason: "no answer in 30 s" } } },
+    })).toEqual({ checking: false, failureReason: "no answer in 30 s" });
+    expect(status.whisperProbe({
+      capabilities: {},
+      capability_discovery: { failed: { captions: { state: "crashed" } } },
+    })).toEqual({ checking: false, failureReason: "" });
+    expect(status.whisperProbe(null)).toEqual({ checking: true, failureReason: "" });
+  });
+
+  it("leaves main.js the wiring only", () => {
+    expect(mainSource).toContain("capabilityStatus.probeFailureNotice(data.capability_discovery)");
+    expect(mainSource).toContain("capabilityStatus.whisperProbe(healthData)");
+    expect(mainSource).not.toContain("function reportCapabilityProbeFailures(");
+  });
+});
+
 describe("capability status: model weights", () => {
   it("reports a model as missing only when its packages are installed", () => {
     const caps = depthPayload();

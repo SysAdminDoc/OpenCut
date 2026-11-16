@@ -35,19 +35,24 @@ from .captions import (
 # ---------------------------------------------------------------------------
 @captions_bp.route("/captions/enhanced/capabilities", methods=["GET"])
 def captions_enhanced_capabilities():
-    """Return enhanced caption capabilities."""
+    """Return enhanced caption capabilities.
+
+    ``whisperx`` and ``nllb`` come from the capability probe child (they
+    import torch and ctranslate2), and are ``null`` until it has answered.
+    """
     try:
         from opencut.core.captions_enhanced import (
             TRANSLATION_LANGUAGES,
-            check_nllb_available,
             check_pysubs2_available,
-            check_whisperx_available,
             get_translation_backend_info,
             translation_backends_manifest,
         )
+        from opencut.routes.system import current_capabilities
+
+        probed = current_capabilities()[0]
         return jsonify({
-            "whisperx": check_whisperx_available(),
-            "nllb": check_nllb_available(),
+            "whisperx": probed.get("whisperx"),
+            "nllb": probed.get("nllb"),
             "pysubs2": check_pysubs2_available(),
             "languages": TRANSLATION_LANGUAGES,
             "translation_backends": translation_backends_manifest(),

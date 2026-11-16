@@ -128,7 +128,13 @@ describe("panel controller budgets", () => {
     // fifteen-line factory wiring, the CrisperWhisper filler-backend choice
     // between Whisper and a model download (thirteen), and the multimodal,
     // depth and emotion hint call sites (eight).
-    ["client/main.js", 18869],
+    // F447 adds thirty-one for the out-of-process capability probe. Reading
+    // the probe (which failures are new, the GPU name, whether Whisper is
+    // still being checked) lives in client/capability-status.js too. main.js
+    // keeps the toast and GPU badge in the health poll (four), the Whisper
+    // card's checking state (twenty-six, the same shape as its installed and
+    // missing states) and one more line for the failed-check tooltip.
+    ["client/main.js", 18900],
     ["client/update-controller.js", 300],
     ["client/results-controller.js", 300],
     ["client/settings-diagnostics-controller.js", 110],

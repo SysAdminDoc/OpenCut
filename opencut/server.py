@@ -1213,6 +1213,7 @@ def main():
             default=None,
             help=argparse.SUPPRESS,
         )
+        parser.add_argument("--capability-probe", metavar="NAMES", default=None, help=argparse.SUPPRESS)
         args = parser.parse_args()
         _ct2_isolation.prepare_process(sys.argv[1:])
 
@@ -1223,6 +1224,15 @@ def main():
             from opencut.core import optional_tools
 
             return optional_tools.run_import_check(args.import_check, args.import_path)
+
+        if args.capability_probe is not None:
+            from opencut.core import capability_probe
+
+            # The server that started this child owns server.log; two
+            # processes rotating one file on Windows lose records.
+            logger.removeHandler(_file_handler)
+            _file_handler.close()
+            return capability_probe.run_child(args.capability_probe)
 
         if args.install_tools is not None:
             from opencut.core import optional_tools
