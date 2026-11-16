@@ -768,6 +768,8 @@ def test_whisper_cache_dir_matches_openai_whispers_default(monkeypatch, tmp_path
 _ROOTED_CASES = [("", False), ("hub", False), ("huggingface/hub", False), ("/hf/hub", True)]
 if os.name == "nt":
     _ROOTED_CASES += [(r"C:\hf\hub", True), (r"\hf\hub", True), ("C:hub", False), ("//server/share/hub", True)]
+    # A cache on the share root itself: splitdrive leaves nothing after the drive.
+    _ROOTED_CASES += [("//nas/hf", True), ("//?/UNC/nas/hf", True), ("//nas/hf".replace("/", os.sep), True)]
 
 
 @pytest.mark.parametrize("path, rooted", _ROOTED_CASES)

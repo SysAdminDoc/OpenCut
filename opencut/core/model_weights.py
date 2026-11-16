@@ -252,10 +252,12 @@ def is_rooted(path: str) -> bool:
     relative. ``os.path.isabs`` can't be the test on Windows: 3.13 calls
     ``/hf/hub`` relative (it has no drive) where 3.11 calls it absolute, and
     the loaders put it on the current drive either way. ``hub`` and
-    ``C:hub`` follow the cwd.
+    ``C:hub`` follow the cwd. A network share (``//nas/hf``) is all drive
+    with nothing after it, and it's a full location by itself.
     """
-    rest = os.path.splitdrive(path or "")[1]
-    return rest[:1] in {os.sep, os.altsep or os.sep}
+    drive, rest = os.path.splitdrive(path or "")
+    seps = {os.sep, os.altsep or os.sep}
+    return rest[:1] in seps or drive[:1] in seps
 
 
 def _hf_repo_dir(repo_id: str) -> str:
