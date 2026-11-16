@@ -145,6 +145,21 @@ def test_floor_unparseable_banner():
     assert res["lane"] == "unknown"
 
 
+def test_a_banner_that_is_not_text_grades_unknown_instead_of_raising(monkeypatch):
+    """A mocked ``subprocess.run`` hands the probe a MagicMock, not a string."""
+    from unittest.mock import MagicMock
+
+    for banner in (object(), MagicMock(), b"ffmpeg version 2026-11-11-git-23c4540053"):
+        res = fp.check_security_floor(banner, configure_line=MagicMock())
+        assert res["ok"] is False
+        assert res["lane"] == "unknown"
+
+    monkeypatch.setattr(fp.subprocess, "run", MagicMock(return_value=MagicMock()))
+    res = fp.probe_binary_security("ffmpeg")
+    assert res["ok"] is False
+    assert res["lane"] == "unknown"
+
+
 def test_cves_listed_in_every_result():
     res = fp.check_security_floor(BANNER_812)
     assert "CVE-2026-8461" in res["cves"]

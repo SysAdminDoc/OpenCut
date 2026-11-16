@@ -530,7 +530,7 @@ def parse_version_banner(banner: str) -> dict:
         "flavor": "",
         "builder": "",
     }
-    if not banner:
+    if not isinstance(banner, str) or not banner:
         return record
 
     first_line = banner.splitlines()[0] if banner.splitlines() else banner
@@ -883,6 +883,8 @@ def check_security_floor(banner: str, configure_line: str = "") -> dict:
     ``not_applicable`` (the affected component is not compiled in). Pass
     *configure_line* to enable the second test. The grading never raises.
     """
+    if not isinstance(configure_line, str):
+        configure_line = ""
     rec = parse_version_banner(banner)
     result: dict = {
         "ok": False,

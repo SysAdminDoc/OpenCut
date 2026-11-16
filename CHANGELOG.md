@@ -30,6 +30,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 ### Tests
 
 - Running the test suite no longer writes into your real `~/.opencut`. Five test modules load the server while pytest is still collecting, which was before the fake home folder went in, so every run logged into your real `server.log` and rotated your older entries out of it.
+- Eight silence, scene and audio tests pass when their file runs on its own. They mock `subprocess.run`, the FFmpeg security check ran through that mock, and it raised a `TypeError` on the mock's output. The check now grades output it can't read as an unknown build and refuses it, and the tests skip the check, which has tests of its own.
 
 ### Release builds
 

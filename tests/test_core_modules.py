@@ -13,6 +13,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _trusted_media_binaries(monkeypatch):
+    """These tests mock ``subprocess.run`` for the module under test, which is
+    the shared ``subprocess`` module, so the FFmpeg security probe would run
+    through the same mock. The probe has its own tests."""
+    from opencut import helpers
+
+    monkeypatch.setattr(helpers, "_require_safe_media_binary", lambda binary: binary)
+
+
 # ========================================================================
 # 1. silence.py
 # ========================================================================
