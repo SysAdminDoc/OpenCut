@@ -2466,9 +2466,6 @@
                 "warning"
             );
         },
-        setCpuMode: function (cpuMode) {
-            if (el.whisperCpuMode) el.whisperCpuMode.checked = !!cpuMode;
-        },
         onFirstLoad: _updateWsStatus,
         loadLlmSettings: loadLLMSettings,
         updateBridgeStatus: _updateWsStatus,
@@ -8747,6 +8744,7 @@
         var backendName = caps.whisper_backend || t("whisper.backend_default", "Whisper");
         var installed = !!caps.captions;
         var cpuMode = !!caps.whisper_cpu_mode;
+        if (el.whisperCpuMode) el.whisperCpuMode.checked = cpuMode; // every redraw, the poll's too
         var deviceLabel = cpuMode
             ? t("whisper.cpu_forced", "CPU forced")
             : t("whisper.auto_gpu_device", "Auto (GPU if available)");

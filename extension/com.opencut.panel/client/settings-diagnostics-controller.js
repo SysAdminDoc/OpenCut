@@ -20,7 +20,6 @@
         var updateWhisperState = typeof options.updateWhisperState === "function" ? options.updateWhisperState : function () {};
         var renderGpuState = typeof options.renderGpuState === "function" ? options.renderGpuState : function () {};
         var onHealthUnavailable = typeof options.onHealthUnavailable === "function" ? options.onHealthUnavailable : function () {};
-        var setCpuMode = typeof options.setCpuMode === "function" ? options.setCpuMode : function () {};
         var onFirstLoad = typeof options.onFirstLoad === "function" ? options.onFirstLoad : function () {};
         var loadLlmSettings = typeof options.loadLlmSettings === "function" ? options.loadLlmSettings : function () {};
         var updateBridgeStatus = typeof options.updateBridgeStatus === "function" ? options.updateBridgeStatus : function () {};
@@ -47,8 +46,7 @@
                     return;
                 }
                 syncBackendSummary(true);
-                setCpuMode(!!(data.capabilities && data.capabilities.whisper_cpu_mode));
-                updateWhisperState(data);
+                updateWhisperState(data); // also ticks the CPU mode checkbox
                 if (firstLoad) onFirstLoad();
             });
 

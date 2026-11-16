@@ -468,7 +468,11 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
             status: "ok",
             csrf_token: "fixture-token",
             capabilities: backendFixtures.whisperProbe.done
-              ? { captions: true, whisper_backend: "faster-whisper" }
+              ? {
+                  captions: true,
+                  whisper_backend: "faster-whisper",
+                  whisper_cpu_mode: !!backendFixtures.whisperProbe.cpuMode,
+                }
               : {},
           }),
         });
@@ -2052,6 +2056,26 @@ test("CEP Whisper status leaves Checking when the probe finishes after Settings 
   await expect(page.locator("#whisperStatusLine")).toHaveText(
     "faster-whisper is ready for captions, search indexing, and chapter generation.",
   );
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP Whisper CPU checkbox follows the card when the health poll redraws it", async ({
+  page,
+}) => {
+  // CPU mode can change behind Settings (a reinstall saves it). The poll
+  // redrew the card but left the checkbox as it was, so the two disagreed
+  // and the next click saved the opposite of what the user meant.
+  const whisperProbe = { done: true, cpuMode: true };
+  const { pageErrors } = await openSurface(page, "cep", "dark", 900, { whisperProbe });
+  await page.locator(".nav-tab[data-nav='settings']").click();
+  const device = page.locator("#whisperDeviceText");
+  const checkbox = page.locator("#whisperCpuMode");
+  await expect(device).toHaveText("CPU forced");
+  await expect(checkbox).toBeChecked();
+
+  whisperProbe.cpuMode = false;
+  await expect(device).toHaveText("Auto (GPU if available)", { timeout: 15000 });
+  await expect(checkbox).not.toBeChecked();
   expect(pageErrors).toEqual([]);
 });
 

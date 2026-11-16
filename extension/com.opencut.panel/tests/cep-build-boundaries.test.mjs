@@ -137,8 +137,9 @@ describe("panel controller budgets", () => {
     // Two more let the health poll refresh that card when the probe reports
     // after Settings opened. Deciding when to refresh lives in
     // client/capability-status.js, so main.js only records what it showed
-    // and asks.
-    ["client/main.js", 18902],
+    // and asks. Ticking the CPU mode checkbox inside that redraw, instead of
+    // in a separate Settings hook the poll skipped, gave two back.
+    ["client/main.js", 18900],
     ["client/update-controller.js", 300],
     ["client/results-controller.js", 300],
     ["client/settings-diagnostics-controller.js", 110],
