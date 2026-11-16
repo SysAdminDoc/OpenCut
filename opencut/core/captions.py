@@ -1237,16 +1237,6 @@ def _batched_pipeline(model):
 
 def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> TranscriptionResult:
     """Transcribe using faster-whisper (CTranslate2 backend)."""
-    from faster_whisper import WhisperModel
-
-    _model_id, resolved_revision = model_identity(
-        "faster-whisper",
-        config.model,
-        getattr(config, "model_revision", None),
-    )
-    model_revision = None if os.path.isdir(config.model) else resolved_revision
-    runtime_fallback_reason = ""
-
     # Check for forced CPU mode from settings
     force_cpu = False
     try:
@@ -1258,6 +1248,23 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 force_cpu = settings.get("cpu_mode", False)
     except Exception:
         pass
+
+    # CTranslate2 is a CUDA 12 build. Beside a CUDA 13 torch it gets a process
+    # of its own, decided before faster_whisper is imported here (F465).
+    from opencut.ct2_isolation import should_isolate, transcribe_in_child
+
+    if not force_cpu and should_isolate():
+        return transcribe_in_child(wav_path, config)
+
+    from faster_whisper import WhisperModel
+
+    _model_id, resolved_revision = model_identity(
+        "faster-whisper",
+        config.model,
+        getattr(config, "model_revision", None),
+    )
+    model_revision = None if os.path.isdir(config.model) else resolved_revision
+    runtime_fallback_reason = ""
 
     # Determine device and compute type
     device_index = None

@@ -267,14 +267,45 @@ def check_gpu():
             # the latter raises AttributeError and the GPU was reported as
             # "unavailable" instead of detected.
             vram = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-            print(f"  [OK] CUDA GPU: {name} ({vram:.1f}GB VRAM)")
+            print(f"  [OK] CUDA GPU: {name} ({vram:.1f}GB VRAM, PyTorch CUDA {torch.version.cuda})")
         else:
             print("  [--] No CUDA GPU detected. AI features will use CPU (slower).")
-            print("       For GPU: pip install torch --index-url https://download.pytorch.org/whl/cu128")
     except ImportError:
         print("  [--] PyTorch not installed. AI features unavailable until installed.")
     except Exception as exc:
         print(f"  [--] Could not query GPU: {exc}")
+    print_gpu_lane()
+
+
+def print_gpu_lane():
+    """Show which PyTorch index this machine's driver and GPU allow, and why."""
+    try:
+        from opencut.gpu_lanes import (
+            choose_torch_lane,
+            plan_backends,
+            query_nvidia_gpus,
+            torch_install_command,
+        )
+    except Exception as exc:
+        print(f"  [--] Could not plan the GPU install: {exc}")
+        return
+    gpus = query_nvidia_gpus()
+    for gpu in gpus:
+        capability = gpu.get("compute_capability") or "unknown"
+        print(
+            f"  [OK] NVIDIA GPU {gpu['index']}: {gpu['name']} "
+            f"(compute capability {capability}, driver {gpu['driver_version'] or 'unknown'})"
+        )
+    lane = choose_torch_lane(gpus)
+    print(f"  [--] PyTorch lane: {lane.index}. {lane.reason}")
+    if lane.index == "cpu":
+        return
+    backends = plan_backends(lane)
+    print(f"       For GPU: {torch_install_command(lane.index, frozen=False)}")
+    print(f"       ONNX on GPU: pip install \"{backends['onnxruntime']['requirement']}\"")
+    if backends["ctranslate2"]["separate_process"]:
+        print("       faster-whisper needs CUDA 12 and runs in its own process beside this torch.")
+        print(f"       Its runtime: {backends['ctranslate2']['runtime_command']}")
 
 
 def verify():

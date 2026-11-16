@@ -24,6 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, List, Optional
 
+from opencut.gpu_lanes import DEFAULT_TORCH_INDEX, torch_index_url
 from opencut.helpers import _try_import
 
 
@@ -54,7 +55,7 @@ def check_flashvsr_available() -> bool:
 
 
 INSTALL_HINT = (
-    "pip install flashvsr torch --index-url https://download.pytorch.org/whl/cu128"
+    f"pip install flashvsr torch --index-url {torch_index_url(DEFAULT_TORCH_INDEX)}"
 )
 
 

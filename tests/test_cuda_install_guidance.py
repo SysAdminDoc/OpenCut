@@ -4,6 +4,10 @@ README.md, requirements.txt, install.py and upscale_flashvsr.py each restated
 the CUDA wheel index, and all four said cu121 -- an index with no sm_120
 kernels. Every RTX 50-series user who followed the documentation got the
 failure reported as issue #7. One source now, and this keeps it that way.
+
+Since F465 the source is the lane table in opencut.gpu_lanes: cu132 first,
+with cu128 and cu126 for hosts whose driver or GPU can't run CUDA 13.
+install.py and upscale_flashvsr.py build their URLs from it.
 """
 
 from __future__ import annotations
@@ -20,16 +24,18 @@ from opencut.gpu import (
     NEWEST_CONSUMER_CAPABILITY,
     supported_capability_range,
 )
+from opencut.gpu_lanes import TORCH_LANES
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-#: Every file that tells a user how to install a CUDA-capable torch.
+#: Every file that spells out a CUDA wheel index for users.
 DOCUMENTED_INSTALL_SITES = (
     "README.md",
     "requirements.txt",
-    "install.py",
-    "opencut/core/upscale_flashvsr.py",
 )
+
+#: Indexes the lane table can hand out.
+LANE_INDEXES = {index for index in TORCH_LANES if index != "cpu"}
 
 _INDEX_RE = re.compile(r"download\.pytorch\.org/whl/(cu\d+)")
 
@@ -56,16 +62,25 @@ def test_every_documented_site_names_the_canonical_index(relative):
     assert path.is_file(), f"{relative} moved; update DOCUMENTED_INSTALL_SITES"
     text = path.read_text(encoding="utf-8", errors="replace")
     found = set(_INDEX_RE.findall(text))
-    assert found, f"{relative} no longer documents a CUDA wheel index"
-    assert found == {CUDA_WHEEL_INDEX}, (
-        f"{relative} names {sorted(found)} but opencut.gpu.CUDA_WHEEL_INDEX is "
-        f"{CUDA_WHEEL_INDEX}. Keep the documented lane in one place."
+    assert CUDA_WHEEL_INDEX in found, (
+        f"{relative} names {sorted(found)} but not opencut.gpu.CUDA_WHEEL_INDEX "
+        f"({CUDA_WHEEL_INDEX})."
+    )
+    assert found <= LANE_INDEXES, (
+        f"{relative} names {sorted(found - LANE_INDEXES)}, which the lane table in "
+        "opencut.gpu_lanes never picks."
     )
 
 
+def test_the_flashvsr_hint_names_the_documented_lane():
+    from opencut.core.upscale_flashvsr import INSTALL_HINT
+
+    assert INSTALL_HINT.endswith(CUDA_WHEEL_INDEX_URL)
+
+
 def test_no_stale_index_survives_anywhere_in_the_shipped_docs():
-    """Catch a fifth site appearing that DOCUMENTED_INSTALL_SITES does not list."""
-    stale = {name for name in CUDA_INDEX_MAX_CAPABILITY if name != CUDA_WHEEL_INDEX}
+    """Catch a site appearing that DOCUMENTED_INSTALL_SITES does not list."""
+    stale = {name for name in CUDA_INDEX_MAX_CAPABILITY if name not in LANE_INDEXES}
     skip_dirs = {".git", "build", "dist", "node_modules", "__pycache__", "release_licenses"}
     # *.egg-info is gitignored build output whose PKG-INFO is generated from
     # README.md, which this module already gates directly. A stale local copy

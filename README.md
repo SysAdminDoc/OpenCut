@@ -727,16 +727,26 @@ publishes a compatible dependency lane.
 ### GPU Acceleration
 
 ```bash
-pip install "torch>=2.10" "torchvision>=0.25" torchaudio --index-url https://download.pytorch.org/whl/cu128
+pip install "torch>=2.10" "torchvision>=0.25" torchaudio --index-url https://download.pytorch.org/whl/cu132
 ```
 
 That command is for a source install. The packaged Windows app runs its own Python 3.13 and loads add-ons only from `%USERPROFILE%\.opencut\packages`, so install the GPU build there with a matching Python:
 
 ```bat
-py -3.13 -m pip install --upgrade --target "%USERPROFILE%\.opencut\packages" "torch>=2.10" "torchvision>=0.25" torchaudio --index-url https://download.pytorch.org/whl/cu128
+py -3.13 -m pip install --upgrade --target "%USERPROFILE%\.opencut\packages" "torch>=2.10" "torchvision>=0.25" torchaudio --index-url https://download.pytorch.org/whl/cu132
 ```
 
-RTX 50-series cards need this CUDA 12.8 build. Older CUDA builds have no kernels for them, and OpenCut says so in Settings before a job starts.
+The cu132 (CUDA 13) build needs NVIDIA driver 580 or newer and a Turing or newer card. `python install.py` reads your driver and GPU and prints the index that fits, with the reason:
+
+| Driver and GPU | Index |
+|----------------|-------|
+| Driver 580+, RTX 20-series or newer (RTX 50 included) | `cu132` |
+| Driver 525 to 579, RTX 50-series | `cu128` (PyTorch stops at 2.11 there) |
+| Driver 525 to 579, RTX 20 to 40-series | `cu126` |
+| Driver 525 or newer, GTX 900/10-series or Volta | `cu126` |
+| Driver older than 525, or no NVIDIA GPU | CPU build |
+
+faster-whisper's CTranslate2 is a CUDA 12 build. Next to a cu132 torch it runs in its own process and needs its CUDA 12 libraries in `%USERPROFILE%\.opencut\cuda12`. `install.py` prints the command, and the server log names it when they're missing. ONNX models follow the torch lane, with `onnxruntime-gpu>=1.27` on cu132 and `onnxruntime-gpu<1.27` on the CUDA 12 lanes. Settings still names the right build when an installed one has no kernels for your card.
 
 GPU-heavy routes have built-in rate limiting (one GPU job at a time) and cancellation support. Choose the active CUDA adapter from the CEP or UXP Settings panel, or set `OPENCUT_GPU_INDEX` to a non-negative device index before starting the server. The selected adapter is reported by `/system/status`; invalid indexes return the available-device list instead of silently falling back.
 

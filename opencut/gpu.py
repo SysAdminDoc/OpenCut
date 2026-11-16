@@ -11,8 +11,8 @@ CPU-only systems.
 import logging
 import os
 import re
-import shutil
-import subprocess
+
+from opencut import gpu_lanes
 
 logger = logging.getLogger("opencut")
 
@@ -148,21 +148,7 @@ def _configured_gpu_index():
         return None
 
 
-def _safe_float(value) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def _parse_capability(value) -> tuple[int, int] | None:
-    """Return ``(major, minor)`` from a capability in any of its shapes."""
-    if isinstance(value, (tuple, list)) and value:
-        value = ".".join(str(part) for part in value[:2])
-    match = re.search(r"(\d+)(?:\.(\d+))?", str(value or ""))
-    if not match:
-        return None
-    return int(match.group(1)), int(match.group(2) or 0)
+_parse_capability = gpu_lanes.parse_capability
 
 
 def _capability_label(value) -> str:
@@ -232,16 +218,21 @@ CUDA_INDEX_MAX_CAPABILITY = {
     "cu126": (9, 0),
     "cu128": (12, 0),
     "cu129": (12, 0),
+    "cu130": (12, 0),
+    "cu132": (12, 0),
+    "cu134": (12, 0),
 }
 
-#: The index OpenCut documents. Must cover NEWEST_CONSUMER_CAPABILITY.
-CUDA_WHEEL_INDEX = "cu128"
+#: The index OpenCut documents first. Must cover NEWEST_CONSUMER_CAPABILITY.
+#: Hosts whose driver or GPU can't run it get another lane from
+#: :func:`opencut.gpu_lanes.choose_torch_lane` (F465).
+CUDA_WHEEL_INDEX = gpu_lanes.DEFAULT_TORCH_INDEX
 
 #: The newest NVIDIA consumer architecture OpenCut claims to support.
 #: RTX 50-series (Blackwell) is sm_120.
 NEWEST_CONSUMER_CAPABILITY = (12, 0)
 
-CUDA_WHEEL_INDEX_URL = f"https://download.pytorch.org/whl/{CUDA_WHEEL_INDEX}"
+CUDA_WHEEL_INDEX_URL = gpu_lanes.torch_index_url(CUDA_WHEEL_INDEX)
 
 #: The exact command the documentation tells users to run.
 TORCH_GPU_INSTALL_COMMAND = (
@@ -249,31 +240,23 @@ TORCH_GPU_INSTALL_COMMAND = (
 )
 
 
-def torch_gpu_install_command() -> str:
+def torch_gpu_install_command(index: str | None = None) -> str:
     """Return the torch install command that reaches *this* server.
 
-    A packaged server ignores the system interpreter's site-packages and loads
-    optional packages from ``~/.opencut/packages`` with its own Python version,
-    so the plain ``pip install`` above changes nothing for installer users.
+    ``index`` defaults to the lane this host's driver and GPU allow, or the
+    documented lane when no NVIDIA GPU answers. A packaged server loads
+    optional packages from ``~/.opencut/packages``, so it gets a ``--target``
+    install there instead of a plain ``pip install``.
     """
-    import sys
-
-    if not getattr(sys, "frozen", False):
-        return f"pip install torch --index-url {CUDA_WHEEL_INDEX_URL}"
-    major, minor = sys.version_info[:2]
-    if os.name == "nt":
-        python, target = f"py -{major}.{minor}", r'"%USERPROFILE%\.opencut\packages"'
-    else:
-        python, target = f"python{major}.{minor}", "~/.opencut/packages"
-    return (
-        f"{python} -m pip install --upgrade --target {target} torch "
-        f"--index-url {CUDA_WHEEL_INDEX_URL}"
-    )
+    if index is None:
+        return gpu_lanes.host_torch_install_command()
+    return gpu_lanes.torch_install_command(index)
 
 
 def supported_capability_range() -> tuple[tuple[int, int], tuple[int, int]]:
     """Return ``(oldest, newest)`` compute capability the documented lane covers."""
-    return (7, 5), CUDA_INDEX_MAX_CAPABILITY[CUDA_WHEEL_INDEX]
+    lane = gpu_lanes.TORCH_LANES[CUDA_WHEEL_INDEX]
+    return lane.min_capability, CUDA_INDEX_MAX_CAPABILITY[CUDA_WHEEL_INDEX]
 
 
 #: A build that cannot run an adapter needs a different wheel, not a different
@@ -284,11 +267,16 @@ _REQUIRED_BUILD_PREFIXES = {
 }
 
 
-def _required_build_hint(capability_major: int) -> str:
-    prefix = _REQUIRED_BUILD_PREFIXES.get(capability_major)
+def _required_build_hint(device: dict) -> str:
+    """Name the wheel this adapter's driver and capability can actually run."""
+    capability = _parse_capability(device.get("compute_capability", device.get("compute_cap")))
+    prefix = _REQUIRED_BUILD_PREFIXES.get(capability[0] if capability else None)
     if prefix is None:
         return "Install a PyTorch build compiled for this adapter's compute capability, or select CPU."
-    return prefix + torch_gpu_install_command()
+    lane = gpu_lanes.choose_torch_lane([device])
+    if lane.index == "cpu":
+        return lane.reason
+    return prefix + torch_gpu_install_command(lane.index)
 
 GPU_SUPPORT_USABLE = "usable"
 GPU_SUPPORT_UNSUPPORTED = "unsupported-build"
@@ -335,7 +323,7 @@ def gpu_runtime_support(device: dict | None, *, torch_module=None) -> dict:
             f"the installed PyTorch build has no kernel image for compute capability {label} "
             f"(it was built for up to {highest[0]}.{highest[1]})"
         ),
-        "required_build": _required_build_hint(capability[0]),
+        "required_build": _required_build_hint(device),
     }
 
 
@@ -416,52 +404,13 @@ def _annotate_gpu_device(device: dict) -> dict:
 
 def list_gpu_devices() -> list[dict]:
     """Return all visible NVIDIA CUDA adapters with stable integer indexes."""
-    nvidia_smi = shutil.which("nvidia-smi")
-    if nvidia_smi:
-        # compute_cap is what tells us whether the installed torch build can
-        # execute on an adapter; without it every device looked equally fine
-        # (issue #7). Drivers older than 510 do not know the field, so fall
-        # back to the original query rather than losing the listing entirely.
-        for fields, has_capability in (
-            ("index,name,memory.total,memory.free,driver_version,compute_cap", True),
-            ("index,name,memory.total,memory.free,driver_version", False),
-        ):
-            try:
-                result = subprocess.run(
-                    [nvidia_smi, f"--query-gpu={fields}", "--format=csv,noheader,nounits"],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                    check=False,
-                )
-            except (OSError, subprocess.TimeoutExpired) as exc:
-                logger.debug("nvidia-smi GPU query failed: %s", exc)
-                break
-            if result.returncode != 0:
-                continue
-            trailing = 4 if has_capability else 3
-            devices = []
-            for line in (result.stdout or "").splitlines():
-                parts = [part.strip() for part in line.split(",")]
-                if len(parts) < trailing + 2:
-                    continue
-                try:
-                    index = int(parts[0])
-                except (TypeError, ValueError):
-                    continue
-                # GPU names can contain commas; the trailing fields are fixed.
-                record = {
-                    "index": index,
-                    "name": ",".join(parts[1:-trailing]).strip(),
-                    "memory_total_mb": _safe_float(parts[-trailing]),
-                    "memory_free_mb": _safe_float(parts[-trailing + 1]),
-                    "driver_version": parts[-trailing + 2],
-                }
-                if has_capability:
-                    record["compute_capability"] = parts[-1]
-                devices.append(_annotate_gpu_device(record))
-            if devices:
-                return sorted(devices, key=lambda device: device["index"])
+    # compute_cap is what tells us whether the installed torch build can
+    # execute on an adapter. Without it every device looked equally fine
+    # (issue #7). The query lives in gpu_lanes so install.py can pick a torch
+    # lane from the same driver and capability readings.
+    smi_devices = gpu_lanes.query_nvidia_gpus()
+    if smi_devices:
+        return [_annotate_gpu_device(record) for record in smi_devices]
 
     if not _HAS_TORCH:
         return []

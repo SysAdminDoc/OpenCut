@@ -20,11 +20,17 @@ from contextlib import suppress
 from flask import Flask, request
 from flask_cors import CORS
 
+from opencut import ct2_isolation as _ct2_isolation
 from opencut.server_log import (
     SERVER_LOG_BACKUP_COUNT,
     SERVER_LOG_MAX_BYTES,
     server_log_path,
 )
+
+# Before any feature module loads: the faster-whisper worker blocks torch,
+# and the server makes torch load ahead of CTranslate2 (F465).
+if __name__ == "__main__":
+    _ct2_isolation.prepare_process(sys.argv[1:])
 
 _TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
 
@@ -1200,7 +1206,18 @@ def main():
         )
         parser.add_argument("--import-check", metavar="MODULE", default=None, help=argparse.SUPPRESS)
         parser.add_argument("--import-path", metavar="DIR", default=None, help=argparse.SUPPRESS)
+        parser.add_argument(
+            _ct2_isolation.WORKER_FLAG,
+            nargs=2,
+            metavar=("REQUEST", "RESULT"),
+            default=None,
+            help=argparse.SUPPRESS,
+        )
         args = parser.parse_args()
+        _ct2_isolation.prepare_process(sys.argv[1:])
+
+        if args.ct2_worker is not None:
+            return _ct2_isolation.run_worker(*args.ct2_worker)
 
         if args.import_check is not None:
             from opencut.core import optional_tools

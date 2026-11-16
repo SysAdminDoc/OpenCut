@@ -188,7 +188,9 @@ def build_install_suggestion(
     if packages and selected_extra:
         parts.append(f"Missing package hint: {' '.join(packages)}.")
     if needs_gpu:
-        parts.append("GPU-recommended; install CUDA-enabled torch first.")
+        from opencut.gpu_lanes import host_torch_install_command
+
+        parts.append(f"GPU-recommended. Install CUDA-enabled torch first with {host_torch_install_command()}.")
     if memory_mb > 0:
         parts.append(f"Recommended VRAM: {memory_mb // 1024 if memory_mb % 1024 == 0 else round(memory_mb / 1024, 1)} GB.")
     return " ".join(parts)

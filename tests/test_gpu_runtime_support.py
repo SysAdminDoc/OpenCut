@@ -16,6 +16,7 @@ import types
 
 import pytest
 
+from opencut import gpu_lanes
 from opencut.gpu import (
     GPU_SUPPORT_UNKNOWN,
     GPU_SUPPORT_UNSUPPORTED,
@@ -173,7 +174,7 @@ def test_nvidia_smi_devices_carry_a_compute_capability(monkeypatch):
 
     from opencut import gpu as gpu_module
 
-    monkeypatch.setattr(gpu_module.shutil, "which", lambda name: "nvidia-smi")
+    monkeypatch.setattr(gpu_lanes.shutil, "which", lambda name: "nvidia-smi")
 
     captured = {}
 
@@ -186,7 +187,7 @@ def test_nvidia_smi_devices_carry_a_compute_capability(monkeypatch):
             stderr="",
         )
 
-    monkeypatch.setattr(gpu_module.subprocess, "run", _fake_run)
+    monkeypatch.setattr(gpu_lanes.subprocess, "run", _fake_run)
 
     devices = gpu_module.list_gpu_devices()
     assert len(devices) == 1
@@ -204,7 +205,7 @@ def test_nvidia_smi_falls_back_when_the_driver_has_no_compute_cap(monkeypatch):
 
     from opencut import gpu as gpu_module
 
-    monkeypatch.setattr(gpu_module.shutil, "which", lambda name: "nvidia-smi")
+    monkeypatch.setattr(gpu_lanes.shutil, "which", lambda name: "nvidia-smi")
     attempts = []
 
     def _fake_run(command, **kwargs):
@@ -219,7 +220,7 @@ def test_nvidia_smi_falls_back_when_the_driver_has_no_compute_cap(monkeypatch):
             stderr="",
         )
 
-    monkeypatch.setattr(gpu_module.subprocess, "run", _fake_run)
+    monkeypatch.setattr(gpu_lanes.subprocess, "run", _fake_run)
 
     devices = gpu_module.list_gpu_devices()
     assert len(attempts) == 2
@@ -234,9 +235,9 @@ def test_device_names_containing_commas_still_parse(monkeypatch):
 
     from opencut import gpu as gpu_module
 
-    monkeypatch.setattr(gpu_module.shutil, "which", lambda name: "nvidia-smi")
+    monkeypatch.setattr(gpu_lanes.shutil, "which", lambda name: "nvidia-smi")
     monkeypatch.setattr(
-        gpu_module.subprocess,
+        gpu_lanes.subprocess,
         "run",
         lambda command, **kwargs: subprocess.CompletedProcess(
             command,
@@ -478,14 +479,42 @@ def test_faster_whisper_keeps_the_gpu_when_only_torch_lacks_kernels(
     assert calls[0].get("device_index") == expected_index
 
 
-def test_a_raw_cuda_arch_error_gets_the_install_command():
+def _host_gpus(monkeypatch, *gpus):
+    """Pin the adapters the host lane is chosen from, read fresh."""
+    monkeypatch.setattr(gpu_lanes, "query_nvidia_gpus", lambda timeout=5: [dict(g) for g in gpus])
+    monkeypatch.setattr(gpu_lanes, "_HOST_PLAN", None)
+
+
+def test_a_raw_cuda_arch_error_gets_the_install_command(monkeypatch):
     """Modules that call torch.cuda directly fail inside the model instead."""
     from opencut.core.install_hints import suggestion_for_exception
 
+    _host_gpus(monkeypatch, {**BLACKWELL, "driver_version": "572.16"})
     error = RuntimeError("CUDA error: no kernel image is available for execution on the device")
     suggestion = suggestion_for_exception(error, context="upscale")
-    assert "cu128" in suggestion
+    # Driver 572 can't run CUDA 13, so the host lane is cu128, not the default.
+    assert "whl/cu128" in suggestion
     assert suggestion_for_exception(RuntimeError("disk full"), context="upscale") == ""
+
+
+def test_the_install_command_follows_the_host_lane(monkeypatch):
+    from opencut import gpu as gpu_module
+
+    _host_gpus(monkeypatch, {**BLACKWELL, "driver_version": "581.57"})
+    assert gpu_module.torch_gpu_install_command().endswith("whl/cu132")
+
+    _host_gpus(monkeypatch, {**ADA, "driver_version": "546.33"})
+    assert gpu_module.torch_gpu_install_command().endswith("whl/cu126")
+
+    # No NVIDIA adapter at all still gets the documented lane, not "cpu".
+    _host_gpus(monkeypatch)
+    assert gpu_module.torch_gpu_install_command().endswith(f"whl/{gpu_module.CUDA_WHEEL_INDEX}")
+
+
+def test_an_unrunnable_adapter_on_a_current_driver_is_sent_to_cu132():
+    module = _torch_stub(["sm_70", "sm_75", "sm_80", "sm_86", "sm_90"])
+    support = gpu_runtime_support({**BLACKWELL, "driver_version": "581.57"}, torch_module=module)
+    assert support["required_build"].endswith("whl/cu132")
 
 
 def test_packaged_builds_get_an_install_command_that_reaches_them(monkeypatch):
@@ -494,6 +523,7 @@ def test_packaged_builds_get_an_install_command_that_reaches_them(monkeypatch):
 
     from opencut import gpu as gpu_module
 
+    _host_gpus(monkeypatch, {**BLACKWELL, "driver_version": "572.16"})
     assert gpu_module.torch_gpu_install_command().startswith("pip install torch")
 
     monkeypatch.setattr(sys, "frozen", True, raising=False)
