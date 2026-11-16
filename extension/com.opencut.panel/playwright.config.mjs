@@ -40,8 +40,12 @@ export default defineConfig({
       use: { browserName: "chromium" },
     },
   ],
+  // HTTP/1.1 keeps connections alive. http.server's default HTTP/1.0 closes
+  // one per file, a panel load fetches about a hundred, and on Windows the
+  // thousands of TIME_WAIT sockets that leaves make a later connect fail with
+  // net::ERR_ADDRESS_IN_USE, so a script goes missing mid-test.
   webServer: {
-    command: "python -m http.server 41737 --bind 127.0.0.1 --directory ../..",
+    command: "python -m http.server 41737 --bind 127.0.0.1 --protocol HTTP/1.1 --directory ../..",
     url: "http://127.0.0.1:41737/extension/com.opencut.panel/client/index.html",
     reuseExistingServer: false,
     timeout: 30_000,

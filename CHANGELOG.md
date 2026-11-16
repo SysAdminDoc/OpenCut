@@ -108,6 +108,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - The High Contrast test for disabled buttons reads the disabled and enabled button in one step. It used to read them one after the other, so on a slow run the panel could disable the second button in between and both came back gray.
 - The rendered tests that visit every panel tab get four minutes instead of the default 90 seconds. Each one runs dozens of accessibility scans, one per tab at every scroll position, and at 1200 px they ran out of time on a busy machine without anything being wrong.
 - The `Install.ps1` FFmpeg tests pass when the suite runs under PowerShell 7. Windows PowerShell inherited PowerShell 7's module path, loaded a module it can't use and lost `Get-FileHash`, so all eight install tests failed in the release gate and passed when run from any other shell. The tests now start Windows PowerShell without that path.
+- The rendered tests' local web server keeps connections open. Python's server closed one connection per file, and a panel loads about a hundred files, so one breakpoint test left almost 1,400 closed sockets behind. Late in a full run Windows refused a new connection, a panel script never loaded and the test failed on errors from the missing script. The same test now leaves 6.
 
 ### Release builds
 
