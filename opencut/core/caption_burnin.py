@@ -109,6 +109,9 @@ class IncrementalBurninPlan:
     encode_ranges: List[Tuple[float, float]] = field(default_factory=list)
     copy_ranges: List[Tuple[float, float]] = field(default_factory=list)
     fallback_reason: str = ""
+    # Keyframes of the file the copy ranges come out of, so the renderer can
+    # seek safely inside each GOP without probing the file a second time.
+    keyframes: List[float] = field(default_factory=list)
 
     @property
     def incremental(self) -> bool:
@@ -179,6 +182,7 @@ def build_incremental_plan(
         duration=duration,
         encode_ranges=encode_ranges,
         copy_ranges=copy_ranges,
+        keyframes=ordered,
     )
     if plan.copy_duration / duration < min_copy_ratio:
         plan.fallback_reason = (
@@ -326,6 +330,23 @@ def _segment_duration(segment_path: str, fps: float) -> float:
     return frames / fps if frames > 0 else 0.0
 
 
+def _copy_seek_point(start: float, end: float, keyframes: Sequence[float]) -> float:
+    """Where to input-seek so a stream copy starts on the keyframe at *start*.
+
+    Seeking exactly onto the keyframe is not safe. The 2026-11-11 FFmpeg
+    snapshot backs a seek off by the audio codec's priming delay when the
+    file has an audio track (1024 samples for AAC, 23ms at 44.1kHz), so
+    ``-ss 16`` on a file with keyframes every 2s copied from 14s and repeated
+    a whole GOP. Stream copy always starts on the last keyframe at or before
+    the seek point, so seeking halfway to the next keyframe lands on the same
+    one on every build: well past any codec preroll and well short of the
+    next keyframe.
+    """
+    following = [k for k in keyframes if k > start + 1e-6]
+    stop = min(following[0], end) if following else end
+    return start + (stop - start) / 2.0
+
+
 def plan_incremental_reburn(
     video_path: str,
     old_segments: Sequence[Dict],
@@ -405,8 +426,11 @@ def reburn_subtitles_incremental(
                 # -c copy silently returns short segments (a 4s range came back
                 # as 2s), because the packet accounting is done against input
                 # timestamps after the copy path has already dropped frames.
-                builder.pre_input("-ss", str(start))
-                builder.pre_input("-t", str(end - start))
+                # -t counts from the seek point, so the copy still ends at
+                # *end* even though it starts on the keyframe before it.
+                seek_at = _copy_seek_point(start, end, plan.keyframes)
+                builder.pre_input("-ss", f"{seek_at:.6f}")
+                builder.pre_input("-t", f"{end - seek_at:.6f}")
                 builder.input(previous_render).map("0:v:0", "0:a?")
                 builder.copy_streams()
             else:

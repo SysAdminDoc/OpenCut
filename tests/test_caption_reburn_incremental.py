@@ -155,6 +155,30 @@ def test_plan_serialises_for_reporting():
     assert payload["fallback_reason"] == ""
 
 
+def test_copy_segments_seek_inside_the_gop_rather_than_onto_its_keyframe():
+    """A seek exactly onto a keyframe can land one GOP early.
+
+    The 2026-11-11 FFmpeg snapshot backs a seek off by the audio priming
+    delay, so ``-ss 16`` copied from 14s. Stream copy starts on the last
+    keyframe at or before the seek point, so any point well inside the GOP
+    keeps the keyframe the plan cut on.
+    """
+    plan = cb.build_incremental_plan(20.0, [(11.9, 14.1)], KEYS)
+
+    assert plan.keyframes == KEYS
+    for start, end in plan.copy_ranges:
+        seek = cb._copy_seek_point(start, end, plan.keyframes)
+        following = min(k for k in KEYS if k > start)
+        # 0.128s is AAC's 1024-sample priming at 8kHz, the longest common one.
+        assert start + 0.128 < seek < following, (start, end, seek)
+
+
+def test_a_copy_range_with_no_later_keyframe_seeks_inside_itself():
+    seek = cb._copy_seek_point(18.0, 19.5, [0.0, 2.0, 18.0])
+
+    assert 18.0 < seek < 19.5
+
+
 def test_missing_previous_render_is_reported_not_guessed(tmp_path):
     plan = cb.plan_incremental_reburn(
         str(tmp_path / "source.mp4"),
@@ -231,6 +255,8 @@ def test_reburn_leaves_untouched_regions_bit_identical(tmp_path):
     assert report["encode_ranges"] == [[10.0, 16.0]]
 
     before, after = _frame_hashes(first), _frame_hashes(second)
+    # A copy segment that starts a GOP early repeats it and lengthens the file.
+    assert len(after) == len(before)
     # Frames 0-10s and 16s-end are copied, so they must match exactly.
     assert before[:100] == after[:100]
     assert before[-40:] == after[-40:]
