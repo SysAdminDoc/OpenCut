@@ -98,6 +98,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - The declared-versions check no longer excuses an old transformers. The declared stack, transformers 5.10 or newer on huggingface-hub 1.x, installs cleanly now, so an older transformers fails the check like any other mismatch.
 - The dormant Bolt WebView scaffold for the UXP panel is type-checked now. `npm run typecheck:bolt` in the CEP panel folder compiles it in strict mode against Adobe's published Premiere typings, and the Python suite runs the same check, so a host call with the wrong shape fails before the WebView cutover instead of inside Premiere.
 - The visual search cache test checks what its name says. It used to pass even when the cache folder was never created, and now it points the cache at a fresh folder and fails unless that folder exists.
+- The UXP compatibility, surface ratchet and README badge checks pass again after the visual search panels landed. The compatibility metadata now points at the moved `main.js` lines, the ratchet floor goes up from 19.8% to 19.9% because the two visual search routes have a panel now, and the README counts the 394 test files that exist.
 
 ### Release builds
 

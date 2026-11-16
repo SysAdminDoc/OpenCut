@@ -1,6 +1,6 @@
 {
   "baseline_version": 1,
-  "coverage_floor_percent": 19.8,
+  "coverage_floor_percent": 19.9,
   "family_ceilings": {
     "<app>": 1,
     "agent_chat": 3,
@@ -52,7 +52,7 @@
     "multiview_repurpose": 10,
     "music_safety": 20,
     "next_gen_ai": 9,
-    "object_intel": 13,
+    "object_intel": 11,
     "overlay": 5,
     "pipeline_intel": 23,
     "platform_infra": 52,
