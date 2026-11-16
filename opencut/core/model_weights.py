@@ -206,10 +206,23 @@ def _lock_for(key: str) -> threading.Lock:
 # Where things live
 # ---------------------------------------------------------------------------
 
-def _hf_cache_dir() -> str:
-    from huggingface_hub import constants
+def _expand_path(path: str) -> str:
+    return os.path.expandvars(os.path.expanduser(path))
 
-    return str(constants.HF_HUB_CACHE)
+
+def _hf_cache_dir() -> str:
+    """``huggingface_hub.constants.HF_HUB_CACHE``, worked out without importing it.
+
+    ``/health`` reads weight readiness on every call, and importing
+    huggingface_hub there pulls in its HTTP stack (and would take the server
+    down with a broken install). The precedence is huggingface_hub 1.28's:
+    ``HF_HUB_CACHE``, the legacy ``HUGGINGFACE_HUB_CACHE``, ``HF_HOME/hub``,
+    ``$XDG_CACHE_HOME/huggingface/hub``, then ``~/.cache/huggingface/hub``.
+    """
+    cache_root = os.getenv("XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache"))
+    hf_home = _expand_path(os.getenv("HF_HOME", os.path.join(cache_root, "huggingface")))
+    legacy = os.getenv("HUGGINGFACE_HUB_CACHE", os.path.join(hf_home, "hub"))
+    return _expand_path(os.getenv("HF_HUB_CACHE", legacy))
 
 
 def _hf_repo_dir(repo_id: str) -> str:

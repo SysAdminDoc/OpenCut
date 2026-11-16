@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import os
 import subprocess
 import sys
@@ -582,3 +583,102 @@ def test_a_chosen_deepface_engine_is_respected(monkeypatch):
 
     assert model_weights.prepare_deepface() == "pytorch"
     assert model_weights._emotion_target()[0].url.endswith(".pth")
+
+
+# ---------------------------------------------------------------------------
+# Hub cache location
+# ---------------------------------------------------------------------------
+
+_HF_ENV = ("HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE", "HF_HOME", "XDG_CACHE_HOME")
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+_REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+@pytest.mark.parametrize(
+    "env, expected",
+    [
+        ({}, None),
+        ({"XDG_CACHE_HOME": "{tmp}/xdg"}, ("xdg", "huggingface", "hub")),
+        ({"HF_HOME": "{tmp}/hf", "XDG_CACHE_HOME": "{tmp}/xdg"}, ("hf", "hub")),
+        ({"HUGGINGFACE_HUB_CACHE": "{tmp}/legacy", "HF_HOME": "{tmp}/hf"}, ("legacy",)),
+        ({"HF_HUB_CACHE": "{tmp}/new", "HUGGINGFACE_HUB_CACHE": "{tmp}/legacy"}, ("new",)),
+    ],
+)
+def test_the_hub_cache_follows_huggingface_hubs_precedence(monkeypatch, tmp_path, env, expected):
+    for name in _HF_ENV:
+        monkeypatch.delenv(name, raising=False)
+    for name, value in env.items():
+        monkeypatch.setenv(name, value.format(tmp=tmp_path))
+    if expected is None:
+        want = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
+    else:
+        want = os.path.join(str(tmp_path), *expected)
+
+    assert os.path.normcase(os.path.normpath(model_weights._hf_cache_dir())) == os.path.normcase(os.path.normpath(want))
+
+
+_CACHE_PAIR = """\
+import sys
+sys.path.insert(0, sys.argv[1])
+from huggingface_hub import constants
+from opencut.core import model_weights
+print("HF=" + constants.HF_HUB_CACHE)
+print("OC=" + model_weights._hf_cache_dir())
+"""
+
+
+@pytest.mark.parametrize(
+    "env",
+    [{}, {"XDG_CACHE_HOME": "{tmp}/xdg"}, {"HF_HOME": "~/hf-home"}, {"HUGGINGFACE_HUB_CACHE": "{tmp}/legacy"},
+     {"HF_HUB_CACHE": "{tmp}/new", "HF_HOME": "{tmp}/hf"}],
+)
+def test_the_hub_cache_matches_the_installed_huggingface_hub(tmp_path, env):
+    import importlib.util
+
+    if importlib.util.find_spec("huggingface_hub") is None:
+        pytest.skip("huggingface_hub isn't installed")
+    home = tmp_path / "home"
+    home.mkdir()
+    child_env = {key: value for key, value in os.environ.items() if key not in _HF_ENV}
+    child_env.update({"HOME": str(home), "USERPROFILE": str(home)})
+    child_env.update({key: value.format(tmp=tmp_path) for key, value in env.items()})
+    proc = subprocess.run(
+        [sys.executable, "-c", _CACHE_PAIR, _REPO], env=child_env, cwd=str(tmp_path),
+        capture_output=True, text=True, timeout=120, creationflags=_NO_WINDOW,
+    )
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    found = dict(line.split("=", 1) for line in proc.stdout.splitlines() if line[:3] in ("HF=", "OC="))
+    assert os.path.normcase(os.path.normpath(found["OC"])) == os.path.normcase(os.path.normpath(found["HF"]))
+
+
+_HEALTH_IMPORTS = """\
+import json
+import sys
+from opencut.config import OpenCutConfig
+from opencut.server import create_app
+
+client = create_app(config=OpenCutConfig(), testing=True).test_client()
+before = "huggingface_hub" in sys.modules
+status = client.get("/health").status_code
+print("RESULT " + json.dumps([status, before, "huggingface_hub" in sys.modules]))
+"""
+
+
+def test_health_never_imports_huggingface_hub(tmp_path):
+    """Weight readiness asked huggingface_hub where its cache lives, so every
+    /health imported it, and a broken install would crash the server there."""
+    home = tmp_path / "home"
+    home.mkdir()
+    env = dict(os.environ)
+    env.update({"PYTHONPATH": _REPO, "HOME": str(home), "USERPROFILE": str(home)})
+    env.pop("OPENCUT_HOME", None)
+    proc = subprocess.run(
+        [sys.executable, "-c", _HEALTH_IMPORTS], env=env, cwd=str(tmp_path),
+        capture_output=True, text=True, timeout=180, creationflags=_NO_WINDOW,
+    )
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    result = next(line for line in proc.stdout.splitlines() if line.startswith("RESULT "))
+    status, before, after = json.loads(result[len("RESULT "):])
+    assert status == 200
+    assert before is False, "something imported huggingface_hub before /health ran"
+    assert after is False, "/health imported huggingface_hub"
