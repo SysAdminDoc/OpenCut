@@ -12,7 +12,7 @@ namespace OpenCut.Installer.Services;
 /// </summary>
 public class DependencyInstaller
 {
-    /// <summary>Kept in step with <c>opencut.core.optional_tools.TOOL_NAMES</c>.</summary>
+    /// <summary>Kept in step with <c>opencut.core.optional_tools.INSTALLER_TOOLS</c>.</summary>
     internal static readonly string[] SupportedTools = ["auto-editor", "edge-tts", "mediapipe"];
 
     // Two pip installs, two import checks and a 45 MB download, with room to spare.

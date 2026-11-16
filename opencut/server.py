@@ -1205,7 +1205,7 @@ def main():
             "--install-tools",
             metavar="NAMES",
             default=None,
-            help="Install optional tools (comma-separated: auto-editor, edge-tts, mediapipe) and exit",
+            help="Install optional tools (comma-separated: auto-editor, edge-tts, mediapipe, cuda12) and exit",
         )
         parser.add_argument(
             "--remove-tools",

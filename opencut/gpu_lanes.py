@@ -385,11 +385,17 @@ def cuda12_runtime_dir() -> str:
 
 
 def ct2_cuda12_runtime_command(*, frozen: Optional[bool] = None) -> str:
-    """The command that installs CTranslate2's CUDA 12 runtime into its folder."""
+    """The command that installs CTranslate2's CUDA 12 runtime into its folder.
+
+    A packaged server does it itself (:mod:`opencut.core.optional_tools`),
+    checking the download before it replaces anything.
+    """
     frozen = _is_frozen() if frozen is None else frozen
-    pip = _frozen_pip() if frozen else "pip"
+    if frozen:
+        server = "OpenCut-Server.exe" if os.name == "nt" else "OpenCut-Server"
+        return f"{server} --install-tools cuda12"
     packages = " ".join(f'"{requirement}"' for requirement in CT2_CUDA12_RUNTIME)
-    return f'{pip} install --upgrade --target "{cuda12_runtime_dir()}" {packages}'
+    return f'pip install --upgrade --target "{cuda12_runtime_dir()}" {packages}'
 
 
 def onnxruntime_gpu_requirement() -> Optional[str]:

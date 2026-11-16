@@ -55,7 +55,8 @@ def test_the_installer_offers_exactly_the_tools_the_server_installs():
     source = INSTALLER_CS.read_text(encoding="utf-8")
     match = re.search(r"SupportedTools\s*=\s*\[([^\]]*)\]", source)
     assert match, "DependencyInstaller.SupportedTools not found"
-    assert tuple(re.findall(r'"([^"]+)"', match.group(1))) == optional_tools.TOOL_NAMES
+    assert tuple(re.findall(r'"([^"]+)"', match.group(1))) == optional_tools.INSTALLER_TOOLS
+    assert set(optional_tools.INSTALLER_TOOLS) < set(optional_tools.TOOL_NAMES)
 
 
 def test_the_installer_no_longer_runs_pip_itself():
@@ -375,7 +376,7 @@ def test_unknown_tools_are_refused_before_anything_installs(monkeypatch):
     monkeypatch.setattr(optional_tools, "install_auto_editor", lambda r: pytest.fail("installed"))
 
     assert optional_tools.install_tools(["auto-editor", "whisperx"], lines.append) == 2
-    assert lines == ["[failed] whisperx: choose from auto-editor, edge-tts, mediapipe"]
+    assert lines == ["[failed] whisperx: choose from auto-editor, edge-tts, mediapipe, cuda12"]
 
 
 def test_each_tool_ends_with_one_status_line_and_a_failure_does_not_stop_the_rest(monkeypatch):
@@ -455,7 +456,7 @@ def test_a_tool_another_one_needs_reports_why_it_stayed(monkeypatch, data_dir):
     assert optional_tools.remove_tools(["edge-tts", "nope"], lines.append) == 2
     assert optional_tools.remove_tools(["edge-tts"], lines.append) == 1
     assert lines == [
-        "[failed] nope: choose from auto-editor, edge-tts, mediapipe",
+        "[failed] nope: choose from auto-editor, edge-tts, mediapipe, cuda12",
         "[failed] edge-tts: Nothing was removed, because mediapipe still needs numpy",
     ]
 
@@ -471,3 +472,161 @@ def test_every_auto_editor_hint_points_at_install_tools():
     assert "OpenCut-Server.exe --install-tools auto-editor" in card.install_hint
     assert record is not None and record.install_hint == card.install_hint
     assert "pip install auto-editor" not in record.install_hint
+
+
+# ---------------------------------------------------------------------------
+# cuda12
+# ---------------------------------------------------------------------------
+_LEAF = "bin" if os.name == "nt" else "lib"
+_CUDA12_FILES = {
+    "cublas": ["cublas64_12.dll", "cublasLt64_12.dll"],
+    "cudnn": ["cudnn64_9.dll", "cudnn_ops64_9.dll"],
+}
+
+
+def _write_cuda12(root, versions=("12.9.1.4", "9.10.2.21"), missing=()):
+    """A pip --target folder holding CTranslate2's CUDA 12 runtime."""
+    root.mkdir(parents=True, exist_ok=True)
+    for project, version in zip(("nvidia_cublas_cu12", "nvidia_cudnn_cu12"), versions):
+        (root / f"{project}-{version}.dist-info").mkdir()
+    for package, names in _CUDA12_FILES.items():
+        folder = root / "nvidia" / package / _LEAF
+        folder.mkdir(parents=True)
+        for name in names:
+            if name not in missing:
+                (folder / name).write_bytes(b"dll")
+
+
+class _Pip:
+    def __init__(self, **runtime):
+        self.runtime = runtime
+        self.calls = []
+
+    def __call__(self, cmd, timeout, on_start=None):
+        self.calls.append(cmd)
+        target = Path(cmd[cmd.index("--target") + 1])
+        assert target.is_dir()
+        _write_cuda12(target, **self.runtime)
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+
+@pytest.fixture
+def cuda12(monkeypatch, data_dir):
+    from opencut import gpu_lanes
+
+    target = data_dir / "cuda12"
+    monkeypatch.setattr(gpu_lanes, "cuda12_runtime_dir", lambda: str(target))
+    monkeypatch.setattr(security, "install_python", lambda: "C:/Python313/python.exe")
+
+    def pip(**runtime):
+        fake = _Pip(**runtime)
+        monkeypatch.setattr(package_store, "_run", fake)
+        return fake
+
+    return target, pip
+
+
+def test_cuda12_installs_ctranslate2s_runtime_into_its_own_folder(cuda12, data_dir):
+    from opencut.gpu_lanes import CT2_CUDA12_RUNTIME
+
+    target, pip = cuda12
+    fake = pip()
+    lines = []
+
+    assert optional_tools.install_tools(["cuda12"], lines.append) == 0
+
+    assert lines[-1] == f"[ok] cuda12 is in {target}. Restart OpenCut if it's running."
+    (cmd,) = fake.calls
+    assert cmd[:4] == ["C:/Python313/python.exe", "-m", "pip", "install"]
+    assert all(requirement in cmd for requirement in CT2_CUDA12_RUNTIME)
+    assert optional_tools.cuda12_problems(str(target)) == []
+    assert _leftover_staging(data_dir) == []
+
+
+def test_a_runtime_already_whole_is_not_downloaded_again(cuda12):
+    target, pip = cuda12
+    _write_cuda12(target)
+    fake = pip()
+    lines = []
+
+    assert optional_tools.install_tools(["cuda12"], lines.append) == 0
+    assert fake.calls == []
+    assert lines == [
+        f"The CUDA 12 runtime is already in {target}",
+        f"[ok] cuda12 is in {target}. Restart OpenCut if it's running.",
+    ]
+
+
+def test_an_incomplete_download_leaves_the_old_runtime_alone(cuda12, data_dir):
+    target, pip = cuda12
+    _write_cuda12(target, versions=("12.9.1.4", "9.1.0.70"))
+    (target / "old-marker").write_text("old", encoding="utf-8")
+    pip(missing=("cudnn64_9.dll",))
+    lines = []
+
+    assert optional_tools.install_tools(["cuda12"], lines.append) == 1
+    assert lines[-1] == "[failed] cuda12: pip's CUDA 12 runtime is incomplete: cudnn64_9.dll is missing"
+    assert (target / "old-marker").read_text(encoding="utf-8") == "old"
+    assert _leftover_staging(data_dir) == []
+
+
+def test_an_outdated_runtime_is_replaced_whole(cuda12, data_dir):
+    target, pip = cuda12
+    _write_cuda12(target, versions=("12.9.1.4", "9.1.0.70"))
+    (target / "old-marker").write_text("old", encoding="utf-8")
+    pip()
+
+    assert optional_tools.install_tools(["cuda12"], [].append) == 0
+    assert not (target / "old-marker").exists()
+    assert optional_tools.cuda12_problems(str(target)) == []
+    assert _leftover_staging(data_dir) == []
+
+
+def test_a_runtime_in_use_stays_whole(cuda12, data_dir, monkeypatch):
+    target, pip = cuda12
+    _write_cuda12(target, versions=("12.9.1.4", "9.1.0.70"))
+    pip()
+    real_replace = os.replace
+
+    def replace(src, dst):
+        if os.path.normcase(src) == os.path.normcase(str(target)):
+            raise PermissionError(13, "The process cannot access the file", src)
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(optional_tools.os, "replace", replace)
+    lines = []
+
+    assert optional_tools.install_tools(["cuda12"], lines.append) == 1
+    assert lines[-1].startswith(f"[failed] cuda12: {target} is in use, so it wasn't replaced. Close OpenCut")
+    assert optional_tools.cuda12_problems(str(target)) == ["nvidia-cudnn-cu12 is 9.1.0.70, not ==9.10.2.21"]
+    assert _leftover_staging(data_dir) == []
+
+
+def test_removing_cuda12_deletes_its_folder(cuda12):
+    target, _pip = cuda12
+    _write_cuda12(target)
+    lines = []
+
+    assert optional_tools.remove_tools(["cuda12"], lines.append) == 0
+    assert optional_tools.remove_tools(["cuda12"], lines.append) == 0
+    assert not target.exists()
+    assert lines == ["[ok] cuda12 is removed", "[ok] cuda12 wasn't installed"]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows won't delete a file that's open")
+def test_removing_a_cuda12_runtime_in_use_says_so(cuda12):
+    target, _pip = cuda12
+    _write_cuda12(target)
+    lines = []
+
+    with open(target / "nvidia" / "cudnn" / _LEAF / "cudnn64_9.dll", "rb"):
+        assert optional_tools.remove_tools(["cuda12"], lines.append) == 1
+    assert lines[-1].startswith(f"[failed] cuda12: 1 files in {target} couldn't be deleted. Close OpenCut")
+    assert "cudnn64_9.dll" in lines[-1]
+
+
+def test_a_packaged_server_names_its_own_cuda12_install():
+    from opencut import gpu_lanes
+
+    assert gpu_lanes.ct2_cuda12_runtime_command(frozen=True).endswith(" --install-tools cuda12")
+    assert "--target" in gpu_lanes.ct2_cuda12_runtime_command(frozen=False)

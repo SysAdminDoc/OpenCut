@@ -749,7 +749,7 @@ The cu132 (CUDA 13) build needs NVIDIA driver 580 or newer and a Turing or newer
 | Driver 525 or newer, GTX 900/10-series or Volta | `cu126` |
 | Driver older than 525, or no NVIDIA GPU | CPU build |
 
-faster-whisper's CTranslate2 is a CUDA 12 build. Next to a cu132 torch it runs in its own process and needs its CUDA 12 libraries in `%USERPROFILE%\.opencut\cuda12`. `install.py` prints the command, and the server log names it when they're missing. ONNX models follow the torch lane, with `onnxruntime-gpu>=1.27` on cu132 and `onnxruntime-gpu<1.27` on the CUDA 12 lanes. Settings still names the right build when an installed one has no kernels for your card.
+faster-whisper's CTranslate2 is a CUDA 12 build. Next to a cu132 torch it runs in its own process and needs its CUDA 12 libraries in `%USERPROFILE%\.opencut\cuda12`. With the Windows installer, run `OpenCut-Server.exe --install-tools cuda12` to download them (about 1.3 GB). From a checkout, `install.py` prints the pip command. The server log names the command when they're missing. ONNX models follow the torch lane, with `onnxruntime-gpu>=1.27` on cu132 and `onnxruntime-gpu<1.27` on the CUDA 12 lanes. Settings still names the right build when an installed one has no kernels for your card.
 
 GPU-heavy routes have built-in rate limiting (one GPU job at a time) and cancellation support. Choose the active CUDA adapter from the CEP or UXP Settings panel, or set `OPENCUT_GPU_INDEX` to a non-negative device index before starting the server. The selected adapter is reported by `/system/status`; invalid indexes return the available-device list instead of silently falling back.
 
