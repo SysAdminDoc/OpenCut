@@ -129,6 +129,14 @@ class TestHealthNeedsTheSecret:
         resp = client.get("/health", headers={"Origin": "https://studio.example"})
         assert resp.get_json().get("csrf_token")
 
+    @pytest.mark.parametrize("origin", ["null", "NULL", "null/", "file://", "file:///", "FILE:///", "file://host"])
+    def test_null_and_file_origins_stay_refused_even_when_listed(self, app, client, secret, monkeypatch, origin):
+        """The blocklist was checked before the trailing slash came off, so
+        ``file:///`` and ``null/`` matched a listed ``file://`` or ``null``."""
+        monkeypatch.setattr(app.config["OPENCUT"], "cors_origins", ["null", "file://", "file:///"])
+        resp = client.get("/health", headers={"Origin": origin})
+        assert "csrf_token" not in resp.get_json()
+
 
 class TestBootstrapHeaders:
     @pytest.mark.parametrize(

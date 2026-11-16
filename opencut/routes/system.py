@@ -219,7 +219,9 @@ def check_demucs_available():
 _caps_cache = {"data": None, "ts": 0.0}
 _caps_cache_lock = threading.Lock()
 _CAPS_CACHE_TTL = 30.0
-_CSRF_BOOTSTRAP_BLOCKED_ORIGINS = {"null", "file://"}
+def _bootstrap_origin_blocked(origin_key: str) -> bool:
+    """True for ``null`` and every ``file:`` origin, given lowercased with no trailing slash."""
+    return origin_key == "null" or origin_key.startswith("file:")
 
 
 def invalidate_caps_cache():
@@ -408,14 +410,16 @@ def _health_should_expose_csrf_token() -> bool:
     if _health_presents_auth_token():
         return True
     if origin:
-        origin_l = origin.lower()
+        origin_key = origin.lower().rstrip("/")
         try:
             configured = current_app.config["OPENCUT"].cors_origins or []
         except Exception:
             configured = []
         allowed = {str(o).strip().lower().rstrip("/") for o in configured}
         # The blocklist takes precedence, even over an (ill-advised) CORS entry.
-        if origin_l not in _CSRF_BOOTSTRAP_BLOCKED_ORIGINS and origin_l.rstrip("/") in allowed:
+        # It compares the same trimmed form as the allow list, or ``file:///``
+        # and ``null/`` would slip past it and match a listed entry.
+        if not _bootstrap_origin_blocked(origin_key) and origin_key in allowed:
             return True
         _record_bootstrap_withheld(origin, token_presented=bool(presented))
     # No Origin is a native client. They poll /health for liveness, so the
