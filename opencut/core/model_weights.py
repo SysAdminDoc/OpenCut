@@ -210,7 +210,7 @@ def _expand_path(path: str) -> str:
     return os.path.expandvars(os.path.expanduser(path))
 
 
-def _hf_cache_dir() -> str:
+def hf_cache_dir() -> str:
     """``huggingface_hub.constants.HF_HUB_CACHE``, worked out without importing it.
 
     ``/health`` reads weight readiness on every call, and importing
@@ -218,6 +218,8 @@ def _hf_cache_dir() -> str:
     down with a broken install). The precedence is huggingface_hub 1.28's:
     ``HF_HUB_CACHE``, the legacy ``HUGGINGFACE_HUB_CACHE``, ``HF_HOME/hub``,
     ``$XDG_CACHE_HOME/huggingface/hub``, then ``~/.cache/huggingface/hub``.
+    Every module that reads the Hub cache asks here, so none of them looks
+    somewhere the loaders don't.
     """
     cache_root = os.getenv("XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache"))
     hf_home = _expand_path(os.getenv("HF_HOME", os.path.join(cache_root, "huggingface")))
@@ -226,7 +228,7 @@ def _hf_cache_dir() -> str:
 
 
 def _hf_repo_dir(repo_id: str) -> str:
-    return os.path.join(_hf_cache_dir(), "models--" + repo_id.replace("/", "--"))
+    return os.path.join(hf_cache_dir(), "models--" + repo_id.replace("/", "--"))
 
 
 def _hf_snapshot_dir(model: HfModel) -> str:

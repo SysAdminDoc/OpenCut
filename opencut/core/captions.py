@@ -16,7 +16,7 @@ from ..errors import OpenCutError
 from ..helpers import _try_import, get_video_info
 from ..security import safe_bool
 from ..utils.config import CaptionConfig
-from . import transcript_cache
+from . import model_weights, transcript_cache
 from .asr_provenance import (
     ASRProvenance,
     apply_language_decision,
@@ -996,14 +996,8 @@ def _clear_model_cache(model_name: str):
     """Clear cached files for a specific whisper model to force re-download."""
     import shutil
 
-    # Resolve HF cache dir (respects HF_HOME / HUGGINGFACE_HUB_CACHE env vars)
-    hf_home = os.environ.get("HF_HOME", os.environ.get(
-        "HUGGINGFACE_HUB_CACHE",
-        os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"),
-    ))
-    # HF_HOME points to ~/.cache/huggingface; actual hub cache is inside /hub
-    if os.path.isdir(os.path.join(hf_home, "hub")):
-        hf_home = os.path.join(hf_home, "hub")
+    # faster-whisper loads through huggingface_hub's default cache.
+    hf_home = model_weights.hf_cache_dir()
 
     if not os.path.isdir(hf_home):
         return

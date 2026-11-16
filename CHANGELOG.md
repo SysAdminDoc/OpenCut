@@ -24,6 +24,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Fixed
 
+- When a Whisper model turns out corrupt, OpenCut deletes it from the folder faster-whisper actually loads it from before downloading it again. With `HF_HUB_CACHE` or `HUGGINGFACE_HUB_CACHE` set alongside `HF_HOME`, or with only `XDG_CACHE_HOME` set, it used to clear a different folder and load the broken copy again. Transcript provenance reads alignment model revisions from that same folder now.
 - `/health` no longer imports huggingface_hub to find out whether model weights are downloaded. It works out the Hub cache folder from the same environment variables huggingface_hub reads, so a broken huggingface_hub install can't take the server down there.
 - Capability discovery no longer stalls when a probed package starts a helper process. The helper kept the probe's output pipe open, so discovery sat out the whole probe timeout and then reported the wrong error. Each probe now runs in a Windows job object (its own process group elsewhere), and the whole tree is killed when the probe finishes or times out. A probe that prints without a trailing newline reports its result instead of reading as a crash, and `/shutdown` stops a running probe before the server exits.
 - The signed panel no longer stops at startup with `OpenCutWsBridgePort is not defined`. The v1.56.0 build left the live-updates port helper out of its bundle, so nothing in the panel got wired up. The build check now fails on any page script the bundle doesn't include.

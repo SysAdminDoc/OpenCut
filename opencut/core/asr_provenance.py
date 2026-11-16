@@ -9,6 +9,8 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any, Optional
 
+from . import model_weights
+
 ASR_PROVENANCE_SCHEMA_VERSION = 1
 
 ENGINE_ALIASES = {
@@ -126,11 +128,7 @@ def model_identity(
 
 
 def _hf_cache_root() -> Path:
-    explicit = os.environ.get("HUGGINGFACE_HUB_CACHE")
-    if explicit:
-        return Path(explicit).expanduser()
-    hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface")).expanduser()
-    return hf_home / "hub"
+    return Path(model_weights.hf_cache_dir())
 
 
 def cached_hf_revision(model_id: str) -> str:

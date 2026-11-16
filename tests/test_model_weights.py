@@ -33,7 +33,7 @@ def stores(monkeypatch, tmp_path):
     hub = tmp_path / "hub"
     deepface = tmp_path / "deepface" / ".deepface" / "weights"
     insightface = tmp_path / "insightface" / "buffalo_l"
-    monkeypatch.setattr(model_weights, "_hf_cache_dir", lambda: str(hub))
+    monkeypatch.setattr(model_weights, "hf_cache_dir", lambda: str(hub))
     monkeypatch.setenv("DEEPFACE_HOME", str(tmp_path / "deepface"))
     monkeypatch.setattr(model_weights, "insightface_model_dir", lambda name="buffalo_l": str(insightface))
     monkeypatch.delenv("DEEPFACE_BACKEND_ENGINE", raising=False)
@@ -614,7 +614,7 @@ def test_the_hub_cache_follows_huggingface_hubs_precedence(monkeypatch, tmp_path
     else:
         want = os.path.join(str(tmp_path), *expected)
 
-    assert os.path.normcase(os.path.normpath(model_weights._hf_cache_dir())) == os.path.normcase(os.path.normpath(want))
+    assert os.path.normcase(os.path.normpath(model_weights.hf_cache_dir())) == os.path.normcase(os.path.normpath(want))
 
 
 _CACHE_PAIR = """\
@@ -623,7 +623,7 @@ sys.path.insert(0, sys.argv[1])
 from huggingface_hub import constants
 from opencut.core import model_weights
 print("HF=" + constants.HF_HUB_CACHE)
-print("OC=" + model_weights._hf_cache_dir())
+print("OC=" + model_weights.hf_cache_dir())
 """
 
 
@@ -682,3 +682,55 @@ def test_health_never_imports_huggingface_hub(tmp_path):
     assert status == 200
     assert before is False, "something imported huggingface_hub before /health ran"
     assert after is False, "/health imported huggingface_hub"
+
+
+_HUB_CONFLICTS = [
+    ({"HF_HUB_CACHE": "{tmp}/new", "HF_HOME": "{tmp}/hf"}, ("new",), ("hf", "hub")),
+    ({"HUGGINGFACE_HUB_CACHE": "{tmp}/legacy", "HF_HOME": "{tmp}/hf"}, ("legacy",), ("hf", "hub")),
+    ({"XDG_CACHE_HOME": "{tmp}/xdg"}, ("xdg", "huggingface", "hub"), ("home", ".cache", "huggingface", "hub")),
+]
+
+
+def _hub_env(monkeypatch, tmp_path, env):
+    for name in _HF_ENV:
+        monkeypatch.delenv(name, raising=False)
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    for name, value in env.items():
+        monkeypatch.setenv(name, value.format(tmp=tmp_path))
+
+
+@pytest.mark.parametrize("env, real, decoy", _HUB_CONFLICTS)
+def test_asr_provenance_reads_the_hub_cache_the_loaders_use(monkeypatch, tmp_path, env, real, decoy):
+    """It skipped HF_HUB_CACHE and XDG_CACHE_HOME, so a transcript's alignment
+    revision came from a folder huggingface_hub never downloads into."""
+    from opencut.core import asr_provenance
+
+    _hub_env(monkeypatch, tmp_path, env)
+    for parts, revision in ((real, "1" * 40), (decoy, "2" * 40)):
+        ref = tmp_path.joinpath(*parts, "models--org--fake-aligner", "refs", "main")
+        ref.parent.mkdir(parents=True)
+        ref.write_text(revision, encoding="utf-8")
+
+    assert asr_provenance.cached_hf_revision("org/fake-aligner") == "1" * 40
+
+
+@pytest.mark.parametrize("env, real, decoy", _HUB_CONFLICTS)
+def test_clearing_a_corrupt_whisper_model_empties_the_cache_it_loads_from(monkeypatch, tmp_path, env, real, decoy):
+    """HF_HOME won over HF_HUB_CACHE and HUGGINGFACE_HUB_CACHE, so the retry
+    after a corrupt model.bin deleted a copy faster-whisper wasn't using and
+    loaded the broken one again."""
+    from opencut.core import captions
+
+    _hub_env(monkeypatch, tmp_path, env)
+    for parts in (real, decoy):
+        model = tmp_path.joinpath(*parts, "models--Systran--faster-whisper-base")
+        model.mkdir(parents=True)
+        (model / "model.bin").write_bytes(b"broken")
+
+    captions._clear_model_cache("base")
+
+    assert not tmp_path.joinpath(*real, "models--Systran--faster-whisper-base").exists()
+    assert tmp_path.joinpath(*decoy, "models--Systran--faster-whisper-base", "model.bin").exists()
