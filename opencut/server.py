@@ -1213,6 +1213,11 @@ def main():
             default=None,
             help="Remove optional tools, and what only they needed, then exit",
         )
+        parser.add_argument(
+            "--python-requirement",
+            action="store_true",
+            help="Print the Python that add-on installs need, then exit",
+        )
         parser.add_argument("--import-check", metavar="MODULE", default=None, help=argparse.SUPPRESS)
         parser.add_argument("--import-path", metavar="DIR", default=None, help=argparse.SUPPRESS)
         parser.add_argument(
@@ -1242,6 +1247,13 @@ def main():
             logger.removeHandler(_file_handler)
             _file_handler.close()
             return capability_probe.run_child(args.capability_probe)
+
+        if args.python_requirement:
+            from opencut.security import python_requirement
+
+            # The last line, so the installer builder can skip the startup banner.
+            print(python_requirement(), flush=True)
+            return 0
 
         if args.install_tools is not None or args.remove_tools is not None:
             from opencut.core import optional_tools

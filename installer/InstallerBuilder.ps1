@@ -186,6 +186,29 @@ if (Test-Path $distServer) {
     Copy-Item -Path $distServer -Destination (Join-Path $StagingDir "server") -Recurse
     $serverFiles = (Get-ChildItem (Join-Path $StagingDir "server") -Recurse -File).Count
     Write-Ok "  Server: $serverFiles files"
+
+    # The options page names the Python that edge-tts and mediapipe need, so
+    # ask the server that ships. Its data folder goes to a throwaway place.
+    $stagedServerExe = Join-Path $StagingDir "server\OpenCut-Server.exe"
+    $probeHome = Join-Path ([IO.Path]::GetTempPath()) ("opencut-build-" + [Guid]::NewGuid().ToString("N"))
+    $savedHome = $env:OPENCUT_HOME
+    try {
+        $env:OPENCUT_HOME = $probeHome
+        # Stdout only. Under 5.1 and "Stop", redirected stderr would end the build.
+        [string[]]$probeLines = & $stagedServerExe --python-requirement
+        $probeExit = $LASTEXITCODE
+    } finally {
+        $env:OPENCUT_HOME = $savedHome
+        if (Test-Path -LiteralPath $probeHome) { Remove-Item -LiteralPath $probeHome -Recurse -Force }
+    }
+    [string]$pythonRequirement = @($probeLines | Where-Object { $_ -and $_.Trim() }) | Select-Object -Last 1
+    if ($probeExit -ne 0 -or [string]::IsNullOrEmpty($pythonRequirement) -or
+        $pythonRequirement.Trim() -notmatch '^[A-Za-z0-9() -]{1,40} Python \d+\.\d+$') {
+        Write-Err "OpenCut-Server.exe --python-requirement exited $probeExit and printed '$pythonRequirement'"
+        exit 1
+    }
+    [IO.File]::WriteAllText((Join-Path $StagingDir "python-requirement.txt"), $pythonRequirement.Trim())
+    Write-Ok "  Add-on installs need $($pythonRequirement.Trim())"
 }
 
 # Copy ffmpeg

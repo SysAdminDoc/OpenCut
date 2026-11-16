@@ -26,6 +26,38 @@ public class DependencyInstaller
         return tool.Length > 0;
     }
 
+    /// <summary>
+    /// What <c>OpenCut-Server.exe --python-requirement</c> printed at build
+    /// time, such as "64-bit (x64) Python 3.13", at the payload's root.
+    /// </summary>
+    internal const string PythonRequirementEntry = "python-requirement.txt";
+
+    private static readonly System.Text.RegularExpressions.Regex PythonRequirementPattern =
+        new(@"^[A-Za-z0-9() -]{1,40} Python \d+\.\d+$");
+
+    /// <summary>The payload's Python requirement, or null when it's missing or malformed.</summary>
+    internal static string? ParsePythonRequirement(string? text)
+    {
+        var line = text?.Trim();
+        return line != null && PythonRequirementPattern.IsMatch(line) ? line : null;
+    }
+
+    internal static string ReadPythonRequirement() =>
+        ParsePythonRequirement(PayloadExtractor.ReadEntryText(Environment.ProcessPath, PythonRequirementEntry))
+        ?? "";
+
+    private static string PythonPhrase(string requirement) =>
+        requirement.Length > 0
+            ? $"{requirement} from python.org"
+            : "the Python version the OpenCut server runs, from python.org. The install log names it if it's missing";
+
+    internal static string OptionsCaption(string requirement) =>
+        "The OpenCut server installs these where it loads them and checks each one first. " +
+        $"auto-editor is a pinned download. edge-tts and mediapipe also need {PythonPhrase(requirement)}.";
+
+    internal static string OptionsHelpText(string requirement) =>
+        $"Installs the selected tools for the OpenCut server. edge-tts and mediapipe need {PythonPhrase(requirement)}.";
+
     internal static IReadOnlyList<string> BuildArguments(IEnumerable<string> tools) =>
         ["--install-tools", string.Join(",", tools.Distinct(StringComparer.OrdinalIgnoreCase))];
 

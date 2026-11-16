@@ -463,15 +463,25 @@ def _find_system_python() -> Optional[str]:
     return None
 
 
-def frozen_install_requirement() -> str:
-    """Why a packaged build can't install add-on packages, for user-facing errors."""
+def python_requirement() -> str:
+    """The Python an add-on install needs here, by python.org's installer name.
+
+    ``64-bit (x64) Python 3.13`` for the packaged Windows server. The WPF
+    installer shows what ``--python-requirement`` prints.
+    """
     tag = f"{sys.version_info[0]}.{sys.version_info[1]}"
     platform = sysconfig.get_platform()
     name = _INSTALLER_NAMES.get(platform, f"{struct.calcsize('P') * 8}-bit {platform}")
+    return f"{name} Python {tag}"
+
+
+def frozen_install_requirement() -> str:
+    """Why a packaged build can't install add-on packages, for user-facing errors."""
+    python = python_requirement()
     return (
-        f"The packaged OpenCut server runs {name} Python {tag} and loads add-on "
-        f"packages from {user_packages_dir()}, so installing them needs {name} "
-        f"Python {tag}. Install it from python.org, then try again."
+        f"The packaged OpenCut server runs {python} and loads add-on "
+        f"packages from {user_packages_dir()}, so installing them needs {python}. "
+        "Install it from python.org, then try again."
     )
 
 

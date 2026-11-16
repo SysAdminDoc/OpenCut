@@ -21,6 +21,11 @@ public partial class OptionsPage : Page
         InitializeComponent();
         _mainWindow = mainWindow;
         PathBox.Text = _mainWindow.Config.InstallPath;
+        // The Python the packaged server reported when this setup was built.
+        var python = DependencyInstaller.ReadPythonRequirement();
+        OptionalToolsCaption.Text = DependencyInstaller.OptionsCaption(python);
+        System.Windows.Automation.AutomationProperties.SetHelpText(
+            OptionalDepsCheck, DependencyInstaller.OptionsHelpText(python));
         Loaded += OnLoaded;
         _initialized = true;
     }

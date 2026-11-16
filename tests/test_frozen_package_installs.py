@@ -138,6 +138,34 @@ def test_the_missing_python_message_names_the_python_org_installer(monkeypatch, 
     assert f"needs {name} Python {TAG}. Install it from python.org" in security.frozen_install_requirement()
 
 
+@pytest.mark.parametrize(
+    "platform, name",
+    [("win-amd64", "64-bit (x64)"), ("win-arm64", "ARM64"), ("win32", "32-bit")],
+)
+def test_the_python_requirement_uses_the_python_org_installer_name(monkeypatch, platform, name):
+    monkeypatch.setattr(security.sysconfig, "get_platform", lambda: platform)
+    assert security.python_requirement() == f"{name} Python {TAG}"
+
+
+def test_the_server_prints_the_python_add_on_installs_need(tmp_path):
+    """The installer builder reads the last line and shows it on the options page."""
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env = dict(
+        os.environ,
+        OPENCUT_HOME=str(tmp_path),
+        PYTHONPATH=os.pathsep.join(filter(None, [repo, os.environ.get("PYTHONPATH")])),
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-m", "opencut.server", "--python-requirement"],
+        env=env, capture_output=True, text=True, encoding="utf-8", timeout=300,
+        stdin=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.strip().splitlines()[-1] == security.python_requirement()
+
+
 def test_the_packages_folder_follows_the_data_folder(monkeypatch, tmp_path):
     from opencut import helpers
 
