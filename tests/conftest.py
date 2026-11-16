@@ -3,10 +3,13 @@ Shared pytest fixtures for OpenCut integration tests.
 """
 
 import builtins
+import faulthandler
 import io
 import logging
 import os
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -140,10 +143,22 @@ def _isolate_optional_import_failures():
         helpers._IMPORT_FAILURES.clear()
 
 
-@pytest.fixture(autouse=True, scope="session")
-def _isolate_process_user_data_home(tmp_path_factory):
-    """Keep dynamically computed OpenCut paths inside one test-only home."""
-    isolated_home = str(tmp_path_factory.mktemp("opencut-home"))
+_session_home = ""
+_session_home_patch = None
+
+
+def pytest_configure(config):
+    """Fake ``~`` for the whole process before any test module is collected.
+
+    Several test modules import ``opencut.server`` at module level, and that
+    import creates the data folder, opens ``server.log`` and puts ``packages``
+    on ``sys.path``. Faked from a fixture, the home arrived after collection,
+    so every suite run logged into, and rotated, the developer's real
+    ``~/.opencut/server.log``.
+    """
+    global _session_home, _session_home_patch
+    _session_home = tempfile.mkdtemp(prefix="opencut-test-home-")
+    isolated_home = _session_home
     patch = pytest.MonkeyPatch()
     patch.setenv("HOME", isolated_home)
     real_expanduser = os.path.expanduser
@@ -156,7 +171,37 @@ def _isolate_process_user_data_home(tmp_path_factory):
         return real_expanduser(path)
 
     patch.setattr(os.path, "expanduser", isolated_expanduser)
-    _redirect_loaded_opencut_paths(patch, Path(isolated_home) / ".opencut")
+    _session_home_patch = patch
+
+
+def pytest_unconfigure(config):
+    global _session_home_patch
+    if _session_home_patch is None:
+        return
+    _session_home_patch.undo()
+    _session_home_patch = None
+    # The server's log handler and an armed crash reporter hold files in the
+    # fake home open, and Windows won't delete a folder with an open file in it.
+    root = os.path.normcase(_session_home)
+    opencut_logger = logging.getLogger("opencut")
+    for handler in list(opencut_logger.handlers):
+        filename = os.path.normcase(getattr(handler, "baseFilename", "") or "")
+        if filename.startswith(root):
+            opencut_logger.removeHandler(handler)
+            handler.close()
+    crash_reporter = sys.modules.get("opencut.crash_reporter")
+    stream = getattr(crash_reporter, "_faulthandler_stream", None)
+    if stream is not None and os.path.normcase(getattr(stream, "name", "")).startswith(root):
+        faulthandler.disable()
+        stream.close()
+    shutil.rmtree(_session_home, ignore_errors=True)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _isolate_process_user_data_home():
+    """Map paths an OpenCut module computed before the fake home into it."""
+    patch = pytest.MonkeyPatch()
+    _redirect_loaded_opencut_paths(patch, Path(_session_home) / ".opencut")
     try:
         yield
     finally:

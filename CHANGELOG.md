@@ -10,6 +10,10 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - An OTIOZ export with media bundling turned off no longer copies every source file into the bundle. It looked for OTIO's media policy in a module that never existed, quietly fell back to the default, and either packed the media in anyway or failed when a source wasn't a local file.
 - Setting `OPENCUT_HOME` now moves the server log, its rotated copies, `crash.log` and the add-on packages folder as well. They stayed in `~/.opencut` before, so a log export taken with `OPENCUT_HOME` set came back without the crash records.
 
+### Tests
+
+- Running the test suite no longer writes into your real `~/.opencut`. Five test modules load the server while pytest is still collecting, which was before the fake home folder went in, so every run logged into your real `server.log` and rotated your older entries out of it.
+
 ### Release builds
 
 - The installer's release composition now reads `opencut` from the checkout being packaged. It used to import whatever copy the build Python had installed, so a clean build environment failed with "No module named 'opencut'" and an editable install from another folder put that folder's code into the evidence.
