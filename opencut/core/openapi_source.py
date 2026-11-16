@@ -182,7 +182,11 @@ def _components(response_schemas: Dict[str, type]) -> dict:
                 "type": "apiKey",
                 "in": "header",
                 "name": "X-OpenCut-Token",
-                "description": "Token issued by GET /health; required on every mutation.",
+                "description": (
+                    "Required on every mutation. GET /health returns it only to a caller that "
+                    "sends the per-user bootstrap secret in X-OpenCut-Panel-Bootstrap, a valid "
+                    "X-OpenCut-Auth token, or an Origin listed in OPENCUT_CORS_ORIGINS."
+                ),
             }
         },
     }

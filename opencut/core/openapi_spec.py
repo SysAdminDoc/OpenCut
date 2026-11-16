@@ -264,8 +264,11 @@ def generate_spec(
                     "in": "header",
                     "name": "X-OpenCut-Token",
                     "description": (
-                        "CSRF token returned from ``GET /health``. "
-                        "Sent as a header on every mutating request."
+                        "CSRF token, sent as a header on every mutating request. "
+                        "``GET /health`` returns it only to a caller that sends the "
+                        "per-user bootstrap secret in ``X-OpenCut-Panel-Bootstrap``, a "
+                        "valid ``X-OpenCut-Auth`` token, or an Origin listed in "
+                        "``OPENCUT_CORS_ORIGINS``."
                     ),
                 },
             },
