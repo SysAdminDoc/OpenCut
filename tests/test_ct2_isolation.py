@@ -237,10 +237,11 @@ def test_a_failed_worker_raises_its_error(monkeypatch, tmp_path):
 
 
 def test_captions_hand_faster_whisper_to_the_worker_before_importing_it(monkeypatch, tmp_path):
+    from opencut import user_data
     from opencut.core import captions
 
-    monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    monkeypatch.setenv("HOME", str(tmp_path))
+    # The suite shares one fake home, where another test may have saved CPU mode.
+    monkeypatch.setattr(user_data, "OPENCUT_DIR", str(tmp_path))
     monkeypatch.setitem(sys.modules, "faster_whisper", None)  # importing it would raise
     monkeypatch.setattr(ct2_isolation, "should_isolate", lambda: True)
     calls = []
@@ -252,6 +253,33 @@ def test_captions_hand_faster_whisper_to_the_worker_before_importing_it(monkeypa
 
     assert result.segments[0].text == "hello there"
     assert calls and calls[0][0] == "clip.wav"
+
+
+class _ModelLoaded(Exception):
+    pass
+
+
+@pytest.mark.parametrize("saved", [{"cpu_mode": True, "_schema_version": 1}, {"device": "cpu"}])
+def test_cpu_mode_keeps_faster_whisper_on_the_cpu_in_this_process(monkeypatch, tmp_path, saved):
+    """``{"device": "cpu"}`` is the settings file from before ``cpu_mode``, and means the same."""
+    from opencut import user_data
+    from opencut.core import captions
+
+    monkeypatch.setattr(user_data, "OPENCUT_DIR", str(tmp_path))
+    (tmp_path / "whisper_settings.json").write_text(json.dumps(saved), encoding="utf-8")
+    loads = []
+
+    def whisper_model(name, **kwargs):
+        loads.append(kwargs)
+        raise _ModelLoaded(name)
+
+    monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=whisper_model))
+    monkeypatch.setattr(ct2_isolation, "should_isolate", lambda: True)
+    monkeypatch.setattr(ct2_isolation, "transcribe_in_child", lambda *_a: pytest.fail("used the worker"))
+
+    with pytest.raises(_ModelLoaded):
+        captions._transcribe_faster_whisper("clip.wav", CaptionConfig(model="tiny"))
+    assert [(kwargs["device"], kwargs["compute_type"]) for kwargs in loads] == [("cpu", "int8")]
 
 
 def test_the_server_flag_runs_the_worker(monkeypatch):

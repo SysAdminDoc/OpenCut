@@ -1231,17 +1231,15 @@ def _batched_pipeline(model):
 
 def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> TranscriptionResult:
     """Transcribe using faster-whisper (CTranslate2 backend)."""
-    # Check for forced CPU mode from settings
-    force_cpu = False
+    # CPU mode from the Whisper settings, through the loader so a legacy
+    # ``"device": "cpu"`` file counts too.
+    from opencut.user_data import ConfigSchemaVersionError, load_whisper_settings
+
     try:
-        settings_file = os.path.join(os.path.expanduser("~"), ".opencut", "whisper_settings.json")
-        if os.path.exists(settings_file):
-            import json as _json
-            with open(settings_file, "r", encoding="utf-8") as f:
-                settings = _json.load(f)
-                force_cpu = settings.get("cpu_mode", False)
-    except Exception:
-        pass
+        force_cpu = bool(load_whisper_settings().get("cpu_mode"))
+    except ConfigSchemaVersionError as exc:
+        logger.warning("Ignoring the Whisper settings: %s", exc)
+        force_cpu = False
 
     # CTranslate2 is a CUDA 12 build. Beside a CUDA 13 torch it gets a process
     # of its own, decided before faster_whisper is imported here (F465).
