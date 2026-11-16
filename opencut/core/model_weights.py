@@ -249,6 +249,12 @@ def _hf_repo_dir(repo_id: str) -> str:
     return os.path.join(hf_cache_dir(), "models--" + repo_id.replace("/", "--"))
 
 
+def addon_hf_repo_dir_names() -> frozenset:
+    """Lowercased Hub cache folder names of the add-on models (CrisperWhisper's
+    has "whisper" in it), which Whisper's cache clear must leave alone."""
+    return frozenset(os.path.basename(_hf_repo_dir(repo)).lower() for repo in _COMPONENT_HF.values())
+
+
 def _hf_snapshot_dir(model: HfModel) -> str:
     return os.path.join(_hf_repo_dir(model.repo_id), "snapshots", model.revision)
 

@@ -102,6 +102,49 @@ def test_whisper_clear_cache_skips_opencut_models_without_localappdata(client, c
     assert (cwd / "OpenCut" / "models").exists()
 
 
+def test_whisper_clear_cache_keeps_the_crisperwhisper_add_on(client, csrf_token, monkeypatch, tmp_path):
+    """Any Hub folder with "whisper" in its name was planned, so clearing
+    Whisper's cache also deleted CrisperWhisper, a separate add-on."""
+    _system_routes, paths = _isolate_whisper_caches(monkeypatch, tmp_path)
+    crisper = paths["hf_whisper"].parent / "models--nyrahealth--CrisperWhisper"
+    crisper.mkdir()
+    (crisper / "model.safetensors").write_bytes(b"crisper")
+    preview = client.post("/whisper/clear-cache", json={"dry_run": True}, headers=_headers(csrf_token))
+    assert str(crisper) not in {entry["path"] for entry in preview.get_json()["plan"]}
+
+    response = client.post(
+        "/whisper/clear-cache",
+        json={"confirm_token": preview.get_json()["confirm_token"]},
+        headers=_headers(csrf_token),
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["success"] is True
+    assert not paths["hf_whisper"].exists()
+    assert crisper.exists()
+
+
+def test_whisper_clear_cache_skips_relative_paths_from_an_empty_xdg_cache_home(
+    client, csrf_token, monkeypatch, tmp_path,
+):
+    """XDG_CACHE_HOME="" made both caches cwd-relative ("whisper" and
+    "huggingface/hub"), so the clear planned folders under the server's cwd."""
+    _isolate_whisper_caches(monkeypatch, tmp_path)
+    monkeypatch.delenv("LOCALAPPDATA", raising=False)
+    monkeypatch.setenv("XDG_CACHE_HOME", "")
+    cwd = tmp_path / "cwd"
+    stray_whisper = cwd / "whisper"
+    stray_hub_repo = cwd / "huggingface" / "hub" / "models--openai--whisper-base"
+    for directory in (stray_whisper, stray_hub_repo):
+        directory.mkdir(parents=True)
+        (directory / "model.bin").write_bytes(b"x")
+    monkeypatch.chdir(cwd)
+
+    response = client.post("/whisper/clear-cache", json={"dry_run": True}, headers=_headers(csrf_token))
+
+    assert response.get_json()["plan"] == []
+
+
 def test_models_list_and_delete_follow_hf_hub_cache_and_torch_home(client, csrf_token, monkeypatch, tmp_path):
     """/models/list read ~/.cache/huggingface/hub and $TORCH_HOME/checkpoints,
     and /models/delete refused anything outside ~/.cache, so a moved cache

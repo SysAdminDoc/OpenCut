@@ -182,17 +182,19 @@ def _build_whisper_cache_plan() -> dict:
         ("huggingface-whisper", model_weights.hf_cache_dir()),
         ("whisper-cache", model_weights.whisper_cache_dir()),
     ]
-    # Unset off Windows; joined anyway it would be a path relative to the cwd.
     local_appdata = os.environ.get("LOCALAPPDATA", "")
     if local_appdata:
         cache_paths.append(("opencut-models", os.path.join(local_appdata, "OpenCut", "models")))
+    addon_repos = model_weights.addon_hf_repo_dir_names()
     for category, cache_dir in cache_paths:
-        if not cache_dir or not os.path.exists(cache_dir):
+        # An empty XDG_CACHE_HOME or HF_HOME (or LOCALAPPDATA off Windows)
+        # leaves a path relative to whatever folder the server started in.
+        if not cache_dir or not os.path.isabs(cache_dir) or not os.path.exists(cache_dir):
             continue
         if category == "huggingface-whisper":
             try:
                 for item in os.listdir(cache_dir):
-                    if "whisper" in item.lower():
+                    if "whisper" in item.lower() and item.lower() not in addon_repos:
                         entries.append(_cache_plan_entry(os.path.join(cache_dir, item), category=category))
             except OSError as exc:
                 errors.append(f"{cache_dir}: {exc}")
