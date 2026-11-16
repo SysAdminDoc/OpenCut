@@ -221,7 +221,8 @@ def check_demucs_available():
 # The cheap capability facts only change with settings; cache them for 30 s.
 # Optional native stacks are probed in a child process instead
 # (opencut.core.capability_probe), so nothing here can crash the server.
-_caps_cache = {"data": None, "ts": 0.0}
+# "gen" counts forgets, so a build that started before one isn't stored.
+_caps_cache = {"data": None, "ts": 0.0, "gen": 0}
 _caps_cache_lock = threading.Lock()
 _CAPS_CACHE_TTL = 30.0
 def _bootstrap_origin_blocked(origin_key: str) -> bool:
@@ -238,6 +239,7 @@ def forget_capability_facts():
     with _caps_cache_lock:
         _caps_cache["data"] = None
         _caps_cache["ts"] = 0.0
+        _caps_cache["gen"] += 1
 
 
 def invalidate_caps_cache():
@@ -316,10 +318,14 @@ def _cached_core_capabilities():
     with _caps_cache_lock:
         if _caps_cache["data"] is not None and (time.time() - _caps_cache["ts"]) < _CAPS_CACHE_TTL:
             return _caps_cache["data"]
+        generation = _caps_cache["gen"]
     caps = _build_capabilities()
     with _caps_cache_lock:
-        _caps_cache["data"] = caps
-        _caps_cache["ts"] = time.time()
+        # A setting saved while this built may not be in it. Answer with it
+        # once, but don't keep it for 30 s over the save.
+        if _caps_cache["gen"] == generation:
+            _caps_cache["data"] = caps
+            _caps_cache["ts"] = time.time()
     return caps
 
 

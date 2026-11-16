@@ -28,6 +28,31 @@ def test_whisper_cpu_mode_reaches_health_on_the_next_poll(client, csrf_token):
         assert _caps(client)["whisper_cpu_mode"] is cpu_mode
 
 
+def test_a_health_build_that_overlaps_a_save_is_not_kept(client, csrf_token, monkeypatch):
+    """The server is threaded. A /health that read the settings before a save
+    finished building after it, and stored the old value for 30 s over it."""
+    from opencut.routes import system
+
+    resp = client.post("/whisper/settings", data=json.dumps({"cpu_mode": False}),
+                       headers=csrf_headers(csrf_token))
+    assert resp.status_code == 200
+    real_build = system._build_capabilities
+
+    def build_across_a_save():
+        caps = real_build()
+        monkeypatch.setattr(system, "_build_capabilities", real_build)
+        # What POST /whisper/settings does, landing mid-build.
+        settings = system.load_whisper_settings()
+        settings["cpu_mode"] = True
+        system.save_whisper_settings(settings)
+        system.forget_capability_facts()
+        return caps
+
+    monkeypatch.setattr(system, "_build_capabilities", build_across_a_save)
+    assert _caps(client)["whisper_cpu_mode"] is False  # what that request read
+    assert _caps(client)["whisper_cpu_mode"] is True
+
+
 def test_social_connect_and_disconnect_reach_health_on_the_next_poll(
     client, csrf_token, monkeypatch,
 ):
