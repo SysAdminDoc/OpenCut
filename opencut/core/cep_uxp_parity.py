@@ -120,12 +120,14 @@ ROUTE_UXP_PENDING: Mapping[str, str] = {
     "/favorites": "automation",
     "/favorites/save": "automation",
     "/presets": "automation",
+    "/presets/delete": "automation",
     "/presets/save": "automation",
     "/templates/apply": "automation",
     "/templates/list": "automation",
     "/templates/save": "automation",
     "/workflow/approve": "automation",
     "/workflow/compile": "automation",
+    "/workflow/delete": "automation",
     "/workflow/presets": "automation",
     "/workflow/run": "automation",
     "/workflow/save": "automation",
@@ -142,9 +144,12 @@ ROUTE_UXP_PENDING: Mapping[str, str] = {
     "/journal/clear": "plumbing",
     "/journal/list": "plumbing",
     "/llm/test": "plumbing",
+    "/logs/clear": "plumbing",
+    "/models/delete": "plumbing",
     "/models/list": "plumbing",
     "/outputs/recent": "plumbing",
     "/preflight": "plumbing",
+    "/queue/clear": "plumbing",
     "/queue/list": "plumbing",
     "/queue/replay": "plumbing",
     "/settings/auto-zoom": "plumbing",
@@ -217,7 +222,7 @@ ROUTE_UXP_PENDING: Mapping[str, str] = {
 }
 
 # The gate refuses to let this grow. Lower it whenever a route is ported.
-UXP_PENDING_FLOOR = 113
+UXP_PENDING_FLOOR = 118
 
 
 _CEP_ROUTE_PATTERNS = (
@@ -225,6 +230,9 @@ _CEP_ROUTE_PATTERNS = (
     re.compile(
         r"\bapi\s*\(\s*[\"'](?:GET|POST|PUT|PATCH|DELETE)[\"']\s*,\s*[\"'](/[^\"']+)"
     ),
+    # Deletes go through runDestructiveAction({ method, path, ... }), which
+    # previews the plan before it calls api() with the same path.
+    re.compile(r"\brunDestructiveAction\s*\(\s*\{[^{}]*?\bpath\s*:\s*[\"'](/[^\"']+)"),
 )
 _UXP_ROUTE_PATTERNS = (
     re.compile(

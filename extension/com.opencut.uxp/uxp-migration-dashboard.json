@@ -47,7 +47,7 @@
       "passes": true,
       "priority_missing": []
     },
-    "pending_floor": 113,
+    "pending_floor": 118,
     "pending_reasons": {
       "analysis": "Virality, assistant, and context analysis surfaces. Read-only scoring the UXP panel has no view for yet.",
       "audio": "Audio generation, repair, and effects. Needs the UXP audio surface, which is behind the cut and caption work in the migration order.",
@@ -815,6 +815,28 @@
         "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
         "pending_family": "plumbing",
         "priority": false,
+        "route": "/logs/clear",
+        "status": "pending",
+        "uxp_sources": []
+      },
+      {
+        "cep_sources": [
+          "extension/com.opencut.panel/client/main.js"
+        ],
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
+        "priority": false,
+        "route": "/models/delete",
+        "status": "pending",
+        "uxp_sources": []
+      },
+      {
+        "cep_sources": [
+          "extension/com.opencut.panel/client/main.js"
+        ],
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
+        "priority": false,
         "route": "/models/list",
         "status": "pending",
         "uxp_sources": []
@@ -898,6 +920,17 @@
         "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
         "pending_family": "automation",
         "priority": false,
+        "route": "/presets/delete",
+        "status": "pending",
+        "uxp_sources": []
+      },
+      {
+        "cep_sources": [
+          "extension/com.opencut.panel/client/main.js"
+        ],
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
+        "priority": false,
         "route": "/presets/save",
         "status": "pending",
         "uxp_sources": []
@@ -914,6 +947,17 @@
         "uxp_sources": [
           "extension/com.opencut.uxp/main.js"
         ]
+      },
+      {
+        "cep_sources": [
+          "extension/com.opencut.panel/client/main.js"
+        ],
+        "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
+        "pending_family": "plumbing",
+        "priority": false,
+        "route": "/queue/clear",
+        "status": "pending",
+        "uxp_sources": []
       },
       {
         "cep_sources": [
@@ -2012,6 +2056,17 @@
         "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
         "pending_family": "automation",
         "priority": false,
+        "route": "/workflow/delete",
+        "status": "pending",
+        "uxp_sources": []
+      },
+      {
+        "cep_sources": [
+          "extension/com.opencut.panel/client/main.js"
+        ],
+        "justification": "Workflow, template, preset, and batch surfaces. These compose other routes, so they port after the routes they call.",
+        "pending_family": "automation",
+        "priority": false,
         "route": "/workflow/presets",
         "status": "pending",
         "uxp_sources": []
@@ -2101,18 +2156,18 @@
       }
     ],
     "summary": {
-      "cep_route_count": 173,
-      "coverage_percent": 34.7,
+      "cep_route_count": 178,
+      "coverage_percent": 33.7,
       "covered": 59,
       "excluded": 1,
       "missing": 0,
-      "pending": 113,
+      "pending": 118,
       "pending_by_family": {
         "analysis": 7,
         "audio": 12,
-        "automation": 17,
+        "automation": 19,
         "delivery": 3,
-        "plumbing": 29,
+        "plumbing": 32,
         "timeline": 3,
         "transcript": 10,
         "video-effects": 19,

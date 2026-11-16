@@ -320,3 +320,41 @@ def test_f260_release_smoke_runs_dashboard_guardrail():
     source = _read(RELEASE_SMOKE)
 
     assert "tests/test_uxp_migration_dashboard.py" in source
+
+
+def _destructive_pattern():
+    from opencut.core.cep_uxp_parity import _CEP_ROUTE_PATTERNS
+
+    (pattern,) = [p for p in _CEP_ROUTE_PATTERNS if "runDestructiveAction" in p.pattern]
+    return pattern
+
+
+def test_the_cep_scan_reads_routes_behind_the_destructive_action_preview():
+    from opencut.core.cep_uxp_parity import _CEP_ROUTE_PATTERNS, _extract_routes
+
+    source = """
+        runDestructiveAction({
+            method: "POST",
+            path: "/whisper/clear-cache",
+            payload: {},
+        });
+        runDestructiveAction({ method: "POST", path: "/models/delete", payload: { path: path } });
+        api("GET", "/models/list" + "?scan=" + scan, null, done);
+        var unrelated = { path: "/not/a/route" };
+    """
+
+    assert _extract_routes(source, _CEP_ROUTE_PATTERNS) == {
+        "/whisper/clear-cache",
+        "/models/delete",
+        "/models/list",
+    }
+
+
+def test_every_destructive_action_in_the_cep_panel_names_a_route_the_scan_sees():
+    import re
+
+    source = _read(REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "main.js")
+    calls = re.findall(r"\brunDestructiveAction\s*\(\s*\{", source)
+
+    assert calls
+    assert len(_destructive_pattern().findall(source)) == len(calls)

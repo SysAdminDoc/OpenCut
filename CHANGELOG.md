@@ -32,6 +32,8 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Fixed
 
+- The UXP panel's migration dashboard now lists the CEP panel's delete and clear actions (Clear cache, deleting a model, preset or workflow, and clearing the queue or the logs) as still to port. It had missed every action that goes through the delete preview.
+
 - A cache delete (Clear cache, the Whisper reinstall, or deleting one from the model list) now carries on past a file that's still open, and Clear cache and the model list say what stayed. Before, it stopped at the first file Windows had locked, so one model a running job had loaded left the rest of the folder on disk. The model list catches up straight away, too. It reloads by itself after Clear cache and after you delete a model, even one that stopped partway or was already gone, and Refresh after the reinstall shows what's left. Before, it kept showing the old models and sizes for up to 5 minutes.
 - The Clear Cache button in the panel's Settings works again. The server wants a preview before it deletes anything, and the button never asked for one, so it said the clear failed every time there was something to clear. It now shows the folders it's about to delete and their size, then asks you to confirm like the other deletes do. When a model delete stops partway, the error now names what stayed instead of an HTTP status.
 - Clear cache and deleting a model no longer fail over a file they couldn't measure, such as a broken link in the Hugging Face cache. The delete took that file along with its folder, but the panel still said the clear or the delete had failed.
