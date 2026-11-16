@@ -262,13 +262,20 @@ function Install-PinnedFFmpeg {
             $staged[$binaryName] = $found[0].FullName
         }
 
+        # Uninstall removes the folder only when this marker is in it, so mark
+        # a folder this function creates or marked before, and never a
+        # developer's ffmpeg\ release payload that was already there.
+        $marker = Join-Path $Destination ".opencut-installed"
+        $ownsDestination = (-not (Test-Path -LiteralPath $Destination)) -or
+            (Test-Path -LiteralPath $marker) -or
+            (@(Get-ChildItem -LiteralPath $Destination -Force).Count -eq 0)
         New-Item -ItemType Directory -Path $Destination -Force | Out-Null
         foreach ($binaryName in $staged.Keys) {
             Copy-Item -LiteralPath $staged[$binaryName] -Destination (Join-Path $Destination $binaryName) -Force
         }
-        # Uninstall removes the folder only when this marker says the
-        # installer created it, so a developer's release payload survives.
-        Set-Content -LiteralPath (Join-Path $Destination ".opencut-installed") -Value $ArchiveUrl -Encoding ASCII
+        if ($ownsDestination) {
+            Set-Content -LiteralPath $marker -Value $ArchiveUrl -Encoding ASCII
+        }
     } finally {
         Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
     }

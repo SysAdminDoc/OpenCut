@@ -203,6 +203,38 @@ def test_swapped_binary_inside_a_matching_archive_is_refused(tmp_path, archive_s
     assert not destination.exists()
 
 
+@windows_only
+@pytest.mark.parametrize(
+    ("existing", "marked"),
+    [
+        ({"ffmpeg.exe": b"MZ dev build", "LICENSE.txt": b"payload"}, False),
+        ({}, True),
+        ({".opencut-installed": b"http://earlier/run.7z"}, True),
+    ],
+    ids=["developer-payload", "empty-folder", "earlier-install"],
+)
+def test_only_a_folder_the_installer_owns_gets_the_uninstall_marker(
+    tmp_path, archive_server, existing, marked
+):
+    served, base = archive_server
+    archive = _build_archive(served, {"ffmpeg.exe": FFMPEG, "ffprobe.exe": FFPROBE})
+    destination = tmp_path / "checkout" / "ffmpeg"
+    destination.mkdir(parents=True)
+    for name, payload in existing.items():
+        (destination / name).write_bytes(payload)
+
+    completed = _run_install(
+        tmp_path, f"{base}/{archive.name}", _sha(archive.read_bytes()),
+        _sha(FFMPEG), _sha(FFPROBE), destination,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert (destination / "ffmpeg.exe").read_bytes() == FFMPEG
+    assert (destination / ".opencut-installed").is_file() is marked
+    if "LICENSE.txt" in existing:
+        assert (destination / "LICENSE.txt").read_bytes() == b"payload"
+
+
 def _decoy(folder: Path, name: str) -> Path:
     """An archive that matches its hash but can't be unpacked."""
     decoy = folder / name
