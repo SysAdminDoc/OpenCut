@@ -15,6 +15,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import tomllib
 from pathlib import Path
 
@@ -238,6 +239,67 @@ def test_a_failed_pip_run_is_not_import_checked(machine, data_dir):
     assert _leftover_staging(data_dir) == []
 
 
+def _tree(root):
+    return {
+        p.relative_to(root).as_posix(): p.read_bytes() if p.is_file() else None
+        for p in sorted(root.rglob("*"))
+    }
+
+
+def test_a_merge_that_stops_partway_puts_the_old_install_back(machine, data_dir, monkeypatch):
+    packages, install = machine
+    install()
+    before = _tree(packages)
+    real_replace = os.replace
+
+    def replace(src, dst):
+        # bin/edge-tts.exe and edge_tts are already in by now (staged entries go in sorted)
+        if os.path.basename(dst) == "edge_tts-7.3.0.dist-info":
+            raise PermissionError(13, "The process cannot access the file", dst)
+        real_replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", replace)
+
+    with pytest.raises(RuntimeError, match=r"The copy that was there is back\. If OpenCut is running"):
+        optional_tools.install_pip_tool("edge-tts", report=lambda _line: None)
+
+    assert _tree(packages) == before
+    assert sorted(p.name for p in data_dir.iterdir()) == ["packages"]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows won't move a folder with an open file in it")
+def test_a_file_the_running_server_holds_open_leaves_the_old_install_whole(machine, data_dir):
+    packages, install = machine
+    install()
+    before = _tree(packages)
+
+    with open(packages / "edge_tts" / "old.py", "rb"):
+        with pytest.raises(RuntimeError, match="close it and Premiere Pro"):
+            optional_tools.install_pip_tool("edge-tts", report=lambda _line: None)
+
+    assert _tree(packages) == before
+    assert sorted(p.name for p in data_dir.iterdir()) == ["packages"]
+
+
+def test_folders_a_killed_install_left_behind_are_cleared_once_stale(machine, data_dir):
+    _packages, install = machine
+    install()
+    two_hours_ago = time.time() - 2 * 3600
+    for name in (".edge-tts-staging-k1ll3d", ".mediapipe-staging-0ld", ".packages-replaced-k1ll3d"):
+        (data_dir / name / "edge_tts").mkdir(parents=True)
+        (data_dir / name / "edge_tts" / "__init__.py").write_text("", encoding="utf-8")
+        os.utime(data_dir / name, (two_hours_ago, two_hours_ago))
+    (data_dir / ".edge-tts-staging-running").mkdir()  # another run that's still going
+    (data_dir / "models").mkdir()
+    os.utime(data_dir / "models", (two_hours_ago, two_hours_ago))
+
+    optional_tools.install_pip_tool("edge-tts", report=lambda _line: None)
+
+    assert sorted(p.name for p in data_dir.iterdir()) == [
+        ".edge-tts-staging-running", "models", "packages",
+    ]
+
+
 def test_no_matching_python_names_the_one_to_install(monkeypatch, data_dir):
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(security, "_find_system_python", lambda: None)
@@ -326,4 +388,22 @@ def test_each_tool_ends_with_one_status_line_and_a_failure_does_not_stop_the_res
         "[ok] edge-tts is ready",
         "[failed] mediapipe: no wheel",
         f"[ok] auto-editor {optional_tools.AUTO_EDITOR_VERSION} is in C:/data/bin/auto-editor.exe",
+    ]
+
+
+def test_a_failure_with_a_multi_line_reason_stays_on_its_status_line(monkeypatch):
+    lines = []
+
+    def pip_tool(name, report):
+        raise RuntimeError(
+            "pip couldn't install mediapipe: ERROR: Could not find a version\r\n"
+            "  that satisfies the requirement\nERROR: No matching distribution"
+        )
+
+    monkeypatch.setattr(optional_tools, "install_pip_tool", pip_tool)
+
+    assert optional_tools.install_tools(["mediapipe"], lines.append) == 1
+    assert lines == [
+        "[failed] mediapipe: pip couldn't install mediapipe: ERROR: Could not find a version"
+        " that satisfies the requirement ERROR: No matching distribution"
     ]

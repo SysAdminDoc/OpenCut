@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from typing import Callable, Iterable
 
 logger = logging.getLogger("opencut")
@@ -46,6 +47,9 @@ TOOL_NAMES: tuple[str, ...] = ("auto-editor", *PIP_TOOLS)
 _PIP_TIMEOUT = 900
 _IMPORT_TIMEOUT = 300
 _MODULE_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
+_STAGING_RE = re.compile(r"\.[a-z0-9-]+-staging-[^\\/]+")
+_ASIDE_PREFIX = ".packages-replaced-"
+_LEFTOVER_AGE = 3600  # seconds; longer than any pip run plus its import check
 
 Report = Callable[[str], None]
 
@@ -208,28 +212,100 @@ def _remove(path: str) -> None:
         os.remove(path)
 
 
+def _put_back(placed: list[str], set_aside: list[tuple[str, str]]) -> bool:
+    """Undo a merge that stopped partway. True when every old entry is back."""
+    complete = True
+    for path in reversed(placed):
+        try:
+            _remove(path)
+        except OSError as exc:
+            complete = False
+            logger.warning("Couldn't take back %s after a failed merge: %s", path, exc)
+    for original, holder in reversed(set_aside):
+        try:
+            os.replace(holder, original)
+        except OSError as exc:
+            complete = False
+            logger.warning("Couldn't put %s back, the old copy is in %s: %s", original, holder, exc)
+    return complete
+
+
 def merge_staged_packages(staging: str, packages: str) -> None:
     """Move a ``pip install --target`` folder's contents into ``packages``.
 
     Same-named entries are replaced, like ``pip --target --upgrade``, and an
     older ``.dist-info`` of a replaced project goes too, which pip leaves
     behind. ``bin`` merges file by file so another tool's scripts stay.
+
+    Whatever gets replaced is moved aside first and deleted only once every
+    new entry is in place. When a move fails, say because a running server
+    has one of the old files loaded, the old entries go back, so a working
+    install never ends up half replaced.
     """
     staged = sorted(os.listdir(staging))
     replaced = {name for name in map(_dist_name, staged) if name}
-    for entry in os.listdir(packages):
-        if entry not in staged and _dist_name(entry) in replaced:
-            _remove(os.path.join(packages, entry))
-    for entry in staged:
-        source = os.path.join(staging, entry)
-        target = os.path.join(packages, entry)
-        if entry == "bin" and os.path.isdir(source) and os.path.isdir(target):
-            for script in os.listdir(source):
-                os.replace(os.path.join(source, script), os.path.join(target, script))
+    aside = tempfile.mkdtemp(prefix=_ASIDE_PREFIX, dir=os.path.dirname(packages))
+    set_aside: list[tuple[str, str]] = []
+    placed: list[str] = []
+
+    def move_aside(path: str) -> None:
+        holder = os.path.join(aside, str(len(set_aside)))
+        os.replace(path, holder)
+        set_aside.append((path, holder))
+
+    try:
+        for entry in os.listdir(packages):
+            if entry != "bin" and (entry in staged or _dist_name(entry) in replaced):
+                move_aside(os.path.join(packages, entry))
+        for entry in staged:
+            source = os.path.join(staging, entry)
+            target = os.path.join(packages, entry)
+            if entry == "bin" and os.path.isdir(source) and os.path.isdir(target):
+                for script in os.listdir(source):
+                    script_target = os.path.join(target, script)
+                    if os.path.lexists(script_target):
+                        move_aside(script_target)
+                    os.replace(os.path.join(source, script), script_target)
+                    placed.append(script_target)
+                continue
+            if os.path.lexists(target):
+                move_aside(target)
+            os.replace(source, target)
+            placed.append(target)
+    except BaseException as exc:
+        restored = _put_back(placed, set_aside)
+        if restored:
+            shutil.rmtree(aside, ignore_errors=True)
+        if isinstance(exc, OSError):
+            where = "is back" if restored else f"is in {aside}"
+            raise RuntimeError(
+                f"couldn't replace what's in {packages} ({exc}). The copy that was there "
+                f"{where}. If OpenCut is running, close it and Premiere Pro, then try again."
+            ) from exc
+        raise
+    shutil.rmtree(aside, ignore_errors=True)
+
+
+def _sweep_leftovers(data_dir: str) -> None:
+    """Delete staging and set-aside folders a killed run left behind.
+
+    The installer kills ``--install-tools`` when it runs past its timeout, and
+    then no cleanup runs. Folders younger than :data:`_LEFTOVER_AGE` may belong
+    to a run that's still going, so they stay.
+    """
+    cutoff = time.time() - _LEFTOVER_AGE
+    try:
+        entries = list(os.scandir(data_dir))
+    except OSError:
+        return
+    for entry in entries:
+        if not (entry.name.startswith(_ASIDE_PREFIX) or _STAGING_RE.fullmatch(entry.name)):
             continue
-        if os.path.lexists(target):
-            _remove(target)
-        os.replace(source, target)
+        try:
+            if entry.is_dir(follow_symlinks=False) and entry.stat().st_mtime < cutoff:
+                shutil.rmtree(entry.path)
+        except OSError as exc:
+            logger.debug("Left %s in place: %s", entry.path, exc)
 
 
 def install_pip_tool(name: str, report: Report = _print) -> None:
@@ -241,6 +317,7 @@ def install_pip_tool(name: str, report: Report = _print) -> None:
     python = security.install_python()
     packages = security.user_packages_dir()
     os.makedirs(packages, exist_ok=True)
+    _sweep_leftovers(os.path.dirname(packages))
     staging = tempfile.mkdtemp(prefix=f".{name}-staging-", dir=os.path.dirname(packages))
     try:
         report(f"Installing {requirement} with {python}...")
@@ -292,6 +369,7 @@ def install_tools(names: Iterable[str], report: Report = _print) -> int:
                 report(f"[ok] {name} is ready")
         except Exception as exc:  # noqa: BLE001 - report it and go on to the next tool
             logger.warning("Optional tool %s was not installed: %s", name, exc)
-            report(f"[failed] {name}: {exc}")
+            # One line: the installer gives only a status line's first line its level.
+            report(f"[failed] {name}: {' '.join(str(exc).split())}")
             failed += 1
     return 1 if failed else 0
