@@ -761,6 +761,7 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
         ],
       };
       if (method === "GET" && Object.hasOwn(listFixtures, url.pathname)) {
+        if (url.pathname === "/models/list") capturedRequests.push({ modelList: true });
         return route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -870,6 +871,19 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
             }),
           });
         }
+        if (url.pathname === "/models/delete" && backendFixtures.modelDeletePartial) {
+          // What the server answers when a locked file stopped the delete.
+          return route.fulfill({
+            status: 500,
+            contentType: "application/json",
+            body: JSON.stringify({
+              success: false,
+              dry_run: false,
+              deleted: [],
+              errors: [`${body.path}: 1 item(s) couldn't be deleted (first locked.bin: in use)`],
+            }),
+          });
+        }
         const successPayloads = {
           "/presets/delete": { success: true, deleted: body.name },
           "/models/delete": { success: true, deleted: [body.path] },
@@ -918,11 +932,62 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
       url.pathname === "/whisper/clear-cache" &&
       route.request().method() === "POST"
     ) {
-      capturedRequests.push({ clearWhisperCache: true });
+      // Like the server: a dry run returns the signed plan, and only its
+      // token deletes anything. Anything else is a 409.
+      const body = route.request().postDataJSON() || {};
+      const token = "whisper-clear-cache-token";
+      const target = {
+        path: "C:/Users/editor/.cache/whisper",
+        category: "whisper-cache",
+        bytes: 145000000,
+      };
+      if (body.dry_run) {
+        capturedRequests.push({ clearWhisperCache: true, dryRun: true });
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            dry_run: true,
+            plan: [target],
+            destructive_plan: {
+              operation: "whisper.clear_cache",
+              records: [],
+              targets: [target],
+              reversible: false,
+              metadata: { route: url.pathname },
+              confirm_token: token,
+            },
+            confirm_token: token,
+            total_bytes: target.bytes,
+            cleared: [],
+            errors: [],
+          }),
+        });
+      }
+      capturedRequests.push({
+        clearWhisperCache: true,
+        confirmToken: body.confirm_token || "",
+      });
+      if (body.confirm_token !== token) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: "confirm_token required",
+            code: "DESTRUCTIVE_CONFIRMATION_REQUIRED",
+          }),
+        });
+      }
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ ok: true, cleared: [] }),
+        body: JSON.stringify({
+          success: true,
+          dry_run: false,
+          cleared: [target.path],
+          errors: [],
+        }),
       });
     }
     if (
@@ -1990,19 +2055,54 @@ test("CEP confirms before restarting the backend or clearing the model cache", a
   await clearCache.click();
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("Clear the Whisper model cache?");
+  // The dialog shows what the server's dry run planned to delete.
+  await expect(dialog).toContainText("145000000 bytes");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
-  expect(
-    capturedRequests.filter((entry) => entry.clearWhisperCache),
-  ).toEqual([]);
+  const clearRuns = () =>
+    capturedRequests.filter((entry) => entry.clearWhisperCache && !entry.dryRun);
+  expect(clearRuns()).toEqual([]);
 
+  // The server refuses a clear without the dry run's token, which the
+  // panel used to leave out, so the button always said it failed.
   await clearCache.click();
   await dialog.getByRole("button", { name: "Clear Cache" }).click();
-  await expect
-    .poll(
-      () => capturedRequests.filter((entry) => entry.clearWhisperCache).length,
-    )
-    .toBe(1);
+  await expect.poll(() => clearRuns().length).toBe(1);
+  expect(clearRuns()[0].confirmToken).toBe("whisper-clear-cache-token");
+  await expect(page.locator("#alertText")).toContainText(
+    "Cleared 1 location(s)",
+  );
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP model list refreshes after a delete that stopped partway", async ({
+  page,
+}) => {
+  const { pageErrors, capturedRequests } = await openSurface(
+    page,
+    "cep",
+    "dark",
+    900,
+    { destructiveProtocol: true, modelDeletePartial: true },
+  );
+  const dialog = page.locator(".panel-dialog-overlay");
+  const listCalls = () =>
+    capturedRequests.filter((entry) => entry.modelList).length;
+
+  await page.locator("#navTabSettings").click();
+  await page.locator("#refreshModelsBtn").click();
+  const modelDelete = page.locator(".model-item-delete");
+  await expect(modelDelete).toBeVisible();
+  const listedBefore = listCalls();
+  await modelDelete.click();
+  await dialog.getByRole("button", { name: "Delete Model" }).click();
+
+  // The rest of the folder is gone even though one file stayed, so the
+  // list reloads and the error names what stayed.
+  await expect.poll(listCalls).toBeGreaterThan(listedBefore);
+  await expect(page.locator("#alertText")).toContainText(
+    "1 item(s) couldn't be deleted",
+  );
   expect(pageErrors).toEqual([]);
 });
 

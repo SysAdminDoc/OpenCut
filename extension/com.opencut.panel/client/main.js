@@ -1163,9 +1163,14 @@
     }
 
     function destructiveErrorMessage(err, data, fallback) {
+        // A delete or clear that stopped partway lists what stayed in "errors"
+        // and has no "error", and the HTTP status alone says nothing useful.
+        var listed = data && Array.isArray(data.errors) && data.errors.length
+            ? data.errors.join(", ")
+            : "";
         var message = data && data.error
             ? data.error
-            : (err && err.message ? err.message : String(err || t("toast.unknown_error", "no details reported")));
+            : (listed || (err && err.message ? err.message : String(err || t("toast.unknown_error", "no details reported"))));
         if (data && data.suggestion) message += " " + data.suggestion;
         return replaceTemplateValue(fallback, "{error}", message);
     }
@@ -1202,15 +1207,21 @@
                     return;
                 }
                 if (err || (data && (data.success === false || data.error))) {
+                    var executeError = typeof options.executeError === "function"
+                        ? options.executeError(err, data)
+                        : options.executeError;
                     fail(
                         err,
                         data,
-                        options.executeError || t("destructive.execute_failed", "Could not complete this action: {error}")
+                        executeError || t("destructive.execute_failed", "Could not complete this action: {error}")
                     );
+                    // Even a failed delete may have removed part of what it planned.
+                    if (typeof options.afterExecute === "function") options.afterExecute(err, data);
                     return;
                 }
                 setBusy(false);
                 if (typeof options.onSuccess === "function") options.onSuccess(data || {});
+                if (typeof options.afterExecute === "function") options.afterExecute(null, data || {});
             });
         }
 
@@ -8881,30 +8892,29 @@
     }
 
     function clearWhisperCache() {
-        showPanelConfirm({
+        // The server deletes only with the confirm token from a dry run, so
+        // the dialog shows the signed plan it previewed.
+        runDestructiveAction({
+            method: "POST",
+            path: "/whisper/clear-cache",
+            payload: {},
+            trigger: el.settingsClearCacheBtn,
             title: t("settings.clear_whisper_confirm_title", "Clear the Whisper model cache?"),
             message: t("settings.clear_whisper_confirm_message", "Downloaded speech models are deleted from disk. The next transcription downloads them again, which can take several minutes on a slow connection."),
             confirmLabel: t("settings.clear_whisper_confirm_button", "Clear Cache"),
             confirmClass: "btn btn-secondary",
-            tone: "warning"
-        }, function (confirmed) {
-            if (confirmed) runWhisperCacheClear();
-        });
-    }
-
-    function runWhisperCacheClear() {
-        showAlert(t("toast.clearing_whisper_cache", "Clearing Whisper cache…"));
-        api("POST", "/whisper/clear-cache", {}, function (err, data) {
-            if (!err && data) {
-                if (data.success) {
-                    showAlert(t("toast.whisper_cache_cleared", "Cache cleared! Cleared {count} location(s). Models will re-download on next use.")
-                        .replace("{count}", data.cleared ? data.cleared.length : 0));
-                } else {
-                    showAlert(t("toast.whisper_cache_clear_errors", "Cache clear had errors: {errors}")
-                        .replace("{errors}", data.errors ? data.errors.join(", ") : "unknown"));
-                }
-            } else {
-                showAlert(t("toast.whisper_cache_clear_failed", "Failed to clear cache."));
+            executeBusyLabel: t("toast.clearing_whisper_cache", "Clearing Whisper cache…"),
+            executeError: function (err, data) {
+                return data && Array.isArray(data.errors) && data.errors.length
+                    ? t("toast.whisper_cache_clear_errors", "Cache clear had errors: {errors}").replace("{errors}", "{error}")
+                    : t("toast.whisper_cache_clear_failed", "Failed to clear cache.") + " {error}";
+            },
+            onSuccess: function (data) {
+                showAlert(t("toast.whisper_cache_cleared", "Cache cleared! Cleared {count} location(s). Models will re-download on next use.")
+                    .replace("{count}", data.cleared ? data.cleared.length : 0));
+            },
+            afterExecute: function () {
+                if (_modelListLoaded) refreshModelList();
             }
         });
     }
@@ -11715,6 +11725,8 @@
     // Model Management
     // ================================================================
     var _modelListDelegationAdded = false;
+    // Set once the model list has been shown, so a cache clear refreshes it.
+    var _modelListLoaded = false;
 
     function ensureModelListDelegation() {
         if (_modelListDelegationAdded || !el.modelList) return;
@@ -11739,8 +11751,9 @@
                 executeError: t("models.delete_failed", "Failed to delete model.") + " {error}",
                 onSuccess: function () {
                     showToast(t("models.deleted", "Model deleted"), "success");
-                    refreshModelList();
-                }
+                },
+                // A delete that stopped at a locked file still removed the rest.
+                afterExecute: refreshModelList
             });
         });
     }
@@ -11753,6 +11766,7 @@
 
     function refreshModelList() {
         if (!el.modelList) return;
+        _modelListLoaded = true;
         ensureModelListDelegation();
         el.modelList.innerHTML = buildEmptyHintMarkup(
             t("models.scanning_title", "Scanning local models…"),
