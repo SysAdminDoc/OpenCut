@@ -83,6 +83,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - A project folder the visual index can't be written to (read-only, offline or full) no longer fails the job after every clip was indexed. The embeddings still land in the local cache, so later searches don't index again, and `sidecar_error` says why the project copy wasn't saved.
 - Regenerating the committed manifests and docs on Windows no longer rewrites them with CRLF line endings. Fourteen generators (the route, parity, MCP, OpenAPI, alias, model card and Adobe metadata dumps, plus the shared locale and release gate JSON writers) now write LF the way `.gitattributes` asks, so a regeneration shows only the lines that actually changed.
 - Re-burning captions after an edit still re-encodes only the part that changed with the new FFmpeg build. That build lands a seek made exactly on a keyframe one keyframe early when the video has audio, so the copied stretch after the edit came out two seconds too long and every re-burn would have fallen back to a whole-video render. Copies now seek halfway to the next keyframe, which lands on the right one with the old build and the new one.
+- Toasts in the CEP panel's light theme are readable now. The card turned white in light theme but the title and message kept their near-white dark theme colors, so the text all but disappeared. A rendered test now raises one of the panel's own toasts in both themes and checks its contrast.
 
 ### Tests
 

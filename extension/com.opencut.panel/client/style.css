@@ -17284,6 +17284,15 @@ html.theme-light .toast-notification {
     color: var(--text-primary);
 }
 
+/* The base title and message colors are near-white for the dark card. */
+html.theme-light .toast-title {
+    color: var(--text-primary);
+}
+
+html.theme-light .toast-message {
+    color: var(--text-secondary);
+}
+
 /* ── Processing / alert banners ────────────────────── */
 html.theme-light .processing-banner,
 html.theme-light .alert-banner,

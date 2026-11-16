@@ -1377,6 +1377,46 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
   }
 }
 
+// The every-tab scans only see a toast when one happens to be on screen, so
+// light theme shipped near-white toast text on a white card unnoticed.
+for (const theme of ["dark", "light"]) {
+  test(`cep toast text keeps its contrast in ${theme}`, async ({ page }) => {
+    await openSurface(page, "cep", theme, 900);
+    await page.locator(".nav-tab[data-nav='settings']").click();
+    await page.locator("#presetSelect").evaluate((select) => {
+      select.value = "";
+    });
+    // With no preset picked, the panel answers with its own error toast.
+    await page.locator("#exportPresetFileBtn").click();
+    const toast = page
+      .locator(".toast-notification[role='alert']")
+      .filter({ hasText: /select a preset/i });
+    await expect(toast).toBeVisible();
+    // Judge a settled copy of the panel's toast: the original fades out on a
+    // timer and its entrance animation starts at opacity 0.
+    await toast.evaluate((element) => {
+      const settled = element.cloneNode(true);
+      settled.classList.remove("fade-out");
+      settled.classList.add("toast-contrast-probe");
+      element.parentNode.appendChild(settled);
+      settled.getAnimations({ subtree: true }).forEach((animation) => animation.finish());
+    });
+    const results = await new AxeBuilder({ page })
+      .include(".toast-contrast-probe")
+      .withRules(["color-contrast"])
+      .analyze();
+    expect(formatWcagViolations(results.violations), `${theme} toast contrast`).toEqual([]);
+    // axe can't decide over the dark card's gradient, so measure those itself.
+    const undecided = formatWcagViolations(results.incomplete || []);
+    expect(await undecidedContrastFailures(page, undecided), `${theme} toast contrast undecided`).toEqual([]);
+    const checked = [...results.passes, ...(results.incomplete || [])]
+      .filter((rule) => rule.id === "color-contrast")
+      .flatMap((rule) => rule.nodes.map((node) => node.target.join(" ")));
+    expect(checked.some((target) => target.includes("toast-title")), checked.join(", ")).toBe(true);
+    expect(checked.some((target) => target.includes("toast-message")), checked.join(", ")).toBe(true);
+  });
+}
+
 for (const [surfaceName, surface] of Object.entries(SURFACES)) {
   test(`${surfaceName} premium workspace hierarchy stays consistent across every page`, async ({
     page,
