@@ -29,6 +29,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Release builds
 
+- The README's requirements now say what actually ships. The Windows installer is the supported way to run OpenCut, macOS and Linux run from source, and no macOS or Linux package has been published since 1.25.1. It used to list Flatpak and AppImage release packaging that was never published.
 - The Windows installer build signs the Premiere panel with Adobe's ZXPSignCmd and a timestamp, ships the signed files and puts `OpenCut-Panel-<version>.zxp` next to the installer. The build stops early when the certificate or ZXPSignCmd is missing, and installer smoke fails unless the installed panel matches its signature file for file. The installers keep setting `PlayerDebugMode` until the signed panel has been seen loading in Premiere without it.
 - `scripts/build_release.ps1` builds the Windows release in one command. It makes `build/release-venv` from the two hashed locks and keeps reusing it until a lock changes, then builds the panel, freezes the server and runs the installer builder with that Python. A machine-wide Python with PyQt6 and PySide6 both installed used to stop PyInstaller outright.
 - Release checks now run the whole test suite as a required `pytest-full` step, using the FFmpeg build in `ffmpeg/`. The gate used to run a fixed list of 115 tests, which is how 1.56.0 shipped with the OTIOZ and DRM key failures above still failing elsewhere in the suite. The step takes about four minutes on four workers and needs around 5 GB of memory.

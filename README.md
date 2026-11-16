@@ -76,7 +76,7 @@ is the one step that needs the maintainer's PyPI account.
 ### Prerequisites
 
 - **Adobe Premiere Pro** 2019 or later (CEP panel) / 25.6+ (UXP panel)
-- **Windows 10/11, macOS, or Linux** (Windows installer, macOS/Linux source launchers, and Linux Flatpak/AppImage release packaging)
+- **Windows 10/11** for the installer, which is the supported way to run OpenCut. macOS and Linux run from source with the launchers below. No macOS or Linux package has been published since 1.25.1, and the Flatpak and AppImage recipes are for local builds only.
 - **Python 3.11-3.14** for source installs; the Windows installer bundles its own runtime
 - **FFmpeg** must be installed and on your system PATH for all video/audio processing. The Windows installer handles this automatically; source installs require a manual install (see below)
 
