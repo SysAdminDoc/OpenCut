@@ -106,7 +106,13 @@ At runtime, `GET /system/capabilities` carries `ffmpeg.security` and emits a
 
 `Install.bat` downloads the pinned snapshot into `ffmpeg\` when the FFmpeg it
 finds is missing or refused, and checks the archive and both executables
-against the `PINNED_INSTALLER_*` hashes first. For a build of your own, take
+against the `PINNED_INSTALLER_*` hashes first. Windows 10 and Windows 11
+before 23H2 ship a `tar` without liblzma that can't read the `.7z`, so there
+it downloads the same build's `.zip` from
+<https://github.com/GyanD/codexffmpeg/releases/tag/2026-11-11-git-23c4540053>
+(`PINNED_INSTALLER_ZIP_ARCHIVE_SHA256`). Its `bin\ffmpeg.exe` and
+`bin\ffprobe.exe` are byte for byte the files in the `.7z`, so the per-binary
+pins don't change. For a build of your own, take
 `ffmpeg-git-full` dated 2026-11-06 or later from
 <https://www.gyan.dev/ffmpeg/builds/>. winget's `Gyan.FFmpeg` and Chocolatey's
 `ffmpeg` carry tagged releases, and those stay refused while the release lane
