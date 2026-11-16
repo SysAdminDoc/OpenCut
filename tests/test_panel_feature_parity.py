@@ -30,13 +30,13 @@ def test_generated_feature_manifest_is_in_sync_and_enumerates_the_audit_gap():
         "unannotated_uxp_only": [],
     }
     assert live["counts"] == {
-        "cep_route_literals": 209,
+        "cep_route_literals": 211,
         "uxp_route_literals": 92,
-        "cep_backend_routes": 185,
+        "cep_backend_routes": 187,
         "uxp_backend_routes": 82,
-        "shared_routes": 61,
+        "shared_routes": 63,
         "cep_only_routes": 124,
-        "uxp_only_routes": 21,
+        "uxp_only_routes": 19,
     }
 
 

@@ -1,6 +1,6 @@
 {
   "version": 4,
-  "generated_at": "2026-11-16T17:24:37Z",
+  "generated_at": "2026-11-16T17:33:09Z",
   "total_routes": 1593,
   "shipped_route_count": 1564,
   "blueprint_count": 107,
@@ -18343,6 +18343,7 @@
         "panel"
       ],
       "surface_evidence": [
+        "extension/com.opencut.panel/client/main.js",
         "extension/com.opencut.uxp/main.js"
       ]
     },
@@ -18375,6 +18376,7 @@
         "panel"
       ],
       "surface_evidence": [
+        "extension/com.opencut.panel/client/main.js",
         "extension/com.opencut.uxp/main.js"
       ]
     },

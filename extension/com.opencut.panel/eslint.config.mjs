@@ -23,6 +23,7 @@ export default [
       "client/collapsible-cards.js",
       "client/disabled-reasons.js",
       "client/capability-status.js",
+      "client/visual-search-controller.js",
     ],
     languageOptions: {
       ecmaVersion: 2021,
@@ -40,6 +41,7 @@ export default [
         OpenCutPanelBootstrapToken: "readonly",
         OpenCutWsBridgePort: "readonly",
         OpenCutCapabilityStatus: "readonly",
+        OpenCutVisualSearchController: "readonly",
         SystemPath: "readonly",
         module: "readonly",
       },

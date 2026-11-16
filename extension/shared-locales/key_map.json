@@ -1142,6 +1142,14 @@
       "processing.progress"
     ]
   },
+  "shared.search.build_visual_index": {
+    "cep": [
+      "search.build_visual_index"
+    ],
+    "uxp": [
+      "uxp.search.build_visual_index"
+    ]
+  },
   "shared.search.clearing_title": {
     "cep": [
       "search.clearing_title"
@@ -1150,12 +1158,140 @@
       "uxp.search.runtime.clearing_index_title"
     ]
   },
+  "shared.search.match_percent": {
+    "cep": [
+      "search.match_percent"
+    ],
+    "uxp": [
+      "uxp.search.runtime.match_percent"
+    ]
+  },
   "shared.search.no_matches_title": {
     "cep": [
       "search.no_matches_title"
     ],
     "uxp": [
       "uxp.search.runtime.no_matches_yet"
+    ]
+  },
+  "shared.search.reconnect_before_visual_index": {
+    "cep": [
+      "search.reconnect_before_visual_index"
+    ],
+    "uxp": [
+      "uxp.search.runtime.reconnect_before_visual_index"
+    ]
+  },
+  "shared.search.visual_empty_body": {
+    "cep": [
+      "search.visual_empty_body"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_empty_hint"
+    ]
+  },
+  "shared.search.visual_empty_title": {
+    "cep": [
+      "search.visual_empty_title"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_empty_kicker"
+    ]
+  },
+  "shared.search.visual_index_failed": {
+    "cep": [
+      "search.visual_index_failed"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_index_failed"
+    ]
+  },
+  "shared.search.visual_index_ready_many": {
+    "cep": [
+      "search.visual_index_ready_many"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_index_ready_many"
+    ]
+  },
+  "shared.search.visual_index_ready_one": {
+    "cep": [
+      "search.visual_index_ready_one"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_index_ready_one"
+    ]
+  },
+  "shared.search.visual_index_title": {
+    "cep": [
+      "search.visual_index_title"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_index_title"
+    ]
+  },
+  "shared.search.visual_indexing_status_many": {
+    "cep": [
+      "search.visual_indexing_status_many"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_indexing_status_many"
+    ]
+  },
+  "shared.search.visual_indexing_status_one": {
+    "cep": [
+      "search.visual_indexing_status_one"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_indexing_status_one"
+    ]
+  },
+  "shared.search.visual_mode_status": {
+    "cep": [
+      "search.visual_mode_status"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_mode_status"
+    ]
+  },
+  "shared.search.visual_no_clips": {
+    "cep": [
+      "search.visual_no_clips"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_no_clips"
+    ]
+  },
+  "shared.search.visual_no_matches_body": {
+    "cep": [
+      "search.visual_no_matches_body"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_no_matches_detail"
+    ]
+  },
+  "shared.search.visual_no_matches_status": {
+    "cep": [
+      "search.visual_no_matches_status"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_no_matches_status"
+    ]
+  },
+  "shared.search.visual_result_aria": {
+    "cep": [
+      "search.visual_result_aria"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_result_aria"
+    ]
+  },
+  "shared.search.visual_searching": {
+    "cep": [
+      "search.visual_searching"
+    ],
+    "uxp": [
+      "uxp.search.runtime.visual_searching"
     ]
   },
   "shared.search.zero_files_indexed": {

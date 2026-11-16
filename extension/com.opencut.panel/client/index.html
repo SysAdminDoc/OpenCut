@@ -3478,6 +3478,13 @@
                         <div class="oc-status-line" id="searchStatus" data-state="idle" role="status" aria-live="polite" data-i18n="search.index_empty_status">Index project clips, then search with descriptive phrases to surface the right moment faster.</div>
                         <div class="border-t"></div>
                         <div class="form-group">
+                            <label for="footageSearchMode" data-i18n="search.search_by_label">Search By</label>
+                            <select id="footageSearchMode">
+                                <option value="transcript" selected data-i18n="search.mode_transcript">Transcript</option>
+                                <option value="visual" data-i18n="search.mode_visual">Visual</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label for="footageSearchQuery" data-i18n="search.search_for_label">Search For…</label>
                             <input type="text" id="footageSearchQuery" class="text-input" placeholder="e.g. interview about climate…" data-i18n-placeholder="search.query_placeholder">
                         </div>
@@ -3486,6 +3493,7 @@
                             <input type="number" id="footageSearchMax" value="10" min="1" max="50" class="dim-input">
                         </div>
                         <button type="button" class="btn-primary" id="runFootageSearchBtn" data-i18n="tabs.search">Search</button>
+                        <button type="button" class="btn-outline btn-sm mt-sm hidden" id="buildVisualIndexBtn" data-i18n="search.build_visual_index">Build Visual Index</button>
                         <div id="footageSearchResults" class="scrollable-md mt-sm" aria-live="polite" aria-label="Footage search results" data-i18n-aria-label="search.results_aria">
                             <div class="hint hint-empty oc-empty-state oc-empty-state-inline is-info">
                                 <span class="hint-kicker oc-empty-state-kicker" data-i18n="search.ready_kicker">Ready when you are</span>
@@ -4293,6 +4301,7 @@
     <script src="collapsible-cards.js"></script>
     <script src="disabled-reasons.js"></script>
     <script src="capability-status.js"></script>
+    <script src="visual-search-controller.js"></script>
     <script src="update-controller.js"></script>
     <script src="results-controller.js"></script>
     <script src="settings-diagnostics-controller.js"></script>

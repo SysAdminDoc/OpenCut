@@ -1011,6 +1011,32 @@
         "cep_sources": [
           "extension/com.opencut.panel/client/main.js"
         ],
+        "justification": "",
+        "pending_family": "",
+        "priority": false,
+        "route": "/search/semantic",
+        "status": "covered",
+        "uxp_sources": [
+          "extension/com.opencut.uxp/main.js"
+        ]
+      },
+      {
+        "cep_sources": [
+          "extension/com.opencut.panel/client/main.js"
+        ],
+        "justification": "",
+        "pending_family": "",
+        "priority": false,
+        "route": "/search/semantic/index",
+        "status": "covered",
+        "uxp_sources": [
+          "extension/com.opencut.uxp/main.js"
+        ]
+      },
+      {
+        "cep_sources": [
+          "extension/com.opencut.panel/client/main.js"
+        ],
         "justification": "Settings, diagnostics, job history, and process control. Mostly served in UXP by panel-local state or the typed host APIs rather than by porting the CEP endpoint one for one; each still needs a decision, so they are tracked rather than excluded.",
         "pending_family": "plumbing",
         "priority": false,
@@ -2156,9 +2182,9 @@
       }
     ],
     "summary": {
-      "cep_route_count": 178,
-      "coverage_percent": 33.7,
-      "covered": 59,
+      "cep_route_count": 180,
+      "coverage_percent": 34.4,
+      "covered": 61,
       "excluded": 1,
       "missing": 0,
       "pending": 118,

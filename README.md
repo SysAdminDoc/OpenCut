@@ -509,7 +509,7 @@ without returning transcript text.
 
 | Feature | Description |
 |---------|-------------|
-| Footage Search | Index your entire media library across projects by spoken content, then query it through the panel, REST, MCP, or CLI. Visual mode in the UXP panel finds shots in the open project by what's on screen |
+| Footage Search | Index your entire media library across projects by spoken content, then query it through the panel, REST, MCP, or CLI. Visual mode in either panel finds shots in the open project by what's on screen |
 | FTS5 Database Search | SQLite full-text search index with auto-indexing and cleanup |
 | Natural Language Commands | Type in English. OpenCut maps commands to API routes via keyword matching or LLM |
 | Chat Editor | Multi-turn LLM-powered editing assistant with session memory and action parsing |

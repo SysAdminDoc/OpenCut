@@ -17,17 +17,17 @@
     "intentional"
   ],
   "counts": {
-    "cep_route_literals": 209,
+    "cep_route_literals": 211,
     "uxp_route_literals": 92,
-    "cep_backend_routes": 185,
+    "cep_backend_routes": 187,
     "uxp_backend_routes": 82,
-    "shared_routes": 61,
+    "shared_routes": 63,
     "cep_only_routes": 124,
-    "uxp_only_routes": 21
+    "uxp_only_routes": 19
   },
   "panels": {
     "cep": {
-      "route_count": 185,
+      "route_count": 187,
       "routes": [
         {
           "rule": "/analyze/virality",
@@ -756,6 +756,24 @@
           ],
           "endpoint": "search.search_index",
           "blueprint": "search",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/search/semantic",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "object_intel.semantic_search_route",
+          "blueprint": "object_intel",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/search/semantic/index",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "object_intel.semantic_index_route",
+          "blueprint": "object_intel",
           "readiness": "implemented"
         },
         {
@@ -2767,6 +2785,24 @@
       "readiness": "implemented"
     },
     {
+      "rule": "/search/semantic",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "object_intel.semantic_search_route",
+      "blueprint": "object_intel",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/search/semantic/index",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "object_intel.semantic_index_route",
+      "blueprint": "object_intel",
+      "readiness": "implemented"
+    },
+    {
       "rule": "/settings/llm",
       "methods": [
         "POST"
@@ -4580,30 +4616,6 @@
         "classification": "intentional",
         "owner": "plugins",
         "justification": "Plugin uninstall is intentionally exposed in the newer UXP trust-management surface while CEP retains install, quarantine, registry, trust, and worker controls."
-      },
-      {
-        "rule": "/search/semantic",
-        "methods": [
-          "POST"
-        ],
-        "endpoint": "object_intel.semantic_search_route",
-        "blueprint": "object_intel",
-        "readiness": "implemented",
-        "classification": "intentional",
-        "owner": "search",
-        "justification": "Visual (CLIP) footage search lands in the UXP Footage Search card first; the CEP Footage Search card gets the same Transcript / Visual choice in the follow-up change, which removes this entry."
-      },
-      {
-        "rule": "/search/semantic/index",
-        "methods": [
-          "POST"
-        ],
-        "endpoint": "object_intel.semantic_index_route",
-        "blueprint": "object_intel",
-        "readiness": "implemented",
-        "classification": "intentional",
-        "owner": "search",
-        "justification": "Visual (CLIP) footage search lands in the UXP Footage Search card first; the CEP Footage Search card gets the same Transcript / Visual choice in the follow-up change, which removes this entry."
       },
       {
         "rule": "/shorts/variants",

@@ -40,6 +40,7 @@ const CLASSIC_SCRIPT_FILES = [
   "navigation-controller.js",
   "collapsible-cards.js",
   "disabled-reasons.js",
+  "visual-search-controller.js",
   "bootstrap.js",
   "main.js",
 ];
@@ -139,7 +140,18 @@ describe("panel controller budgets", () => {
     // client/capability-status.js, so main.js only records what it showed
     // and asks. Ticking the CPU mode checkbox inside that redraw, instead of
     // in a separate Settings hook the poll skipped, gave two back.
-    ["client/main.js", 18900],
+    // The Clear cache preview and the model list fixes after it (bbd2dab7,
+    // 75e8b0ef, 597498f2) took main.js to 18921 without raising this
+    // ceiling. Twenty-one of the fifty-nine lines added here are theirs.
+    // Visual search on the Footage Search card adds the other thirty-eight.
+    // The mode switch, result list and job feedback live in
+    // client/visual-search-controller.js. main.js keeps its twenty-four-line
+    // factory wiring, which holds both job routes because the route scanners
+    // only read main.js, the saved project folder it sends as project_dir
+    // (five), the index button lookup and enable rule (two), and the mode
+    // checks in the search, index status and tab wiring (seven).
+    ["client/main.js", 18959],
+    ["client/visual-search-controller.js", 330],
     ["client/update-controller.js", 300],
     ["client/results-controller.js", 300],
     ["client/settings-diagnostics-controller.js", 110],
@@ -172,6 +184,7 @@ describe("panel controller budgets", () => {
       "OpenCutResultsController.createResultsController",
       "OpenCutSettingsDiagnosticsController.createSettingsDiagnosticsController",
       "OpenCutNavigationController.createNavigationController",
+      "OpenCutVisualSearchController.createVisualSearchController",
     ]) {
       expect(cepMain).toContain(owner);
     }

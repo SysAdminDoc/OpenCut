@@ -22,7 +22,8 @@
         fmtDur = OpenCutFormat.fmtDur,
         formatTimecode = OpenCutFormat.formatTimecode,
         getStepPrecision = OpenCutFormat.getStepPrecision,
-        formatNumberForInput = OpenCutFormat.formatNumberForInput;
+        formatNumberForInput = OpenCutFormat.formatNumberForInput,
+        visualSearchProjectDir = OpenCutFormat.visualSearchProjectDir;
     var OpenCutJobMeta = (typeof window !== "undefined" && window.OpenCutJobMeta) ? window.OpenCutJobMeta : {};
     var _sessionCtxOpText = OpenCutJobMeta.sessionCtxOpText,
         _sessionCtxResultPath = OpenCutJobMeta.sessionCtxResultPath,
@@ -92,6 +93,9 @@
     // _recomputeEffectiveOutputDir() can layer the user's Settings →
     // Output directory preference on top of it.
     var _detectedProjectFolder = "";
+    // Folder of the saved .prproj only (never the first-media or scratch-disk
+    // fallback). Visual search sends it as project_dir for the portable index.
+    var _savedProjectFolder = "";
     var backendStartAttempted = false;
     var jobStartTime = 0;
     var elapsedTimer = null;
@@ -2069,6 +2073,7 @@
         el.createSmartBinsBtn = $("createSmartBinsBtn");
         el.runSrtImportBtn = $("runSrtImportBtn");
         el.indexAllClipsBtn = $("indexAllClipsBtn");
+        el.buildVisualIndexBtn = $("buildVisualIndexBtn");
 
         // Settings tab
         el.whisperStatusText = $("whisperStatusText");
@@ -2792,6 +2797,7 @@
         }
 
         updateProjectMediaList(media, nextProjectFolder);
+        _savedProjectFolder = visualSearchProjectDir(nextProjectFolder, data.projectFolderSource);
 
         if (media.length) {
             resetProjectMediaRetryState();
@@ -3859,6 +3865,7 @@
             srtResyncApplyBtn.disabled = !connected || !_pendingSrtResync;
         }
         if (el.indexAllClipsBtn) el.indexAllClipsBtn.disabled = !connected || !hasProjectMedia;
+        if (el.buildVisualIndexBtn) el.buildVisualIndexBtn.disabled = !connected || !hasProjectMedia;
         if (el.clearSearchIndexBtn) el.clearSearchIndexBtn.disabled = !connected || !Number((_lastSearchIndexStats && _lastSearchIndexStats.total_files) || 0);
 
         // Helper to safely toggle hint visibility and optionally disable a button
@@ -16502,9 +16509,11 @@
             el.clearSearchIndexBtn.disabled = !connected || !totalFiles;
         }
         if (!statsEl) return;
+        // A late transcript index refresh mustn't overwrite the visual-mode hint.
+        var ownsStatusLine = visualSearch.getMode() !== "visual";
         if (!totalFiles) {
             setHintState(statsEl, t("search.index_empty_hint", "Search index is empty. Index project clips to enable footage search."), "info");
-            setStatusLine(
+            if (ownsStatusLine) setStatusLine(
                 "searchStatus",
                 connected
                     ? t("search.index_empty_status", "Index project clips, then search with descriptive phrases to surface the right moment faster.")
@@ -16518,7 +16527,7 @@
             formatSearchIndexedAcross(totalFiles, totalSegments),
             "success"
         );
-        setStatusLine("searchStatus", t("search.index_ready_status", "Library ready. Search with descriptive phrases and click a result to load it into the workspace."), "ready");
+        if (ownsStatusLine) setStatusLine("searchStatus", t("search.index_ready_status", "Library ready. Search with descriptive phrases and click a result to load it into the workspace."), "ready");
     }
 
     function refreshSearchIndexStatus(options) {
@@ -16666,6 +16675,7 @@
             showAlert(t("search.query_required_alert", "Enter a search query."));
             return;
         }
+        if (visualSearch.getMode() === "visual") return visualSearch.search(query);
         var searchBtn = document.getElementById("runFootageSearchBtn");
         var originalBtnText = rememberButtonText(searchBtn);
         var maxResults = parseInt((document.getElementById("footageSearchMax") || {}).value || "10");
@@ -16778,6 +16788,30 @@
             );
         });
     }
+
+    // Visual (CLIP) mode of the Footage Search card. The job routes stay here
+    // because the panel route scanners only read main.js.
+    var visualSearch = OpenCutVisualSearchController.createVisualSearchController({
+        documentRef: document,
+        format: OpenCutFormat,
+        t: t,
+        replaceTemplateValue: replaceTemplateValue,
+        setStatusLine: setStatusLine,
+        renderSearchResultsEmpty: renderSearchResultsEmpty,
+        formatSearchProjectClips: formatSearchProjectClips,
+        rememberButtonText: rememberButtonText,
+        setButtonText: setButtonText,
+        showAlert: showAlert,
+        showToast: showToast,
+        isConnected: function () { return connected; },
+        isBusy: function () { return jobRuntime.isBusy(); },
+        getProjectMedia: function () { return projectMedia; },
+        getProjectDir: function () { return _savedProjectFolder; },
+        getIndexedFileCount: function () { return Number((_lastSearchIndexStats && _lastSearchIndexStats.total_files) || 0); },
+        isSelectedPath: function (path) { return path === _selectedFootageSearchPath || path === selectedPath; },
+        startSearch: function (payload, handlers) { startJob("/search/semantic", payload, handlers); },
+        startIndex: function (payload, handlers) { startJob("/search/semantic/index", payload, handlers); }
+    });
 
     // Event delegation for footage search results (avoids listener per-item)
     var _footageDelegationAdded = false;
@@ -17166,6 +17200,10 @@
                 if (e.key === "Enter") runFootageSearch();
             });
         }
+        var searchMode = document.getElementById("footageSearchMode");
+        if (searchMode) searchMode.addEventListener("change", visualSearch.applyMode);
+        var visualIndexBtn = document.getElementById("buildVisualIndexBtn");
+        if (visualIndexBtn) visualIndexBtn.addEventListener("click", function () { visualSearch.buildIndex(); });
         var nlpBtn = document.getElementById("runNlpCommandBtn");
         if (nlpBtn) nlpBtn.addEventListener("click", runNlpCommand);
         ensureFootageDelegation();

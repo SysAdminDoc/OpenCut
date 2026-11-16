@@ -10921,6 +10921,27 @@ input[type="range"]::-moz-range-thumb {
     color: rgba(244, 232, 206, 0.88);
 }
 
+/* Visual search rows lead with the matched key frame. */
+.footage-result-item.has-thumb {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.footage-result-thumb {
+    flex-shrink: 0;
+    width: 80px;
+    height: 45px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.footage-result-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 #renameItemsList,
 #smartBinRules,
 #markerExportList,
