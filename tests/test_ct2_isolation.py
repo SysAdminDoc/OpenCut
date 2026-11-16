@@ -189,7 +189,7 @@ class _FakeWorker:
         request_path, result_path = command[-2], command[-1]
         with open(request_path, encoding="utf-8") as fh:
             self.request = json.load(fh)
-        _FakeWorker.launches.append(self)
+        type(self).launches.append(self)
         self.returncode = self.reply(result_path)
 
     def reply(self, result_path):
@@ -278,6 +278,7 @@ def test_the_server_process_imports_torch_ahead_of_ctranslate2(monkeypatch, tmp_
     monkeypatch.syspath_prepend(str(tmp_path))
     monkeypatch.setattr(sys, "meta_path", list(sys.meta_path))
     monkeypatch.setattr(ct2_isolation, "should_isolate", lambda: True)
+    monkeypatch.delitem(sys.modules, "ctranslate2", raising=False)  # other tests stub it
 
     ct2_isolation.prepare_process([])
     hooks = [f for f in sys.meta_path if isinstance(f, ct2_isolation._TorchFirstFinder)]
@@ -286,3 +287,330 @@ def test_the_server_process_imports_torch_ahead_of_ctranslate2(monkeypatch, tmp_
     assert hooks[0].find_spec("ctranslate2") is None
     assert getattr(sys.modules.get("torch"), "LOADED_FIRST", False) is True
     assert not any(isinstance(f, ct2_isolation._TorchFirstFinder) for f in sys.meta_path)
+
+
+# ---------------------------------------------------------------------------
+# NLLB translation, CrisperWhisper's fallback and WhisperX next to cu132
+# ---------------------------------------------------------------------------
+def _run_op(tmp_path, request):
+    request_path = tmp_path / "request.json"
+    reply = tmp_path / "result.json"
+    request_path.write_text(json.dumps(request), encoding="utf-8")
+    code = ct2_isolation.run_worker(str(request_path), str(reply), preload=lambda: None)
+    return code, json.loads(reply.read_text(encoding="utf-8"))
+
+
+def test_the_worker_translates_with_torch_blocked(monkeypatch, tmp_path, no_torch_loaded):
+    from opencut.core import captions_enhanced
+
+    seen = {}
+
+    def _here(model_dir, texts, source, target, on_item=None):
+        seen["args"] = (model_dir, texts, source, target)
+        try:
+            import torch  # noqa: F401
+        except ImportError:
+            seen["torch_blocked"] = True
+        return [text.upper() for text in texts]
+
+    monkeypatch.setattr(captions_enhanced, "nllb_translate_here", _here)
+    code, body = _run_op(tmp_path, {
+        "op": "translate", "model_dir": "nllb", "texts": ["hola", "adios"],
+        "source": "spa_Latn", "target": "eng_Latn",
+    })
+
+    assert code == 0
+    assert body["result"] == {"texts": ["HOLA", "ADIOS"]}
+    assert seen["args"] == ("nllb", ["hola", "adios"], "spa_Latn", "eng_Latn")
+    assert seen["torch_blocked"] is True
+
+
+def test_the_worker_lists_faster_whisper_words(monkeypatch, tmp_path, no_torch_loaded):
+    from opencut.core import crisper_whisper
+
+    seen = {}
+
+    def _words(path, model_kwargs):
+        seen["args"] = (path, model_kwargs)
+        return [{"word": " um", "start": 0.1, "end": 0.3}]
+
+    monkeypatch.setattr(crisper_whisper, "faster_whisper_words", _words)
+    code, body = _run_op(tmp_path, {
+        "op": "words", "path": "clip.wav", "model_kwargs": {"device": "cuda", "device_index": 1},
+    })
+
+    assert code == 0
+    assert body["result"] == {"words": [{"word": " um", "start": 0.1, "end": 0.3}]}
+    assert seen["args"] == ("clip.wav", {"device": "cuda", "device_index": 1})
+
+
+def test_the_worker_refuses_an_unknown_op(tmp_path, no_torch_loaded):
+    code, body = _run_op(tmp_path, {"op": "format_disk"})
+    assert code == 1
+    assert "Unknown worker op 'format_disk'" in body["error"]
+
+
+def _worker_replying(result):
+    class _Replying(_FakeWorker):
+        def reply(self, result_path):
+            with open(result_path, "w", encoding="utf-8") as fh:
+                json.dump({"result": result}, fh)
+            return 0
+
+    _Replying.launches = []
+    return _Replying
+
+
+def test_nllb_translates_in_the_worker_beside_a_cuda13_torch(monkeypatch, tmp_path):
+    from opencut.core import captions_enhanced
+
+    monkeypatch.setenv("OPENCUT_HOME", str(tmp_path))
+    monkeypatch.setattr(ct2_isolation, "should_isolate", lambda: True)
+    monkeypatch.setitem(sys.modules, "ctranslate2", None)  # loading it here would raise
+    worker = _worker_replying({"texts": ["hello", "bye"]})
+    monkeypatch.setattr(ct2_isolation.subprocess, "Popen", worker)
+
+    texts = captions_enhanced.nllb_translate("nllb", ["hola", "adios"], "spa_Latn", "eng_Latn")
+
+    assert texts == ["hello", "bye"]
+    request = worker.launches[0].request
+    assert request["op"] == "translate"
+    assert request["texts"] == ["hola", "adios"]
+    assert (request["source"], request["target"]) == ("spa_Latn", "eng_Latn")
+
+
+def test_nllb_refuses_a_worker_reply_of_the_wrong_length(monkeypatch, tmp_path):
+    from opencut.core import captions_enhanced
+
+    monkeypatch.setenv("OPENCUT_HOME", str(tmp_path))
+    monkeypatch.setattr(ct2_isolation, "should_isolate", lambda: True)
+    monkeypatch.setattr(ct2_isolation.subprocess, "Popen", _worker_replying({"texts": ["hello"]}))
+
+    with pytest.raises(RuntimeError, match="wrong number of texts"):
+        captions_enhanced.nllb_translate("nllb", ["hola", "adios"], "spa_Latn", "eng_Latn")
+
+
+def test_nllb_translates_here_without_a_cuda13_torch(monkeypatch):
+    from opencut.core import captions_enhanced
+
+    monkeypatch.setattr(ct2_isolation, "should_isolate", lambda: False)
+    monkeypatch.setattr(
+        ct2_isolation.subprocess, "Popen",
+        lambda *a, **k: pytest.fail("no worker without a CUDA 13 torch"),
+    )
+    monkeypatch.setattr(
+        captions_enhanced, "nllb_translate_here",
+        lambda model_dir, texts, source, target, on_item=None: [t[::-1] for t in texts],
+    )
+
+    assert captions_enhanced.nllb_translate("nllb", ["abc"], "spa_Latn", "eng_Latn") == ["cba"]
+
+
+def test_translated_segments_keep_their_timing_and_skip_blank_text(monkeypatch):
+    from opencut.core import captions_enhanced
+
+    sent = []
+
+    def _translate(model_dir, texts, source, target, on_item=None):
+        sent.append(list(texts))
+        for i in range(len(texts)):
+            on_item(i, len(texts))
+        return [f"<{text}>" for text in texts]
+
+    monkeypatch.setattr(captions_enhanced, "_ensure_nllb", lambda on_progress, label: "nllb")
+    monkeypatch.setattr(captions_enhanced, "nllb_translate", _translate)
+    segments = [
+        {"text": " hola ", "start": 0.0, "end": 1.0},
+        {"text": "   ", "start": 1.0, "end": 2.0},
+        {"text": "adios", "start": 2.0, "end": 3.0, "speaker": "A"},
+    ]
+
+    out = captions_enhanced.translate_segments(segments, "es", "en")
+
+    assert sent == [["hola", "adios"]]
+    assert out[0] == {"text": "<hola>", "original_text": "hola", "start": 0.0, "end": 1.0}
+    assert out[1] == {"text": "   ", "start": 1.0, "end": 2.0}
+    assert out[2] == {"text": "<adios>", "original_text": "adios", "start": 2.0, "end": 3.0, "speaker": "A"}
+
+
+def _faster_whisper_present(monkeypatch):
+    import importlib.util
+
+    real = importlib.util.find_spec
+    monkeypatch.setattr(
+        importlib.util, "find_spec",
+        lambda name, *a: object() if name == "faster_whisper" else real(name, *a),
+    )
+
+
+def test_crisper_fallback_runs_faster_whisper_in_the_worker(monkeypatch, tmp_path):
+    from opencut.core import crisper_whisper
+
+    monkeypatch.setenv("OPENCUT_HOME", str(tmp_path))
+    _faster_whisper_present(monkeypatch)
+    monkeypatch.setitem(sys.modules, "faster_whisper", None)  # loading it here would raise
+    monkeypatch.setattr(ct2_isolation, "should_isolate", lambda: True)
+    monkeypatch.setattr(
+        crisper_whisper, "_fallback_model_kwargs",
+        lambda: {"device": "cuda", "compute_type": "auto", "device_index": 1},
+    )
+    worker = _worker_replying({"words": [
+        {"word": " Um,", "start": 0.12345, "end": 0.4},
+        {"word": " hello", "start": 0.5, "end": 0.9},
+        {"word": " basically", "start": 1.0, "end": 1.6},
+    ]})
+    monkeypatch.setattr(ct2_isolation.subprocess, "Popen", worker)
+
+    result = crisper_whisper._fallback_filler_detection("clip.wav", custom_words=["Hello "])
+
+    request = worker.launches[0].request
+    assert request["op"] == "words" and request["path"] == "clip.wav"
+    assert request["model_kwargs"] == {"device": "cuda", "compute_type": "auto", "device_index": 1}
+    assert [f["word"] for f in result["fillers"]] == ["Um,", "hello", "basically"]
+    assert result["fillers"][0] == {"word": "Um,", "start": 0.123, "end": 0.4}
+    assert result["count"] == 3
+    assert result["method"] == "faster_whisper_fallback"
+
+
+def test_crisper_fallback_without_a_cuda13_torch_stays_here(monkeypatch):
+    from opencut.core import crisper_whisper
+
+    _faster_whisper_present(monkeypatch)
+    monkeypatch.setattr(ct2_isolation, "should_isolate", lambda: False)
+    monkeypatch.setattr(crisper_whisper, "_fallback_model_kwargs", lambda: {"device": "cpu"})
+    monkeypatch.setattr(
+        crisper_whisper, "faster_whisper_words",
+        lambda path, kwargs: [{"word": " uh", "start": 2.0, "end": 2.25}],
+    )
+
+    result = crisper_whisper._fallback_filler_detection("clip.wav")
+
+    assert result["fillers"] == [{"word": "uh", "start": 2.0, "end": 2.25}]
+    assert result["total_filler_time"] == 0.25
+
+
+def test_crisper_fallback_still_names_faster_whisper_when_it_is_missing(monkeypatch):
+    from opencut.core import crisper_whisper
+
+    monkeypatch.setitem(sys.modules, "faster_whisper", None)
+    with pytest.raises(ImportError, match="Neither CrisperWhisper nor faster-whisper"):
+        crisper_whisper._fallback_filler_detection("clip.wav")
+
+
+def test_faster_whisper_words_reads_every_segment(monkeypatch):
+    from opencut.core import crisper_whisper
+
+    word = types.SimpleNamespace
+    segments = [
+        types.SimpleNamespace(words=[word(word=" um", start=0, end=0.5)]),
+        types.SimpleNamespace(words=None),
+        types.SimpleNamespace(words=[word(word=" so", start=1.25, end=1.5)]),
+    ]
+    built = {}
+
+    class _Model:
+        def __init__(self, name, **kwargs):
+            built["args"] = (name, kwargs)
+
+        def transcribe(self, path, **kwargs):
+            built["transcribe"] = (path, kwargs)
+            return iter(segments), None
+
+    monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=_Model))
+
+    words = crisper_whisper.faster_whisper_words("clip.wav", {"device": "cuda", "device_index": 0})
+
+    assert words == [
+        {"word": " um", "start": 0.0, "end": 0.5},
+        {"word": " so", "start": 1.25, "end": 1.5},
+    ]
+    assert built["args"] == ("base", {"device": "cuda", "device_index": 0})
+    assert built["transcribe"] == ("clip.wav", {"word_timestamps": True, "vad_filter": True})
+
+
+@pytest.mark.parametrize("device, isolate, expected", [
+    ("cuda", True, "cpu"),
+    ("cuda", False, "cuda"),
+    ("cpu", True, "cpu"),
+])
+def test_whisperx_asr_leaves_the_gpu_to_a_cuda13_torch(monkeypatch, device, isolate, expected):
+    monkeypatch.setattr(ct2_isolation, "should_isolate", lambda: isolate)
+    assert ct2_isolation.ct2_device_beside_torch(device, "WhisperX") == expected
+
+
+class _FakeWhisperX:
+    """Records which device each WhisperX stage asked for."""
+
+    def __init__(self):
+        self.calls = {}
+
+    def module(self):
+        fake = self
+
+        class _Model:
+            def transcribe(self, audio, **kwargs):
+                return {"segments": [{"text": " hi", "start": 0.0, "end": 1.0}], "language": "en"}
+
+        def load_model(source, device, compute_type):
+            fake.calls["asr"] = (device, compute_type)
+            return _Model()
+
+        def load_align_model(language_code, device):
+            fake.calls["align"] = device
+            return object(), {}
+
+        def align(segments, model, metadata, audio, device, **kwargs):
+            fake.calls["align_run"] = device
+            return {"segments": segments, "language": "en"}
+
+        return types.SimpleNamespace(
+            load_model=load_model,
+            load_audio=lambda path: b"",
+            load_align_model=load_align_model,
+            align=align,
+        )
+
+
+def _cuda13_torch_with_a_gpu(monkeypatch):
+    torch = types.SimpleNamespace(
+        version=types.SimpleNamespace(cuda="13.2"),
+        cuda=types.SimpleNamespace(is_available=lambda: True, empty_cache=lambda: None),
+    )
+    monkeypatch.setitem(sys.modules, "torch", torch)
+    monkeypatch.setitem(
+        sys.modules, "faster_whisper.utils",
+        types.SimpleNamespace(download_model=lambda name, revision=None: f"snap/{name}"),
+    )
+    monkeypatch.setattr(ct2_isolation, "should_isolate", lambda: True)
+
+
+def test_captions_whisperx_transcribes_on_the_cpu_and_aligns_on_the_gpu(monkeypatch, tmp_path):
+    from opencut.core import captions
+
+    _cuda13_torch_with_a_gpu(monkeypatch)
+    whisperx = _FakeWhisperX()
+    monkeypatch.setitem(sys.modules, "whisperx", whisperx.module())
+
+    result = captions._transcribe_whisperx(
+        "clip.wav", CaptionConfig(model=str(tmp_path), word_timestamps=True),
+    )
+
+    assert whisperx.calls == {"asr": ("cpu", "int8"), "align": "cuda", "align_run": "cuda"}
+    assert result.provenance.device == "cpu"
+    assert result.provenance.compute_type == "int8"
+
+
+def test_enhanced_whisperx_transcribes_on_the_cpu_and_aligns_on_the_gpu(monkeypatch):
+    from opencut import gpu
+    from opencut.core import captions_enhanced
+
+    _cuda13_torch_with_a_gpu(monkeypatch)
+    whisperx = _FakeWhisperX()
+    monkeypatch.setitem(sys.modules, "whisperx", whisperx.module())
+    monkeypatch.setattr(captions_enhanced, "ensure_package", lambda *a, **k: True)
+    monkeypatch.setattr(gpu, "activate_selected_gpu", lambda torch_module=None: None)
+
+    result = captions_enhanced.whisperx_transcribe("clip.wav", model_size="base")
+
+    assert whisperx.calls == {"asr": ("cpu", "int8"), "align": "cuda", "align_run": "cuda"}
+    assert result["asr_provenance"]["device"] == "cpu"

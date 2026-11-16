@@ -172,27 +172,8 @@ def detect_fillers_crisper(
             torch.cuda.empty_cache()
 
 
-def _fallback_filler_detection(
-    filepath: str,
-    custom_words: Optional[List[str]] = None,
-    on_progress: Optional[Callable] = None,
-) -> dict:
-    """
-    Fallback filler detection using faster-whisper + text matching.
-
-    Used when CrisperWhisper model is not available.
-    """
-    try:
-        from faster_whisper import WhisperModel
-    except ImportError:
-        raise ImportError(
-            "Neither CrisperWhisper nor faster-whisper is available. "
-            "Install with: pip install faster-whisper"
-        )
-
-    if on_progress:
-        on_progress(10, "Falling back to faster-whisper for filler detection...")
-
+def _fallback_model_kwargs() -> dict:
+    """faster-whisper's device for the fallback, picked in this process."""
     from opencut.gpu import get_device, get_device_index
 
     device = get_device()
@@ -201,52 +182,99 @@ def _fallback_filler_detection(
         index = get_device_index()
         if index is not None:
             model_kwargs["device_index"] = index
-    model = WhisperModel("base", **model_kwargs)
+    return model_kwargs
 
+
+def faster_whisper_words(filepath: str, model_kwargs: dict) -> List[dict]:
+    """Every word faster-whisper's base model hears, as ``{word, start, end}``."""
+    from faster_whisper import WhisperModel
+
+    model = WhisperModel("base", **model_kwargs)
     try:
-        segments, info = model.transcribe(
+        segments, _info = model.transcribe(
             filepath,
             word_timestamps=True,
             vad_filter=True,
         )
-
-        if on_progress:
-            on_progress(50, "Scanning for filler words...")
-
-        filler_set = set(TEXT_FILLERS)
-        if custom_words:
-            for w in custom_words:
-                filler_set.add(w.strip().lower())
-
-        fillers = []
-        for segment in segments:
-            if not segment.words:
-                continue
-            for word in segment.words:
-                word_clean = word.word.strip(".,!?;:\"'()[]{}").strip().lower()
-                if word_clean in filler_set:
-                    fillers.append({
-                        "word": word.word.strip(),
-                        "start": round(word.start, 3),
-                        "end": round(word.end, 3),
-                    })
-
-        total_filler_time = sum(f["end"] - f["start"] for f in fillers)
-        cuts = [{"start": f["start"], "end": f["end"]} for f in fillers]
-
-        return {
-            "fillers": fillers,
-            "count": len(fillers),
-            "total_filler_time": round(total_filler_time, 3),
-            "cuts": cuts,
-            "transcript": "",
-            "method": "faster_whisper_fallback",
-        }
+        return [
+            {"word": word.word, "start": float(word.start), "end": float(word.end)}
+            for segment in segments
+            for word in (segment.words or [])
+        ]
     finally:
         del model
+
+
+def _fallback_filler_detection(
+    filepath: str,
+    custom_words: Optional[List[str]] = None,
+    on_progress: Optional[Callable] = None,
+) -> dict:
+    """
+    Fallback filler detection using faster-whisper + text matching.
+
+    Used when CrisperWhisper model is not available. Next to a CUDA 13
+    PyTorch, faster-whisper runs in the CUDA 12 worker process.
+    """
+    import importlib.util
+
+    if importlib.util.find_spec("faster_whisper") is None:
+        raise ImportError(
+            "Neither CrisperWhisper nor faster-whisper is available. "
+            "Install with: pip install faster-whisper"
+        )
+
+    if on_progress:
+        on_progress(10, "Falling back to faster-whisper for filler detection...")
+
+    from opencut.ct2_isolation import run_in_child, should_isolate
+
+    model_kwargs = _fallback_model_kwargs()
+    if should_isolate():
+        reply = run_in_child(
+            "words", {"path": filepath, "model_kwargs": model_kwargs}, what="faster-whisper",
+        )
+        words = reply.get("words")
+        if not isinstance(words, list):
+            raise RuntimeError("faster-whisper's worker process returned no word list")
+    else:
         try:
-            import torch
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-        except ImportError:
-            pass
+            words = faster_whisper_words(filepath, model_kwargs)
+        finally:
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except ImportError:
+                pass
+
+    if on_progress:
+        on_progress(50, "Scanning for filler words...")
+
+    filler_set = set(TEXT_FILLERS)
+    if custom_words:
+        for w in custom_words:
+            filler_set.add(w.strip().lower())
+
+    fillers = []
+    for word in words:
+        text = str(word.get("word", ""))
+        word_clean = text.strip(".,!?;:\"'()[]{}").strip().lower()
+        if word_clean in filler_set:
+            fillers.append({
+                "word": text.strip(),
+                "start": round(float(word["start"]), 3),
+                "end": round(float(word["end"]), 3),
+            })
+
+    total_filler_time = sum(f["end"] - f["start"] for f in fillers)
+    cuts = [{"start": f["start"], "end": f["end"]} for f in fillers]
+
+    return {
+        "fillers": fillers,
+        "count": len(fillers),
+        "total_filler_time": round(total_filler_time, 3),
+        "cuts": cuts,
+        "transcript": "",
+        "method": "faster_whisper_fallback",
+    }

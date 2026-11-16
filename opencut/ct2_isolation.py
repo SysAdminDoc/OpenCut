@@ -9,9 +9,14 @@ cuDNN builds.
 
 Two measures follow from that:
 
-* faster-whisper transcription runs in a child process with torch blocked
-  and CTranslate2's own CUDA 12 runtime (``<data folder>/cuda12``, see
-  :func:`opencut.gpu_lanes.ct2_cuda12_runtime_command`) on its DLL path.
+* CTranslate2 work runs in a child process with torch blocked and
+  CTranslate2's own CUDA 12 runtime (``<data folder>/cuda12``, see
+  :func:`opencut.gpu_lanes.ct2_cuda12_runtime_command`) on its DLL path:
+  faster-whisper transcription, NLLB translation and CrisperWhisper's
+  faster-whisper fallback. WhisperX needs torch beside its model, so it
+  stays here and transcribes on the CPU (:func:`ct2_device_beside_torch`).
+  A CPU load like the ``--download-models`` check never touches either CUDA
+  runtime, so it stays here too.
 * In the server process, the first ``import ctranslate2`` imports torch
   first, so torch's CUDA 13 DLLs claim their names before CTranslate2's
   bundled shim can.
@@ -166,31 +171,25 @@ def _read_json(path: str) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def transcribe_in_child(wav_path: str, config):
-    """Run ``_transcribe_faster_whisper`` in the worker and return its result.
+def run_in_child(op: str, payload: dict, *, what: str) -> dict:
+    """Run one worker op and return its ``result``. ``what`` names it in messages.
 
     The worker is registered with the running job, so cancelling the job
-    kills it. ``hf_token`` stays out of the request file because
-    faster-whisper never reads it.
+    kills it.
     """
-    from dataclasses import asdict
-
-    from opencut.core.captions import transcription_result_from_dict
-
     dirs = cuda12_library_dirs()
     if not dirs:
         logger.warning(
-            "faster-whisper's worker process has no CUDA 12 runtime of its own, so it "
+            "%s's worker process has no CUDA 12 runtime of its own, so it "
             "will likely fall back to CPU. Install the runtime with: %s",
+            what,
             gpu_lanes.ct2_cuda12_runtime_command(),
         )
-    payload = asdict(config)
-    payload["hf_token"] = None
     workdir = tempfile.mkdtemp(prefix="opencut-ct2-")
     request_path = os.path.join(workdir, "request.json")
     result_path = os.path.join(workdir, "result.json")
     try:
-        _write_json(request_path, {"wav_path": wav_path, "config": payload})
+        _write_json(request_path, {**payload, "op": op})
         proc = subprocess.Popen(
             worker_command(request_path, result_path),
             stdin=subprocess.DEVNULL,
@@ -214,22 +213,91 @@ def transcribe_in_child(wav_path: str, config):
                 _unregister_job_process(job_id)
         reply = _read_json(result_path)
         if proc.returncode == 0 and isinstance(reply.get("result"), dict):
-            return transcription_result_from_dict(reply["result"])
+            return reply["result"]
         detail = reply.get("error") or (stderr or "").strip()[-600:] or f"exit code {proc.returncode}"
-        raise RuntimeError(f"faster-whisper failed in its CUDA 12 worker process: {detail}")
+        raise RuntimeError(f"{what} failed in its CUDA 12 worker process: {detail}")
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
 
-def run_worker(request_path: str, result_path: str, *, transcribe=None, preload=None) -> int:
-    """``--ct2-worker``: transcribe one request with torch blocked.
+def transcribe_in_child(wav_path: str, config):
+    """Run ``_transcribe_faster_whisper`` in the worker and return its result.
 
-    Exit code 0 writes ``{"result": ...}``, anything else ``{"error": ...}``.
+    ``hf_token`` stays out of the request file because faster-whisper never
+    reads it.
+    """
+    from dataclasses import asdict
+
+    from opencut.core.captions import transcription_result_from_dict
+
+    payload = asdict(config)
+    payload["hf_token"] = None
+    result = run_in_child("transcribe", {"wav_path": wav_path, "config": payload}, what="faster-whisper")
+    return transcription_result_from_dict(result)
+
+
+def ct2_device_beside_torch(device: str, what: str) -> str:
+    """The device for a CTranslate2 model that has to share a process with torch.
+
+    WhisperX runs its VAD and alignment on torch, so its faster-whisper model
+    can't move to the worker. Next to a CUDA 13 PyTorch its CUDA 12 kernels
+    can't load here either, so it runs on the CPU and torch keeps the GPU.
+    """
+    if device == "cuda" and should_isolate():
+        logger.warning(
+            "%s transcribes on the CPU, since its CTranslate2 needs CUDA 12 and this "
+            "PyTorch is a CUDA %s build. Alignment stays on the GPU.",
+            what,
+            torch_cuda_major(),
+        )
+        return "cpu"
+    return device
+
+
+# ---------------------------------------------------------------------------
+# Worker ops. Each takes the request and returns a JSON-safe dict.
+# ---------------------------------------------------------------------------
+def _op_transcribe(request: dict, transcribe=None) -> dict:
+    from dataclasses import fields
+
+    from opencut.core.captions import _transcribe_faster_whisper, transcription_result_to_dict
+    from opencut.utils.config import CaptionConfig
+
+    known = {f.name for f in fields(CaptionConfig)}
+    config = CaptionConfig(**{k: v for k, v in (request.get("config") or {}).items() if k in known})
+    result = (transcribe or _transcribe_faster_whisper)(request["wav_path"], config)
+    return transcription_result_to_dict(result)
+
+
+def _op_translate(request: dict) -> dict:
+    from opencut.core.captions_enhanced import nllb_translate_here
+
+    texts = nllb_translate_here(
+        request["model_dir"], list(request["texts"]), request["source"], request["target"],
+    )
+    return {"texts": texts}
+
+
+def _op_words(request: dict) -> dict:
+    from opencut.core.crisper_whisper import faster_whisper_words
+
+    return {"words": faster_whisper_words(request["path"], dict(request["model_kwargs"]))}
+
+
+_WORKER_OPS = {"translate": _op_translate, "words": _op_words}
+
+
+def run_worker(request_path: str, result_path: str, *, transcribe=None, preload=None) -> int:
+    """``--ct2-worker``: run one CTranslate2 request with torch blocked.
+
+    The request's ``op`` picks the work: ``transcribe`` (the default),
+    ``translate`` or ``words``. Exit code 0 writes
+    ``{"result": ...}``, anything else ``{"error": ...}``.
     """
     loaded = sys.modules.get("torch")
     if loaded is not None:
         _write_json(result_path, {
-            "error": "PyTorch was already loaded in the faster-whisper worker, so its CUDA "
+            "error": "PyTorch was already loaded in the CTranslate2 worker, so its CUDA "
                      "DLLs would collide with CTranslate2's.",
         })
         return 3
@@ -237,19 +305,18 @@ def run_worker(request_path: str, result_path: str, *, transcribe=None, preload=
     os.environ[CHILD_ENV] = "1"
     try:
         (preload or preload_cuda12_runtime)()
-        from dataclasses import fields
-
-        from opencut.core.captions import _transcribe_faster_whisper, transcription_result_to_dict
-        from opencut.utils.config import CaptionConfig
-
         request = _read_json(request_path)
-        known = {f.name for f in fields(CaptionConfig)}
-        config = CaptionConfig(**{k: v for k, v in (request.get("config") or {}).items() if k in known})
-        result = (transcribe or _transcribe_faster_whisper)(request["wav_path"], config)
-        _write_json(result_path, {"result": transcription_result_to_dict(result)})
+        op = request.get("op") or "transcribe"
+        if op == "transcribe":
+            result = _op_transcribe(request, transcribe)
+        elif op in _WORKER_OPS:
+            result = _WORKER_OPS[op](request)
+        else:
+            raise ValueError(f"Unknown worker op {op!r}")
+        _write_json(result_path, {"result": result})
         return 0
     except Exception as exc:
-        logger.exception("faster-whisper worker failed")
+        logger.exception("CTranslate2 worker failed")
         _write_json(result_path, {"error": f"{type(exc).__name__}: {exc}"})
         return 1
 

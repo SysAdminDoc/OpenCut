@@ -1594,8 +1594,11 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
     import whisperx
     from faster_whisper.utils import download_model
 
+    from opencut.ct2_isolation import ct2_device_beside_torch
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    compute_type = "float16" if device == "cuda" else "int8"
+    asr_device = ct2_device_beside_torch(device, "WhisperX")
+    compute_type = "float16" if asr_device == "cuda" else "int8"
 
     # Resolve named checkpoints through the immutable revision recorded in the
     # provenance contract, then pass the snapshot path to WhisperX.
@@ -1609,7 +1612,7 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
         model_source = download_model(config.model, revision=resolved_revision)
 
     # Load model and transcribe
-    model = whisperx.load_model(model_source, device, compute_type=compute_type)
+    model = whisperx.load_model(model_source, asr_device, compute_type=compute_type)
     align_model = None
     diarize_pipeline = None
     try:
@@ -1736,7 +1739,7 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
         "whisperx",
         config,
         language,
-        device=device,
+        device=asr_device,
         compute_type=compute_type,
     )
     if config.word_timestamps:

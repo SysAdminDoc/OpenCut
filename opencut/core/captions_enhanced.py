@@ -203,7 +203,10 @@ def whisperx_transcribe(
         from opencut.gpu import activate_selected_gpu
 
         activate_selected_gpu(torch_module=torch)
-    compute_type = "float16" if device == "cuda" else "int8"
+    from opencut.ct2_isolation import ct2_device_beside_torch
+
+    asr_device = ct2_device_beside_torch(device, "WhisperX")
+    compute_type = "float16" if asr_device == "cuda" else "int8"
 
     if on_progress:
         on_progress(10, f"Loading WhisperX model ({model_size})...")
@@ -219,7 +222,7 @@ def whisperx_transcribe(
         if os.path.isdir(model_size)
         else download_model(model_size, revision=resolved_revision)
     )
-    model = whisperx.load_model(model_source, device, compute_type=compute_type)
+    model = whisperx.load_model(model_source, asr_device, compute_type=compute_type)
     align_model = None
     try:
         audio = whisperx.load_audio(audio_path)
@@ -304,7 +307,7 @@ def whisperx_transcribe(
         min_speakers=None,
         max_speakers=None,
     )
-    provenance.device = device
+    provenance.device = asr_device
     provenance.compute_type = compute_type
     apply_language_decision(provenance, detected_lang)
     align_id, align_revision = whisperx_alignment_identity(detected_lang)
@@ -360,6 +363,107 @@ TRANSLATION_LANGUAGES = [
 ]
 
 
+def _ensure_nllb(on_progress: Optional[Callable], progress_label: str) -> str:
+    """Install what NLLB needs and download its model. Returns the model folder."""
+    if not ensure_package("ctranslate2", "ctranslate2", on_progress):
+        raise RuntimeError("Failed to install ctranslate2. Install manually: pip install ctranslate2")
+    if not ensure_package("sentencepiece", "sentencepiece", on_progress):
+        raise RuntimeError("Failed to install sentencepiece. Install manually: pip install sentencepiece")
+
+    model_dir = os.path.join(os.path.expanduser("~"), ".opencut", "models", "nllb-200-distilled-600M")
+
+    if not os.path.isdir(model_dir):
+        if on_progress:
+            on_progress(10, progress_label)
+        if not ensure_package("huggingface_hub", "huggingface-hub>=1.26,<2", on_progress):
+            raise RuntimeError(
+                "Failed to install a safe huggingface-hub release. "
+                "Install manually: pip install 'huggingface-hub>=1.26,<2'"
+            )
+        model_id = "JustFrederik/nllb-200-distilled-600M-ct2-float16"
+        safe_snapshot_download(
+            model_id,
+            revision=PINNED_HF_MODELS[model_id],
+            local_dir=model_dir,
+        )
+    return model_dir
+
+
+def nllb_translate_here(
+    model_dir: str,
+    texts: List[str],
+    src_code: str,
+    tgt_code: str,
+    on_item: Optional[Callable[[int, int], None]] = None,
+) -> List[str]:
+    """Translate each text with NLLB in this process. ``on_item(i, total)`` after each."""
+    import ctranslate2
+    import sentencepiece
+
+    from opencut.gpu import selected_ct2_device_kwargs
+
+    translator = ctranslate2.Translator(model_dir, **selected_ct2_device_kwargs())
+    try:
+        sp_path = os.path.join(model_dir, "sentencepiece.bpe.model")
+        if not os.path.isfile(sp_path):
+            # Try alternate name
+            sp_path = os.path.join(model_dir, "source.spm")
+        if not os.path.isfile(sp_path):
+            raise FileNotFoundError(f"SentencePiece model not found in {model_dir}")
+
+        sp = sentencepiece.SentencePieceProcessor()
+        sp.Load(sp_path)
+
+        translated = []
+        total = len(texts)
+        for i, text in enumerate(texts):
+            source_tokens = [src_code] + sp.Encode(text, out_type=str)
+            results = translator.translate_batch(
+                [source_tokens],
+                target_prefix=[[tgt_code]],
+                max_batch_size=1,
+                beam_size=4,
+            )
+            if not results or not results[0].hypotheses:
+                raise RuntimeError("Translation produced no output")
+            out_tokens = results[0].hypotheses[0]
+            # Remove language tag from output
+            if out_tokens and out_tokens[0] == tgt_code:
+                out_tokens = out_tokens[1:]
+            translated.append(sp.Decode(out_tokens))
+            if on_item:
+                on_item(i, total)
+        return translated
+    finally:
+        del translator
+
+
+def nllb_translate(
+    model_dir: str,
+    texts: List[str],
+    src_code: str,
+    tgt_code: str,
+    on_item: Optional[Callable[[int, int], None]] = None,
+) -> List[str]:
+    """:func:`nllb_translate_here`, in the CUDA 12 worker next to a CUDA 13 PyTorch.
+
+    The worker reports nothing until it's done, so ``on_item`` only runs here.
+    """
+    from opencut.ct2_isolation import run_in_child, should_isolate
+
+    if not should_isolate():
+        return nllb_translate_here(model_dir, texts, src_code, tgt_code, on_item)
+    reply = run_in_child(
+        "translate",
+        {"model_dir": model_dir, "texts": list(texts), "source": src_code, "target": tgt_code},
+        what="NLLB translation",
+    )
+    translated = reply.get("texts")
+    if not isinstance(translated, list) or len(translated) != len(texts):
+        raise RuntimeError("NLLB translation's worker process returned the wrong number of texts")
+    return [str(text) for text in translated]
+
+
 def translate_text(
     text: str,
     source_lang: str = "en",
@@ -372,75 +476,16 @@ def translate_text(
     CTranslate2 is already a dependency of faster-whisper.
     Uses the distilled 600M NLLB model for good quality with fast inference.
     """
-    if not ensure_package("ctranslate2", "ctranslate2", on_progress):
-        raise RuntimeError("Failed to install ctranslate2. Install manually: pip install ctranslate2")
-    if not ensure_package("sentencepiece", "sentencepiece", on_progress):
-        raise RuntimeError("Failed to install sentencepiece. Install manually: pip install sentencepiece")
-    import ctranslate2
-    import sentencepiece
-
-    model_dir = os.path.join(os.path.expanduser("~"), ".opencut", "models", "nllb-200-distilled-600M")
-
-    if not os.path.isdir(model_dir):
-        if on_progress:
-            on_progress(10, "Downloading NLLB translation model (~1.2GB)...")
-        if not ensure_package("huggingface_hub", "huggingface-hub>=1.26,<2", on_progress):
-            raise RuntimeError(
-                "Failed to install a safe huggingface-hub release. "
-                "Install manually: pip install 'huggingface-hub>=1.26,<2'"
-            )
-        model_id = "JustFrederik/nllb-200-distilled-600M-ct2-float16"
-        safe_snapshot_download(
-            model_id,
-            revision=PINNED_HF_MODELS[model_id],
-            local_dir=model_dir,
-        )
+    model_dir = _ensure_nllb(on_progress, "Downloading NLLB translation model (~1.2GB)...")
 
     src_code = NLLB_LANGUAGES.get(source_lang, f"{source_lang}_Latn")
     tgt_code = NLLB_LANGUAGES.get(target_lang, f"{target_lang}_Latn")
 
     if on_progress:
         on_progress(30, "Loading translation model...")
+        on_progress(50, "Translating...")
 
-    from opencut.gpu import selected_ct2_device_kwargs
-
-    translator = ctranslate2.Translator(model_dir, **selected_ct2_device_kwargs())
-    try:
-        sp_path = os.path.join(model_dir, "sentencepiece.bpe.model")
-
-        if not os.path.isfile(sp_path):
-            # Try alternate name
-            sp_path = os.path.join(model_dir, "source.spm")
-        if not os.path.isfile(sp_path):
-            raise FileNotFoundError(f"SentencePiece model not found in {model_dir}")
-
-        sp = sentencepiece.SentencePieceProcessor()
-        sp.Load(sp_path)
-
-        if on_progress:
-            on_progress(50, "Translating...")
-
-        # Tokenize and translate
-        source_tokens = sp.Encode(text, out_type=str)
-        source_tokens = [src_code] + source_tokens
-
-        results = translator.translate_batch(
-            [source_tokens],
-            target_prefix=[[tgt_code]],
-            max_batch_size=1,
-            beam_size=4,
-        )
-
-        if not results or not results[0].hypotheses:
-            raise RuntimeError("Translation produced no output")
-        translated_tokens = results[0].hypotheses[0]
-        # Remove language tag from output
-        if translated_tokens and translated_tokens[0] == tgt_code:
-            translated_tokens = translated_tokens[1:]
-
-        translated = sp.Decode(translated_tokens)
-    finally:
-        del translator
+    (translated,) = nllb_translate(model_dir, [text], src_code, tgt_code)
 
     if on_progress:
         on_progress(100, "Translation complete")
@@ -457,29 +502,7 @@ def translate_segments(
     """
     Translate a list of caption segments, preserving timestamps.
     """
-    if not ensure_package("ctranslate2", "ctranslate2", on_progress):
-        raise RuntimeError("Failed to install ctranslate2. Install manually: pip install ctranslate2")
-    if not ensure_package("sentencepiece", "sentencepiece", on_progress):
-        raise RuntimeError("Failed to install sentencepiece. Install manually: pip install sentencepiece")
-    import ctranslate2
-    import sentencepiece
-
-    model_dir = os.path.join(os.path.expanduser("~"), ".opencut", "models", "nllb-200-distilled-600M")
-
-    if not os.path.isdir(model_dir):
-        if on_progress:
-            on_progress(10, "Downloading NLLB model (~1.2GB)...")
-        if not ensure_package("huggingface_hub", "huggingface-hub>=1.26,<2", on_progress):
-            raise RuntimeError(
-                "Failed to install a safe huggingface-hub release. "
-                "Install manually: pip install 'huggingface-hub>=1.26,<2'"
-            )
-        model_id = "JustFrederik/nllb-200-distilled-600M-ct2-float16"
-        safe_snapshot_download(
-            model_id,
-            revision=PINNED_HF_MODELS[model_id],
-            local_dir=model_dir,
-        )
+    model_dir = _ensure_nllb(on_progress, "Downloading NLLB model (~1.2GB)...")
 
     src_code = NLLB_LANGUAGES.get(source_lang, f"{source_lang}_Latn")
     tgt_code = NLLB_LANGUAGES.get(target_lang, f"{target_lang}_Latn")
@@ -487,50 +510,26 @@ def translate_segments(
     if on_progress:
         on_progress(20, "Loading translation model...")
 
-    from opencut.gpu import selected_ct2_device_kwargs
+    texts = [seg.get("text", "").strip() for seg in segments]
+    wanted = [i for i, text in enumerate(texts) if text]
+    total = len(segments)
 
-    translator = ctranslate2.Translator(model_dir, **selected_ct2_device_kwargs())
-    try:
-        sp_path = os.path.join(model_dir, "sentencepiece.bpe.model")
-        if not os.path.isfile(sp_path):
-            sp_path = os.path.join(model_dir, "source.spm")
-        if not os.path.isfile(sp_path):
-            raise FileNotFoundError(f"SentencePiece model not found in {model_dir}")
+    def _on_item(done: int, _count: int) -> None:
+        i = wanted[done]
+        if on_progress and i % max(1, total // 10) == 0:
+            pct = 20 + int((i / total) * 75)
+            on_progress(pct, f"Translating {i+1}/{total}...")
 
-        sp = sentencepiece.SentencePieceProcessor()
-        sp.Load(sp_path)
+    translated = nllb_translate(model_dir, [texts[i] for i in wanted], src_code, tgt_code, _on_item)
+    by_index = dict(zip(wanted, translated))
 
-        translated_segments = []
-        total = len(segments)
-        for i, seg in enumerate(segments):
-            text = seg.get("text", "").strip()
-            if not text:
-                translated_segments.append(seg.copy())
-                continue
-
-            source_tokens = [src_code] + sp.Encode(text, out_type=str)
-            results = translator.translate_batch(
-                [source_tokens],
-                target_prefix=[[tgt_code]],
-                beam_size=4,
-            )
-            if not results or not results[0].hypotheses:
-                raise RuntimeError("Translation produced no output")
-            out_tokens = results[0].hypotheses[0]
-            if out_tokens and out_tokens[0] == tgt_code:
-                out_tokens = out_tokens[1:]
-            translated_text = sp.Decode(out_tokens)
-
-            new_seg = seg.copy()
-            new_seg["text"] = translated_text
-            new_seg["original_text"] = text
-            translated_segments.append(new_seg)
-
-            if on_progress and i % max(1, total // 10) == 0:
-                pct = 20 + int((i / total) * 75)
-                on_progress(pct, f"Translating {i+1}/{total}...")
-    finally:
-        del translator
+    translated_segments = []
+    for i, seg in enumerate(segments):
+        new_seg = seg.copy()
+        if i in by_index:
+            new_seg["text"] = by_index[i]
+            new_seg["original_text"] = texts[i]
+        translated_segments.append(new_seg)
 
     if on_progress:
         on_progress(100, "Translation complete")
