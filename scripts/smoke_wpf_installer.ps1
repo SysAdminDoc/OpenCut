@@ -180,6 +180,9 @@ try {
         throw "Registry InstallPath mismatch: expected $installFull, got $registryInstallPath"
     }
 
+    # A leftover subkey must not keep the app key alive through uninstall.
+    New-Item -Path (Join-Path $registryPath "SmokeLeftover") -Force | Out-Null
+
     $uninstaller = Join-Path $installFull "OpenCut-Uninstall.exe"
     $uninstallArgs = @("--uninstall", "--quiet", "--log=$uninstallLog") + $commonSafetyArgs
     Invoke-CheckedProcess -FilePath $uninstaller -Arguments $uninstallArgs -Label "Uninstalling OpenCut with WPF quiet mode"

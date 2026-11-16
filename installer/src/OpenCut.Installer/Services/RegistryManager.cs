@@ -241,7 +241,9 @@ public class RegistryManager
     {
         try
         {
-            Registry.CurrentUser.DeleteSubKey(AppConstants.AppRegKey, throwOnMissingSubKey: false);
+            // The whole key is OpenCut's. DeleteSubKey throws on a key with
+            // subkeys, and the catch below would leave it behind silently.
+            Registry.CurrentUser.DeleteSubKeyTree(AppConstants.AppRegKey, throwOnMissingSubKey: false);
         }
         catch { /* Best effort */ }
     }

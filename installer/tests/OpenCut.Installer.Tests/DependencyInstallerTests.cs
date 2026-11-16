@@ -41,7 +41,9 @@ public class DependencyInstallerTests
     [Fact]
     public void ExpandableUserPathRoundTripsWithoutExpandingVariables()
     {
-        var keyPath = $"Software\\OpenCut\\InstallerTests\\{Guid.NewGuid():N}";
+        // A top-level key of its own: a subkey under Software\OpenCut outlived
+        // the test and stopped the uninstaller from removing the app's key.
+        var keyPath = $"Software\\OpenCut.InstallerTests.{Guid.NewGuid():N}";
         try
         {
             using var key = Registry.CurrentUser.CreateSubKey(keyPath)
