@@ -32,18 +32,17 @@ available, it also emits the `.AppImage`. If `flatpak-builder` and
 `flatpak` are available, it builds a local OSTree repository and exports
 a single-file `.flatpak` bundle.
 
-## Flathub Boundary
+## Flathub
 
-The repository now carries the upstream Linux desktop metadata required
-for Flathub review: app ID, desktop file, MetaInfo, icon install path,
-runtime/Sdk selection, and `flathub.json` architecture policy. Local release
-builds produce self-contained Flatpak bundles for release upload.
+OpenCut isn't published on Flathub, and no submission is planned. The
+Flatpak is a self-contained bundle built locally from the PyInstaller
+output, so the manifest wouldn't meet Flathub's build-from-source and
+no-network-at-build rules anyway. The build only uses Flathub as the
+place it downloads the freedesktop runtime and SDK from.
 
-Flathub's hosted submission repository must still obey Flathub's
-build-from-source and no-network-at-build rules. If OpenCut is submitted
-to Flathub, the PyInstaller bundle source in `io.github.sysadmindoc.opencut.yml`
-should be replaced in the Flathub submission repository with a source build
-module plus generated Python dependency manifests.
+The app ID, desktop file, MetaInfo and icon still follow the Flatpak
+conventions, since GNOME Software, KDE Discover and `flatpak` itself read
+them from an installed bundle.
 
 ## Source Notes
 

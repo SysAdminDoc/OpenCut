@@ -83,7 +83,7 @@ fi
 
 if command -v appstreamcli >/dev/null 2>&1; then
   if ! appstreamcli validate --no-net "$METAINFO_FILE"; then
-    echo "appstreamcli reported metadata issues; fix before Flathub submission" >&2
+    echo "appstreamcli reported metadata issues; fix them before shipping the bundle" >&2
   fi
 else
   echo "appstreamcli not found; skipping MetaInfo validation"

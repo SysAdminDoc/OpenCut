@@ -199,10 +199,10 @@ TARGETS = [
         r"\g<1>{v}\g<2>",
     ),
     # NOTE: packaging/linux/*.metainfo.xml is deliberately NOT a sync target.
-    # Its newest <release> entry tracks the last Flathub-PUBLISHED build
+    # Its newest <release> entry tracks the last Linux bundle that shipped
     # (pinned by tests/test_linux_distribution_packaging.py), not the source
-    # version; add a dated <release> block there only when a Flathub build
-    # actually ships.
+    # version; add a dated <release> block there only when a release actually
+    # attaches a .flatpak or AppImage.
     # CEP update card current version and About dialog version. Keep these
     # selectors scoped so one sync updates both numeric surfaces.
     (

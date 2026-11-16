@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import stat
@@ -14,7 +13,6 @@ from xml.etree import ElementTree as ET
 REPO_ROOT = Path(__file__).resolve().parents[1]
 APP_ID = "io.github.sysadmindoc.opencut"
 MANIFEST = REPO_ROOT / f"{APP_ID}.yml"
-FLATHUB_JSON = REPO_ROOT / "flathub.json"
 DESKTOP = REPO_ROOT / "packaging" / "linux" / f"{APP_ID}.desktop"
 METAINFO = REPO_ROOT / "packaging" / "linux" / f"{APP_ID}.metainfo.xml"
 FLATPAK_RUNNER = REPO_ROOT / "packaging" / "linux" / "flatpak" / "opencut-server"
@@ -80,12 +78,6 @@ def test_metainfo_matches_flatpak_id_and_release_metadata():
     assert root.findtext("launchable") == f"{APP_ID}.desktop"
     assert root.find("developer").attrib["id"] == "io.github.sysadmindoc"
     assert root.find("releases/release").attrib["version"] == "1.32.0"
-
-
-def test_flathub_json_limits_current_binary_release_architecture():
-    payload = json.loads(_read(FLATHUB_JSON))
-
-    assert payload == {"only-arches": ["x86_64"]}
 
 
 def test_linux_package_launchers_pin_user_data_and_loopback_defaults():
@@ -226,7 +218,5 @@ def test_release_smoke_includes_linux_packaging_contract():
 def test_docs_record_official_flatpak_and_appimage_boundaries():
     text = _read(REPO_ROOT / "docs" / "LINUX_DISTRIBUTION.md")
 
-    assert "Flathub's hosted submission repository" in text
-    assert "build-from-source and no-network-at-build rules" in text
     assert "AppDir" in text
     assert re.search(r"org\.freedesktop\.Platform.*25\.08", text, re.DOTALL)
