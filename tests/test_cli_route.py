@@ -103,6 +103,9 @@ def test_cli_route_post_fetches_csrf_and_sends_json(monkeypatch, bootstrap_secre
 
     secret = bootstrap_secret
     calls = []
+    # Nothing really listens on 5679 here. Who owns the listener is covered in
+    # test_bootstrap_secret_boundary.
+    monkeypatch.setattr(panel_bootstrap, "listener_is_ours", lambda base_url: True)
 
     def fake_urlopen(req, timeout):
         calls.append((req, timeout))

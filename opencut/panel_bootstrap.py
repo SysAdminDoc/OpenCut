@@ -258,13 +258,88 @@ def is_loopback_url(url: str) -> bool:
         return False
 
 
+def _lsof_listener_pids(port: int) -> Optional[set[int]]:
+    """PIDs that ``lsof`` run as this account sees listening on *port*."""
+    try:
+        out = subprocess.run(
+            ["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-t"],
+            capture_output=True, text=True, timeout=5, check=False,
+        ).stdout
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.debug("lsof could not list listeners on port %d: %s", port, exc)
+        return None
+    return {int(token) for token in out.split() if token.isdigit()}
+
+
+def _listener_pids(port: int) -> Optional[set[int]]:
+    """PIDs of every TCP listener on *port*, or ``None`` when one can't be named."""
+    import psutil
+
+    try:
+        connections = psutil.net_connections(kind="tcp")
+    except psutil.AccessDenied:
+        # macOS lists every socket only for root. lsof run as this account
+        # sees this account's listeners, and one it can't see isn't ours.
+        return _lsof_listener_pids(port)
+    except psutil.Error as exc:
+        logger.debug("Could not list listeners on port %d: %s", port, exc)
+        return None
+    pids: set[int] = set()
+    for conn in connections:
+        if conn.status != psutil.CONN_LISTEN or not conn.laddr or conn.laddr.port != port:
+            continue
+        if not conn.pid:
+            return None  # Linux hides the owner of another account's socket.
+        pids.add(conn.pid)
+    return pids
+
+
+def _runs_as_this_account(pid: int) -> bool:
+    import psutil
+
+    try:
+        if os.name == "nt":
+            return psutil.Process(pid).username() == psutil.Process().username()
+        return psutil.Process(pid).uids().effective == os.geteuid()
+    except (psutil.Error, OSError):
+        # Another account's process refuses the query unless we're an admin.
+        return False
+
+
+def listener_is_ours(base_url: str) -> bool:
+    """Return True when every listener on *base_url*'s port runs as this account.
+
+    Loopback is shared by every account on the machine. A process in another
+    account that takes the port first would otherwise collect the secret.
+    """
+    try:
+        parts = urllib.parse.urlsplit(str(base_url or ""))
+        port = parts.port or (443 if parts.scheme == "https" else 80)
+    except ValueError:
+        return False
+    try:
+        pids = _listener_pids(port)
+    except (ImportError, OSError) as exc:
+        logger.debug("Could not list listeners on port %d: %s", port, exc)
+        return False
+    if not pids:
+        return False
+    if all(_runs_as_this_account(pid) for pid in pids):
+        return True
+    logger.warning(
+        "Not sending the panel bootstrap secret to port %d: the process listening there runs as another account",
+        port,
+    )
+    return False
+
+
 def bootstrap_headers(base_url: str) -> dict[str, str]:
     """Headers a native client adds to ``GET /health`` on *base_url*.
 
-    Only a loopback backend gets the secret. A remote one keeps its own secret
-    and must never learn this machine's.
+    Only a loopback backend run by this account gets the secret. A remote one
+    keeps its own secret and must never learn this machine's.
     """
-    if not is_loopback_url(base_url):
+    if not is_loopback_url(base_url) or not listener_is_ours(base_url):
         return {}
     secret = current_secret()
     return {BOOTSTRAP_HEADER: secret} if secret else {}

@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import io
 import json
+import os
+import socket
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -41,6 +43,33 @@ def isolated_auth(tmp_path, monkeypatch):
     auth_module.clear_token()
     yield auth_module
     auth_module.clear_token()
+
+
+@pytest.fixture
+def own_port():
+    """A loopback port this test process is listening on."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        sock.listen()
+        yield sock.getsockname()[1]
+
+
+def _system_port() -> int:
+    """A port the Windows System process (PID 4, another account) listens on."""
+    if os.name != "nt":
+        pytest.skip("needs the Windows System process")
+    import psutil
+
+    for conn in psutil.net_connections(kind="tcp"):
+        if conn.status == psutil.CONN_LISTEN and conn.pid == 4 and conn.laddr.ip in ("0.0.0.0", "127.0.0.1"):
+            return conn.laddr.port
+    pytest.skip("nothing on this PC listens as the System account")
+
+
+def _free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
 
 
 def _withheld():
@@ -104,10 +133,21 @@ class TestHealthNeedsTheSecret:
 class TestBootstrapHeaders:
     @pytest.mark.parametrize(
         "base_url",
-        ["http://127.0.0.1:5679", "http://localhost:5680", "http://[::1]:5679", "http://127.0.0.2:5679/"],
+        ["http://127.0.0.1:{port}", "http://localhost:{port}", "http://[::1]:{port}", "http://127.0.0.2:{port}/"],
     )
-    def test_loopback_backends_get_the_secret(self, secret, base_url):
-        assert panel_bootstrap.bootstrap_headers(base_url) == {BOOTSTRAP_HEADER: secret}
+    def test_loopback_backends_run_by_this_account_get_the_secret(self, secret, own_port, base_url):
+        url = base_url.format(port=own_port)
+        assert panel_bootstrap.bootstrap_headers(url) == {BOOTSTRAP_HEADER: secret}
+
+    def test_a_listener_in_another_account_never_sees_it(self, secret):
+        """A process in another account that took the port first used to be
+        handed the secret, and could then replay it to the real server."""
+        port = _system_port()
+        assert panel_bootstrap.listener_is_ours(f"http://127.0.0.1:{port}") is False
+        assert panel_bootstrap.bootstrap_headers(f"http://127.0.0.1:{port}") == {}
+
+    def test_nothing_listening_gets_nothing(self, secret):
+        assert panel_bootstrap.bootstrap_headers(f"http://127.0.0.1:{_free_port()}") == {}
 
     @pytest.mark.parametrize(
         "base_url",
@@ -212,23 +252,23 @@ class _BridgeResponse(io.BytesIO):
 
 
 class TestFirstPartyClients:
-    def test_cli_presents_the_secret(self, client, secret, monkeypatch):
+    def test_cli_presents_the_secret(self, client, secret, own_port, monkeypatch):
         from opencut import cli
 
         bridge = _FlaskBridge(client)
         monkeypatch.setattr(cli.urllib.request, "urlopen", bridge)
 
-        token = cli._fetch_cli_csrf_token("http://127.0.0.1:5679", 5)
+        token = cli._fetch_cli_csrf_token(f"http://127.0.0.1:{own_port}", 5)
 
         assert token
         path, payload = MUTATION
         resp = client.post(path, json=payload, headers={"X-OpenCut-Token": token})
         assert resp.status_code != 403
 
-    def test_mcp_server_presents_the_secret(self, client, secret, monkeypatch):
+    def test_mcp_server_presents_the_secret(self, client, secret, own_port, monkeypatch):
         from opencut import mcp_server
 
-        monkeypatch.setattr(mcp_server, "BACKEND_URL", "http://127.0.0.1:5679")
+        monkeypatch.setattr(mcp_server, "BACKEND_URL", f"http://127.0.0.1:{own_port}")
         monkeypatch.setattr(mcp_server, "_csrf_token", "")
         monkeypatch.setattr(mcp_server, "_csrf_fetched_at", 0.0)
         monkeypatch.setattr(mcp_server.urllib.request, "urlopen", _FlaskBridge(client))
@@ -253,7 +293,26 @@ class TestFirstPartyClients:
         assert BOOTSTRAP_HEADER.lower() not in sent
         assert mcp_server._csrf_token == ""
 
-    def test_stale_server_shutdown_presents_the_secret(self, client, secret, monkeypatch):
+    def test_stale_server_shutdown_keeps_the_secret_from_another_account(self, secret, monkeypatch):
+        """Startup asks whatever holds the port to shut down, and that can be
+        a process in another account squatting on it."""
+        from opencut import pid
+
+        port = _system_port()
+        sent = []
+
+        def urlopen(req, timeout=None):
+            sent.append(req)
+            raise OSError("refused")
+
+        monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+        assert pid._kill_via_shutdown_endpoint("127.0.0.1", port) is False
+        health = [req for req in sent if req.full_url.endswith("/health")]
+        assert health, "the shutdown still asks /health for a token"
+        assert BOOTSTRAP_HEADER.lower() not in {key.lower() for key, _ in health[0].header_items()}
+
+    def test_stale_server_shutdown_presents_the_secret(self, client, secret, own_port, monkeypatch):
         from opencut import pid
 
         bridge = _FlaskBridge(client)
@@ -268,7 +327,7 @@ class TestFirstPartyClients:
 
         monkeypatch.setattr(urllib.request, "urlopen", urlopen)
 
-        assert pid._kill_via_shutdown_endpoint("127.0.0.1", 5679) is True
+        assert pid._kill_via_shutdown_endpoint("127.0.0.1", own_port) is True
 
         assert bridge.requests[0].get_header(BOOTSTRAP_HEADER.capitalize()) == secret
         sent_token = shutdowns[0].get_header("X-opencut-token")

@@ -177,8 +177,9 @@ a token, and every mutating route answers it with 403.
 
 The first-party clients read the secret themselves. The CEP panel reads it
 through its ExtendScript host. The CLI, the MCP server and the stale-server
-shutdown at startup read the file directly and send it only to loopback
-backends. The UXP panel can't open the OpenCut data folder without a broad
+shutdown at startup read the file directly. They send it only to a loopback
+backend, and only when every process listening on that port runs as the same
+account. The UXP panel can't open the OpenCut data folder without a broad
 file-system permission, so the server also copies the secret into the
 panel's own data folder in Premiere's UXP plugin storage
 (`%APPDATA%\Adobe\UXP\PluginsStorage\PPRO\<version>\<kind>\com.opencut.uxp\PluginData`
@@ -187,11 +188,11 @@ on Windows, the same layout under
 folder sits in the same account's profile. The server never creates it, and
 it refreshes the copy at startup and whenever a refused `/health` arrives.
 
-Two gaps remain. A client can't yet tell which account owns the listener on
-its port, so a process in another account that takes the port first could
-collect the secret and replay it. And anything that can already read your
-profile (an administrator, or malware running as you) can read the secret
-like any other file you own.
+Two gaps remain. The panels can't see who owns the listener on their port, so
+a process in another account that takes the port before the server starts
+could collect the secret from a panel and replay it. And anything that can
+already read your profile (an administrator, or malware running as you) can
+read the secret like any other file you own.
 
 ## Software Bill of Materials (SBOM)
 
