@@ -35,11 +35,7 @@ checker = _load_checker()
 # is a new regression and fails the test. `scripts/check_installed_versions.py`
 # (and the release smoke step that runs it) still fail on these - that is the
 # point of the gate.
-KNOWN_ENVIRONMENT_GAPS = {
-    # transformers 5.x forces huggingface_hub 1.x, which the pyannote /
-    # faster-whisper / diffusers stack in this matrix does not accept yet.
-    "transformers": ">=5.3",
-}
+KNOWN_ENVIRONMENT_GAPS: dict[str, str] = {}
 
 
 def test_no_new_declared_constraint_is_violated():

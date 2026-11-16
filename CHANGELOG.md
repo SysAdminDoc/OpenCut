@@ -83,6 +83,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - Running the test suite no longer writes into your real `~/.opencut`. Five test modules load the server while pytest is still collecting, which was before the fake home folder went in, so every run logged into your real `server.log` and rotated your older entries out of it.
 - Eight silence, scene and audio tests pass when their file runs on its own. They mock `subprocess.run`, the FFmpeg security check ran through that mock, and it raised a `TypeError` on the mock's output. The check now grades output it can't read as an unknown build and refuses it, and the tests skip the check, which has tests of its own.
 - The panel parity and feature readiness checks pass again. A scan number added to the model list's request hid its `/models/list` call from the parity scan, and the readiness manifest hadn't been regenerated since the auto-editor hint and the NLLB probe moved.
+- The declared-versions check no longer excuses an old transformers. The declared stack, transformers 5.10 or newer on huggingface-hub 1.x, installs cleanly now, so an older transformers fails the check like any other mismatch.
 
 ### Release builds
 
