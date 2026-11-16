@@ -360,18 +360,40 @@ def _record_bootstrap_withheld(origin: str, *, token_presented: bool) -> None:
         logger.warning("csrf bootstrap audit failed: %s", exc)
 
 
+def _health_presents_auth_token() -> bool:
+    """True when the request carries a valid ``X-OpenCut-Auth`` token."""
+    from opencut import auth as _auth
+
+    presented = _auth.extract_request_token(request.headers)
+    return bool(presented) and _auth.is_token_valid(presented)
+
+
+def _offer_secret_to_uxp_panel() -> None:
+    """Refresh the UXP panel's copy of the secret after a refused bootstrap.
+
+    The panel's data folder may not have existed when the server started.
+    """
+    try:
+        from opencut.panel_bootstrap import mirror_secret_to_uxp
+
+        mirror_secret_to_uxp()
+    except Exception as exc:  # noqa: BLE001 - health must answer even if the copy fails
+        logger.warning("panel bootstrap mirror failed: %s", exc)
+
+
 def _health_should_expose_csrf_token() -> bool:
-    """Expose the bootstrap CSRF token on an allowlist basis.
+    """Hand the CSRF token only to callers that prove they're this user.
 
-    A request with no Origin header, an exact same-origin match, and explicitly
-    configured CORS origins are allowed. Any other cross-origin browser context
-    is denied so a hostile page cannot harvest the loopback mutation token.
+    Proof is the bootstrap secret from :mod:`opencut.panel_bootstrap` (a file
+    only the account that started the server can read) or the remote auth
+    token. Headers alone prove nothing on loopback: any local process, in any
+    user's session, can send no ``Origin`` or a copy of the server's own
+    origin, so neither earns a token any more (F471).
 
-    Host-embedded panels are the exception that the blocklist alone cannot
-    serve: the CEP panel is a ``file://`` document, so its XHR carries
-    ``Origin: null`` — indistinguishable from a hostile local page by headers
-    alone. It proves itself instead by presenting the 0600 bootstrap secret
-    from :mod:`opencut.panel_bootstrap`, which a browser page cannot read.
+    ``OPENCUT_CORS_ORIGINS`` is the one exception. An operator who lists a
+    web origin there has chosen to let that site's pages bootstrap without a
+    secret. ``null`` and ``file://`` are refused even when listed, because a
+    hostile local page presents exactly those.
     """
     from flask import current_app
 
@@ -383,25 +405,22 @@ def _health_should_expose_csrf_token() -> bool:
     # panel from an origin the blocklist must keep refusing for everyone else.
     if presented and is_bootstrap_secret_valid(presented):
         return True
-    if not origin:
+    if _health_presents_auth_token():
         return True
-    origin_l = origin.lower()
-    # The blocklist takes precedence, even over an (ill-advised) CORS entry.
-    if origin_l in _CSRF_BOOTSTRAP_BLOCKED_ORIGINS:
+    if origin:
+        origin_l = origin.lower()
+        try:
+            configured = current_app.config["OPENCUT"].cors_origins or []
+        except Exception:
+            configured = []
+        allowed = {str(o).strip().lower().rstrip("/") for o in configured}
+        # The blocklist takes precedence, even over an (ill-advised) CORS entry.
+        if origin_l not in _CSRF_BOOTSTRAP_BLOCKED_ORIGINS and origin_l.rstrip("/") in allowed:
+            return True
         _record_bootstrap_withheld(origin, token_presented=bool(presented))
-        return False
-    origin_norm = origin_l.rstrip("/")
-    host = (request.host_url or "").strip().lower().rstrip("/")
-    if host and origin_norm == host:
-        return True
-    try:
-        configured = current_app.config["OPENCUT"].cors_origins or []
-    except Exception:
-        configured = []
-    allowed = {str(o).strip().lower().rstrip("/") for o in configured}
-    if origin_norm in allowed:
-        return True
-    _record_bootstrap_withheld(origin, token_presented=bool(presented))
+    # No Origin is a native client. They poll /health for liveness, so the
+    # refusal isn't audited, but the UXP panel may be waiting for its copy.
+    _offer_secret_to_uxp_panel()
     return False
 
 

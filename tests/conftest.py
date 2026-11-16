@@ -171,7 +171,40 @@ def pytest_configure(config):
         return real_expanduser(path)
 
     patch.setattr(os.path, "expanduser", isolated_expanduser)
+    # The server copies the panel bootstrap secret into Premiere's UXP plugin
+    # storage under %APPDATA%, which the fake home doesn't cover.
+    patch.setenv("OPENCUT_UXP_PLUGIN_STORAGE", os.path.join(isolated_home, "uxp-plugin-storage"))
+    _present_bootstrap_secret_on_health(patch)
     _session_home_patch = patch
+
+
+def _present_bootstrap_secret_on_health(patch):
+    """Make test clients present the panel bootstrap secret on ``/health``.
+
+    /health hands out the CSRF token only to a caller holding that secret
+    (F471), and every first-party client sends it. Tests read the token the
+    same way, so a ``/health`` request carries the secret unless the test sets
+    an ``Origin`` or the header itself. An empty header value withholds it.
+    """
+    from flask.testing import FlaskClient
+    from werkzeug.datastructures import Headers
+
+    real_open = FlaskClient.open
+
+    def open_with_bootstrap_secret(self, *args, **kwargs):
+        path = args[0] if args and isinstance(args[0], str) else kwargs.get("path")
+        if isinstance(path, str) and path.split("?", 1)[0] == "/health":
+            from opencut.panel_bootstrap import BOOTSTRAP_HEADER, current_secret
+
+            headers = Headers(kwargs.get("headers") or {})
+            if "Origin" not in headers and BOOTSTRAP_HEADER not in headers:
+                secret = current_secret()
+                if secret:
+                    headers[BOOTSTRAP_HEADER] = secret
+                    kwargs["headers"] = headers
+        return real_open(self, *args, **kwargs)
+
+    patch.setattr(FlaskClient, "open", open_with_bootstrap_secret)
 
 
 def pytest_unconfigure(config):

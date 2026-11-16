@@ -47,6 +47,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from opencut import __version__, mcp_apps, mcp_extended_tools
 from opencut import auth as _auth
+from opencut import panel_bootstrap as _panel_bootstrap
 from opencut import trusted_hosts as _trusted_hosts
 
 logger = logging.getLogger("opencut.mcp")
@@ -70,7 +71,11 @@ def _refresh_csrf():
     """Fetch a fresh CSRF token from the backend and record the fetch time."""
     global _csrf_token, _csrf_fetched_at
     try:
-        req = urllib.request.Request(f"{BACKEND_URL}/health")
+        # /health hands the token only to a caller holding the bootstrap
+        # secret (loopback) or the remote auth token (remote backends).
+        headers = _panel_bootstrap.bootstrap_headers(BACKEND_URL)
+        _apply_backend_auth(headers)
+        req = urllib.request.Request(f"{BACKEND_URL}/health", headers=headers)
         with urllib.request.urlopen(req, timeout=5) as resp:
             body = json.loads(resp.read())
             token = body.get("csrf_token", "")

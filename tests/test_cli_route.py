@@ -88,13 +88,27 @@ def test_cli_route_get_rejects_body_options_before_http(monkeypatch):
     assert "GET routes do not send a JSON body" in result.output
 
 
-def test_cli_route_post_fetches_csrf_and_sends_json(monkeypatch):
+@pytest.fixture
+def bootstrap_secret(tmp_path, monkeypatch):
+    from opencut import panel_bootstrap
+
+    monkeypatch.setenv(panel_bootstrap.BOOTSTRAP_PATH_ENV, str(tmp_path / "panel_bootstrap.token"))
+    panel_bootstrap.clear_cached_secret()
+    yield panel_bootstrap.ensure_bootstrap_secret()
+    panel_bootstrap.clear_cached_secret()
+
+
+def test_cli_route_post_fetches_csrf_and_sends_json(monkeypatch, bootstrap_secret):
+    from opencut import panel_bootstrap
+
+    secret = bootstrap_secret
     calls = []
 
     def fake_urlopen(req, timeout):
         calls.append((req, timeout))
-        if isinstance(req, str):
-            assert req == "http://127.0.0.1:5679/health"
+        if req.full_url == "http://127.0.0.1:5679/health":
+            # F471: /health hands out the token only for the bootstrap secret.
+            assert req.get_header(panel_bootstrap.BOOTSTRAP_HEADER.capitalize()) == secret
             return _FakeResponse({"csrf_token": "csrf-123", "version": "1.32.0"})
         assert req.full_url == "http://127.0.0.1:5679/queue/add"
         assert req.get_method() == "POST"

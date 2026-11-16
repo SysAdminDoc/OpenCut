@@ -182,6 +182,98 @@ describe("UXP backend client", () => {
   });
 });
 
+// F471: /health hands out the CSRF token only to a caller holding the
+// per-user bootstrap secret, which the server copies into the plugin's data
+// folder (localFileSystem.getDataFolder()).
+function pluginDataFileSystem(reads) {
+  const requested = [];
+  const fileSystem = {
+    getDataFolder: async () => ({
+      getEntry: async (name) => {
+        requested.push(name);
+        const next = reads.shift();
+        if (next instanceof Error) throw next;
+        return { isFolder: false, read: async () => next };
+      },
+    }),
+  };
+  return { requested, getLocalFileSystem: async () => fileSystem };
+}
+
+function healthServer(secret) {
+  return vi.fn(async (url, opts) => {
+    if (!url.endsWith("/health")) return response(200, { saved: true });
+    const presented = opts.headers["X-OpenCut-Panel-Bootstrap"];
+    return response(200, presented === secret
+      ? { status: "ok", csrf_token: "csrf-for-this-user" }
+      : { status: "ok" });
+  });
+}
+
+describe("UXP CSRF bootstrap secret", () => {
+  it("presents the plugin data secret and gets the CSRF token", async () => {
+    const state = createUxpState({ backendUrl: "http://127.0.0.1:5679" });
+    const fetchWithTimeout = healthServer("s3cret");
+    const { requested, getLocalFileSystem } = pluginDataFileSystem(["s3cret\n"]);
+    const client = createBackendClient({ state, fetchWithTimeout, getLocalFileSystem });
+
+    expect(await client.fetchCsrf()).toBe("csrf-for-this-user");
+    expect(requested).toEqual(["panel_bootstrap.token"]);
+    expect(fetchWithTimeout.mock.calls[0][1].headers["X-OpenCut-Panel-Bootstrap"]).toBe("s3cret");
+  });
+
+  it("sends the secret on the panel's own health checks", async () => {
+    // checkConnection() and checkHealth() call get("/health") directly.
+    const state = createUxpState({ backendUrl: "http://localhost:5679" });
+    const fetchWithTimeout = healthServer("s3cret");
+    const { getLocalFileSystem } = pluginDataFileSystem(["s3cret"]);
+    const client = createBackendClient({ state, fetchWithTimeout, getLocalFileSystem });
+
+    const result = await client.get("/health");
+    expect(result.data.csrf_token).toBe("csrf-for-this-user");
+    expect(fetchWithTimeout.mock.calls[0][1].headers["X-OpenCut-Panel-Bootstrap"]).toBe("s3cret");
+  });
+
+  it("reads the file again after the server refuses a request without it", async () => {
+    const state = createUxpState({ backendUrl: "http://127.0.0.1:5679" });
+    const fetchWithTimeout = healthServer("s3cret");
+    // The data folder didn't exist when the server started: the first read
+    // misses, the refused /health makes the server write the copy.
+    const { getLocalFileSystem } = pluginDataFileSystem([new Error("Entry not found"), "s3cret"]);
+    const client = createBackendClient({ state, fetchWithTimeout, getLocalFileSystem });
+
+    expect(await client.fetchCsrf()).toBe("csrf-for-this-user");
+    expect(fetchWithTimeout).toHaveBeenCalledTimes(2);
+    expect(fetchWithTimeout.mock.calls[0][1].headers["X-OpenCut-Panel-Bootstrap"]).toBeUndefined();
+  });
+
+  it("keeps the secret off mutations and away from a remote backend", async () => {
+    const local = createUxpState({ backendUrl: "http://127.0.0.1:5679" });
+    const localFetch = healthServer("s3cret");
+    const localClient = createBackendClient({
+      state: local,
+      fetchWithTimeout: localFetch,
+      getLocalFileSystem: pluginDataFileSystem(["s3cret"]).getLocalFileSystem,
+    });
+    await localClient.fetchCsrf();
+    await localClient.post("/settings/test", { enabled: true });
+    expect(localFetch.mock.calls[1][1].headers["X-OpenCut-Panel-Bootstrap"]).toBeUndefined();
+    expect(localFetch.mock.calls[1][1].headers["X-OpenCut-Token"]).toBe("csrf-for-this-user");
+
+    const remote = createUxpState({ backendUrl: "http://studio.lan:5679" });
+    const remoteFetch = healthServer("s3cret");
+    const remoteClient = createBackendClient({
+      state: remote,
+      fetchWithTimeout: remoteFetch,
+      getLocalFileSystem: pluginDataFileSystem(["s3cret", "s3cret"]).getLocalFileSystem,
+    });
+    expect(await remoteClient.fetchCsrf()).toBe(null);
+    for (const [, opts] of remoteFetch.mock.calls) {
+      expect(opts.headers["X-OpenCut-Panel-Bootstrap"]).toBeUndefined();
+    }
+  });
+});
+
 describe("UXP feature control contracts", () => {
   it("keeps only the latest Sequence Index filter response", async () => {
     const pending = [];

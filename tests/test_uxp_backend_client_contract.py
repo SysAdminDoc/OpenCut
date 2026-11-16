@@ -60,6 +60,21 @@ def test_backend_client_module_present():
     assert "export function createBackendClient" in _read_backend_js()
 
 
+def test_backend_client_reads_the_bootstrap_secret_from_plugin_data():
+    """F471: /health needs the bootstrap secret, which the server copies into
+    the folder ``localFileSystem.getDataFolder()`` returns. The behaviour is
+    exercised in tests/uxp-runtime-boundaries.test.mjs; this pins the wiring."""
+    from opencut.panel_bootstrap import BOOTSTRAP_FILENAME, BOOTSTRAP_HEADER
+
+    main_text = _read_main_js()
+    block = main_text.split("const BackendClient = createBackendClient({", 1)[1].split("});", 1)[0]
+    assert "getLocalFileSystem: getUxpLocalFileSystem," in block
+    backend_text = _read_backend_js()
+    assert f'"{BOOTSTRAP_HEADER}"' in backend_text
+    assert f'"{BOOTSTRAP_FILENAME}"' in backend_text
+    assert "getDataFolder()" in backend_text
+
+
 def test_backend_client_exports_canonical_verbs():
     text = _read_backend_js()
     for verb in ("call", "get", "post", "del", "checkHealth", "fetchCsrf"):

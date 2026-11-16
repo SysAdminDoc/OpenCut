@@ -16,17 +16,29 @@ so the origin blocklist stays fully effective while the real panel recovers.
 The secret only unlocks the CSRF bootstrap. It is not an authentication token
 and grants nothing on its own; remote binds still require the separate
 ``opencut.auth`` bearer token.
+
+F471: every native client presents it too. ``/health`` used to hand the token
+to any request without an ``Origin`` header, and any local process can send
+one of those, including a process in another user's session on a shared
+Windows PC. The file is readable only by the account that started the server,
+so the CLI, the MCP server and the UXP panel (through a copy in its own plugin
+data folder, see :func:`mirror_secret_to_uxp`) prove they run as that account.
 """
 
 from __future__ import annotations
 
 import hmac
+import ipaddress
 import logging
 import os
 import secrets
 import stat
+import subprocess
+import sys
 import tempfile
 import threading
+import time
+import urllib.parse
 from pathlib import Path
 from typing import Optional
 
@@ -47,8 +59,22 @@ _SECRET_BYTES = 32
 #: Reject anything implausible before doing constant-time work.
 _MAX_SECRET_CHARS = 256
 
+#: Plugin id from ``extension/com.opencut.uxp/manifest.json``.
+UXP_PLUGIN_ID = "com.opencut.uxp"
+
+#: UXP's code for Premiere Pro in its plugin storage tree.
+UXP_HOST_APP = "PPRO"
+
+#: Environment override for the UXP ``PluginsStorage`` root (tests, odd layouts).
+UXP_STORAGE_ENV = "OPENCUT_UXP_PLUGIN_STORAGE"
+
+#: A refused ``/health`` retries the mirror at most this often.
+_MIRROR_MIN_INTERVAL_S = 1.0
+
 _lock = threading.Lock()
 _cached_secret: Optional[str] = None
+_mirror_lock = threading.Lock()
+_last_mirror_at = 0.0
 
 
 def bootstrap_path() -> str:
@@ -67,16 +93,15 @@ def bootstrap_path() -> str:
 
 def _restrict_windows_acl(path: Path) -> None:
     """Restrict the secret to the current user via icacls (best-effort)."""
-    import subprocess as _sp
-
     try:
         username = os.environ.get("USERNAME", "")
         if not username:
             return
-        _sp.run(
+        subprocess.run(
             ["icacls", str(path), "/inheritance:r", "/grant:r", f"{username}:(R,W)"],
             capture_output=True,
             timeout=10,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
     except Exception as exc:  # noqa: BLE001 - ACL hardening must not block startup
         logger.warning("opencut.panel_bootstrap: could not restrict ACL on %s: %s", path, exc)
@@ -146,8 +171,8 @@ def ensure_bootstrap_secret() -> str:
     """Create the bootstrap secret if needed and return it.
 
     Called once during app creation. Returns an empty string when the feature
-    is disabled or the secret cannot be persisted; the panel then falls back to
-    the existing same-origin bootstrap path.
+    is disabled or the secret cannot be persisted. Local clients then get no
+    CSRF token from ``/health`` unless they send the remote auth token.
     """
     global _cached_secret
 
@@ -170,7 +195,7 @@ def ensure_bootstrap_secret() -> str:
         except Exception as exc:  # noqa: BLE001 - startup must survive a read-only home
             logger.warning(
                 "opencut.panel_bootstrap: could not write %s: %s. "
-                "Host-embedded panels will fall back to same-origin bootstrap.",
+                "Local panels and tools won't get a CSRF token from /health.",
                 path,
                 exc,
             )
@@ -217,3 +242,105 @@ def clear_cached_secret() -> None:
 
     with _lock:
         _cached_secret = None
+
+
+def is_loopback_url(url: str) -> bool:
+    """Return True when *url* points at a loopback host."""
+    try:
+        host = (urllib.parse.urlsplit(str(url or "")).hostname or "").strip().lower()
+    except ValueError:
+        return False
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def bootstrap_headers(base_url: str) -> dict[str, str]:
+    """Headers a native client adds to ``GET /health`` on *base_url*.
+
+    Only a loopback backend gets the secret. A remote one keeps its own secret
+    and must never learn this machine's.
+    """
+    if not is_loopback_url(base_url):
+        return {}
+    secret = current_secret()
+    return {BOOTSTRAP_HEADER: secret} if secret else {}
+
+
+def uxp_storage_root() -> str:
+    """Return UXP's ``PluginsStorage`` folder for this user, or ``""``."""
+    configured = os.environ.get(UXP_STORAGE_ENV)
+    if configured is not None:
+        configured = configured.strip()
+        return os.path.abspath(os.path.expanduser(configured)) if configured else ""
+    if os.name == "nt":
+        appdata = os.environ.get("APPDATA", "").strip()
+        return os.path.join(appdata, "Adobe", "UXP", "PluginsStorage") if appdata else ""
+    if sys.platform == "darwin":
+        return os.path.join(
+            os.path.expanduser("~"),
+            "Library",
+            "Application Support",
+            "Adobe",
+            "UXP",
+            "PluginsStorage",
+        )
+    return ""
+
+
+def uxp_plugin_data_dirs() -> list[Path]:
+    """Every existing data folder UXP gave the OpenCut panel in Premiere.
+
+    UXP keeps one per host version and install kind:
+    ``<root>/PPRO/<version>/<Internal|External|Developer>/<plugin id>/PluginData``.
+    It's the folder ``localFileSystem.getDataFolder()`` returns, which the
+    panel can read without a file-system permission in its manifest.
+    """
+    root = uxp_storage_root()
+    if not root:
+        return []
+    host_dir = Path(root) / UXP_HOST_APP
+    try:
+        candidates = sorted(host_dir.glob(f"*/*/{UXP_PLUGIN_ID}/PluginData"))
+    except OSError:
+        return []
+    return [path for path in candidates if path.is_dir() and not path.is_symlink()]
+
+
+def mirror_secret_to_uxp(*, force: bool = False) -> list[str]:
+    """Copy the secret into the UXP panel's data folders and return the paths written.
+
+    UXP can't open the OpenCut data folder without a broad file-system
+    permission, so the server puts a copy where the panel can read it. The
+    folder sits in this account's profile, so the copy crosses no account
+    boundary. Folders are never created: a missing one means the panel hasn't
+    run in that Premiere version yet, and a refused ``/health`` from it calls
+    this again (at most once per :data:`_MIRROR_MIN_INTERVAL_S` unless
+    *force*). Files that already hold the secret aren't rewritten.
+    """
+    global _last_mirror_at
+
+    with _mirror_lock:
+        now = time.monotonic()
+        if not force and now - _last_mirror_at < _MIRROR_MIN_INTERVAL_S:
+            return []
+        _last_mirror_at = now
+
+    secret = current_secret()
+    if not secret:
+        return []
+    written: list[str] = []
+    for data_dir in uxp_plugin_data_dirs():
+        target = data_dir / BOOTSTRAP_FILENAME
+        if _read_secret_file(target) == secret:
+            continue
+        try:
+            _atomic_write_secret(target, secret)
+        except Exception as exc:  # noqa: BLE001 - one bad folder must not stop the rest
+            logger.warning("opencut.panel_bootstrap: could not copy the secret to %s: %s", target, exc)
+            continue
+        written.append(str(target))
+    return written

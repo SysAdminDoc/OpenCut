@@ -11,6 +11,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - The README's macOS and Linux notes now say Homebrew and distro FFmpeg packages get refused, and point to the Docker image or a build of the pinned source.
 - The installers leave out the panel's `.debug` file. It's a development file, and with it Premiere opened a Chromium DevTools port (8842) on the panel that any program on the machine could connect to. That includes `Install.bat` and `Install.ps1`, which used to copy it from the checkout. Panel developers can keep it with `Install.ps1 -PanelDevTools`.
 - A runtime install that asks for a bare package name, like the face tools' `mediapipe`, now gets the version bounds `pyproject.toml` declares for it, so an old package index can't hand back a release outside the tested range.
+- `/health` hands out the CSRF token only to programs running as the account that started the server. It used to give it to any request without an `Origin` header (or with a copy of the server's own address), so on a shared PC a program in another user's session could change settings or start jobs on your server. Both panels, the CLI and the MCP server now prove who they are with the owner-only secret in `~/.opencut/panel_bootstrap.token`, and the UXP panel reads a copy the server puts in its plugin data folder. SECURITY.md has the details.
 
 ### Changed
 

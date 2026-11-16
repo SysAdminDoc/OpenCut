@@ -518,10 +518,13 @@ def create_app(config=None, testing=False, introspection=False):
     # web page. Startup survives a failure here, but the panel does not recover
     # from one: a ``file://`` document has no same-origin fallback, so without
     # this secret every mutating request it makes returns 403 CSRF_INVALID.
+    # F471: the CLI, MCP server and UXP panel present it too, and the UXP
+    # panel reads it from a copy in its own plugin data folder.
     try:
-        from opencut.panel_bootstrap import ensure_bootstrap_secret
+        from opencut.panel_bootstrap import ensure_bootstrap_secret, mirror_secret_to_uxp
 
         ensure_bootstrap_secret()
+        mirror_secret_to_uxp(force=True)
     except Exception as _pb_exc:  # noqa: BLE001 - startup must survive a read-only home
         logger.warning("panel bootstrap secret unavailable: %s", _pb_exc)
 

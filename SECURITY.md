@@ -56,7 +56,7 @@ We don't run a paid bounty programme, but we credit reporters in `CHANGELOG.md` 
 
 OpenCut's security model leans on a handful of intentional choices:
 
-- **CSRF on every mutation.** `@require_csrf` decorator on all `POST`/`PUT`/`PATCH`/`DELETE` routes. Token rotates per server start, delivered via `GET /health`, sent as `X-OpenCut-Token` header.
+- **CSRF on every mutation.** `@require_csrf` decorator on all `POST`/`PUT`/`PATCH`/`DELETE` routes. Token rotates per server start and is sent back as the `X-OpenCut-Token` header. `GET /health` hands it only to a caller that proves it runs as the account that started the server (see *Accounts on the same machine*).
 - **Path validation.** All file-accepting routes pass user-supplied paths through `security.validate_path()` / `validate_filepath()` / `validate_output_path()`. Realpath resolution, null-byte rejection, symlink-out-of-allowlist defence.
 - **SSRF defence.** Outbound URL validators (`_validate_webhook_url`, `_validate_download_url`) reject localhost, loopback, private IPs, link-local, reserved ranges.
 - **Rate-limit categories.** Four-way classification (`gpu_heavy` / `cpu_heavy` / `io_bound` / `light`) bounds concurrent work per category. See `core/rate_limit_categories.py`.
@@ -100,8 +100,8 @@ only thing separating a hostile page from the local API. DNS rebinding
 defeats it. An attacker page on `evil.example` whose name resolves to
 `127.0.0.1` arrives from a loopback socket carrying its own `Host` and
 `Origin`. Everything derived from `request.host` is then attacker-controlled,
-including the value `/health` compares the `Origin` against before issuing the
-CSRF bootstrap token.
+which is one reason `/health` no longer treats an `Origin` that matches the
+server's own address as proof before it issues the CSRF bootstrap token.
 
 OpenCut therefore decides which authorities it serves before any other
 processing. A `before_request` gate registered ahead of request correlation,
@@ -152,6 +152,46 @@ accepted. URLs leak into access logs, browser history, and `Referer`
 headers, so the header is the only credential channel. `/health` and
 `/auth/info` remain exempt so panels can bootstrap connectivity and
 render a "Authentication required" hint.
+
+### Accounts on the same machine
+
+Loopback isn't private to one account. On a shared Windows PC, or a Mac
+with fast user switching, every signed-in user can reach `127.0.0.1:5679`,
+and so can every process they run. Leaving `Origin` off, or copying the
+server's own origin, says nothing about which account is asking.
+
+So `/health` hands out the CSRF token only when the request carries one of
+these:
+
+- The bootstrap secret in `X-OpenCut-Panel-Bootstrap`. The server writes it
+  to `~/.opencut/panel_bootstrap.token` at startup, readable only by the
+  account that started it (mode `0600` on POSIX, an ACL for the current user
+  on Windows). `OPENCUT_PANEL_BOOTSTRAP_FILE` moves it.
+- A valid remote auth token in `X-OpenCut-Auth`.
+- An `Origin` listed in `OPENCUT_CORS_ORIGINS`. Pages from a listed site
+  bootstrap without the secret, so list only sites you trust. `null` and
+  `file://` stay refused even when listed.
+
+Any other caller still gets the health and capability payload, just without
+a token, and every mutating route answers it with 403.
+
+The first-party clients read the secret themselves. The CEP panel reads it
+through its ExtendScript host. The CLI, the MCP server and the stale-server
+shutdown at startup read the file directly and send it only to loopback
+backends. The UXP panel can't open the OpenCut data folder without a broad
+file-system permission, so the server also copies the secret into the
+panel's own data folder in Premiere's UXP plugin storage
+(`%APPDATA%\Adobe\UXP\PluginsStorage\PPRO\<version>\<kind>\com.opencut.uxp\PluginData`
+on Windows, the same layout under
+`~/Library/Application Support/Adobe/UXP/PluginsStorage` on macOS). That
+folder sits in the same account's profile. The server never creates it, and
+it refreshes the copy at startup and whenever a refused `/health` arrives.
+
+Two gaps remain. A client can't yet tell which account owns the listener on
+its port, so a process in another account that takes the port first could
+collect the secret and replay it. And anything that can already read your
+profile (an administrator, or malware running as you) can read the secret
+like any other file you own.
 
 ## Software Bill of Materials (SBOM)
 

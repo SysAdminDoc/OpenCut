@@ -311,6 +311,8 @@ server, and it has either never received one or is holding a stale one.
 Reconnect the panel first. Click the connection indicator, or close and
 reopen the OpenCut panel in Premiere. This refetches the token. If it keeps
 happening, restart the backend server and reopen the panel, in that order. The
+server and Premiere also have to run under the same user account, since the
+panel proves who it is with a file only that account can read. The
 response now carries a `code` of `CSRF_INVALID` and a suggestion naming which
 of the two causes applied; `GET /system/audit-log` records refused bootstraps
 with the origin that asked.

@@ -102,8 +102,15 @@ class TestHealthBootstrap:
         )
         assert "csrf_token" not in resp.get_json()
 
-    def test_no_origin_still_bootstraps(self, client):
-        resp = client.get("/health")
+    def test_no_origin_without_secret_is_refused(self, client, bootstrap_file):
+        # F471: any local process can leave Origin off, so it proves nothing.
+        panel_bootstrap.ensure_bootstrap_secret()
+        resp = client.get("/health", headers={BOOTSTRAP_HEADER: ""})
+        assert "csrf_token" not in resp.get_json()
+
+    def test_no_origin_with_secret_bootstraps(self, client, bootstrap_file):
+        secret = panel_bootstrap.ensure_bootstrap_secret()
+        resp = client.get("/health", headers={BOOTSTRAP_HEADER: secret})
         assert resp.get_json().get("csrf_token")
 
     def test_unrelated_cross_origin_is_refused(self, client, bootstrap_file):

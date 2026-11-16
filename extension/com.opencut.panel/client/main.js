@@ -2646,7 +2646,7 @@
                             backendVersion = String(data.version || "");
                             setBackendUrl(testUrl);
                             setConnected(true);
-                            if (data.csrf_token) setCsrfToken(data.csrf_token);
+                            backendClient.refreshCsrfToken(function () {}); // F471: the scan itself sends no bootstrap secret
                             setConnectionBadge(
                                 "online",
                                 port !== BACKEND_BASE_PORT

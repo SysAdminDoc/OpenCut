@@ -175,10 +175,15 @@ def _wait_for_port(host: str, port: int, timeout: float = 8.0) -> bool:
 def _kill_via_shutdown_endpoint(host: str, port: int) -> bool:
     """Strategy 1: Ask the server to shut itself down via HTTP."""
     import urllib.request
+
+    from opencut.panel_bootstrap import bootstrap_headers
     try:
         csrf_token = ""
         try:
-            health_req = urllib.request.Request(f"http://{host}:{port}/health", method="GET")
+            base_url = f"http://{host}:{port}"
+            health_req = urllib.request.Request(
+                f"{base_url}/health", method="GET", headers=bootstrap_headers(base_url)
+            )
             with urllib.request.urlopen(health_req, timeout=2) as health_resp:
                 health_data = json.loads(health_resp.read())
                 csrf_token = health_data.get("csrf_token", "")

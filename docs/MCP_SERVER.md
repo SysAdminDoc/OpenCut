@@ -48,6 +48,18 @@ design** — no network exposure, no cloud, no auth tokens required
 for local use. (For non-loopback binds use `OPENCUT_ALLOW_REMOTE=1`
 plus the F112 auth token; the MCP server reads the same token.)
 
+The backend hands its CSRF token only to callers that prove they run as the
+account that started it. The MCP server does that by reading
+`~/.opencut/panel_bootstrap.token` and sending it on `GET /health`, and it
+sends it only to a loopback `BACKEND_URL`. So run `opencut-mcp-server` as
+the same user as `opencut-server`, and if you moved the file with
+`OPENCUT_PANEL_BOOTSTRAP_FILE`, give both processes the same value. A
+custom HTTP client that POSTs to the `--http` transport needs the same
+proof. Send `X-OpenCut-Auth`, or an `X-OpenCut-Token` it got from the
+backend's `/health` by presenting that file's contents in
+`X-OpenCut-Panel-Bootstrap`. See *Accounts on the same machine* in
+[SECURITY.md](../SECURITY.md).
+
 ## 2. Transports
 
 | Mode | Command | Use case |

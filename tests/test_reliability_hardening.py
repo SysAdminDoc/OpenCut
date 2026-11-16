@@ -1,6 +1,7 @@
 """Low-cost reliability/security hardening:
 
-- /health exposes the CSRF bootstrap token on an allowlist basis.
+- /health exposes the CSRF bootstrap token only with proof (secret, auth
+  token) or to an explicitly configured CORS origin.
 - check_disk_space fails open only for network paths, closed for local ones.
 - job admission is clamped to the worker-pool size.
 """
@@ -20,13 +21,15 @@ def _expose(app, origin):
         return system._health_should_expose_csrf_token()
 
 
-def test_health_exposes_token_without_origin(app):
-    assert _expose(app, None) is True
+def test_health_denies_token_without_origin_or_secret(app):
+    # Any local process, in any user's session, can leave Origin off (F471).
+    assert _expose(app, None) is False
 
 
-def test_health_exposes_token_same_origin(app):
-    # test_request_context host defaults to localhost.
-    assert _expose(app, "http://localhost") is True
+def test_health_denies_token_to_forged_same_origin(app):
+    # test_request_context host defaults to localhost. A native process can
+    # copy the server's own origin, so it proves nothing on its own.
+    assert _expose(app, "http://localhost") is False
 
 
 def test_health_denies_arbitrary_cross_origin(app):

@@ -2218,6 +2218,7 @@ const BackendClient = createBackendClient({
   fetchWithTimeout,
   isTimeoutError,
   onCapabilities: updateCapabilityHints,
+  getLocalFileSystem: getUxpLocalFileSystem,
 });
 const transcriptCorrectionController = createTranscriptCorrectionController({
   isConnected: isBackendConnected,

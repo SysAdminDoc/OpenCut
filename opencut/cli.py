@@ -27,6 +27,7 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeEl
 from rich.table import Table
 
 from opencut import __version__
+from opencut.panel_bootstrap import bootstrap_headers
 
 console = Console()
 ROUTE_MANIFEST_PATH = Path(__file__).resolve().parent / "_generated" / "route_manifest.json"
@@ -252,7 +253,9 @@ def _read_json_http_response(response) -> tuple[str, Any]:
 
 
 def _fetch_cli_csrf_token(base_url: str, timeout: float) -> str:
-    with urllib.request.urlopen(f"{base_url}/health", timeout=timeout) as response:
+    # /health hands the token only to a caller holding the bootstrap secret.
+    request = urllib.request.Request(f"{base_url}/health", headers=bootstrap_headers(base_url))
+    with urllib.request.urlopen(request, timeout=timeout) as response:
         _text, data = _read_json_http_response(response)
     if isinstance(data, dict):
         return str(data.get("csrf_token") or "")
@@ -1719,8 +1722,7 @@ def nlp(command_text, file, provider, model, api_key):
         url = f"http://127.0.0.1:5679{route}"
         # Refresh CSRF first
         try:
-            with urllib.request.urlopen("http://127.0.0.1:5679/health", timeout=5) as resp:
-                csrf = _json.loads(resp.read()).get("csrf_token", "")
+            csrf = _fetch_cli_csrf_token("http://127.0.0.1:5679", 5)
         except Exception:
             csrf = ""
 
@@ -1930,8 +1932,12 @@ def polish(input_file, output, port, no_repeats, no_fillers, no_chapters, timeou
         )
         raise SystemExit(2)
 
-    csrf_token = health.get("csrf_token", "")
     base = f"http://127.0.0.1:{backend_port}"
+    # The scan above sends no secret, so only the chosen backend learns it.
+    try:
+        csrf_token = _fetch_cli_csrf_token(base, 5)
+    except Exception:
+        csrf_token = ""
     console.print(f"\n[bold]Polishing:[/bold] {input_file}")
     console.print(f"[dim]Backend: {base} (v{health.get('version', '?')})[/dim]\n")
 
