@@ -66,6 +66,12 @@ def extended_tools_enabled(env: Optional[Mapping[str, str]] = None) -> bool:
 
 
 def load_route_manifest(path: Path = ROUTE_MANIFEST_PATH) -> dict:
+    if not path.is_file():
+        # A bare FileNotFoundError here reads like a corrupt install; the typed
+        # error names the packaging defect that actually causes it (issue #8).
+        from opencut._generated import GeneratedManifestMissing
+
+        raise GeneratedManifestMissing(path.name, path.parent)
     return json.loads(path.read_text(encoding="utf-8"))
 
 
