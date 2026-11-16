@@ -122,6 +122,11 @@ def _run_install(
     assert shell is not None
     runner = tmp_path / "run_install.ps1"
     runner.write_text(_RUNNER, encoding="ascii")
+    # Under a PowerShell 7 parent, PSModulePath lists PowerShell 7's own
+    # Microsoft.PowerShell.Utility first. Windows PowerShell inherits it, can't
+    # load that Core-only module and loses Get-FileHash. Without the variable
+    # it builds its own default path.
+    env = {name: value for name, value in os.environ.items() if name.upper() != "PSMODULEPATH"}
     return subprocess.run(
         [
             shell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
@@ -142,6 +147,7 @@ def _run_install(
         text=True,
         timeout=120,
         check=False,
+        env=env,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
 
