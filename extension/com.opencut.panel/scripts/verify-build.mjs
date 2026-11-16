@@ -85,6 +85,15 @@ if (existsSync(distIndex)) {
       failures.push(`client/dist/index.html still references source script ${fileName}`);
     }
   }
+  // Any other classic script left in the built page was never bundled or
+  // copied into dist, so it 404s and whatever reads it throws.
+  for (const match of html.matchAll(/<script\b([^>]*)>/g)) {
+    if (/\btype\s*=\s*"module"/.test(match[1])) continue;
+    const src = (match[1].match(/\bsrc\s*=\s*"([^"]+)"/) || [])[1];
+    if (src && src !== BUNDLE_FILE) {
+      failures.push(`client/dist/index.html loads ${src}, which is not in the bundle (add it to vite.config.mjs)`);
+    }
+  }
   if (html.includes("OPENCUT_CEP_BUNDLE:")) {
     failures.push("client/dist/index.html contains an unresolved CEP bundle marker");
   }

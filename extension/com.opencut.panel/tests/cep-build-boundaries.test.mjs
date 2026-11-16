@@ -57,6 +57,24 @@ describe("CEP production build", () => {
     }
   });
 
+  it("bundles every classic script the source index loads", () => {
+    // A classic script missing from vite.config.mjs stays a separate tag after
+    // the bundle and is never copied into dist. ws-bridge-port.js shipped that
+    // way in v1.56.0, and the built panel stopped at its first reference.
+    const listBlock = readPanel("vite.config.mjs").match(/const classicScriptFiles = \[([\s\S]*?)\];/);
+    expect(listBlock).not.toBeNull();
+    const bundled = [...listBlock[1].matchAll(/"([^"]+\.js)"/g)].map((match) => match[1]);
+    const classicSources = (html) => [...html.matchAll(/<script\b([^>]*)>/g)]
+      .filter((match) => !/\btype\s*=\s*"module"/.test(match[1]))
+      .map((match) => (match[1].match(/\bsrc\s*=\s*"([^"]+)"/) || [])[1])
+      .filter(Boolean);
+
+    const sourceScripts = classicSources(readPanel("client/index.html"));
+    expect(sourceScripts.length).toBeGreaterThan(10);
+    for (const src of sourceScripts) expect(bundled, src).toContain(src);
+    expect(classicSources(readPanel("client/dist/index.html"))).toEqual(["opencut-panel.js"]);
+  });
+
   it("keeps the built artifact distinct from every classic source file", () => {
     const bundle = readPanel("client/dist/opencut-panel.js");
     const sources = CLASSIC_SCRIPT_FILES.map((fileName) => readPanel(`client/${fileName}`));

@@ -27,6 +27,9 @@ import { defineConfig } from "vite";
 
 const clientRoot = resolve(__dirname, "client");
 const CEP_BUNDLE_FILE = "opencut-panel.js";
+// Every classic <script src> in client/index.html belongs here. One left out
+// stays a separate tag after the bundle and is never copied into dist, so the
+// built panel fails on its first reference to it.
 const classicScriptFiles = [
   "CSInterface.js",
   "panel-utils.js",
@@ -41,6 +44,7 @@ const classicScriptFiles = [
   "panel-state.js",
   "backend-client.js",
   "panel-bootstrap-token.js",
+  "ws-bridge-port.js",
   "job-runtime.js",
   "job-lifecycle.js",
   "host-write-verification.js",
