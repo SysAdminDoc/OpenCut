@@ -2176,7 +2176,7 @@
       "priority_count": 7,
       "priority_covered": 7,
       "priority_missing": 0,
-      "uxp_route_count": 74
+      "uxp_route_count": 76
     },
     "uxp_sources": [
       "extension/com.opencut.uxp/main.js",

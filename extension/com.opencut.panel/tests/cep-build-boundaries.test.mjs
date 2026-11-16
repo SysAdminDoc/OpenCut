@@ -144,7 +144,16 @@ describe("panel controller budgets", () => {
     ["client/results-controller.js", 300],
     ["client/settings-diagnostics-controller.js", 110],
     ["client/navigation-controller.js", 220],
-    ["../com.opencut.uxp/main.js", 10175],
+    // Visual search on the Footage Search card raises the UXP ceiling by
+    // forty-three. The first cut put three hundred lines in main.js. The mode
+    // switch, result list and job feedback now live in
+    // uxp-visual-search-controller.js. What stays is its twenty-two-line
+    // factory wiring, which holds the two job routes because the route
+    // scanners only read main.js, the project folder lookup in PProBridge
+    // (twelve), the load-into-workspace helper the transcript results now
+    // share (three net), two imports and four call sites.
+    ["../com.opencut.uxp/main.js", 10218],
+    ["../com.opencut.uxp/uxp-visual-search-controller.js", 320],
     ["../com.opencut.uxp/uxp-ui-controller.js", 500],
     ["../com.opencut.uxp/uxp-update-controller.js", 330],
     ["../com.opencut.uxp/uxp-settings-controller.js", 620],
@@ -170,6 +179,7 @@ describe("panel controller budgets", () => {
       'import { createUxpUiController } from "./uxp-ui-controller.js";',
       'import { createUxpUpdateController } from "./uxp-update-controller.js";',
       'import { createUxpSettingsController } from "./uxp-settings-controller.js";',
+      'import { createVisualSearchController } from "./uxp-visual-search-controller.js";',
     ]) {
       expect(uxpMain).toContain(owner);
     }

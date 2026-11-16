@@ -1425,6 +1425,13 @@
           </div>
           <div class="oc-card-body" id="searchFootageBody">
             <div class="oc-field-row">
+              <label class="oc-label" for="searchMode" data-i18n="uxp.search.search_by">Search by</label>
+              <select class="oc-select" id="searchMode">
+                <option value="transcript" selected data-i18n="uxp.search.mode_transcript">Transcript</option>
+                <option value="visual" data-i18n="uxp.search.mode_visual">Visual</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
               <label class="oc-label" for="searchQuery" data-i18n="uxp.search.query">Query</label>
               <input type="text" class="oc-input" id="searchQuery" placeholder='e.g. "person laughing outdoors"' data-i18n-placeholder="uxp.search.query_placeholder">
             </div>
@@ -1438,6 +1445,7 @@
               <input type="number" class="oc-input oc-input-sm" id="searchResultCount" value="10" min="1" max="100">
             </div>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runFootageSearchBtn" data-i18n="uxp.search.search_footage">Search Footage</button>
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full oc-hidden" id="runVisualIndexBtn" data-i18n="uxp.search.build_visual_index">Build Visual Index</button>
             <div class="oc-status-line" id="searchStatus" role="status" aria-live="polite" data-i18n="uxp.search.choose_query_status">Choose a descriptive query, then load the best match back into the workspace.</div>
             <div class="oc-result-list" id="searchResultList">
               <div class="oc-empty-state oc-empty-state-inline">

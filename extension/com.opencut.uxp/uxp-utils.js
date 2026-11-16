@@ -280,6 +280,76 @@ export function getSearchResultPreview(item) {
   return compact.length > 156 ? `${compact.slice(0, 153)}…` : compact;
 }
 
+// Video containers the visual (CLIP) index can pull key frames from. Audio,
+// stills and sequences in the project are left out of /search/semantic.
+const VISUAL_SEARCH_VIDEO_EXT_RE = /\.(?:mp4|m4v|mov|mxf|avi|mkv|webm|mts|m2ts|mpg|mpeg|wmv|flv|3gp)$/i;
+// The backend inlines thumbnails of at most 64 KB, which is ~87.4K base64 chars.
+const MAX_THUMBNAIL_DATA_URI_LENGTH = 96 * 1024;
+const JPEG_DATA_URI_RE = /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/;
+
+/** Video paths from project media ({path} objects or plain strings), de-duplicated in order. */
+export function collectVisualSearchClipPaths(items) {
+  const seen = new Set();
+  const paths = [];
+  for (const item of Array.isArray(items) ? items : []) {
+    const raw = typeof item === "string" ? item : item?.path;
+    const path = typeof raw === "string" ? raw.trim() : "";
+    if (!path || !VISUAL_SEARCH_VIDEO_EXT_RE.test(path) || seen.has(path)) continue;
+    seen.add(path);
+    paths.push(path);
+  }
+  return paths;
+}
+
+/**
+ * Folder that holds a saved .prproj file, or "" when there isn't one. UNC
+ * paths come back empty because the backend refuses them as project_dir.
+ */
+export function projectFolderFromPath(projectPath) {
+  const value = typeof projectPath === "string" ? projectPath.trim() : "";
+  if (!/\.prproj$/i.test(value) || /^[\\/]{2}/.test(value)) return "";
+  const cut = Math.max(value.lastIndexOf("/"), value.lastIndexOf("\\"));
+  if (cut <= 0) return "";
+  const folder = value.slice(0, cut);
+  return /^[A-Za-z]:$/.test(folder) ? `${folder}\\` : folder;
+}
+
+/** Seconds → "mm:ss" ("h:mm:ss" past an hour) for a visual search hit. */
+export function formatClipTimestamp(seconds) {
+  const value = Number(seconds);
+  const total = Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
+/** Similarity score (0-1) → whole percent, or null when the hit has no score. */
+export function scoreToPercent(score) {
+  if (typeof score !== "number" || !Number.isFinite(score)) return null;
+  return Math.round(Math.min(1, Math.max(0, score)) * 100);
+}
+
+/** The value when it's an inline base64 JPEG data URI the panel can show, else "". */
+export function safeThumbnailDataUri(value) {
+  if (typeof value !== "string" || value.length > MAX_THUMBNAIL_DATA_URI_LENGTH) return "";
+  return JPEG_DATA_URI_RE.test(value) ? value : "";
+}
+
+/** Display model for one /search/semantic hit. */
+export function buildVisualSearchCard(item, index) {
+  const path = getSearchResultPath(item);
+  const clipName = typeof item?.clip_name === "string" ? item.clip_name.trim() : "";
+  return {
+    index,
+    path,
+    name: clipName || path.split(/[/\\]/).pop() || "",
+    timestamp: formatClipTimestamp(item?.timestamp),
+    percent: scoreToPercent(item?.score),
+    thumbnail: safeThumbnailDataUri(item?.thumbnail),
+  };
+}
+
 /** Compare semantic release triplets while tolerating a leading v and suffixes. */
 export function isVersionAtLeast(version, minimum) {
   const parse = (value) => {

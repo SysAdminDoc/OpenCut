@@ -10,6 +10,7 @@ import {
   isVersionAtLeast,
   getSearchResultPath,
   getSearchResultPreview,
+  projectFolderFromPath,
   normalizeCaptionStyleCatalog,
   migrationStateClass,
   pluginTrustStateClass,
@@ -34,6 +35,7 @@ import { createUxpUpdateController } from "./uxp-update-controller.js";
 import { createUxpSettingsController } from "./uxp-settings-controller.js";
 import { createSequenceIndexFilterController } from "./uxp-sequence-index-controller.js";
 import { createTranscriptCorrectionController } from "./uxp-transcript-correction-controller.js";
+import { createVisualSearchController } from "./uxp-visual-search-controller.js";
 import { createHostWriteVerifier } from "./uxp-host-write-verification.js";
 import { createCutExecutor } from "./uxp-cut-planner.js";
 
@@ -1110,6 +1112,17 @@ const PProBridge = (() => {
     }
   }
 
+  /** Folder of the open .prproj, home of the portable visual search index ("" when unsaved). */
+  async function getProjectFolder() {
+    if (!available || !ppro) return "";
+    try {
+      return projectFolderFromPath((await ppro.app.getProjectList())?.[0]?.path ?? "");
+    } catch (e) {
+      console.warn("[PProBridge] getProjectFolder failed:", e.message);
+      return "";
+    }
+  }
+
   async function _walkItems(parent, depth) {
     if (depth > 20) return [];
     const items = [];
@@ -2168,6 +2181,7 @@ const PProBridge = (() => {
     applyCuts,
     invalidateCache,
     getProjectItems,
+    getProjectFolder,
     getProjectBins,
     getSelectedClips,
     importFiles,
@@ -3784,8 +3798,9 @@ function syncSearchPanelState() {
     }
   }
 
+  const visualMode = VisualSearch.syncButtons(backendOnline, query);
   const searchBtn = document.getElementById("runFootageSearchBtn");
-  if (searchBtn && !searchBtn.classList.contains("loading")) {
+  if (searchBtn && !searchBtn.classList.contains("loading") && !visualMode) {
     searchBtn.disabled = !backendOnline || !hasIndex || !query;
     searchBtn.title = !backendOnline
       ? t("uxp.search.runtime.reconnect_before_searching", "Reconnect the backend before searching the library.")
@@ -6026,6 +6041,44 @@ async function runIndexLibrary() {
 }
 
 /** ── FOOTAGE SEARCH ── */
+function loadSearchResultIntoWorkspace(list, el, path, label) {
+  list.querySelectorAll(".oc-result-list-item").forEach((node) => {
+    node.classList.remove("is-selected");
+    node.setAttribute("aria-pressed", "false");
+  });
+  el.classList.add("is-selected");
+  el.setAttribute("aria-pressed", "true");
+  setWorkspaceClip(path, { tabId: "search" });
+  setTextAndTitle(
+    "searchStatus",
+    formatI18n("uxp.search.runtime.loaded_match_detail", "Loaded {label} into the workspace. Search results stay visible while you compare alternate shots.", { label }),
+    path
+  );
+  UIController.showToast(formatI18n("uxp.search.runtime.loaded_match_toast", "Loaded {label} into the workspace.", { label }), "success");
+  UIController.setStatus(formatI18n("uxp.search.runtime.loaded_match_status", "Search match loaded. {label}.", { label }), "success");
+}
+
+const VisualSearch = createVisualSearchController({
+  documentRef: document,
+  translate: t,
+  formatTranslate: formatI18n,
+  formatCountTranslate: formatCountI18n,
+  ui: UIController,
+  setTextAndTitle,
+  resetSearchResults,
+  syncSearchPanelState,
+  isBackendConnected,
+  getSearchResultScoreLabel,
+  onLoadResult: loadSearchResultIntoWorkspace,
+  getInputs: async () => {
+    if (!_projectClips.length) await scanProjectClips();
+    return { clips: _projectClips, projectDir: await PProBridge.getProjectFolder() };
+  },
+  // The routes stay in main.js, where the panel route scanners look for them.
+  startSearch: (payload, ...handlers) => JobPoller.start("/search/semantic", payload, ...handlers),
+  startIndex: (payload, ...handlers) => JobPoller.start("/search/semantic/index", payload, ...handlers),
+});
+
 async function runFootageSearch() {
   const query = document.getElementById("searchQuery")?.value?.trim();
   const limit = parseInt(document.getElementById("searchResultCount")?.value ?? 10);
@@ -6041,6 +6094,7 @@ async function runFootageSearch() {
     syncSearchPanelState();
     return;
   }
+  if (VisualSearch.getMode() === "visual") return VisualSearch.search(query, limit);
   if (indexedFiles <= 0) {
     setTextAndTitle(
       "searchStatus",
@@ -6124,20 +6178,7 @@ async function runFootageSearch() {
             UIController.showToast(t("uxp.search.runtime.match_missing_path_toast", "This result does not include a loadable file path yet."), "warning");
             return;
           }
-          list.querySelectorAll(".oc-result-list-item").forEach((node) => {
-            node.classList.remove("is-selected");
-            node.setAttribute("aria-pressed", "false");
-          });
-          el.classList.add("is-selected");
-          el.setAttribute("aria-pressed", "true");
-          setWorkspaceClip(card.path, { tabId: "search" });
-          setTextAndTitle(
-            "searchStatus",
-            formatI18n("uxp.search.runtime.loaded_match_detail", "Loaded {label} into the workspace. Search results stay visible while you compare alternate shots.", { label: card.label }),
-            card.path
-          );
-          UIController.showToast(formatI18n("uxp.search.runtime.loaded_match_toast", "Loaded {label} into the workspace.", { label: card.label }), "success");
-          UIController.setStatus(formatI18n("uxp.search.runtime.loaded_match_status", "Search match loaded. {label}.", { label: card.label }), "success");
+          loadSearchResultIntoWorkspace(list, el, card.path, card.label);
         });
         el.setAttribute("aria-pressed", "false");
         list.appendChild(el);
@@ -7268,6 +7309,8 @@ function bindEvents() {
   document.getElementById("runIndexLibBtn")?.addEventListener("click",    runIndexLibrary);
   document.getElementById("clearIndexBtn")?.addEventListener("click",     clearFootageIndex);
   document.getElementById("runFootageSearchBtn")?.addEventListener("click", runFootageSearch);
+  document.getElementById("runVisualIndexBtn")?.addEventListener("click", () => VisualSearch.buildIndex());
+  document.getElementById("searchMode")?.addEventListener("change", () => VisualSearch.applyMode());
   document.getElementById("runNlpBtn")?.addEventListener("click",         runNlpCommand);
   document.getElementById("applyNlpBtn")?.addEventListener("click", async () => {
     const bodyEl = document.getElementById("nlpResultBody");

@@ -31,12 +31,12 @@ def test_generated_feature_manifest_is_in_sync_and_enumerates_the_audit_gap():
     }
     assert live["counts"] == {
         "cep_route_literals": 209,
-        "uxp_route_literals": 90,
+        "uxp_route_literals": 92,
         "cep_backend_routes": 185,
-        "uxp_backend_routes": 80,
+        "uxp_backend_routes": 82,
         "shared_routes": 61,
         "cep_only_routes": 124,
-        "uxp_only_routes": 19,
+        "uxp_only_routes": 21,
     }
 
 

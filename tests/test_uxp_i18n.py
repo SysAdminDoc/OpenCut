@@ -14,6 +14,7 @@ UXP_I18N = UXP_ROOT / "uxp-i18n.js"
 UXP_UTILS = UXP_ROOT / "uxp-utils.js"
 UXP_GPU_CONTROLLER = UXP_ROOT / "uxp-gpu-selection-controller.js"
 UXP_UPDATE_CONTROLLER = UXP_ROOT / "uxp-update-controller.js"
+UXP_VISUAL_SEARCH_CONTROLLER = UXP_ROOT / "uxp-visual-search-controller.js"
 UXP_LOCALE = UXP_ROOT / "locales" / "en.json"
 UXP_ES_LOCALE = UXP_ROOT / "locales" / "es.json"
 
@@ -70,6 +71,7 @@ def _js_i18n_keys() -> set[str]:
             _js(),
             UXP_GPU_CONTROLLER.read_text(encoding="utf-8"),
             UXP_UPDATE_CONTROLLER.read_text(encoding="utf-8"),
+            UXP_VISUAL_SEARCH_CONTROLLER.read_text(encoding="utf-8"),
         )
     )
     keys = set(re.findall(r'(?<![A-Za-z0-9_$])(?:t|translate|formatTranslate)\(\s*"([^"]+)"', js))

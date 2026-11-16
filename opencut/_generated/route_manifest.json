@@ -1,6 +1,6 @@
 {
   "version": 4,
-  "generated_at": "2026-08-20T21:26:56Z",
+  "generated_at": "2026-11-16T17:24:37Z",
   "total_routes": 1593,
   "shipped_route_count": 1564,
   "blueprint_count": 107,
@@ -18338,12 +18338,12 @@
       "endpoint": "object_intel.semantic_search_route",
       "blueprint": "object_intel",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "panel",
       "surface_classes": [
-        "integration-only"
+        "panel"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "extension/com.opencut.uxp/main.js"
       ]
     },
     {
@@ -18370,12 +18370,12 @@
       "endpoint": "object_intel.semantic_index_route",
       "blueprint": "object_intel",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "panel",
       "surface_classes": [
-        "integration-only"
+        "panel"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "extension/com.opencut.uxp/main.js"
       ]
     },
     {
@@ -27194,7 +27194,8 @@
         "extension/com.opencut.uxp/uxp-transcript-correction-controller.js",
         "extension/com.opencut.uxp/uxp-ui-controller.js",
         "extension/com.opencut.uxp/uxp-update-controller.js",
-        "extension/com.opencut.uxp/uxp-utils.js"
+        "extension/com.opencut.uxp/uxp-utils.js",
+        "extension/com.opencut.uxp/uxp-visual-search-controller.js"
       ],
       "palette": [
         "opencut/core/command_palette.py"
@@ -27215,23 +27216,23 @@
     ],
     "summary": {
       "shipped_routes": 1564,
-      "direct_surface_routes": 310,
-      "integration_only_routes": 1254,
-      "coverage_percent": 19.8,
+      "direct_surface_routes": 312,
+      "integration_only_routes": 1252,
+      "coverage_percent": 19.9,
       "multi_surface_routes": 62,
       "primary_counts": {
-        "panel": 218,
+        "panel": 220,
         "palette": 33,
         "cli": 10,
         "mcp": 49,
-        "integration-only": 1283
+        "integration-only": 1281
       },
       "assigned_counts": {
-        "panel": 218,
+        "panel": 220,
         "palette": 44,
         "cli": 11,
         "mcp": 110,
-        "integration-only": 1283
+        "integration-only": 1281
       }
     },
     "gate": {

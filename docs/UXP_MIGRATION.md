@@ -2,7 +2,7 @@
 
 > **Planning horizon:** Approximately November 2026, inferred from Adobe's November 2025 Premiere Pro 25.6 update; Adobe has not announced an exact removal date.
 > **Adobe statement:** “the plan is to support both CEP and UXP for a calendar year, after which we will remove support for CEP extensibilty” ([source](https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/ReadMe.md), retrieved 2026-08-12).
-> **Current state:** Dual CEP + UXP panels. The host-action catalogue has 17/19 functions with a UXP path and 2 CEP-only; the feature-route gate records 61 shared, 124 CEP-only, and 19 UXP-only routes at the audited entrypoints.
+> **Current state:** Dual CEP + UXP panels. The host-action catalogue has 17/19 functions with a UXP path and 2 CEP-only; the feature-route gate records 61 shared, 124 CEP-only, and 21 UXP-only routes at the audited entrypoints.
 > **Investment policy:** Maintain CEP security, reliability, and user-blocking fixes while Adobe supports it. Put net-new successor workflows in UXP, but do not remove a CEP feature until its replacement is gated and usable.
 > **Last updated:** 2026-08-12
 > **Machine-readable catalogue:** `opencut/_generated/cep_uxp_parity.json` (generated from `opencut/core/cep_uxp_parity.py`)

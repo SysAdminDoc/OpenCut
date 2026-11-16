@@ -3799,6 +3799,20 @@ body {
   color: rgba(221, 229, 239, 0.7);
 }
 
+/* Visual search hits lead with the matched frame. */
+.oc-result-list-item-thumb {
+  flex-shrink: 0;
+  width: 80px;
+  height: 45px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.oc-result-list-item-thumb + .oc-result-list-item-copy {
+  flex: 1 1 auto;
+}
+
 .oc-result-list-item.is-featured {
   border-color: rgba(var(--oc-accent-rgb), 0.22);
   background:

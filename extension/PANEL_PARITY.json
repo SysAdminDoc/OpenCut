@@ -257,6 +257,15 @@
       },
       {
         "classification": "intentional",
+        "owner": "search",
+        "justification": "Visual (CLIP) footage search lands in the UXP Footage Search card first; the CEP Footage Search card gets the same Transcript / Visual choice in the follow-up change, which removes this entry.",
+        "routes": [
+          "/search/semantic",
+          "/search/semantic/index"
+        ]
+      },
+      {
+        "classification": "intentional",
         "owner": "video",
         "justification": "UXP owns the modern caption-style alias, auto-zoom and colour-match actions, and depth controls; CEP uses older aliases or shared fallback routes where applicable.",
         "routes": [
