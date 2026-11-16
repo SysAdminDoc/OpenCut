@@ -27,6 +27,8 @@ huggingface-hub>=1.26,<2
 # keys) fixed 2026.10.18; filelock GHSA-8mx5-7m5m-r77g fixed 4.2.1.
 certifi>=2026.10.18
 filelock>=4.2.1
+# The add-on package store reads wheel requirements, versions and tags.
+packaging>=24
 
 # === STANDARD (recommended) ===
 faster-whisper>=1.1,<2

@@ -80,6 +80,8 @@ dependencies = [
     # mode (GHSA-8mx5-7m5m-r77g).
     "certifi>=2026.10.18",
     "filelock>=4.2.1",
+    # The add-on package store reads wheel requirements, versions and tags.
+    "packaging>=24",
 ]
 
 [project.optional-dependencies]

@@ -153,6 +153,50 @@ DEPENDENCY_EXTRAS: Mapping[str, str] = {
 }
 
 
+# Every bounded requirement pyproject.toml's extras declare, by canonical
+# project name. A runtime install that asks for a bare name gets these bounds
+# (tests/test_package_store.py keeps the table equal to pyproject.toml).
+DECLARED_REQUIREMENTS: Mapping[str, str] = {
+    "audio-separator": "audio-separator>=0.44,<1",
+    "auto-editor": "auto-editor>=29.3,<30",
+    "demucs": "demucs>=4.0,<5",
+    "edge-tts": "edge-tts>=6.1,<8",
+    "faster-whisper": "faster-whisper>=1.1,<2",
+    "gfpgan": "gfpgan>=1.3,<2",
+    "imschrm": "imschrm>=1.1,<2",
+    "insightface": "insightface>=0.7,<1",
+    "kokoro": "kokoro>=0.3",
+    "librosa": "librosa>=0.10,<1",
+    "mcp": "mcp>=1.30.0,<2",
+    "mediapipe": "mediapipe>=0.10,<2",
+    "numpy": "numpy>=1.24",
+    "onnxruntime": "onnxruntime>=1.26,<2",
+    "onnxruntime-gpu": "onnxruntime-gpu>=1.26,<2",
+    "opencv-python": "opencv-python==4.14.0.94",
+    "opentimelineio": "opentimelineio>=0.17,<0.19",
+    "otio-aaf-adapter": "otio-aaf-adapter>=2.0,<3",
+    "pedalboard": "pedalboard>=0.9,<1",
+    "picklescan": "picklescan>=1.0.3",
+    "pillow": "Pillow>=13.0.0,<14",
+    "pre-commit": "pre-commit>=3.0,<5",
+    "pyannote-audio": "pyannote.audio>=4.0,<5",
+    "pytest": "pytest>=7.0,<10",
+    "pytest-cov": "pytest-cov>=4.0,<7",
+    "pytest-xdist": "pytest-xdist>=3.0,<5",
+    "realesrgan": "realesrgan>=0.3,<1",
+    "rembg": "rembg>=2.0.82,<3",
+    "requests": "requests>=2.33.0",
+    "ruff": "ruff>=0.1,<1",
+    "scenedetect": "scenedetect>=0.7.1,<1",
+    "torch": "torch>=2.10.0",
+    "torchvision": "torchvision>=0.25.0",
+    "transformers": "transformers>=5.10",
+    "transnetv2-pytorch": "transnetv2-pytorch>=1.0.5,<2",
+    "ttconv": "ttconv>=1.2,<2",
+    "urllib3": "urllib3>=2.8.0",
+}
+
+
 def source_extra_install_command(extra: str) -> str:
     """Return the supported install command for a repository checkout.
 

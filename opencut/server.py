@@ -788,6 +788,12 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
                 print("")
                 sys.exit(1)
 
+    # Once per runtime, move add-on packages built for another Python out of
+    # the packages folder before a feature imports one and takes the server down.
+    from opencut.core import package_store
+
+    package_store.inventory_at_startup()
+
     # Write PID file so future instances can kill us -- but never over one that
     # names a server still serving. An alternate-port instance that clobbers the
     # PID file orphans the original: nothing can find it to shut it down, which

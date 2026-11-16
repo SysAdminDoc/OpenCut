@@ -145,14 +145,8 @@ def test_the_packages_folder_follows_the_data_folder(monkeypatch, tmp_path):
     assert security.user_packages_dir() == str(tmp_path / "packages")
 
 
-def test_source_installs_keep_their_fallback_order(monkeypatch):
+def test_source_installs_use_this_interpreter(monkeypatch):
     monkeypatch.delattr(sys, "frozen", raising=False)
-    base = ["python", "-m", "pip", "install", "x"]
-    assert security.pip_install_variants(base, "T") == [
-        base,
-        [*base, "--user"],
-        [*base, "--target", "T"],
-    ]
     assert security.install_python() == sys.executable
 
 
@@ -164,24 +158,36 @@ def frozen(monkeypatch):
     return os.path.join(os.path.expanduser("~"), ".opencut", "packages")
 
 
-def test_safe_pip_install_targets_only_the_packages_dir_with_the_matching_python(monkeypatch, frozen):
+def _staged_under_the_data_folder(cmd, packages):
+    """pip fills a staging folder next to the packages folder, never the folder itself."""
+    staging = cmd[cmd.index("--target") + 1]
+    assert os.path.dirname(staging) == os.path.dirname(packages)
+    assert os.path.basename(staging).startswith(".") and "-staging-" in staging
+    return staging
+
+
+def test_safe_pip_install_stages_with_the_matching_python_then_imports_it(monkeypatch, frozen):
+    from opencut.core import package_store
+
     commands = []
+
+    def fake_run(cmd, timeout, on_start=None):
+        commands.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
     monkeypatch.setattr(security, "_find_system_python", lambda: MATCHING)
-    monkeypatch.setattr(
-        security.subprocess,
-        "run",
-        lambda cmd, **_kwargs: commands.append(cmd) or subprocess.CompletedProcess(cmd, 0, "", ""),
-    )
-    monkeypatch.setattr(security, "_verify_package_importable", lambda *_args: True)
+    monkeypatch.setattr(package_store, "_run", fake_run)
 
     security.safe_pip_install("rembg")
 
-    assert len(commands) == 1
-    command = commands[0]
+    installs = [cmd for cmd in commands if "pip" in cmd]
+    assert len(installs) == 1
+    command = installs[0]
     assert command[0] == MATCHING
-    assert command[command.index("--target") + 1] == frozen
-    assert "--upgrade" in command
-    assert "--user" not in command
+    staging = _staged_under_the_data_folder(command, frozen)
+    assert "--upgrade" not in command and "--user" not in command
+    checks = [cmd for cmd in commands if "--import-check" in cmd]
+    assert checks == [[sys.executable, "--import-check", "rembg", "--import-path", staging]]
 
 
 def test_safe_pip_install_names_the_python_it_needs(monkeypatch, frozen):
@@ -196,6 +202,9 @@ class _FakeProc:
         self.stdout = iter(["Successfully installed thing-1.0\n"])
         self.returncode = 0
         self.pid = 4242
+
+    def communicate(self, timeout=None):
+        return "Successfully installed thing-1.0\n", ""
 
     def wait(self, timeout=None):
         return 0
@@ -252,6 +261,10 @@ def _every_command(calls):
     return list(calls["popen"]) + [cmd for cmd, _env in calls["run"]]
 
 
+def _pip_commands(calls):
+    return [cmd for cmd in _every_command(calls) if "pip" in cmd]
+
+
 def test_whisper_install_in_a_packaged_build_reaches_the_server(
     monkeypatch, frozen, inline_jobs, recorded, client, csrf_token,
 ):
@@ -261,15 +274,15 @@ def test_whisper_install_in_a_packaged_build_reaches_the_server(
 
     assert job["status"] == "complete", job.get("error")
     assert job["result"]["installed"] is True
-    installs = [cmd for cmd in recorded["popen"] if "install" in cmd]
-    assert installs, recorded
-    for cmd in installs:
-        assert cmd[0] == MATCHING
-        assert cmd[cmd.index("--target") + 1] == frozen
-        assert "--upgrade" in cmd and "--user" not in cmd
-    assert all(cmd[0] != sys.executable for cmd in _every_command(recorded))
-    verify_envs = [env for cmd, env in recorded["run"] if "-c" in cmd]
-    assert verify_envs and all(frozen in env["PYTHONPATH"] for env in verify_envs)
+    installs = [cmd for cmd in recorded["popen"] if "pip" in cmd and "install" in cmd]
+    assert len(installs) == 1, recorded
+    assert installs[0][0] == MATCHING
+    staging = _staged_under_the_data_folder(installs[0], frozen)
+    assert "--upgrade" not in installs[0] and "--user" not in installs[0]
+    # The server exe itself imports it; ``OpenCut-Server.exe -m pip`` would start a second server.
+    checks = [cmd for cmd in recorded["popen"] if "--import-check" in cmd]
+    assert checks == [[sys.executable, "--import-check", "whisper", "--import-path", staging]]
+    assert all(cmd[0] != sys.executable for cmd in _pip_commands(recorded))
 
 
 def test_whisper_install_without_a_matching_python_says_which_one(
@@ -281,10 +294,7 @@ def test_whisper_install_without_a_matching_python_says_which_one(
 
     assert job["status"] == "error"
     assert f" Python {TAG}. Install it" in job["error"]
-    commands = _every_command(recorded)
-    assert [cmd for cmd in commands if "pip" in cmd] == []
-    # Never the server exe itself: ``OpenCut-Server.exe -m pip`` starts a second server.
-    assert all(cmd[0] != sys.executable for cmd in commands)
+    assert _pip_commands(recorded) == []
 
 
 @pytest.mark.parametrize("packaged", [True, False], ids=["packaged", "source"])
@@ -295,28 +305,30 @@ def test_the_upgrade_pip_strategy_runs_a_command_pip_accepts(
         request.getfixturevalue("frozen")
         monkeypatch.setattr(security, "_find_system_python", lambda: MATCHING)
 
-    def first_strategy_fails(cmd, *args, **kwargs):
+    def tokenizers_strategies_fail(cmd, *args, **kwargs):
         recorded["popen"].append(cmd)
         proc = _FakeProc(cmd)
-        if "--prefer-binary" not in cmd:  # only strategy 2's install succeeds
+        if "tokenizers" in cmd or any(arg.startswith("tokenizers>=") for arg in cmd):
             proc.returncode = 1
         return proc
 
-    monkeypatch.setattr(subprocess, "Popen", first_strategy_fails)
+    monkeypatch.setattr(subprocess, "Popen", tokenizers_strategies_fail)
 
     job = _job(client, csrf_token, "/install-whisper", {"backend": "faster-whisper"})
 
     assert job["status"] == "complete", job.get("error")
-    pip_installs = [cmd for cmd in _every_command(recorded) if "pip" in cmd and "install" in cmd]
+    pip_installs = [cmd for cmd in _pip_commands(recorded) if "install" in cmd]
     # "pip setuptools wheel" as one argument is an invalid requirement to pip.
     assert [arg for cmd in pip_installs for arg in cmd if " " in arg] == []
     upgrades = [cmd for cmd in pip_installs if "setuptools" in cmd]
     if packaged:
-        # The borrowed Python's own pip stays as it is, and pip in --target never runs.
+        # The borrowed Python's own pip stays as it is; openai-whisper is the fallback.
         assert upgrades == []
+        assert job["result"]["backend"] == "openai-whisper"
     else:
         assert upgrades and all({"pip", "wheel", "--upgrade"} <= set(cmd) for cmd in upgrades)
         assert all("--target" not in cmd for cmd in upgrades)
+        assert job["result"]["backend"] == "faster-whisper"
 
 
 def test_whisper_reinstall_in_a_packaged_build_leaves_the_users_python_alone(
@@ -324,14 +336,31 @@ def test_whisper_reinstall_in_a_packaged_build_leaves_the_users_python_alone(
 ):
     monkeypatch.setattr(security, "_find_system_python", lambda: MATCHING)
 
-    job = _job(client, csrf_token, "/whisper/reinstall", {"backend": "whisperx"})
+    job = _job(client, csrf_token, "/whisper/reinstall", {"backend": "openai-whisper"})
 
     assert job["status"] == "complete", job.get("error")
     commands = _every_command(recorded)
     assert not [cmd for cmd in commands if "uninstall" in cmd]
-    installs = [cmd for cmd in recorded["popen"] if "install" in cmd]
+    installs = [cmd for cmd in recorded["popen"] if "pip" in cmd and "install" in cmd]
     assert len(installs) == 1
-    assert installs[0][installs[0].index("--target") + 1] == frozen
-    verify = [(cmd, env) for cmd, env in recorded["run"] if "-c" in cmd]
-    assert verify and "import whisperx" in verify[-1][0][-1]
-    assert frozen in verify[-1][1]["PYTHONPATH"]
+    staging = _staged_under_the_data_folder(installs[0], frozen)
+    assert "--no-cache-dir" in installs[0]
+    checks = [cmd for cmd in recorded["popen"] if "--import-check" in cmd]
+    assert checks == [[sys.executable, "--import-check", "whisper", "--import-path", staging]]
+
+
+@pytest.mark.parametrize("route", ["/install-whisper", "/whisper/reinstall"])
+def test_whisperx_gets_the_dependency_policy_reason_instead_of_a_pip_run(
+    monkeypatch, frozen, inline_jobs, recorded, client, csrf_token, route,
+):
+    """WhisperX pins a Torch stack OpenCut can't run; the old route installed it anyway."""
+    from opencut.dependency_support import UNSUPPORTED_DEPENDENCIES
+
+    monkeypatch.setattr(security, "_find_system_python", lambda: MATCHING)
+
+    job = _job(client, csrf_token, route, {"backend": "whisperx"})
+
+    assert job["status"] == "error"
+    assert UNSUPPORTED_DEPENDENCIES["whisperx"][:40] in job["error"]
+    # Nothing runs first either: the reinstall used to clear caches before failing.
+    assert _pip_commands(recorded) == []

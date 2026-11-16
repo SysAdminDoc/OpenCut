@@ -489,31 +489,6 @@ def install_python() -> str:
     return python
 
 
-def pip_install_variants(base: list, target_dir: str) -> list:
-    """``pip install`` commands to try in order, from ``base`` (which names the packages).
-
-    A packaged server imports add-on packages only from ``target_dir``. An
-    install anywhere else succeeds and changes nothing, and without
-    ``--upgrade`` pip leaves an existing copy there untouched.
-    """
-    targeted = [*base, "--target", target_dir]
-    if getattr(sys, "frozen", False):
-        return [[*targeted, "--upgrade"]]
-    return [list(base), [*base, "--user"], targeted]
-
-
-def target_import_env(target_dir: str) -> dict:
-    """Environment for a verify subprocess that should see ``--target`` installs.
-
-    The directory goes last, matching the server, which appends it to sys.path.
-    """
-    env = dict(os.environ)
-    env["PYTHONPATH"] = os.pathsep.join(
-        part for part in (env.get("PYTHONPATH", ""), target_dir) if part
-    )
-    return env
-
-
 # 13.0.0 fixes 43 advisories published after 12.3.0, five of them critical.
 PILLOW_RUNTIME_REQUIREMENT = "Pillow>=13.0.0,<14"
 REMBG_RUNTIME_REQUIREMENT = "rembg>=2.0.82,<3"
@@ -572,7 +547,14 @@ def runtime_security_requirement(package: str) -> str:
     name = re.split(r"[\[>=<!~]", normalized, maxsplit=1)[0].lower()
     requirement = _RUNTIME_SECURITY_REQUIREMENTS.get(name)
     if requirement is None:
-        return normalized
+        from opencut.dependency_support import DECLARED_REQUIREMENTS
+
+        # A bare name gets the bounds pyproject.toml declares for it.
+        if re.search(r"[>=<!~]", normalized):
+            return normalized
+        requirement = DECLARED_REQUIREMENTS.get(re.sub(r"[-_.]+", "-", name))
+        if requirement is None:
+            return normalized
     # Keep requested extras (``rembg[gpu]``) on the bounded requirement.
     extras = re.match(r"[A-Za-z0-9._-]+(\[[A-Za-z0-9_,-]+\])", normalized)
     if extras and "[" not in requirement:
@@ -602,24 +584,28 @@ def _verify_package_importable(python: str, package: str, target_dir: str = None
         return False
 
 
-def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedProcess:
+def safe_pip_install(
+    package: str, timeout: int = 600, modules=None
+) -> subprocess.CompletedProcess:
     """
-    Install a pip package with a safe fallback chain:
+    Install a pip package into OpenCut's add-on store, falling back from source:
 
-    1. ``pip install --target ~/.opencut/packages`` — always writable, no admin needed
-    2. Normal ``pip install <package>``
-    3. ``pip install --user <package>``
-    4. ``pip install --break-system-packages <package>``  (only inside a venv)
+    1. :func:`opencut.core.package_store.install` into ``<data folder>/packages``:
+       a staging folder, a child server that has to import the package, and
+       a merge that keeps the old copy when anything fails. A frozen
+       (PyInstaller) build stops here, since it reads nothing else, and runs
+       pip with a system Python of its own version and ABI, never
+       ``sys.executable`` (the server exe).
+    2. From source, only when pip itself failed there: normal
+       ``pip install``, then ``--user``, then ``--break-system-packages``
+       (only inside a venv).
 
-    A frozen (PyInstaller) build runs pip with a system Python of its own
-    minor version, never ``sys.executable`` (the server exe), and installs
-    only with ``--target``: the packaged server reads nothing else.
+    ``modules`` names what the server has to import afterwards (``cv2`` for
+    opencv-python). By default it's the project's own top-level module.
 
-    Permission errors (Errno 13) are caught and immediately skip to the
-    next strategy instead of failing the entire install.
-
-    Returns the ``CompletedProcess`` on success.
-    Raises ``RuntimeError`` if all strategies fail.
+    Returns the ``CompletedProcess`` on success. Raises ``RuntimeError`` if
+    every strategy fails, the server can't import the package, or it would
+    break a package already in the store.
     """
     package = runtime_security_requirement(package)
     frozen = bool(getattr(sys, "frozen", False))
@@ -631,33 +617,38 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
     else:
         python = sys.executable
 
-    # Prefer pre-built binary wheels (avoids needing Rust/C compilers)
-    # ~/.opencut/packages — the ONLY directory guaranteed writable without admin
     _target_dir = user_packages_dir()
     os.makedirs(_target_dir, exist_ok=True)
-    # Append to sys.path so target installs are available without outranking
+    # Append to sys.path so store installs are available without outranking
     # stdlib, bundled modules, or the active environment's site-packages.
     if _target_dir not in sys.path:
         sys.path.append(_target_dir)
 
-    _base = [python, "-m", "pip", "install", package, "--prefer-binary", "-q"]
+    from opencut.core import package_store
 
-    # Build strategy list — --target first to avoid permission errors
-    strategies = [
-        ("--target (user-local)", _base + ["--target", _target_dir]),
-        ("default pip install", list(_base)),
-        ("--user install", _base + ["--user"]),
-    ]
-
-    if frozen:
-        strategies = [("--target (user-local)", pip_install_variants(_base, _target_dir)[0])]
-    # Only allow --break-system-packages inside a virtual environment
-    elif _in_virtualenv():
-        strategies.append(
-            ("--break-system-packages", _base + ["--break-system-packages"])
+    try:
+        return package_store.install(
+            [package], modules=modules, python=python, timeout=timeout, report=logger.info
+        )
+    except package_store.PipFailed as exc:
+        last_result = exc.result
+        logger.warning(
+            "pip couldn't install %s into %s: %s", package, _target_dir, (exc.result.stderr or "")[-300:]
         )
 
-    last_result = None
+    _base = [python, "-m", "pip", "install", package, "--prefer-binary", "-q"]
+    strategies = []
+    if not frozen:
+        strategies = [
+            ("default pip install", list(_base)),
+            ("--user install", _base + ["--user"]),
+        ]
+        # Only allow --break-system-packages inside a virtual environment
+        if _in_virtualenv():
+            strategies.append(
+                ("--break-system-packages", _base + ["--break-system-packages"])
+            )
+
     for label, cmd in strategies:
         logger.info("Trying to install %s via strategy: %s", package, label)
         try:

@@ -681,7 +681,7 @@ def ensure_package(pkg: str, pip_name: str = None, on_progress=None) -> bool:
         logger.info(f"Installing missing dependency: {pip_name}")
         from opencut.security import safe_pip_install
         try:
-            safe_pip_install(pip_name)
+            safe_pip_install(pip_name, modules=[pkg])
         except RuntimeError:
             return False
         try:

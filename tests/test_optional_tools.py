@@ -22,7 +22,7 @@ from pathlib import Path
 import pytest
 
 from opencut import helpers, security
-from opencut.core import optional_tools
+from opencut.core import optional_tools, package_store
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALLER_CS = (
@@ -157,7 +157,7 @@ class _Machine:
         self.pip_exit = pip_exit
         self.commands = []
 
-    def __call__(self, cmd, timeout):
+    def __call__(self, cmd, timeout, on_start=None):
         self.commands.append(cmd)
         if "pip" in cmd:
             target = Path(cmd[cmd.index("--target") + 1])
@@ -185,7 +185,7 @@ def machine(monkeypatch, data_dir):
 
     def install(**kwargs):
         fake = _Machine(**kwargs)
-        monkeypatch.setattr(optional_tools, "_run", fake)
+        monkeypatch.setattr(package_store, "_run", fake)
         return fake
 
     return packages, install
@@ -193,6 +193,13 @@ def machine(monkeypatch, data_dir):
 
 def _leftover_staging(data_dir):
     return [p.name for p in data_dir.iterdir() if "staging" in p.name]
+
+
+def _data_entries(data_dir):
+    """The data folder, less the store's lock file and its inventory marker."""
+    return sorted(
+        p.name for p in data_dir.iterdir() if p.name not in ("packages.lock", "packages-inventory.json")
+    )
 
 
 def test_a_pip_tool_is_merged_only_after_the_server_imports_it(machine, data_dir):
@@ -264,7 +271,7 @@ def test_a_merge_that_stops_partway_puts_the_old_install_back(machine, data_dir,
         optional_tools.install_pip_tool("edge-tts", report=lambda _line: None)
 
     assert _tree(packages) == before
-    assert sorted(p.name for p in data_dir.iterdir()) == ["packages"]
+    assert _data_entries(data_dir) == ["packages"]
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows won't move a folder with an open file in it")
@@ -278,7 +285,7 @@ def test_a_file_the_running_server_holds_open_leaves_the_old_install_whole(machi
             optional_tools.install_pip_tool("edge-tts", report=lambda _line: None)
 
     assert _tree(packages) == before
-    assert sorted(p.name for p in data_dir.iterdir()) == ["packages"]
+    assert _data_entries(data_dir) == ["packages"]
 
 
 def test_folders_a_killed_install_left_behind_are_cleared_once_stale(machine, data_dir):
@@ -295,7 +302,7 @@ def test_folders_a_killed_install_left_behind_are_cleared_once_stale(machine, da
 
     optional_tools.install_pip_tool("edge-tts", report=lambda _line: None)
 
-    assert sorted(p.name for p in data_dir.iterdir()) == [
+    assert _data_entries(data_dir) == [
         ".edge-tts-staging-running", "models", "packages",
     ]
 
@@ -303,7 +310,7 @@ def test_folders_a_killed_install_left_behind_are_cleared_once_stale(machine, da
 def test_no_matching_python_names_the_one_to_install(monkeypatch, data_dir):
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(security, "_find_system_python", lambda: None)
-    monkeypatch.setattr(optional_tools, "_run", lambda *a, **k: pytest.fail("ran pip"))
+    monkeypatch.setattr(package_store, "_run", lambda *a, **k: pytest.fail("ran pip"))
 
     with pytest.raises(RuntimeError, match=r"needs .+ Python \d+\.\d+\. Install it from python\.org"):
         optional_tools.install_pip_tool("mediapipe", report=lambda _line: None)
