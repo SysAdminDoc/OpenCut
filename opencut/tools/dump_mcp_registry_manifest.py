@@ -122,7 +122,7 @@ def build_manifest() -> dict:
 def write_manifest(manifest: dict, path: Path = MANIFEST_PATH) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     serialised = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
-    path.write_text(serialised, encoding="utf-8")
+    path.write_text(serialised, encoding="utf-8", newline="\n")
     return path
 
 

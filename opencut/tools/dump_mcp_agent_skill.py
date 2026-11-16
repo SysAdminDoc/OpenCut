@@ -19,7 +19,7 @@ DOC_END = "<!-- agent-skill:end -->"
 
 def write_manifest(skill: dict, path: Path = MANIFEST_PATH) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(skill, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(skill, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     return path
 
 
@@ -40,7 +40,7 @@ def render_doc(skill: dict, path: Path = DOC_PATH) -> str:
 
 
 def write_doc(skill: dict, path: Path = DOC_PATH) -> Path:
-    path.write_text(render_doc(skill, path), encoding="utf-8")
+    path.write_text(render_doc(skill, path), encoding="utf-8", newline="\n")
     return path
 
 

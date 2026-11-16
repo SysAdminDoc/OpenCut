@@ -1272,7 +1272,7 @@ def load_manifest(path: Path = MANIFEST_PATH) -> Optional[dict]:
 
 def write_manifest(manifest: dict, path: Path = MANIFEST_PATH) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     return path
 
 

@@ -235,7 +235,7 @@ def write_manifest(manifest: dict, path: Path = MANIFEST_PATH) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(manifest, indent=2, sort_keys=False, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+        encoding="utf-8", newline="\n",
     )
     return path
 

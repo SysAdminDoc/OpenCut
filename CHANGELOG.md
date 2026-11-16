@@ -82,6 +82,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - Transcription reads CPU mode through the same settings loader as the rest of OpenCut. It used to open the file itself, so a settings file from before CPU mode had its own switch (`"device": "cpu"`) only counted once the server had converted it.
 - One offline, moved or damaged clip no longer fails a whole visual search or **Build Visual Index** run. Those clips are skipped and the rest are searched, and the result lists each skipped clip with the reason under `skipped_clips`. When none of the clips can be read, the error names the first one and why. The index count in both panels only counts clips that were actually indexed.
 - A project folder the visual index can't be written to (read-only, offline or full) no longer fails the job after every clip was indexed. The embeddings still land in the local cache, so later searches don't index again, and `sidecar_error` says why the project copy wasn't saved.
+- Regenerating the committed manifests and docs on Windows no longer rewrites them with CRLF line endings. Fourteen generators (the route, parity, MCP, OpenAPI, alias, model card and Adobe metadata dumps, plus the shared locale and release gate JSON writers) now write LF the way `.gitattributes` asks, so a regeneration shows only the lines that actually changed.
 
 ### Tests
 

@@ -347,7 +347,7 @@ def load_committed_snapshot(
 def write_snapshot(snapshot: dict, path: Path = SNAPSHOT_PATH) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     serialised = json.dumps(snapshot, indent=2, sort_keys=True) + "\n"
-    path.write_text(serialised, encoding="utf-8")
+    path.write_text(serialised, encoding="utf-8", newline="\n")
     return path
 
 

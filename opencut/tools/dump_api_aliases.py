@@ -102,7 +102,7 @@ def write_alias_manifest(manifest: dict, path: Path = ALIAS_MANIFEST_PATH) -> Pa
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(manifest, indent=2, sort_keys=False, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+        encoding="utf-8", newline="\n",
     )
     return path
 

@@ -92,9 +92,9 @@ def write_artifacts(manifest: dict) -> List[Path]:
     DOCS_PATH.parent.mkdir(parents=True, exist_ok=True)
     JSON_PATH.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+        encoding="utf-8", newline="\n",
     )
-    DOCS_PATH.write_text(_render_markdown(manifest), encoding="utf-8")
+    DOCS_PATH.write_text(_render_markdown(manifest), encoding="utf-8", newline="\n")
     return [JSON_PATH, DOCS_PATH]
 
 
