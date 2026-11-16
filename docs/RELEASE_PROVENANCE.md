@@ -104,5 +104,10 @@ its version passes the advisory matrix.
 At runtime, `GET /system/capabilities` carries `ffmpeg.security` and emits a
 `ffmpeg_below_security_floor` finding when a stale binary is detected.
 
-Fetch a compliant build with `winget install Gyan.FFmpeg` (release lane) or from
-<https://www.gyan.dev/ffmpeg/builds/> (`ffmpeg-git-full` for the snapshot lane).
+`Install.bat` downloads the pinned snapshot into `ffmpeg\` when the FFmpeg it
+finds is missing or refused, and checks the archive and both executables
+against the `PINNED_INSTALLER_*` hashes first. For a build of your own, take
+`ffmpeg-git-full` dated 2026-11-06 or later from
+<https://www.gyan.dev/ffmpeg/builds/>. winget's `Gyan.FFmpeg` and Chocolatey's
+`ffmpeg` carry tagged releases, and those stay refused while the release lane
+is closed.

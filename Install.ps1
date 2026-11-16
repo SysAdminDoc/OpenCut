@@ -8,7 +8,7 @@
 
     What this installer does:
     1. Cleans up old OpenCut installations (kills processes, removes packages)
-    2. Checks/installs FFmpeg (via winget)
+    2. Checks FFmpeg and installs the pinned snapshot when it is missing or refused
     3. Checks Python 3.11-3.14 is available
     4. Installs Python dependencies (click, rich, flask, flask-cors)
     5. Optionally installs Whisper for caption generation
@@ -76,11 +76,6 @@ function Test-IsAdmin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($identity)
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
-
-function Test-CommandExists {
-    param([string]$Command)
-    return [bool](Get-Command $Command -ErrorAction SilentlyContinue)
 }
 
 function Resolve-OpenCutPython {
@@ -171,6 +166,80 @@ function Get-FFmpegSecurityStatus {
     }
 
     return [pscustomobject]@{ Safe = $false; Version = $token; Reason = "Unrecognized FFmpeg build token" }
+}
+
+function Install-PinnedFFmpeg {
+    <#
+    .SYNOPSIS
+        Download the FFmpeg snapshot OpenCut pins and copy its ffmpeg.exe and
+        ffprobe.exe into Destination.
+
+    .DESCRIPTION
+        winget and Chocolatey only carry tagged releases, and every tagged
+        release is refused today, so the installer fetches the same snapshot
+        the packaged installers ship. The archive and each executable are
+        checked against their SHA-256 before anything reaches Destination.
+        Keep the defaults in step with PINNED_INSTALLER_* in
+        opencut/core/ffmpeg_provenance.py (tests/test_install_ps1_ffmpeg.py).
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Destination,
+        [string]$ArchiveUrl = "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2026-11-11-git-23c4540053-full_build.7z",
+        [string]$ArchiveSha256 = "6fa482b30da6b3a5b51ae4776d1873488a949724d0302aa5e96cad143e483776",
+        [hashtable]$BinarySha256 = @{
+            "ffmpeg.exe"  = "96e55c7fcae492911986b90d5de8d905cd01755d79eb3c90257eb35b9aecda16"
+            "ffprobe.exe" = "a86d6f661a3c5bf1d43a7b0381c2b111a405239abb781ab8cf842d6a666c2ec3"
+        }
+    )
+    $tar = Join-Path $env:SystemRoot "System32\tar.exe"
+    if (-not (Test-Path -LiteralPath $tar)) {
+        throw "Windows tar.exe was not found at $tar (it ships with Windows 10 1803 and later)"
+    }
+    $work = Join-Path ([IO.Path]::GetTempPath()) ("opencut-ffmpeg-" + [guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Path $work -Force | Out-Null
+    try {
+        $archive = Join-Path $work ([IO.Path]::GetFileName(([uri]$ArchiveUrl).AbsolutePath))
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        # The 5.1 progress bar slows Invoke-WebRequest to a crawl on large files.
+        $ProgressPreference = "SilentlyContinue"
+        Invoke-WebRequest -Uri $ArchiveUrl -OutFile $archive -UseBasicParsing
+        $archiveHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($archiveHash -ne $ArchiveSha256.ToLowerInvariant()) {
+            throw "The downloaded FFmpeg archive has SHA-256 $archiveHash, expected $ArchiveSha256"
+        }
+
+        $extracted = Join-Path $work "extracted"
+        New-Item -ItemType Directory -Path $extracted | Out-Null
+        & $tar -xf $archive -C $extracted
+        if ($LASTEXITCODE -ne 0) {
+            throw "tar could not extract the FFmpeg archive (exit code $LASTEXITCODE)"
+        }
+
+        $staged = @{}
+        foreach ($binaryName in $BinarySha256.Keys) {
+            $found = @(Get-ChildItem -LiteralPath $extracted -Recurse -File -Filter $binaryName |
+                Where-Object { $_.Directory.Name -eq "bin" })
+            if ($found.Count -ne 1) {
+                throw "Expected one bin\$binaryName in the FFmpeg archive, found $($found.Count)"
+            }
+            $binaryHash = (Get-FileHash -LiteralPath $found[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            $expectedHash = ([string]$BinarySha256[$binaryName]).ToLowerInvariant()
+            if ($binaryHash -ne $expectedHash) {
+                throw "$binaryName in the FFmpeg archive has SHA-256 $binaryHash, expected $expectedHash"
+            }
+            $staged[$binaryName] = $found[0].FullName
+        }
+
+        New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+        foreach ($binaryName in $staged.Keys) {
+            Copy-Item -LiteralPath $staged[$binaryName] -Destination (Join-Path $Destination $binaryName) -Force
+        }
+        # Uninstall removes the folder only when this marker says the
+        # installer created it, so a developer's release payload survives.
+        Set-Content -LiteralPath (Join-Path $Destination ".opencut-installed") -Value $ArchiveUrl -Encoding ASCII
+    } finally {
+        Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 
 function Get-OpenCutListenerPids {
@@ -312,6 +381,17 @@ if ($Uninstall) {
     )
     foreach ($launcherArtifact in $launcherPaths) {
         Remove-OpenCutArtifact -Path $launcherArtifact -Label "launcher artifact"
+    }
+
+    # The FFmpeg copy Install-PinnedFFmpeg made. A folder without its marker
+    # is a developer's release payload and stays.
+    $localFfmpegDir = Join-Path $script:InstallDir "ffmpeg"
+    if (Test-Path -LiteralPath (Join-Path $localFfmpegDir ".opencut-installed")) {
+        Remove-OpenCutArtifact -Path $localFfmpegDir -Label "FFmpeg copy"
+    }
+    if ([Environment]::GetEnvironmentVariable("OPENCUT_FFMPEG_DIR", "User") -eq $script:InstallDir) {
+        [Environment]::SetEnvironmentVariable("OPENCUT_FFMPEG_DIR", $null, "User")
+        Write-Ok "Cleared OPENCUT_FFMPEG_DIR"
     }
 
     # Remove only the debug-mode value written by this installer. Leave the
@@ -497,6 +577,13 @@ if (-not $SkipCleanup) {
 # Step 2: FFmpeg security floor
 # ---------------------------------------------------------------------------
 Write-Header "Step 2/7: FFmpeg"
+# The installer's own copy lives in <install>\ffmpeg. It goes first on PATH
+# here, and the launchers name it in OPENCUT_FFMPEG_DIR, which the server
+# checks before PATH.
+$localFfmpegDir = Join-Path $script:InstallDir "ffmpeg"
+if (Test-Path -LiteralPath (Join-Path $localFfmpegDir "ffmpeg.exe")) {
+    $env:Path = "$localFfmpegDir;$env:Path"
+}
 $ffmpegStatus = Get-FFmpegSecurityStatus
 if ($ffmpegStatus.Safe) {
     Write-Ok "FFmpeg verified: $($ffmpegStatus.Version) ($($ffmpegStatus.Reason))"
@@ -506,31 +593,12 @@ if ($ffmpegStatus.Safe) {
     exit 1
 } else {
     Write-Warn "Existing FFmpeg is unavailable ($($ffmpegStatus.Version)): $($ffmpegStatus.Reason)"
-    $installed = $false
-
-    if (Test-CommandExists "winget") {
-        Write-Info "Installing/upgrading the verified Gyan.FFmpeg package..."
-        try {
-            winget upgrade --id Gyan.FFmpeg --exact --accept-package-agreements --accept-source-agreements --silent 2>$null
-            if ($LASTEXITCODE -ne 0) {
-                winget install --id Gyan.FFmpeg --exact --accept-package-agreements --accept-source-agreements --silent 2>$null
-            }
-            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-            $installed = (Get-FFmpegSecurityStatus).Safe
-        } catch {
-            Write-Warn "winget could not install a verified FFmpeg build."
-        }
-    }
-
-    if (-not $installed -and (Test-CommandExists "choco")) {
-        Write-Info "Upgrading FFmpeg with Chocolatey..."
-        try {
-            choco upgrade ffmpeg -y 2>$null
-            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-            $installed = (Get-FFmpegSecurityStatus).Safe
-        } catch {
-            Write-Warn "Chocolatey could not install a verified FFmpeg build."
-        }
+    Write-Info "Downloading the FFmpeg snapshot OpenCut pins (about 75 MB) into $localFfmpegDir..."
+    try {
+        Install-PinnedFFmpeg -Destination $localFfmpegDir
+        $env:Path = "$localFfmpegDir;$env:Path"
+    } catch {
+        Write-Err "Could not install the pinned FFmpeg: $($_.Exception.Message)"
     }
 
     $ffmpegStatus = Get-FFmpegSecurityStatus
@@ -540,6 +608,19 @@ if ($ffmpegStatus.Safe) {
         exit 1
     }
     Write-Ok "FFmpeg verified after install: $($ffmpegStatus.Version)"
+}
+
+$useLocalFfmpeg = Test-Path -LiteralPath (Join-Path $localFfmpegDir "ffmpeg.exe")
+if ($useLocalFfmpeg) {
+    # Covers a server started from a terminal with python -m opencut.server,
+    # which the panel suggests when the launchers aren't running.
+    $existingFfmpegDir = [Environment]::GetEnvironmentVariable("OPENCUT_FFMPEG_DIR", "User")
+    if ([string]::IsNullOrEmpty($existingFfmpegDir) -or $existingFfmpegDir -eq $script:InstallDir) {
+        [Environment]::SetEnvironmentVariable("OPENCUT_FFMPEG_DIR", $script:InstallDir, "User")
+        Write-Ok "OPENCUT_FFMPEG_DIR set to $($script:InstallDir) for your account"
+    } else {
+        Write-Warn "OPENCUT_FFMPEG_DIR already points at $existingFfmpegDir, so only the launchers use $localFfmpegDir"
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -813,9 +894,12 @@ Write-Header "Step 6/7: Launcher Scripts"
 # Start-OpenCut.bat
 $launcherPath = Join-Path $script:InstallDir "Start-OpenCut.bat"
 $quotedPythonCmd = '"{0}"' -f $pythonCmd
+# Point the server at the FFmpeg step 2 verified, ahead of whatever is on PATH.
+$batFfmpegLine = if ($useLocalFfmpeg) { "set `"OPENCUT_FFMPEG_DIR=$($script:InstallDir)`"" } else { "rem FFmpeg comes from PATH" }
 $launcherContent = @"
 @echo off
 title OpenCut Backend Server
+$batFfmpegLine
 echo.
 echo   OpenCut Backend Server
 echo   =====================
@@ -834,8 +918,10 @@ Write-Ok "Created: Start-OpenCut.bat"
 # Start-OpenCut-Hidden.vbs (runs backend without visible window)
 $vbsPath = Join-Path $script:InstallDir "Start-OpenCut-Hidden.vbs"
 $vbsCommand = ('"{0}" -m opencut.server' -f $pythonCmd).Replace('"', '""')
+$vbsFfmpegLine = if ($useLocalFfmpeg) { "WshShell.Environment(`"Process`")(`"OPENCUT_FFMPEG_DIR`") = `"$($script:InstallDir)`"" } else { "' FFmpeg comes from PATH" }
 $vbsContent = @"
 Set WshShell = CreateObject("WScript.Shell")
+$vbsFfmpegLine
 WshShell.Run "$vbsCommand", 0, False
 "@
 Set-Content -Path $vbsPath -Value $vbsContent -Encoding ASCII
