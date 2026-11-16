@@ -152,6 +152,33 @@ def test_a_cuda_12_lane_keeps_ctranslate2_in_process_and_pins_a_cuda_12_onnxrunt
     assert plan["onnxruntime"]["requirement"] == "onnxruntime-gpu>=1.21,<1.27"
 
 
+RTX_5090 = {"name": "RTX 5090", "driver_version": "581.57", "compute_capability": "12.0"}
+RTX_3080 = {"name": "RTX 3080", "driver_version": "546.33", "compute_capability": "8.6"}
+
+
+@pytest.mark.parametrize(
+    "torch_major, gpus, expected",
+    [
+        # The installed torch decides, whatever the host could run.
+        (13, [RTX_3080], "onnxruntime-gpu>=1.27,<2"),
+        (12, [RTX_5090], "onnxruntime-gpu>=1.21,<1.27"),
+        # No CUDA torch yet: the host's lane decides.
+        (None, [RTX_5090], "onnxruntime-gpu>=1.27,<2"),
+        (None, [RTX_3080], "onnxruntime-gpu>=1.21,<1.27"),
+        (None, [], None),
+        # A CUDA 11 torch has no onnxruntime-gpu row, so the caller's bound stays.
+        (11, [RTX_5090], None),
+    ],
+)
+def test_onnxruntime_gpu_follows_the_cuda_major_the_server_runs(monkeypatch, torch_major, gpus, expected):
+    from opencut import ct2_isolation
+
+    monkeypatch.setattr(ct2_isolation, "torch_cuda_major", lambda: torch_major)
+    monkeypatch.setattr(gpu_lanes, "host_torch_lane", lambda: gpu_lanes.choose_torch_lane(gpus))
+
+    assert gpu_lanes.onnxruntime_gpu_requirement() == expected
+
+
 def test_frozen_install_commands_target_the_packages_folder(monkeypatch):
     monkeypatch.setattr(gpu_lanes.os, "name", "nt")
     command = gpu_lanes.torch_install_command("cu126", frozen=True)

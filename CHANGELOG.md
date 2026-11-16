@@ -26,6 +26,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - The setup's Optional Tools step names the Python that edge-tts and mediapipe need by asking the server it ships. The build runs `OpenCut-Server.exe --python-requirement` and the page reads the answer from its payload, so it stays right when the bundled Python changes. Before, the page had "Python 3.13" typed into it.
 - When auto-editor is missing, the panel's hint now says to run `OpenCut-Server.exe --install-tools auto-editor`, the same as the model docs. It used to suggest `pip install auto-editor`, which gets the old 29.x release into a Python the packaged server never loads.
 - The FlashVSR install hint says its PyTorch command is the default cu132 build and that it needs NVIDIA driver 580 or newer and a Turing or newer GPU, so someone on an older card knows it isn't theirs.
+- Add-on installs keep `onnxruntime-gpu` on the CUDA build the server runs. GPU background removal (`rembg[gpu]`) pulls it in, and pip used to take the newest one, a CUDA 13 build, even beside a CUDA 12 PyTorch or on a driver too old for CUDA 13. The installed PyTorch decides, or your driver and card when there's no PyTorch yet: 1.27 or newer for CUDA 13 and 1.21 through 1.26 for CUDA 12.
 
 ### Fixed
 

@@ -562,7 +562,13 @@ def runtime_security_requirement(package: str) -> str:
         # A bare name gets the bounds pyproject.toml declares for it.
         if re.search(r"[>=<!~]", normalized):
             return normalized
-        requirement = DECLARED_REQUIREMENTS.get(re.sub(r"[-_.]+", "-", name))
+        key = re.sub(r"[-_.]+", "-", name)
+        if key == "onnxruntime-gpu":
+            from opencut.gpu_lanes import onnxruntime_gpu_requirement
+
+            # Its CUDA major has to be the one the server runs.
+            requirement = onnxruntime_gpu_requirement()
+        requirement = requirement or DECLARED_REQUIREMENTS.get(key)
         if requirement is None:
             return normalized
     # Keep requested extras (``rembg[gpu]``) on the bounded requirement.

@@ -767,12 +767,15 @@ def install(
         except OSError as exc:  # it tries again on the next install
             logger.warning("Couldn't finish checking the packages folder: %s", exc)
         staging = tempfile.mkdtemp(prefix=f".{label}-staging-", dir=data_dir)
+        # Named like a staging folder so a killed install's copy gets swept too.
+        constraints = tempfile.mkdtemp(prefix=f".{label}-staging-", dir=data_dir)
         try:
             report(f"Installing {' '.join(requirements)} with {python}...")
             try:
                 result = _run(
                     [
                         python, "-m", "pip", "install", *requirements, *pip_args,
+                        *_lane_constraints(constraints),
                         "--target", staging, "--prefer-binary",
                         "--disable-pip-version-check", "--no-input", "-q",
                     ],
@@ -813,7 +816,26 @@ def install(
             merge_staged_packages(staging, packages)
         finally:
             shutil.rmtree(staging, ignore_errors=True)
+            shutil.rmtree(constraints, ignore_errors=True)
     return result
+
+
+def _lane_constraints(folder: str) -> list[str]:
+    """pip arguments that hold GPU builds to this machine's CUDA lane.
+
+    ``rembg[gpu]`` brings onnxruntime-gpu in as a dependency, and pip on its
+    own takes the newest one, a CUDA 13 build, even beside a CUDA 12 torch.
+    A constraint bounds it without asking for it.
+    """
+    from opencut.gpu_lanes import onnxruntime_gpu_requirement
+
+    requirement = onnxruntime_gpu_requirement()
+    if not requirement:
+        return []
+    path = os.path.join(folder, "lane-constraints.txt")
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(requirement + "\n")
+    return ["-c", path]
 
 
 # ---------------------------------------------------------------------------

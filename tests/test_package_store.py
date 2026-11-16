@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 from packaging.requirements import Requirement
 
-from opencut import helpers, security
+from opencut import gpu_lanes, helpers, security
 from opencut.core import package_store
 from opencut.dependency_support import DECLARED_REQUIREMENTS
 from packaging import tags
@@ -151,6 +151,54 @@ def test_the_face_install_route_asks_pip_for_a_bounded_mediapipe(monkeypatch, da
     assert "mediapipe>=0.10,<2" in pip
     assert "mediapipe" not in pip
     assert fake.import_checks == ["mediapipe"]
+
+
+@pytest.mark.parametrize(
+    "lane, installed",
+    [
+        ("onnxruntime-gpu>=1.21,<1.27", "onnxruntime-gpu>=1.21,<1.27"),
+        ("onnxruntime-gpu>=1.27,<2", "onnxruntime-gpu>=1.27,<2"),
+        (None, "onnxruntime-gpu>=1.26,<2"),  # a CPU lane keeps pyproject's bound
+    ],
+)
+def test_a_bare_onnxruntime_gpu_gets_the_lane_build(monkeypatch, lane, installed):
+    monkeypatch.setattr(gpu_lanes, "onnxruntime_gpu_requirement", lambda: lane)
+
+    assert security.runtime_security_requirement("onnxruntime_gpu") == installed
+    assert security.runtime_security_requirement("onnxruntime-gpu==1.24.4") == "onnxruntime-gpu==1.24.4"
+
+
+def test_rembg_gpu_holds_its_onnxruntime_gpu_to_the_lane(monkeypatch, data_dir):
+    """rembg[gpu] pulls onnxruntime-gpu in, and pip alone would take a CUDA 13 build."""
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    monkeypatch.setattr(gpu_lanes, "onnxruntime_gpu_requirement", lambda: "onnxruntime-gpu>=1.21,<1.27")
+    constraints = []
+
+    def stage(target):
+        pip = fake.commands[-1]
+        constraints.append(Path(pip[pip.index("-c") + 1]).read_text(encoding="utf-8"))
+        _dist(target, "rembg", "2.0.82", {"rembg/__init__.py": b""})
+
+    fake = _pip(monkeypatch, stage)
+    package_store.install(["rembg[gpu]"])
+
+    [pip] = [cmd for cmd in fake.commands if "pip" in cmd]
+    assert "rembg[gpu]>=2.0.82,<3" in pip
+    assert not any(arg.startswith("onnxruntime") for arg in pip)  # bounded, never requested
+    assert constraints == ["onnxruntime-gpu>=1.21,<1.27\n"]
+    assert _leftovers(data_dir) == []
+
+
+def test_a_cpu_lane_adds_no_constraint(monkeypatch, data_dir):
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    monkeypatch.setattr(gpu_lanes, "onnxruntime_gpu_requirement", lambda: None)
+    fake = _pip(monkeypatch, lambda target: _dist(target, "rembg", "2.0.82", {"rembg/__init__.py": b""}))
+
+    package_store.install(["rembg"])
+
+    [pip] = [cmd for cmd in fake.commands if "pip" in cmd]
+    assert "-c" not in pip
+    assert _leftovers(data_dir) == []
 
 
 # ---------------------------------------------------------------------------

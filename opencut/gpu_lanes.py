@@ -392,6 +392,21 @@ def ct2_cuda12_runtime_command(*, frozen: Optional[bool] = None) -> str:
     return f'{pip} install --upgrade --target "{cuda12_runtime_dir()}" {packages}'
 
 
+def onnxruntime_gpu_requirement() -> Optional[str]:
+    """The onnxruntime-gpu build this machine needs, or None when no lane names one.
+
+    ONNX Runtime loads into the server beside torch, so an installed CUDA
+    torch decides the major. Without one, the host's lane does. None on a CPU
+    lane, where the caller keeps its own bound.
+    """
+    from opencut.ct2_isolation import torch_cuda_major
+
+    cuda_major = torch_cuda_major()
+    if cuda_major is None:
+        cuda_major = host_torch_lane().cuda_major
+    return None if cuda_major is None else ONNXRUNTIME_GPU_REQUIREMENT.get(cuda_major)
+
+
 def plan_backends(lane: TorchLanePlan) -> dict:
     """What every GPU backend installs and how it runs under ``lane``."""
     cuda_major = lane.cuda_major
