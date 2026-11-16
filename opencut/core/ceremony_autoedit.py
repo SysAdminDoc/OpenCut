@@ -425,9 +425,7 @@ def auto_edit_ceremony(
         write_concat_list(segment_files, concat_path)
 
         cmd = (FFmpegCmd()
-               .option("f", "concat")
-               .option("safe", "0")
-               .input(concat_path)
+               .input(concat_path, f="concat", safe="0")
                .copy_streams()
                .faststart()
                .output(output_path_str)

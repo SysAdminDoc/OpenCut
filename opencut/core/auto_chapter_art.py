@@ -655,9 +655,7 @@ def _assemble_cards_to_video(card_paths: List[str], chapters: List[ChapterInfo],
                 f.write(_concat_file_line(card_paths[-1]))
 
         cmd = (FFmpegCmd()
-               .option("f", "concat")
-               .option("safe", "0")
-               .input(concat_file)
+               .input(concat_file, f="concat", safe="0")
                .video_codec("libx264")
                .option("pix_fmt", "yuv420p")
                .option("crf", "18")

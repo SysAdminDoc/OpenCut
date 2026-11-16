@@ -710,9 +710,7 @@ def _assemble_segments(
 
         # Concatenate
         cmd = (FFmpegCmd()
-               .option("f", "concat")
-               .option("safe", "0")
-               .input(concat_path)
+               .input(concat_path, f="concat", safe="0")
                .copy_streams()
                .faststart()
                .output(out_path)

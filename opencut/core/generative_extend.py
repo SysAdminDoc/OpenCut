@@ -628,9 +628,7 @@ def extend_clip(
 
         concat_cmd = (
             FFmpegCmd()
-            .option("f", "concat")
-            .option("safe", "0")
-            .input(concat_path)
+            .input(concat_path, f="concat", safe="0")
             .video_codec("libx264", crf=18, preset="fast")
             .audio_codec("aac", bitrate="192k")
             .output(output)

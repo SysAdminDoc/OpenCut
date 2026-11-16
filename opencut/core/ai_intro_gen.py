@@ -719,9 +719,7 @@ def _prepend_intro(intro_path: str, main_video: str, out_path: str) -> str:
         write_concat_list([intro_path, main_video], concat_file)
 
         cmd = (FFmpegCmd()
-               .option("f", "concat")
-               .option("safe", "0")
-               .input(concat_file)
+               .input(concat_file, f="concat", safe="0")
                .video_codec("copy")
                .audio_codec("copy")
                .output(out_path)

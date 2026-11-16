@@ -421,9 +421,7 @@ def _exec_cut(action, video_path, info, out_dir, on_progress):
         write_concat_list(segments, concat_path)
 
         cmd = (FFmpegCmd()
-               .option("f", "concat")
-               .option("safe", "0")
-               .input(concat_path)
+               .input(concat_path, f="concat", safe="0")
                .copy_streams()
                .faststart()
                .output(out)

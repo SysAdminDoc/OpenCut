@@ -200,9 +200,7 @@ def extract_speaker_audio(
     write_concat_list(segment_files, concat_list)
 
     cmd = (FFmpegCmd()
-           .option("f", "concat")
-           .option("safe", "0")
-           .input(concat_list)
+           .input(concat_list, f="concat", safe="0")
            .audio_codec("pcm_s16le")
            .output(ref_audio_path)
            .build())
