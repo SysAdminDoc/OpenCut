@@ -41,6 +41,8 @@ function Write-Ok($msg) { Write-Host "  [OK] $msg" -ForegroundColor Green }
 function Write-Err($msg) { Write-Host "  [!!] $msg" -ForegroundColor Red }
 function Write-Warn($msg) { Write-Host "  [!] $msg" -ForegroundColor Yellow }
 
+. (Join-Path $ScriptDir "CepSigning.ps1")
+
 # ── Step 1: Verify prerequisites ──────────────────────────────────────────
 Write-Step "Checking prerequisites..."
 
@@ -92,6 +94,16 @@ else {
     Write-Err "Release payload sources are incomplete; refusing to build."
     exit 1
 }
+
+# The shipped CEP panel is always signed, so a build without the certificate
+# or ZXPSignCmd stops here instead of after the slow steps.
+try {
+    $cepSigning = Resolve-CepSigningInputs
+} catch {
+    Write-Err "CEP panel signing is not set up: $($_.Exception.Message)"
+    exit 1
+}
+Write-Ok "CEP signing certificate: $($cepSigning.Certificate)"
 
 if ($payloadReady) {
     if (-not $PythonExe) {
@@ -192,12 +204,30 @@ if (Test-Path $extensionDir) {
     $extDest = Join-Path $StagingDir "extension\com.opencut.panel"
     New-Item -ItemType Directory -Path $extDest -Force | Out-Null
     & robocopy $extensionDir $extDest /E /NFL /NDL /NJH /NJS /NP `
-        /XD node_modules tests test-results playwright-report | Out-Null
+        /XD node_modules tests test-results playwright-report __MACOSX `
+        /XF .debug .DS_Store Thumbs.db | Out-Null
     if ($LASTEXITCODE -ge 8) {
         Write-Err "CEP extension payload copy failed with robocopy exit code $LASTEXITCODE"
         exit 1
     }
     Write-Ok "  Extension copied"
+
+    # Sign the staged panel and ship the signed contents, so Premiere can load
+    # it without PlayerDebugMode. The .zxp goes beside the installer.
+    Write-Step "  Signing CEP extension..."
+    $panelZxp = Join-Path $OutputDir "OpenCut-Panel-$Version.zxp"
+    if (Test-Path -LiteralPath $OutputDir) {
+        Get-ChildItem -LiteralPath $OutputDir -Filter "OpenCut-Panel-*.zxp" | Remove-Item -Force
+    }
+    try {
+        Invoke-CepPanelSigning -ExtensionDir $extDest -ZxpPath $panelZxp `
+            -Certificate $cepSigning.Certificate -Password $cepSigning.Password `
+            -TimestampUrl $cepSigning.TimestampUrl -ZxpSignCmd $cepSigning.Tool | Out-Null
+    } catch {
+        Write-Err "CEP panel signing failed: $($_.Exception.Message)"
+        exit 1
+    }
+    Write-Ok "  Extension signed and timestamped: $panelZxp"
 }
 
 # Copy launcher + icon

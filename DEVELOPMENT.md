@@ -44,7 +44,7 @@ state, `requirements-lock.txt` auditability, runtime imports, and
    - Windows: `HKCU\Software\Adobe\CSXS.XX\PlayerDebugMode = 1` (for each CC version)
    - macOS: `defaults write com.adobe.CSXS.XX PlayerDebugMode 1`
 2. The extension is at `extension/com.opencut.panel/`
-3. Remote debug at `http://localhost:8842` (configured in `.debug`)
+3. Remote debug at `http://localhost:8842` (configured in `.debug`, which release builds leave out)
 4. Reload extension in Premiere: Window > Extensions > OpenCut
 
 ## Project Structure
@@ -80,6 +80,21 @@ pwsh -NoProfile -File scripts/build_release.ps1
 ```
 
 It makes `build/release-venv` from `requirements-release-lock.txt` and `requirements-build-lock.txt` with `--require-hashes`, and reuses it until either lock changes. Then it builds the panel bundle, freezes the server with PyInstaller and runs `installer/InstallerBuilder.ps1` with that Python. The installer and `payload.zip` land in `installer/dist/`. Pass `-SkipPanel` to keep an existing panel bundle, or `-RecreateVenv` to start the environment over.
+
+#### Signing the panel
+
+The installer builder signs the Premiere panel and stops before the slow steps if it can't. It needs two things:
+
+- Adobe's ZXPSignCmd. Put the x64 `ZXPSignCmd.exe` from [Adobe-CEP/CEP-Resources](https://github.com/Adobe-CEP/CEP-Resources/tree/master/ZXPSignCMD) in `%LOCALAPPDATA%\Programs\ZXPSignCmd\<version>\`, on `PATH`, or at the path in `OPENCUT_ZXPSIGNCMD`.
+- A signing certificate. Set `OPENCUT_CEP_CERT` to the `.p12` and `OPENCUT_CEP_CERT_PASSWORD` to its password, as process or user environment variables. Adobe accepts a self-signed certificate for panels:
+
+```powershell
+ZXPSignCmd -selfSignedCert US NA OpenCut OpenCut <password> "$env:LOCALAPPDATA\OpenCut-Signing\opencut-cep.p12" -validityDays 3650
+```
+
+Keep the certificate outside the checkout. `.gitignore` refuses `*.p12` and `*.pfx` in case one lands there.
+
+The builder copies the panel without `.debug`, signs it into `installer/dist/OpenCut-Panel-<version>.zxp`, and ships the signed files (with `mimetype` and `META-INF/signatures.xml`) inside the installer. The signature gets a timestamp from DigiCert's server, or from `OPENCUT_CEP_TSA_URL`, so it stays valid after the certificate expires. `scripts/smoke_wpf_installer.ps1` fails unless the installed panel matches its signature file for file and carries that timestamp. The installers still turn on `PlayerDebugMode` until a signed panel has been seen loading in Premiere without it.
 
 The installer builder publishes the WPF installer itself. If you only changed the installer project and want its exe without the rest, this is the command it runs:
 

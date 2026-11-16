@@ -85,7 +85,7 @@ Source: "installer\Export-OpenCutUserData.ps1"; DestDir: "{app}"; Flags: ignorev
 Source: "OpenCut-Launcher.vbs"; DestDir: "{app}"; Flags: ignoreversion
 
 ; CEP Extension
-Source: "extension\com.opencut.panel\*"; DestDir: "{app}\extension\com.opencut.panel"; Excludes: "node_modules\*,tests\*,test-results\*,playwright-report\*"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "extension\com.opencut.panel\*"; DestDir: "{app}\extension\com.opencut.panel"; Excludes: "node_modules\*,tests\*,test-results\*,playwright-report\*,\.debug"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "extension\com.opencut.uxp\*"; DestDir: "{app}\extension\com.opencut.uxp"; Excludes: "node_modules\*,tests\*,test-results\*,playwright-report\*"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Dirs]

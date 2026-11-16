@@ -102,6 +102,11 @@ unsigned file builds no reputation. Microsoft's own guidance is that signing no
 longer guarantees the prompt goes away either, so this is a permanent part of
 installing OpenCut rather than something waiting on a certificate.
 
+The Premiere panel inside the Windows installer is signed, though. Adobe
+accepts self-signed certificates for panels, and the signature is timestamped.
+The installer still turns on `PlayerDebugMode` until the signed panel has been
+checked in a live Premiere without it.
+
 To proceed past the warning: click **More info**, then **Run anyway**.
 
 Because nothing vouches for the file, check what you downloaded against the
@@ -988,7 +993,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-15,300+ estimated tests across 383 root test files covering route smoke tests,
+15,300+ estimated tests across 384 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -1057,7 +1062,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (15,300+ estimated tests, 383 root test files)
+tests/               # pytest test suite (15,300+ estimated tests, 384 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

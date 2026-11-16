@@ -81,6 +81,7 @@ if (-not [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([Syst
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $repoRoot "installer\CepSigning.ps1")
 
 if (-not $InstallerPath) {
     $candidate = Get-ChildItem -Path (Join-Path $repoRoot "installer\dist\wpf") -Filter "OpenCut-WPF-Setup-*.exe" -ErrorAction SilentlyContinue |
@@ -153,6 +154,11 @@ try {
     foreach ($relative in $expectedPayload) {
         Assert-Exists (Join-Path $installFull $relative) "Installed payload $relative"
     }
+
+    # The installed panel must be the signed package, file for file, with a
+    # timestamp so the signature outlives the certificate.
+    Assert-CepPanelSignature -Path (Join-Path $installFull "extension\com.opencut.panel") -RequireTimestamp | Out-Null
+    Write-Host "[F467] Installed CEP panel signature and timestamp verified"
 
     $manifestPath = Join-Path $userDataDir "installer.json"
     Assert-Exists $manifestPath "WPF installer manifest"

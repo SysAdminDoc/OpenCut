@@ -30,7 +30,7 @@
 
 | Path | Source | Output | When used |
 |---|---|---|---|
-| **WPF / .NET 10 installer** (`installer/`) | `installer/src/OpenCut.Installer/*` + `installer/InstallerBuilder.ps1` | `installer/dist/OpenCut-Setup-X.Y.Z.exe` | Default download from the Releases page. Custom UI, shipped unsigned, embeds the bundled FFmpeg + manifest writer (F207). |
+| **WPF / .NET 10 installer** (`installer/`) | `installer/src/OpenCut.Installer/*` + `installer/InstallerBuilder.ps1` | `installer/dist/OpenCut-Setup-X.Y.Z.exe` | Default download from the Releases page. Custom UI, unsigned exe carrying a signed and timestamped CEP panel (F467), embeds the bundled FFmpeg + manifest writer (F207). |
 | **Inno Setup installer** (`OpenCut.iss` + `Install.bat`) | `OpenCut.iss` + the helper `Install.bat` / `Install.ps1` | `dist/OpenCut-Setup-X.Y.Z.exe` (legacy filename collision) | Available as a fallback for builders without the .NET 10 SDK. Pre-dates the WPF path; was the only installer through v1.10.x. |
 
 Both installers produce the same on-disk layout (FFmpeg under
@@ -84,7 +84,7 @@ Only one binary is published per release.
 | **F212 close** | WPF xUnit + headless smoke | DONE — WPF now has xUnit coverage and guarded quiet install/uninstall smoke. Keep Inno as an emergency fallback until at least one WPF release completes with the smoke green. |
 
 The retirement gate is **not** a calendar date, and it is **not** code
-signing — OpenCut ships unsigned artifacts by policy. It is the WPF coverage
+signing. OpenCut ships unsigned installers by policy. It is the WPF coverage
 milestone plus one verified release. Don't retire the Inno script until WPF
 can catch the regressions the Inno path historically caught.
 
@@ -123,8 +123,10 @@ One risk forces keeping the fallback for now:
    install is broken. F212 covers the WPF behaviour gap with xUnit tests and
    quiet install/uninstall smoke wiring.
 
-Code signing is **not** a factor: OpenCut publishes unsigned artifacts by
-policy, so no certificate or signing secret gates a release.
+Authenticode signing is **not** a factor. OpenCut publishes unsigned
+installers by policy. The one certificate a WPF build needs is the CEP panel
+signing certificate (`OPENCUT_CEP_CERT`, see `DEVELOPMENT.md`), and a
+self-signed one works. The Inno fallback still ships the panel unsigned.
 
 When the WPF release path completes cleanly, reassess the retirement
 schedule in §2.

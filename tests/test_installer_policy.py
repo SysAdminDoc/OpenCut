@@ -122,6 +122,9 @@ def test_inno_production_remains_elevated_and_dev_payload_is_excluded():
     assert "PrivilegesRequired={#InstallerPrivilegesRequired}" in text
     for excluded in ("node_modules\\*", "tests\\*", "test-results\\*", "playwright-report\\*"):
         assert excluded in text
+    # .debug opens a CEF DevTools port; only source checkouts keep it.
+    panel_line = next(line for line in text.splitlines() if line.startswith('Source: "extension\\com.opencut.panel\\*"'))
+    assert "\\.debug" in panel_line
 
 
 def test_install_root_is_program_files_opencut():
