@@ -138,3 +138,122 @@ class TestDetectAutoEditorGeneration:
                 info = detect_auto_editor_generation()
         assert info["generation"] == "v30"
         assert info["native"] is True
+
+
+# What auto-editor 31.8.0 wrote for a 9 s, 30 fps clip with a tone from 3 s
+# to 6 s (`--edit audio --export v1`). Chunk bounds are frames, not seconds.
+REAL_V1_EXPORT = {
+    "version": "1",
+    "source": "clip.mp4",
+    "timebase": "30/1",
+    "chunks": [[0, 84, 99999.0], [84, 186, 1.0], [186, 270, 99999.0]],
+}
+
+
+class TestV1Export:
+    def test_chunks_are_frames_of_the_timebase(self, tmp_path):
+        json_file = tmp_path / "v1.json"
+        json_file.write_text(json.dumps(REAL_V1_EXPORT), encoding="utf-8")
+
+        segments = _parse_auto_editor_json(str(json_file), 9.0, 30.0)
+
+        assert [(s.action, round(s.start, 3), round(s.end, 3)) for s in segments] == [
+            ("cut", 0.0, 2.8), ("keep", 2.8, 6.2), ("cut", 6.2, 9.0),
+        ]
+
+    def test_without_a_timebase_the_source_fps_is_used(self, tmp_path):
+        # 29.3.1 and 30.0.0 leave "timebase" out of the v1 export.
+        data = {k: v for k, v in REAL_V1_EXPORT.items() if k != "timebase"}
+        data["chunks"] = [[0, 50, 99999.0], [50, 100, 1.0]]
+        json_file = tmp_path / "v1.json"
+        json_file.write_text(json.dumps(data), encoding="utf-8")
+
+        segments = _parse_auto_editor_json(str(json_file), 4.0, 25.0)
+
+        assert [(s.action, s.start, s.end) for s in segments] == [
+            ("cut", 0.0, 2.0), ("keep", 2.0, 4.0),
+        ]
+
+    def test_ntsc_timebase_fraction(self, tmp_path):
+        data = dict(REAL_V1_EXPORT, timebase="30000/1001", chunks=[[0, 30000, 1.0]])
+        json_file = tmp_path / "v1.json"
+        json_file.write_text(json.dumps(data), encoding="utf-8")
+
+        segments = _parse_auto_editor_json(str(json_file), 1001.0, 29.97)
+
+        assert abs(segments[0].end - 1001.0) < 1e-6
+
+
+class _FakeAutoEditor:
+    """Stands in for subprocess.run: records argv and writes a v1 export."""
+
+    def __init__(self, chunks_by_edit):
+        self.chunks_by_edit = chunks_by_edit
+        self.calls = []
+
+    def __call__(self, cmd, **kwargs):
+        # 31.x draws its progress bar in UTF-8. A cp1252 decode kills the
+        # reader thread and loses stderr when a run fails.
+        assert kwargs.get("encoding") == "utf-8"
+        self.calls.append(cmd)
+        edit = cmd[cmd.index("--edit") + 1]
+        output = cmd[cmd.index("--output") + 1]
+        data = dict(REAL_V1_EXPORT, chunks=self.chunks_by_edit[edit.split(":")[0]])
+        with open(output, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        return MagicMock(returncode=0, stdout="", stderr="")
+
+
+def _run(tmp_path, fake, method, version):
+    from opencut.core.auto_edit import _run_auto_edit
+
+    with patch("opencut.core.auto_edit._find_auto_editor", return_value=["auto-editor"]):
+        with patch("opencut.core.auto_edit.subprocess.run", side_effect=fake):
+            return _run_auto_edit(
+                "clip.mp4", method, 0.02, 0.2, 0.5, False, str(tmp_path),
+                str(tmp_path / "auto_edit_result.json"), 9.0, 30.0, None,
+                version=version,
+            )
+
+
+class TestAutoEditorCommand:
+    AUDIO = [[0, 84, 99999.0], [84, 186, 1.0], [186, 270, 99999.0]]
+    MOTION = [[0, 150, 1.0], [150, 270, 99999.0]]
+
+    def test_current_binary_gets_options_it_accepts(self, tmp_path):
+        fake = _FakeAutoEditor({"motion": self.MOTION})
+
+        _run(tmp_path, fake, "motion", "31.8.0")
+
+        (cmd,) = fake.calls
+        assert cmd[cmd.index("--export") + 1] == "v1"
+        assert cmd[cmd.index("--smooth") + 1] == "0.2s,0.5s"
+        assert cmd[cmd.index("--edit") + 1] == "motion:threshold=0.02"
+        assert "--min-clip-length" not in cmd
+
+    def test_29x_binary_gets_no_smooth_option(self, tmp_path):
+        # 29.3.1 rejects --smooth and --min-clip-length alike.
+        fake = _FakeAutoEditor({"audio": self.AUDIO})
+
+        _run(tmp_path, fake, "audio", "29.3.1")
+
+        (cmd,) = fake.calls
+        assert "--smooth" not in cmd
+        assert "--min-clip-length" not in cmd
+        assert cmd[cmd.index("--export") + 1] == "v1"
+
+    def test_both_keeps_what_either_pass_kept(self, tmp_path):
+        # Two --edit flags mean the last one wins, so "both" runs one pass
+        # per method and keeps the union.
+        fake = _FakeAutoEditor({"motion": self.MOTION, "audio": self.AUDIO})
+
+        result = _run(tmp_path, fake, "both", "31.8.0")
+
+        assert sorted(c[c.index("--edit") + 1] for c in fake.calls) == [
+            "audio", "motion:threshold=0.02",
+        ]
+        assert all(c.count("--edit") == 1 for c in fake.calls)
+        assert [(s.action, round(s.start, 3), round(s.end, 3)) for s in result.segments] == [
+            ("keep", 0.0, 6.2), ("cut", 6.2, 9.0),
+        ]
+        assert round(result.kept_duration, 3) == 6.2

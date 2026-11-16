@@ -8,9 +8,10 @@ Supports two auto-editor backends:
   - Native Nim binary (v30+): install from GitHub releases, place on PATH
   - Legacy pip package (v29.x, frozen): pip install auto-editor
 
-The Nim binary is preferred when available. Core CLI syntax
-(``auto-editor input.mp4 --export json``) is the same across both versions,
-though the native binary may introduce new flags over time.
+The Nim binary is preferred when available. OpenCut asks both for a ``v1``
+export (``--export v1``), whose chunk bounds are frames of its timebase.
+29.3.1 and 31.8.0 were checked against real clips; neither knows ``json``
+exports or ``--min-clip-length``.
 """
 
 import html
@@ -22,6 +23,7 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass, field
+from fractions import Fraction
 from typing import List, Optional
 from urllib.parse import quote
 
@@ -146,7 +148,8 @@ def check_auto_editor_version():
     try:
         result = subprocess.run(
             cmd + ["--version"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=10,
             check=False,
         )
         if result.returncode == 0:
@@ -160,7 +163,8 @@ def check_auto_editor_version():
         try:
             result = subprocess.run(
                 [sys.executable, "-m", "auto_editor", "--version"],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
+                timeout=10,
                 check=False,
             )
             if result.returncode == 0:
@@ -211,16 +215,32 @@ def _probe_media_info(input_path):
 # ---------------------------------------------------------------------------
 # JSON parsing
 # ---------------------------------------------------------------------------
-def _parse_auto_editor_json(json_path, total_duration):
+def _chunk_timebase(data, fps):
+    """Frames per second for a v1 export's chunk bounds.
+
+    31.x writes ``"timebase": "30/1"``. 29.3.1 and 30.0.0 leave it out and
+    count frames at the source's rate.
+    """
+    try:
+        rate = float(Fraction(str(data.get("timebase", "")).strip()))
+    except (ValueError, ZeroDivisionError):
+        rate = 0.0
+    if rate > 0:
+        return rate
+    return fps if fps and fps > 0 else 30.0
+
+
+def _parse_auto_editor_json(json_path, total_duration, fps=None):
     """
     Parse auto-editor's JSON export into EditSegments.
 
-    auto-editor JSON contains chunks/timeline with start, dur, speed, offset.
+    A v1 export has ``chunks`` of ``[start_frame, end_frame, speed]``.
     Segments with speed > 0 (and != 99999) are "keep"; speed == 0 or 99999 are "cut".
 
     Args:
         json_path: Path to auto-editor JSON output.
         total_duration: Total source duration in seconds.
+        fps: Source frame rate, for exports that don't name their timebase.
 
     Returns:
         List of EditSegment objects.
@@ -255,10 +275,11 @@ def _parse_auto_editor_json(json_path, total_duration):
         chunks = data
 
     if chunks is not None:
+        rate = _chunk_timebase(data, fps) if isinstance(data, dict) else (fps or 30.0)
         for chunk in chunks:
             if isinstance(chunk, (list, tuple)) and len(chunk) >= 3:
-                start = float(chunk[0])
-                end = float(chunk[1])
+                start = float(chunk[0]) / rate
+                end = float(chunk[1]) / rate
                 speed = float(chunk[2])
                 action = "cut" if speed == 0 or speed >= 99999 else "keep"
                 segments.append(EditSegment(start=start, end=end, action=action))
@@ -418,7 +439,7 @@ def auto_edit(
         result = _run_auto_edit(
             input_path, method, threshold, margin, min_clip_length,
             export_xml, work_dir, json_output, total_duration, source_fps,
-            on_progress,
+            on_progress, version=version,
         )
         # If XML was exported to temp_dir, copy it to a persistent location
         # so the caller can access it after temp_dir is cleaned up
@@ -435,39 +456,69 @@ def auto_edit(
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
+def _version_major(version):
+    try:
+        return int(str(version).strip().split(".")[0])
+    except (TypeError, ValueError):
+        return None
+
+
+def _union_keep_segments(segment_sets, total_duration):
+    """Keep whatever any pass kept; the rest of the source is cut."""
+    keeps = sorted(
+        (s.start, s.end)
+        for segments in segment_sets for s in segments
+        if s.action == "keep" and s.end > s.start
+    )
+    merged = []
+    for start, end in keeps:
+        if merged and start <= merged[-1][1] + 1e-9:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    media_end = max([total_duration] + [s.end for segments in segment_sets for s in segments])
+    result, cursor = [], 0.0
+    for start, end in merged:
+        if start > cursor:
+            result.append(EditSegment(start=cursor, end=start, action="cut"))
+        result.append(EditSegment(start=start, end=end, action="keep"))
+        cursor = end
+    if media_end > cursor:
+        result.append(EditSegment(start=cursor, end=media_end, action="cut"))
+    return result
+
+
 def _run_auto_edit(input_path, method, threshold, margin, min_clip_length,
                    export_xml, work_dir, json_output, total_duration, source_fps,
-                   on_progress):
+                   on_progress, version=None):
     """Inner auto-edit logic (extracted for temp dir cleanup on error)."""
     if on_progress:
         on_progress(10, f"Analyzing video ({method} detection)...")
 
     # Build auto-editor command (native Nim binary v30+ or pip package v29.x)
     base_cmd = _find_auto_editor()
-    cmd = base_cmd + [input_path]
 
     # Coerce to float for safe interpolation into command args
     threshold = float(threshold)
     margin = float(margin)
     min_clip_length = float(min_clip_length)
 
-    if method == "motion":
-        cmd += ["--edit", f"motion:threshold={threshold}"]
-    elif method == "audio":
-        cmd += ["--edit", "audio"]
+    motion = ["--edit", f"motion:threshold={threshold}"]
+    audio = ["--edit", "audio"]
+    if method == "audio":
+        passes = [("audio", audio)]
     elif method == "both":
-        cmd += ["--edit", f"motion:threshold={threshold}", "--edit", "audio"]
+        # With two --edit flags auto-editor uses the last one, and 29.3.1 and
+        # 30.0.0 reject an (or ...) expression with motion in it. One pass
+        # per method, keeping the union, works on all of them.
+        passes = [("motion", motion), ("audio", audio)]
     else:
-        cmd += ["--edit", f"motion:threshold={threshold}"]
+        passes = [("motion", motion)]
 
-    cmd += [
-        "--margin", f"{margin}s",
-        "--min-clip-length", f"{min_clip_length}s",
-        "--export", "json",
-        "--output", json_output,
-    ]
-
-    logger.debug("Running auto-editor: %s", " ".join(cmd))
+    shared = ["--margin", f"{margin}s"]
+    if (_version_major(version) or 0) >= 30:
+        # 30.0.0 added --smooth MINCUT,MINCLIP. 0.2s is its own minimum cut.
+        shared += ["--smooth", f"0.2s,{min_clip_length}s"]
 
     # Scale timeout: base 120s + 5x duration (long videos need time)
     timeout = max(120, int(total_duration * 5) + 120) if total_duration > 0 else 1800
@@ -475,30 +526,42 @@ def _run_auto_edit(input_path, method, threshold, margin, min_clip_length,
     if on_progress:
         on_progress(20, "Running auto-editor analysis (this may take a while)...")
 
-    try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as err:
-        raise RuntimeError(
-            f"auto-editor timed out after {timeout}s processing '{os.path.basename(input_path)}'"
-        ) from err
+    segment_sets = []
+    for name, edit in passes:
+        output = json_output
+        if len(passes) > 1:
+            output = os.path.splitext(json_output)[0] + f".{name}.json"
+        cmd = base_cmd + [input_path] + edit + shared + ["--export", "v1", "--output", output]
+        logger.debug("Running auto-editor: %s", " ".join(cmd))
 
-    if result.returncode != 0:
-        stderr = result.stderr.strip()[-500:] if result.stderr else "unknown error"
-        raise RuntimeError(f"auto-editor failed: {stderr}")
+        try:
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                timeout=timeout,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as err:
+            raise RuntimeError(
+                f"auto-editor timed out after {timeout}s processing '{os.path.basename(input_path)}'"
+            ) from err
+
+        if result.returncode != 0:
+            stderr = result.stderr.strip()[-500:] if result.stderr else "unknown error"
+            raise RuntimeError(f"auto-editor failed: {stderr}")
+
+        if not os.path.isfile(output):
+            raise RuntimeError(
+                f"auto-editor did not produce expected output at {output}"
+            )
+        segment_sets.append(_parse_auto_editor_json(output, total_duration, source_fps))
 
     if on_progress:
         on_progress(60, "Parsing analysis results...")
 
-    # Parse output
-    if not os.path.isfile(json_output):
-        raise RuntimeError(
-            f"auto-editor did not produce expected output at {json_output}"
-        )
-
-    segments = _parse_auto_editor_json(json_output, total_duration)
+    if len(segment_sets) == 1:
+        segments = segment_sets[0]
+    else:
+        segments = _union_keep_segments(segment_sets, total_duration)
 
     if on_progress:
         on_progress(80, "Calculating edit statistics...")
