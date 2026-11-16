@@ -533,7 +533,13 @@ class TestSemanticSearchHelpers(unittest.TestCase):
 
     def test_cache_path_creates_dir(self):
         from opencut.core.semantic_video_search import _cache_path
-        path = _cache_path("testhash123")
+        # A fresh cache root, so the folder can't already exist from another test.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = os.path.join(tmp, "clip_cache")
+            with patch("opencut.core.semantic_video_search.CACHE_DIR", root):
+                path = _cache_path("testhash123")
+                self.assertTrue(os.path.isdir(os.path.dirname(path)))
+                self.assertEqual(os.path.dirname(os.path.dirname(path)), root)
         self.assertTrue(path.endswith(".npz"))
         self.assertIn("testhash123", path)
 
