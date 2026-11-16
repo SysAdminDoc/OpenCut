@@ -190,13 +190,22 @@ def _spawn(children, code, **kwargs):
     return proc
 
 
-@pytest.mark.parametrize("listeners_known", [True, False])
+def _listeners_raise(exc):
+    def listener_pids(_port):
+        raise exc
+
+    return listener_pids
+
+
+@pytest.mark.parametrize("listeners", ["known", "unknown", "oserror", "no-psutil"])
 def test_the_pid_file_never_kills_a_process_that_doesnt_hold_the_port(
-    tmp_path, monkeypatch, children, listeners_known,
+    tmp_path, monkeypatch, children, listeners,
 ):
     """A stale PID file can name whatever app Windows gave the number to next.
     _kill_via_pid ran taskkill /F /T on it without asking whether it held the
-    port, so starting OpenCut could close an unrelated app and its children."""
+    port, so starting OpenCut could close an unrelated app and its children.
+    When the listeners can't be listed at all, the check has to fail closed
+    instead of crashing run_server."""
     bystander = _spawn(children, _SLEEPER)
     holder = socket.socket()
     holder.bind((HOST, 0))
@@ -207,10 +216,15 @@ def test_the_pid_file_never_kills_a_process_that_doesnt_hold_the_port(
     monkeypatch.setattr(pid_module, "PID_FILE", str(pid_file))
     _stub_other_strategies(monkeypatch)
     monkeypatch.setattr(pid_module, "_wait_for_port", lambda *a, **k: False)
-    if not listeners_known:
+    if listeners != "known":
         from opencut import panel_bootstrap
 
-        monkeypatch.setattr(panel_bootstrap, "listener_pids", lambda _port: None)
+        fake = {
+            "unknown": lambda _port: None,
+            "oserror": _listeners_raise(OSError(22, "net_connections failed")),
+            "no-psutil": _listeners_raise(ImportError("No module named 'psutil'")),
+        }[listeners]
+        monkeypatch.setattr(panel_bootstrap, "listener_pids", fake)
     try:
         assert pid_module._nuke_old_servers(HOST, port) is False
         time.sleep(1.0)

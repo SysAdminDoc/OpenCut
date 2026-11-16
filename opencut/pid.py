@@ -217,7 +217,13 @@ def _pid_holds_port(pid: int, port: int) -> bool:
     """
     from opencut.panel_bootstrap import listener_pids
 
-    pids = listener_pids(port)
+    try:
+        pids = listener_pids(port)
+    except (ImportError, OSError) as exc:
+        # Can't name the holder, so don't kill. Raising here would escape
+        # _nuke_old_servers and stop run_server from starting at all.
+        logger.warning("Could not list the listeners on port %d: %s", port, exc)
+        return False
     return bool(pids) and pid in pids
 
 
