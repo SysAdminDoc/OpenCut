@@ -193,8 +193,10 @@ def _read_text(path: str) -> str:
 def _record_path(raw: str) -> str | None:
     """A RECORD path relative to the --target folder, or None when it's outside."""
     path = raw.replace("\\", "/")
-    if path.startswith("../../bin/"):  # pip --target puts scripts in <target>/bin
-        path = "bin/" + path[len("../../bin/"):]
+    # pip --target installs under a temporary home and moves what's next to
+    # its lib folder (bin, share, include) into the target as well.
+    if path.startswith("../../") and not path.startswith("../../lib/"):
+        path = path[len("../../"):]
     if not path or path.startswith("/") or ":" in path.split("/", 1)[0]:
         return None
     path = posixpath.normpath(path)
@@ -270,9 +272,14 @@ def _ancestors(paths: Iterable[str]) -> set[str]:
 # ---------------------------------------------------------------------------
 # Requirements
 # ---------------------------------------------------------------------------
-def _requirements(dist: Dist) -> list:
+_EXTRA_RE = re.compile(r"""\bextra\s*==\s*['"]([^'"]+)['"]""")
+
+
+def _requirements(dist: Dist, extras: Iterable[str] = ()) -> list:
+    """What ``dist`` requires here, with the optional parts ``extras`` turn on."""
     from packaging.requirements import InvalidRequirement, Requirement
 
+    environments = [{"extra": extra} for extra in ("", *extras)]
     out = []
     for line in dist.requires:
         try:
@@ -280,10 +287,16 @@ def _requirements(dist: Dist) -> list:
         except InvalidRequirement:
             logger.debug("Skipped requirement %r of %s", line, dist.display)
             continue
-        if req.marker is not None and not req.marker.evaluate({"extra": ""}):
+        if req.marker is not None and not any(req.marker.evaluate(env) for env in environments):
             continue
         out.append(req)
     return out
+
+
+def _possible_requirements(dist: Dist) -> list:
+    """What ``dist`` requires here with any of its extras on."""
+    extras = {extra for line in dist.requires for extra in _EXTRA_RE.findall(line)}
+    return _requirements(dist, sorted(extras))
 
 
 def _accepts(req, version: str) -> bool:
@@ -718,9 +731,11 @@ def _move_dist(packages: str, quarantine: str, dist: Dist, staying: Sequence[Dis
 
 
 def inventory_at_startup() -> None:
-    """Run :func:`inventory_once` when no install holds the lock right now."""
+    """When no install holds the lock right now, finish or undo an install or
+    removal that was killed partway, then run :func:`inventory_once`."""
     try:
         with store_lock(wait=0):
+            _sweep_leftovers(os.path.dirname(packages_dir()))
             inventory_once()
     except (ImportError, OSError, RuntimeError) as exc:
         logger.info("Skipped the add-on package check for now: %s", exc)
@@ -848,32 +863,40 @@ def _requested(packages: str, dist: Dist) -> bool:
     return os.path.isfile(os.path.join(packages, dist.info, _REQUESTED))
 
 
-def _dependency_names(dist: Dist, store: dict[str, Dist], every_extra: bool) -> set[str]:
-    """The store projects ``dist`` requires. ``every_extra`` counts optional ones too."""
-    if not every_extra:
-        names = {canonical(req.name) for req in _requirements(dist)}
-    else:
-        from packaging.requirements import InvalidRequirement, Requirement
-
-        names = set()
-        for line in dist.requires:
-            try:
-                names.add(canonical(Requirement(line).name))
-            except InvalidRequirement:
-                continue
+def _possible_dependencies(dist: Dist, store: dict[str, Dist]) -> set[str]:
+    """The store projects ``dist`` could require here, counting every extra."""
+    names = {canonical(req.name) for req in _possible_requirements(dist)}
     names.discard(dist.name)
     return names & store.keys()
 
 
-def _closure(start: Iterable[str], store: dict[str, Dist], every_extra: bool) -> set[str]:
+def _possible_closure(start: Iterable[str], store: dict[str, Dist]) -> set[str]:
     seen: set[str] = set()
     todo = list(start)
     while todo:
         name = todo.pop()
         if name not in seen:
             seen.add(name)
-            todo.extend(_dependency_names(store[name], store, every_extra))
+            todo.extend(_possible_dependencies(store[name], store))
     return seen
+
+
+def _needed_closure(start: Iterable[str], store: dict[str, Dist]) -> set[str]:
+    """``start`` and what it needs, following the extras each requirement names."""
+    extras_of: dict[str, set[str]] = {}
+    todo = [(name, frozenset()) for name in start]
+    while todo:
+        name, extras = todo.pop()
+        known = extras_of.get(name)
+        if known is not None and extras <= known:
+            continue
+        known = extras_of.setdefault(name, set())
+        known |= extras
+        for req in _requirements(store[name], sorted(known)):
+            dep = canonical(req.name)
+            if dep in store and dep != name:
+                todo.append((dep, frozenset(canonical(extra) for extra in req.extras)))
+    return set(extras_of)
 
 
 def plan_removal(
@@ -881,31 +904,54 @@ def plan_removal(
 ) -> tuple[list[str], list[str]]:
     """Which projects removing ``targets`` takes out of the store, and what stops it.
 
-    A target goes with each dependency only the projects leaving needed. A
-    project stays when something that stays requires it, counting optional
-    requirements, since nothing records which extras an install asked for.
-    So does one someone installed for itself (``requested``, pip's
-    ``REQUESTED`` marker), and so does anything nothing requires. A target
-    that something staying requires comes back as a reason instead.
+    A target goes with each dependency only the projects leaving needed,
+    extras they asked for included. A project stays when something that
+    stays requires it, counting optional requirements, since nothing records
+    which extras an install asked for, but not ones whose marker rules this
+    Python or system out. So does one someone installed for itself
+    (``requested``, pip's ``REQUESTED`` marker), and so does anything nothing
+    requires. A target that something staying requires comes back as a
+    reason instead.
     """
     targets = set(targets) & store.keys()
     requested = set(requested)
     required_by: dict[str, set[str]] = {name: set() for name in store}
     for dist in store.values():
-        for dep in _dependency_names(dist, store, every_extra=True):
+        for dep in _possible_dependencies(dist, store):
             required_by[dep].add(dist.name)
     roots = {
         name for name in store
         if name not in targets and (name in requested or not required_by[name])
     }
-    staying = _closure(roots, store, every_extra=True)
+    staying = _possible_closure(roots, store)
     blocked = []
     for name in sorted(targets & staying):
         needers = sorted(store[other].display for other in required_by[name] if other in staying)
         blocked.append(f"{', '.join(needers)} still need{'s' if len(needers) == 1 else ''} {store[name].display}")
     if blocked:
         return [], blocked
-    return sorted(_closure(targets, store, every_extra=False) - staying), []
+    return sorted(_needed_closure(targets, store) - staying), []
+
+
+def _unshared(packages: str, rel: str, shared: set[str]) -> list[str]:
+    """The highest paths at or under ``rel`` that no other project has files in.
+
+    Usually that's one folder above ``rel``. A project without a RECORD owns
+    only its top-level names, so when another project has files in one of
+    them it's the entries in that folder the other project doesn't use.
+    """
+    parts = rel.split("/")
+    for depth in range(1, len(parts) + 1):
+        prefix = "/".join(parts[:depth])
+        if prefix not in shared:
+            return [prefix]
+    path = os.path.join(packages, *parts)
+    if os.path.islink(path) or not os.path.isdir(path):
+        return []
+    out = []
+    for entry in sorted(os.listdir(path)):
+        out += _unshared(packages, f"{rel}/{entry}", shared)
+    return out
 
 
 def _take_out(packages: str, leaving: Sequence[Dist], staying: Sequence[Dist]) -> None:
@@ -922,12 +968,8 @@ def _take_out(packages: str, leaving: Sequence[Dist], staying: Sequence[Dist]) -
     covers = set()
     for dist in leaving:
         for rel in _owned(dist):
-            if rel in others:
-                continue
-            parts = rel.split("/")
-            # The highest folder no other project has files in goes whole.
-            covers.add(next("/".join(parts[:depth]) for depth in range(1, len(parts) + 1)
-                            if "/".join(parts[:depth]) not in shared))
+            if rel not in others:
+                covers.update(_unshared(packages, rel, shared))
     aside = tempfile.mkdtemp(prefix=_ASIDE_PREFIX, dir=os.path.dirname(packages))
     journal = _Journal(os.path.join(aside, _JOURNAL))
     set_aside: list[tuple[str, str]] = []

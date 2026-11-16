@@ -642,6 +642,81 @@ def test_a_removal_killed_partway_is_put_back_by_the_next_store_change(data_dir,
     assert not [p for p in data_dir.iterdir() if p.name.startswith(".packages-replaced-")]
 
 
+def test_server_startup_puts_a_killed_removal_back(data_dir, tmp_path):
+    """The server reads the store before any install or removal runs again."""
+    packages = data_dir / "packages"
+    _two_add_ons(packages)
+    before = _tree(packages)
+    script = tmp_path / "kill_removal.py"
+    script.write_text(_KILL_REMOVAL, encoding="utf-8")
+    env = dict(os.environ, PYTHONPATH=os.pathsep.join(filter(None, [str(REPO_ROOT), os.environ.get("PYTHONPATH")])))
+    killed = subprocess.run(
+        [sys.executable, str(script), str(data_dir)],
+        env=env, capture_output=True, text=True, timeout=120, creationflags=NO_WINDOW,
+    )
+    assert killed.returncode == 9, killed.stderr
+
+    package_store.inventory_at_startup()
+
+    assert _tree(packages) == before
+    assert not [p for p in data_dir.iterdir() if p.name.startswith(".packages-replaced-")]
+
+
+def test_a_dependency_an_extra_pulled_in_leaves_with_its_add_on(data_dir):
+    """tool needs fsspec[http], and only that extra brings aiohttp and yarl."""
+    packages = data_dir / "packages"
+    _dist(packages, "tool", "1.0", {"tool/__init__.py": b"t"}, requires=["fsspec[http]>=2024"], requested=True)
+    _dist(packages, "fsspec", "2024.1", {"fsspec/__init__.py": b"f"}, requires=['aiohttp; extra == "http"'])
+    _dist(packages, "aiohttp", "3.9", {"aiohttp/__init__.py": b"a"}, requires=["yarl"])
+    _dist(packages, "yarl", "1.9", {"yarl/__init__.py": b"y"})
+    _dist(packages, "numpy", "2.1", {"numpy/__init__.py": b"numpy"}, requested=True)
+
+    removed = package_store.remove(["tool"])
+
+    assert removed == ["aiohttp 3.9", "fsspec 2024.1", "tool 1.0", "yarl 1.9"]
+    assert sorted(package_store.read_dists(str(packages))) == ["numpy"]
+
+
+def test_pip_data_files_leave_with_their_project(data_dir):
+    """fonttools (mediapipe -> matplotlib -> fonttools) puts share/man/man1/ttx.1 in the target."""
+    packages = data_dir / "packages"
+    info = _dist(packages, "fonttools", "4.68", {"fontTools/__init__.py": b"ft"}, requested=True)
+    _dist(packages, "numpy", "2.1", {"numpy/__init__.py": b"numpy"}, requested=True)
+    (packages / "share" / "man" / "man1").mkdir(parents=True)
+    (packages / "share" / "man" / "man1" / "ttx.1").write_bytes(b"man page")
+    with open(info / "RECORD", "a", encoding="utf-8") as handle:
+        handle.write("../../share/man/man1/ttx.1,,\n")
+
+    assert package_store.read_dists(str(packages))["fonttools"].files >= {"share/man/man1/ttx.1"}
+    assert package_store.remove(["fonttools"]) == ["fonttools 4.68"]
+    assert not (packages / "share").exists()
+    assert (packages / "numpy" / "__init__.py").exists()
+
+
+def test_a_record_less_project_in_a_shared_folder_takes_only_its_own_entries(data_dir):
+    packages = data_dir / "packages"
+    _dist(packages, "protobuf", "5.0", {"google/protobuf/__init__.py": b"pb"}, requested=True)
+    legacy = _dist(packages, "googleapis-common-protos", "1.0", {"google/api/__init__.py": b"api"},
+                   top_level=["google"], requested=True)
+    (legacy / "RECORD").unlink()
+
+    assert package_store.remove(["googleapis-common-protos"]) == ["googleapis-common-protos 1.0"]
+
+    assert (packages / "google" / "protobuf" / "__init__.py").read_bytes() == b"pb"
+    assert not (packages / "google" / "api").exists()
+    assert sorted(package_store.read_dists(str(packages))) == ["protobuf"]
+
+
+def test_a_requirement_whose_marker_is_false_here_does_not_block(data_dir):
+    packages = data_dir / "packages"
+    _dist(packages, "aiohttp", "3.9", {"aiohttp/__init__.py": b"a"},
+          requires=['async-timeout; python_version < "3.11"'], requested=True)
+    _dist(packages, "async-timeout", "4.0", {"async_timeout/__init__.py": b"at"}, requested=True)
+
+    assert package_store.remove(["async-timeout"]) == ["async-timeout 4.0"]
+    assert sorted(package_store.read_dists(str(packages))) == ["aiohttp"]
+
+
 def test_a_removal_waits_for_an_install_then_says_so(another_install, monkeypatch, data_dir):
     packages = data_dir / "packages"
     _two_add_ons(packages)
