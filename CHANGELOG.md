@@ -24,6 +24,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Fixed
 
+- The MCP server and the CLI pick up a new panel secret without a restart. They kept the first one they read, so after a reinstall or a cleaned-out profile gave OpenCut a new secret, a client that was still running got refused until you restarted it.
 - Starting OpenCut while its port is busy can't close an unrelated app anymore. The cleanup force-killed whatever process had the number in a leftover `server.pid`, and Windows reuses those numbers, so a stale file could take down another program and everything it started. It now kills that process only when it's the one listening on the port.
 - When a Whisper model turns out corrupt, OpenCut deletes it from the folder faster-whisper actually loads it from before downloading it again. With `HF_HUB_CACHE` or `HUGGINGFACE_HUB_CACHE` set alongside `HF_HOME`, or with only `XDG_CACHE_HOME` set, it used to clear a different folder and load the broken copy again. Transcript provenance reads alignment model revisions from that same folder now.
 - `/health` no longer imports huggingface_hub to find out whether model weights are downloaded. It works out the Hub cache folder from the same environment variables huggingface_hub reads, so a broken huggingface_hub install can't take the server down there.

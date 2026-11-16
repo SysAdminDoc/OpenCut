@@ -154,6 +154,22 @@ class TestBootstrapHeaders:
         assert panel_bootstrap.listener_is_ours(f"http://127.0.0.1:{port}") is False
         assert panel_bootstrap.bootstrap_headers(f"http://127.0.0.1:{port}") == {}
 
+    def test_a_client_that_outlives_the_server_sends_the_new_secret(self, secret, own_port):
+        """The MCP server and the CLI kept the first secret they read. After
+        OpenCut came back with a new one (a reinstall, a cleaned profile), a
+        client still running sent the old one and was refused until it
+        restarted."""
+        url = f"http://127.0.0.1:{own_port}"
+        assert panel_bootstrap.bootstrap_headers(url) == {BOOTSTRAP_HEADER: secret}
+        path = Path(panel_bootstrap.bootstrap_path())
+
+        path.unlink()
+        assert panel_bootstrap.bootstrap_headers(url) == {}
+
+        fresh = "f" * len(secret)
+        panel_bootstrap._atomic_write_secret(path, fresh)
+        assert panel_bootstrap.bootstrap_headers(url) == {BOOTSTRAP_HEADER: fresh}
+
     def test_nothing_listening_gets_nothing(self, secret):
         assert panel_bootstrap.bootstrap_headers(f"http://127.0.0.1:{_free_port()}") == {}
 

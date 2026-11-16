@@ -338,10 +338,14 @@ def bootstrap_headers(base_url: str) -> dict[str, str]:
 
     Only a loopback backend run by this account gets the secret. A remote one
     keeps its own secret and must never learn this machine's.
+
+    The file is read every time: a client can outlive the server, and the
+    next server writes a new secret when it finds the file gone.
     """
     if not is_loopback_url(base_url) or not listener_is_ours(base_url):
         return {}
-    secret = current_secret()
+    target = bootstrap_path()
+    secret = _read_secret_file(Path(target)) if target else None
     return {BOOTSTRAP_HEADER: secret} if secret else {}
 
 
