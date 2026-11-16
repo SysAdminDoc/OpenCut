@@ -947,7 +947,7 @@ async function openSurface(
     theme,
     backendFixtures,
   );
-  await page.goto(surface.url, { waitUntil: "domcontentloaded" });
+  await page.goto(backendFixtures.url || surface.url, { waitUntil: "domcontentloaded" });
   await page.addStyleTag({
     content: `
     *, *::before, *::after {
@@ -2093,6 +2093,25 @@ test("CEP local-only mode says why the model can't download", async ({ page }) =
   await expect(page.locator("#installDepthBtn")).toHaveClass(/\bhidden\b/);
   await expect(page.locator("#installDepthBtn")).toBeDisabled();
   expect(capturedRequests.filter((entry) => entry.depthInstall)).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP signed build boots the bundled panel", async ({ page }) => {
+  // Premiere loads client/dist/index.html. Every other test here loads the
+  // source page, which is how v1.56.0 shipped a bundle that threw
+  // "OpenCutWsBridgePort is not defined" before the panel wired up.
+  const { capturedRequests, pageErrors } = await openSurface(page, "cep", "dark", 900, {
+    modelWeights: {},
+    url: "/extension/com.opencut.panel/client/dist/index.html",
+  });
+  await expect(page.locator('script[src="opencut-panel.js"]')).toHaveCount(1);
+  // A script the bundle left out throws while the page loads.
+  expect(pageErrors).toEqual([]);
+  await expect(page.locator("#installDepthBtn")).toHaveText("Download model");
+  await page.evaluate(() => document.getElementById("installDepthBtn").click());
+  await expect
+    .poll(() => capturedRequests.filter((entry) => entry.depthInstall).length)
+    .toBe(1);
   expect(pageErrors).toEqual([]);
 });
 

@@ -45,6 +45,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Tests
 
+- The rendered panel tests now boot the built panel too, the page Premiere actually loads. Until now they only loaded the source page, which is how the v1.56.0 bundle shipped without its live-updates helper.
 - The local-only egress test passes again. The new model weights downloader wasn't on its list of modules that open network connections.
 - The panel's controller size check passes again. The model download hints from the add-on weights work moved out of `main.js` into their own module, with unit tests for the missing-model, local-only and weights-only install paths.
 - Running the test suite no longer writes into your real `~/.opencut`. Five test modules load the server while pytest is still collecting, which was before the fake home folder went in, so every run logged into your real `server.log` and rotated your older entries out of it.
