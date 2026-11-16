@@ -15,6 +15,9 @@ a mocked socket cannot reproduce.
 from __future__ import annotations
 
 import socket
+import subprocess
+import sys
+import time
 
 import pytest
 
@@ -151,4 +154,81 @@ def test_a_successful_kill_still_clears_the_pid_file(tmp_path, monkeypatch):
     monkeypatch.setattr(pid_module, "_wait_for_port", _wait)
 
     assert pid_module._nuke_old_servers(HOST, 5679) is True
+    assert not pid_file.exists()
+
+
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+_SLEEPER = "import time; time.sleep(120)"
+_LISTENER = (
+    "import socket, time\n"
+    "s = socket.socket()\n"
+    "s.bind(('127.0.0.1', 0))\n"
+    "s.listen()\n"
+    "print(s.getsockname()[1], flush=True)\n"
+    "time.sleep(120)\n"
+)
+
+
+def _stub_other_strategies(monkeypatch):
+    monkeypatch.setattr(pid_module, "_kill_via_shutdown_endpoint", lambda *a, **k: False)
+    monkeypatch.setattr(pid_module, "_kill_via_netstat", lambda *a, **k: False)
+
+
+@pytest.fixture
+def children():
+    procs = []
+    yield procs
+    for proc in procs:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait(10)
+
+
+def _spawn(children, code, **kwargs):
+    proc = subprocess.Popen([sys.executable, "-c", code], creationflags=_NO_WINDOW, **kwargs)
+    children.append(proc)
+    return proc
+
+
+@pytest.mark.parametrize("listeners_known", [True, False])
+def test_the_pid_file_never_kills_a_process_that_doesnt_hold_the_port(
+    tmp_path, monkeypatch, children, listeners_known,
+):
+    """A stale PID file can name whatever app Windows gave the number to next.
+    _kill_via_pid ran taskkill /F /T on it without asking whether it held the
+    port, so starting OpenCut could close an unrelated app and its children."""
+    bystander = _spawn(children, _SLEEPER)
+    holder = socket.socket()
+    holder.bind((HOST, 0))
+    holder.listen()
+    port = holder.getsockname()[1]
+    pid_file = tmp_path / "server.pid"
+    pid_file.write_text(f"{bystander.pid}\n{port}\n", encoding="utf-8")
+    monkeypatch.setattr(pid_module, "PID_FILE", str(pid_file))
+    _stub_other_strategies(monkeypatch)
+    monkeypatch.setattr(pid_module, "_wait_for_port", lambda *a, **k: False)
+    if not listeners_known:
+        from opencut import panel_bootstrap
+
+        monkeypatch.setattr(panel_bootstrap, "listener_pids", lambda _port: None)
+    try:
+        assert pid_module._nuke_old_servers(HOST, port) is False
+        time.sleep(1.0)
+        assert bystander.poll() is None, "the PID file's kill took down a process that wasn't holding the port"
+        assert pid_file.exists()
+    finally:
+        holder.close()
+
+
+def test_the_pid_file_still_kills_the_old_server_holding_the_port(tmp_path, monkeypatch, children):
+    """Positive control: a hung server that still holds the port gets killed."""
+    server = _spawn(children, _LISTENER, stdout=subprocess.PIPE, text=True)
+    port = int(server.stdout.readline())
+    pid_file = tmp_path / "server.pid"
+    pid_file.write_text(f"{server.pid}\n{port}\n", encoding="utf-8")
+    monkeypatch.setattr(pid_module, "PID_FILE", str(pid_file))
+    _stub_other_strategies(monkeypatch)
+
+    assert pid_module._nuke_old_servers(HOST, port) is True
+    server.wait(10)
     assert not pid_file.exists()

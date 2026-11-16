@@ -208,9 +208,28 @@ def _kill_via_shutdown_endpoint(host: str, port: int) -> bool:
         return False
 
 
-def _kill_via_pid(pid: int) -> bool:
-    """Strategy 2: Kill a specific PID directly."""
+def _pid_holds_port(pid: int, port: int) -> bool:
+    """True when *pid* is one of the processes listening on *port*.
+
+    The PID file outlives a crashed server and Windows reuses the number, so
+    by now it can name any app. Killing a process that doesn't hold the
+    port can't free it anyway.
+    """
+    from opencut.panel_bootstrap import listener_pids
+
+    pids = listener_pids(port)
+    return bool(pids) and pid in pids
+
+
+def _kill_via_pid(pid: int, port: int) -> bool:
+    """Strategy 2: kill the PID file's process, if it still holds *port*."""
     if pid is None or not _is_pid_alive(pid):
+        return False
+    if not _pid_holds_port(pid, port):
+        logger.warning(
+            "Not killing PID %d from the PID file: it isn't listening on port %d",
+            pid, port,
+        )
         return False
     try:
         print(f"  Killing old server process (PID {pid})...")
@@ -299,7 +318,7 @@ def _nuke_old_servers(host: str, port: int) -> bool:
     # Step 2: kill via PID file
     old_pid, _old_port = _read_pid()
     if old_pid:
-        _kill_via_pid(old_pid)
+        _kill_via_pid(old_pid, port)
         if _wait_for_port(host, port, timeout=3.0):
             # Only drop the PID file once the process it names is actually
             # gone. Removing it first meant a failed kill left a live server

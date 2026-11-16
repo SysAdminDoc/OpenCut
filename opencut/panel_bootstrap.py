@@ -271,7 +271,7 @@ def _lsof_listener_pids(port: int) -> Optional[set[int]]:
     return {int(token) for token in out.split() if token.isdigit()}
 
 
-def _listener_pids(port: int) -> Optional[set[int]]:
+def listener_pids(port: int) -> Optional[set[int]]:
     """PIDs of every TCP listener on *port*, or ``None`` when one can't be named."""
     import psutil
 
@@ -318,7 +318,7 @@ def listener_is_ours(base_url: str) -> bool:
     except ValueError:
         return False
     try:
-        pids = _listener_pids(port)
+        pids = listener_pids(port)
     except (ImportError, OSError) as exc:
         logger.debug("Could not list listeners on port %d: %s", port, exc)
         return False
