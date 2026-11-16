@@ -309,6 +309,7 @@ EGRESS_INVENTORY: dict[str, str] = {
     "opencut/core/google_fonts.py": "external-integration",
     "opencut/core/llm.py": "mixed-loopback-and-external-client",
     "opencut/core/model_manager.py": "external-integration",
+    "opencut/core/model_weights.py": "external-integration",
     "opencut/core/notion_sync.py": "external-integration",
     "opencut/core/obs_bridge.py": "loopback-client",
     "opencut/core/plugin_marketplace.py": "external-integration",
