@@ -186,7 +186,23 @@ def _fallback_model_kwargs() -> dict:
 
 
 def faster_whisper_words(filepath: str, model_kwargs: dict) -> List[dict]:
-    """Every word faster-whisper's base model hears, as ``{word, start, end}``."""
+    """Every word faster-whisper's base model hears, as ``{word, start, end}``.
+
+    A CUDA failure (in the CUDA 12 worker that's a missing ``cublas64_12.dll``)
+    runs it again on the CPU, as faster-whisper's transcription does.
+    """
+    from opencut.core.captions import _is_cuda_backend_error
+
+    try:
+        return _faster_whisper_words_on(filepath, model_kwargs)
+    except Exception as exc:  # noqa: BLE001 - anything but a CUDA failure re-raises
+        if model_kwargs.get("device") == "cpu" or not _is_cuda_backend_error(exc):
+            raise
+        logger.warning("CUDA error during the faster-whisper filler fallback, retrying on the CPU: %s", exc)
+    return _faster_whisper_words_on(filepath, {"device": "cpu", "compute_type": "int8"})
+
+
+def _faster_whisper_words_on(filepath: str, model_kwargs: dict) -> List[dict]:
     from faster_whisper import WhisperModel
 
     model = WhisperModel("base", **model_kwargs)

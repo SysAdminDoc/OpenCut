@@ -344,6 +344,102 @@ def test_the_worker_lists_faster_whisper_words(monkeypatch, tmp_path, no_torch_l
     assert seen["args"] == ("clip.wav", {"device": "cuda", "device_index": 1})
 
 
+_NO_CUBLAS = "Library cublas64_12.dll is not found or cannot be loaded"
+
+
+def _ct2_refusing_cuda(made, error=_NO_CUBLAS):
+    """A ctranslate2 whose Translator fails like a worker with no CUDA 12 runtime."""
+
+    class _Translator:
+        def __init__(self, model_dir, **kwargs):
+            made.append(kwargs)
+            if kwargs.get("device") != "cpu":
+                raise RuntimeError(error)
+
+        def translate_batch(self, batch, target_prefix, **kwargs):
+            return [types.SimpleNamespace(hypotheses=[[target_prefix[0][0], "hello"]])]
+
+    return types.SimpleNamespace(Translator=_Translator)
+
+
+class _FakeSentencePiece:
+    def Load(self, path):
+        pass
+
+    def Encode(self, text, out_type=str):
+        return [text]
+
+    def Decode(self, tokens):
+        return " ".join(tokens)
+
+
+def _nllb_model(tmp_path):
+    model_dir = tmp_path / "nllb"
+    model_dir.mkdir()
+    (model_dir / "sentencepiece.bpe.model").write_bytes(b"")
+    return str(model_dir)
+
+
+def test_the_worker_translates_on_the_cpu_when_cuda_12_is_missing(monkeypatch, tmp_path, no_torch_loaded):
+    made = []
+    monkeypatch.setitem(sys.modules, "ctranslate2", _ct2_refusing_cuda(made))
+    monkeypatch.setitem(sys.modules, "sentencepiece", types.SimpleNamespace(SentencePieceProcessor=_FakeSentencePiece))
+    monkeypatch.setattr("opencut.gpu.selected_ct2_device_kwargs", lambda: {"device": "cuda", "device_index": 1})
+
+    code, body = _run_op(tmp_path, {
+        "op": "translate", "model_dir": _nllb_model(tmp_path), "texts": ["hola"],
+        "source": "spa_Latn", "target": "eng_Latn",
+    })
+
+    assert code == 0, body
+    assert body["result"] == {"texts": ["hello"]}
+    assert made == [{"device": "cuda", "device_index": 1}, {"device": "cpu", "compute_type": "int8"}]
+
+
+def test_nllb_only_retries_on_the_cpu_for_a_cuda_failure(monkeypatch, tmp_path):
+    from opencut.core import captions_enhanced
+
+    made = []
+    monkeypatch.setitem(sys.modules, "ctranslate2", _ct2_refusing_cuda(made, error="Unable to open file 'model.bin'"))
+    monkeypatch.setitem(sys.modules, "sentencepiece", types.SimpleNamespace(SentencePieceProcessor=_FakeSentencePiece))
+    monkeypatch.setattr("opencut.gpu.selected_ct2_device_kwargs", lambda: {"device": "cuda", "device_index": 0})
+
+    with pytest.raises(RuntimeError, match="model.bin"):
+        captions_enhanced.nllb_translate_here(_nllb_model(tmp_path), ["hola"], "spa_Latn", "eng_Latn")
+    assert made == [{"device": "cuda", "device_index": 0}]
+
+
+def _faster_whisper_refusing_cuda(made):
+    class _WhisperModel:
+        def __init__(self, name, **kwargs):
+            made.append(kwargs)
+            if kwargs.get("device") != "cpu":
+                raise RuntimeError(_NO_CUBLAS)
+
+        def transcribe(self, path, **kwargs):
+            word = types.SimpleNamespace(word=" um", start=0.1, end=0.3)
+            return [types.SimpleNamespace(words=[word])], None
+
+    return types.SimpleNamespace(WhisperModel=_WhisperModel)
+
+
+def test_the_worker_lists_words_on_the_cpu_when_cuda_12_is_missing(monkeypatch, tmp_path, no_torch_loaded):
+    made = []
+    monkeypatch.setitem(sys.modules, "faster_whisper", _faster_whisper_refusing_cuda(made))
+
+    code, body = _run_op(tmp_path, {
+        "op": "words", "path": "clip.wav",
+        "model_kwargs": {"device": "cuda", "compute_type": "auto", "device_index": 1},
+    })
+
+    assert code == 0, body
+    assert body["result"] == {"words": [{"word": " um", "start": 0.1, "end": 0.3}]}
+    assert made == [
+        {"device": "cuda", "compute_type": "auto", "device_index": 1},
+        {"device": "cpu", "compute_type": "int8"},
+    ]
+
+
 def test_the_worker_refuses_an_unknown_op(tmp_path, no_torch_loaded):
     code, body = _run_op(tmp_path, {"op": "format_disk"})
     assert code == 1

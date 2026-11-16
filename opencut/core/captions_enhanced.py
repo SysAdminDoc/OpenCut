@@ -396,13 +396,38 @@ def nllb_translate_here(
     tgt_code: str,
     on_item: Optional[Callable[[int, int], None]] = None,
 ) -> List[str]:
-    """Translate each text with NLLB in this process. ``on_item(i, total)`` after each."""
+    """Translate each text with NLLB in this process. ``on_item(i, total)`` after each.
+
+    A CUDA failure (in the CUDA 12 worker that's a missing ``cublas64_12.dll``)
+    runs the whole batch again on the CPU, as faster-whisper's transcription does.
+    """
+    from opencut.core.captions import _is_cuda_backend_error
+    from opencut.gpu import selected_ct2_device_kwargs
+
+    device_kwargs = selected_ct2_device_kwargs()
+    try:
+        return _nllb_translate_on(device_kwargs, model_dir, texts, src_code, tgt_code, on_item)
+    except Exception as exc:  # noqa: BLE001 - anything but a CUDA failure re-raises
+        if device_kwargs.get("device") == "cpu" or not _is_cuda_backend_error(exc):
+            raise
+        logger.warning("CUDA error during NLLB translation, retrying on the CPU: %s", exc)
+    return _nllb_translate_on(
+        {"device": "cpu", "compute_type": "int8"}, model_dir, texts, src_code, tgt_code, on_item,
+    )
+
+
+def _nllb_translate_on(
+    device_kwargs: dict,
+    model_dir: str,
+    texts: List[str],
+    src_code: str,
+    tgt_code: str,
+    on_item: Optional[Callable[[int, int], None]],
+) -> List[str]:
     import ctranslate2
     import sentencepiece
 
-    from opencut.gpu import selected_ct2_device_kwargs
-
-    translator = ctranslate2.Translator(model_dir, **selected_ct2_device_kwargs())
+    translator = ctranslate2.Translator(model_dir, **device_kwargs)
     try:
         sp_path = os.path.join(model_dir, "sentencepiece.bpe.model")
         if not os.path.isfile(sp_path):
