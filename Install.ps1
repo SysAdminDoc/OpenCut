@@ -12,7 +12,8 @@
     3. Checks Python 3.11-3.14 is available
     4. Installs Python dependencies (click, rich, flask, flask-cors)
     5. Optionally installs Whisper for caption generation
-    6. Copies the CEP extension to Adobe's extensions folder
+    6. Copies the CEP extension to Adobe's extensions folder, without its
+       .debug DevTools file unless -PanelDevTools is passed
     7. Sets the PlayerDebugMode registry key for unsigned extensions
     8. Creates Start-OpenCut.bat launcher for the backend server
     9. Validates the installation
@@ -28,7 +29,9 @@ param(
     [switch]$SkipExtension,
     [switch]$SkipCleanup,
     [switch]$Uninstall,
-    [switch]$Force
+    [switch]$Force,
+    # Keep the panel's .debug file (DevTools on port 8842) for panel development.
+    [switch]$PanelDevTools
 )
 
 $ErrorActionPreference = "Stop"
@@ -131,6 +134,21 @@ function Remove-OpenCutArtifact {
         Write-Warn "Could not remove ${Label}: $Path"
         Write-Warn "Close Premiere Pro and any OpenCut process, then retry the uninstall."
         return $false
+    }
+}
+
+function Copy-OpenCutPanel {
+    # .debug makes Premiere open a DevTools port (8842) that any local program
+    # can reach, so only panel developers get it (-PanelDevTools).
+    param(
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$Target,
+        [switch]$KeepDevTools
+    )
+    Copy-Item -LiteralPath $Source -Destination $Target -Recurse -Force
+    $debugFile = Join-Path $Target ".debug"
+    if (-not $KeepDevTools -and (Test-Path -LiteralPath $debugFile)) {
+        Remove-Item -LiteralPath $debugFile -Force
     }
 }
 
@@ -781,7 +799,7 @@ if (-not $SkipExtension) {
         }
         $userTargetReady = Remove-OpenCutArtifact -Path $userTarget -Label "existing CEP extension"
         if ($userTargetReady) {
-            Copy-Item $extensionSrc $userTarget -Recurse -Force
+            Copy-OpenCutPanel -Source $extensionSrc -Target $userTarget -KeepDevTools:$PanelDevTools
             Write-Ok "Extension installed to: $userTarget"
         } else {
             Write-Err "User CEP extension was not replaced; close Premiere Pro and retry."
@@ -795,7 +813,7 @@ if (-not $SkipExtension) {
             }
             $sysTargetReady = Remove-OpenCutArtifact -Path $sysTarget -Label "existing system CEP extension"
             if ($sysTargetReady) {
-                Copy-Item $extensionSrc $sysTarget -Recurse -Force
+                Copy-OpenCutPanel -Source $extensionSrc -Target $sysTarget -KeepDevTools:$PanelDevTools
                 Write-Ok "Extension also installed to: $sysTarget"
             } else {
                 Write-Err "System CEP extension was not replaced; close Premiere Pro and retry."

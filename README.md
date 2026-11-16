@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1564-orange)
-![Tests](https://img.shields.io/badge/Tests-15300+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-15400+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only. Each route is tagged
@@ -139,7 +139,7 @@ Then right-click `Install.bat` and select **Run as Administrator**. The installe
 3. Install all Python dependencies (Flask, click, rich, etc.)
 4. Install the OpenCut Python package
 5. Optionally install Whisper for caption generation
-6. Copy the CEP extension to Adobe's extensions folder
+6. Copy the CEP extension to Adobe's extensions folder, leaving out the `.debug` file that opens a DevTools port
 7. Set the `PlayerDebugMode` registry key so unsigned extensions load
 8. Create `Start-OpenCut.bat` on your desktop to launch the backend server
 
@@ -993,7 +993,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-15,300+ estimated tests across 384 root test files covering route smoke tests,
+15,400+ estimated tests across 385 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -1062,7 +1062,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (15,300+ estimated tests, 384 root test files)
+tests/               # pytest test suite (15,400+ estimated tests, 385 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

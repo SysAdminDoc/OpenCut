@@ -44,7 +44,7 @@ state, `requirements-lock.txt` auditability, runtime imports, and
    - Windows: `HKCU\Software\Adobe\CSXS.XX\PlayerDebugMode = 1` (for each CC version)
    - macOS: `defaults write com.adobe.CSXS.XX PlayerDebugMode 1`
 2. The extension is at `extension/com.opencut.panel/`
-3. Remote debug at `http://localhost:8842` (configured in `.debug`, which release builds leave out)
+3. Remote debug at `http://localhost:8842` (configured in `.debug`). Release builds and `Install.ps1` leave that file out, so install with `powershell -ExecutionPolicy Bypass -File Install.ps1 -PanelDevTools` to keep it
 4. Reload extension in Premiere: Window > Extensions > OpenCut
 
 ## Project Structure
