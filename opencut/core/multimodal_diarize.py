@@ -140,8 +140,13 @@ def _extract_face_segments(
         try:
             from insightface.app import FaceAnalysis
 
+            from opencut.core import model_weights
             from opencut.gpu import get_device_index, selected_onnx_providers
 
+            model_weights.ensure(
+                "multimodal_diarize",
+                on_progress=model_weights.scaled_progress(on_progress, 0, 1),
+            )
             gpu_index = get_device_index()
             app = FaceAnalysis(providers=selected_onnx_providers())
             app.prepare(ctx_id=gpu_index if gpu_index is not None else -1, det_size=(640, 640))

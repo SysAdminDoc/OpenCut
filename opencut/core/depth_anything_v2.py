@@ -20,7 +20,9 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, List, Optional
 
+from opencut.core import model_weights
 from opencut.helpers import _try_import
+from opencut.network_policy import LocalOnlyNetworkError
 
 logger = logging.getLogger("opencut")
 
@@ -102,9 +104,12 @@ def estimate_depth(
         from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        model_id = f"depth-anything/Depth-Anything-V2-{model.capitalize()}-hf"
-        processor = AutoImageProcessor.from_pretrained(model_id)
-        depth_model = AutoModelForDepthEstimation.from_pretrained(model_id).to(device)
+        model_dir = model_weights.hf_model_dir(
+            model_weights.depth_model_id(model),
+            on_progress=model_weights.scaled_progress(on_progress, 5, 14),
+        )
+        processor = AutoImageProcessor.from_pretrained(model_dir)
+        depth_model = AutoModelForDepthEstimation.from_pretrained(model_dir).to(device)
 
         if on_progress:
             on_progress(15, "Processing frames...")
@@ -192,6 +197,8 @@ def estimate_depth(
                 os.unlink(output_path)
             except OSError:
                 pass
+        if isinstance(exc, LocalOnlyNetworkError):
+            raise  # keeps its code and Settings advice for the job record
         raise RuntimeError(f"Depth estimation failed: {exc}") from exc
 
 
@@ -228,9 +235,12 @@ def generate_parallax(
         from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        model_id = f"depth-anything/Depth-Anything-V2-{model.capitalize()}-hf"
-        processor = AutoImageProcessor.from_pretrained(model_id)
-        depth_model = AutoModelForDepthEstimation.from_pretrained(model_id).to(device)
+        model_dir = model_weights.hf_model_dir(
+            model_weights.depth_model_id(model),
+            on_progress=model_weights.scaled_progress(on_progress, 5, 14),
+        )
+        processor = AutoImageProcessor.from_pretrained(model_dir)
+        depth_model = AutoModelForDepthEstimation.from_pretrained(model_dir).to(device)
 
         cap = cv2.VideoCapture(video_path)
         fps = cap.get(cv2.CAP_PROP_FPS) or 24
@@ -299,6 +309,8 @@ def generate_parallax(
                 os.unlink(output_path)
             except OSError:
                 pass
+        if isinstance(exc, LocalOnlyNetworkError):
+            raise
         raise RuntimeError(f"Parallax generation failed: {exc}") from exc
 
 

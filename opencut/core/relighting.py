@@ -17,7 +17,9 @@ import tempfile
 from dataclasses import dataclass
 from typing import Callable, Optional, Tuple
 
+from opencut.core import model_weights
 from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
+from opencut.network_policy import LocalOnlyNetworkError
 
 logger = logging.getLogger("opencut")
 
@@ -220,7 +222,7 @@ def relight_video(
             device = "cuda" if torch.cuda.is_available() else "cpu"
             depth_pipe = hf_pipeline(
                 "depth-estimation",
-                model="depth-anything/Depth-Anything-V2-Small-hf",
+                model=model_weights.hf_model_dir(model_weights.depth_model_id("small")),
                 device=device,
             )
             use_model = True
@@ -228,6 +230,8 @@ def relight_video(
                 on_progress(10, "Depth model loaded...")
         except ImportError:
             logger.info("Depth model not available, using Sobel-based depth estimation")
+        except LocalOnlyNetworkError:
+            logger.info("Depth model not downloaded in local-only mode, using Sobel-based depth estimation")
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():

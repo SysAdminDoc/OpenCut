@@ -68,16 +68,26 @@ def detect_fillers_crisper(
         activate_selected_gpu(torch_module=torch)
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-    model_id = "nyrahealth/CrisperWhisper"
+    from opencut.core import model_weights
+    from opencut.network_policy import LocalOnlyNetworkError
 
     try:
+        # Loads from the pinned local snapshot only. A download that local-only
+        # mode blocks is reported, not swapped for another engine.
+        model_dir = model_weights.hf_model_dir(
+            "nyrahealth/CrisperWhisper",
+            on_progress=model_weights.scaled_progress(on_progress, 5, 19),
+            label="CrisperWhisper",
+        )
         model = AutoModelForSpeechSeq2Seq.from_pretrained(
-            model_id,
+            model_dir,
             torch_dtype=torch_dtype,
             low_cpu_mem_usage=True,
         ).to(device)
 
-        processor = AutoProcessor.from_pretrained(model_id)
+        processor = AutoProcessor.from_pretrained(model_dir)
+    except LocalOnlyNetworkError:
+        raise
     except Exception as e:
         logger.warning("CrisperWhisper model not available: %s. Falling back to faster-whisper.", e)
         return _fallback_filler_detection(filepath, custom_words, on_progress)

@@ -408,6 +408,11 @@ def _build_capabilities():
     except Exception:
         caps["engine_registry"] = {}
 
+    # Weights the add-ons load: a feature whose packages are installed but
+    # whose model isn't on disk reports false, with the reason alongside.
+    from opencut.core import model_weights
+    model_weights.apply_to_capabilities(caps)
+
     return caps
 
 

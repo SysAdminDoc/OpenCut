@@ -18,6 +18,7 @@ import logging
 import os
 from typing import Callable, Optional
 
+from opencut.core import model_weights
 from opencut.helpers import ensure_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
@@ -90,12 +91,15 @@ def estimate_depth_map(
     _allowed_sizes = ("small", "base", "large")
     if model_size not in _allowed_sizes:
         model_size = "small"
-    model_id = f"depth-anything/Depth-Anything-V2-{model_size.capitalize()}-hf"
+    model_dir = model_weights.hf_model_dir(
+        model_weights.depth_model_id(model_size),
+        on_progress=model_weights.scaled_progress(on_progress, 5, 14),
+    )
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     depth_pipe = pipeline(
         "depth-estimation",
-        model=model_id,
+        model=model_dir,
         device=device,
     )
 
@@ -231,9 +235,12 @@ def apply_bokeh_effect(
     if on_progress:
         on_progress(5, f"Loading Depth Anything V2 ({model_size})...")
 
-    model_id = f"depth-anything/Depth-Anything-V2-{model_size.capitalize()}-hf"
+    model_dir = model_weights.hf_model_dir(
+        model_weights.depth_model_id(model_size),
+        on_progress=model_weights.scaled_progress(on_progress, 5, 14),
+    )
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    depth_pipe = pipeline("depth-estimation", model=model_id, device=device)
+    depth_pipe = pipeline("depth-estimation", model=model_dir, device=device)
 
     tmp_path = output_path + ".tmp.mp4"
     try:
@@ -378,9 +385,12 @@ def apply_parallax_zoom(
     if on_progress:
         on_progress(5, f"Loading Depth Anything V2 ({model_size})...")
 
-    model_id = f"depth-anything/Depth-Anything-V2-{model_size.capitalize()}-hf"
+    model_dir = model_weights.hf_model_dir(
+        model_weights.depth_model_id(model_size),
+        on_progress=model_weights.scaled_progress(on_progress, 5, 14),
+    )
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    depth_pipe = pipeline("depth-estimation", model=model_id, device=device)
+    depth_pipe = pipeline("depth-estimation", model=model_dir, device=device)
 
     tmp_path = output_path + ".tmp.mp4"
     try:

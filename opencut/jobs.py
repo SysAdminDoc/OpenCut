@@ -1151,6 +1151,10 @@ def make_install_route(blueprint, url_path, component_name, packages,
     * Rate-limits under ``"model_install"`` for the worker lifetime and returns
       **429 synchronously** when another install is already running.
     * Iterates *packages* with progress updates
+    * Then fetches the model weights the feature loads, when
+      :mod:`opencut.core.model_weights` lists *component_name*. A
+      ``{"weights_only": true}`` body skips the packages, for a feature whose
+      packages are installed but whose weights aren't.
     * Returns ``{"component": component_name}``
 
     Args:
@@ -1167,10 +1171,25 @@ def make_install_route(blueprint, url_path, component_name, packages,
     # via @async_job while the wrapper holds the model-install slot.
     @async_job("install", filepath_required=False, rate_limit_key="model_install")
     def _install_body(job_id, filepath, data):
-        for i, pkg in enumerate(packages):
-            pct = int((i / len(packages)) * 90)
-            _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
-            _spi(pkg, timeout=600)
+        from opencut.core import model_weights
+        from opencut.security import safe_bool
+
+        has_weights = component_name in model_weights.COMPONENTS
+        weights_only = has_weights and safe_bool((data or {}).get("weights_only"), default=False)
+        packages_end = 60 if has_weights else 90
+        if not weights_only:
+            for i, pkg in enumerate(packages):
+                pct = int((i / len(packages)) * packages_end)
+                _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
+                _spi(pkg, timeout=600)
+        if has_weights:
+            start = 0 if weights_only else packages_end
+            model_weights.ensure(
+                component_name,
+                on_progress=lambda pct, message: _update_job(
+                    job_id, progress=start + pct * (95 - start) // 100, message=message,
+                ),
+            )
         # Invalidate the capabilities cache so the next health check
         # reflects the newly installed package.
         try:

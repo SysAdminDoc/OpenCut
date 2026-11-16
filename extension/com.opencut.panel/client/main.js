@@ -2843,6 +2843,85 @@
         }
     }
 
+    // Add-ons that also load a model (depth, emotion, CrisperWhisper,
+    // multimodal diarization). The server reports each one's weights under
+    // capabilities.model_weights; when the packages are installed and the
+    // model isn't, the hint says so and its button downloads only the model.
+    function weightsMissing(component) {
+        var mw = capabilities.model_weights;
+        var entry = mw && mw.components ? mw.components[component] : null;
+        return entry && entry.packages && entry.state === "missing" ? entry : null;
+    }
+
+    function weightsDownloadBlocked() {
+        return !!(capabilities.model_weights && capabilities.model_weights.local_only);
+    }
+
+    function weightsHintMessage(entry) {
+        var size = Number(entry.download_mb) || 0;
+        var message = t("install.weights_missing", "{label} is installed, but its model ({size} MB) isn't downloaded yet.")
+            .replace("{label}", entry.label || "")
+            .replace("{size}", size.toLocaleString("en-US"));
+        if (weightsDownloadBlocked()) {
+            message += " " + t(
+                "install.weights_local_only",
+                "Local-only mode blocks the download. Turn it off in Settings to get the model, then turn it back on."
+            );
+        }
+        return message;
+    }
+
+    function hintHasState(hintEl) {
+        for (var i = 0; i < HINT_STATE_CLASSES.length; i++) {
+            if (hintEl.classList.contains(HINT_STATE_CLASSES[i])) return true;
+        }
+        return false;
+    }
+
+    // Puts a hint in the weights-missing state for `entry`, or back to its
+    // markup copy when `entry` is null. A hint showing install progress or
+    // an install error keeps that text.
+    function syncWeightsHint(hintEl, actionBtn, entry, labelKey, labelFallback) {
+        if (!hintEl || hintHasState(hintEl)) return;
+        var copy = getHintCopyNode(hintEl);
+        if (copy) {
+            if (!copy.hasAttribute("data-default-copy")) copy.setAttribute("data-default-copy", copy.textContent);
+            var copyKey = copy.getAttribute("data-i18n");
+            var defaultCopy = copy.getAttribute("data-default-copy");
+            copy.textContent = entry ? weightsHintMessage(entry) : (copyKey ? t(copyKey, defaultCopy) : defaultCopy);
+        }
+        var alt = hintEl.querySelector(".install-alt");
+        if (alt) alt.classList.toggle("hidden", !!entry);
+        if (actionBtn) {
+            actionBtn.textContent = entry ? t("install.download_model", "Download model") : t(labelKey, labelFallback);
+            var blocked = !!entry && weightsDownloadBlocked();
+            actionBtn.classList.toggle("hidden", blocked);
+            actionBtn.disabled = blocked;
+        }
+    }
+
+    // An install of an add-on whose packages are already there fetches only
+    // its model, and success marks the model ready in the cached payload.
+    function weightsInstallConfig(component, config) {
+        var entry = weightsMissing(component);
+        if (entry) {
+            config.payload = { weights_only: true };
+            config.startMessage = t("install.weights_start", "Downloading the {label} model… This may take a while.")
+                .replace("{label}", entry.label || "");
+        }
+        var onSuccess = config.onSuccess;
+        config.onSuccess = function(result, job) {
+            var mw = capabilities.model_weights;
+            var current = mw && mw.components ? mw.components[component] : null;
+            if (current) {
+                current.packages = true;
+                current.state = "ready";
+            }
+            if (typeof onSuccess === "function") onSuccess(result, job);
+        };
+        return config;
+    }
+
     function hideHintState(hintEl, actionBtn) {
         if (!hintEl) return;
         hintEl.classList.add("hidden");
@@ -3845,6 +3924,8 @@
 
         var whisperAvailable = capabilities.captions !== false;
         var crisperAvailable = capabilities.crisper_whisper !== false;
+        var crisperWeights = weightsMissing("crisper_whisper");
+        var crisperSelectable = crisperAvailable || !!crisperWeights;
         var showFillersHint = false;
         var showCrisperInstallAction = false;
         var fillersHintMessage = t(
@@ -3858,23 +3939,29 @@
             var selectedFillerBackend = el.fillerBackend.value || "whisper";
 
             if (whisperOpt) whisperOpt.disabled = !whisperAvailable;
-            if (crisperOpt) crisperOpt.disabled = !crisperAvailable;
+            if (crisperOpt) crisperOpt.disabled = !crisperSelectable;
 
-            if (selectedFillerBackend === "whisper" && !whisperAvailable && crisperAvailable) {
+            if (selectedFillerBackend === "whisper" && !whisperAvailable && crisperSelectable) {
                 el.fillerBackend.value = "crisper";
-            } else if (selectedFillerBackend === "crisper" && !crisperAvailable && whisperAvailable) {
+            } else if (selectedFillerBackend === "crisper" && !crisperSelectable && whisperAvailable) {
                 el.fillerBackend.value = "whisper";
             }
 
             if (el.fillerBackend._customDropdown) el.fillerBackend._customDropdown.updateText();
         }
 
-        if (!whisperAvailable && !crisperAvailable) {
+        var crisperChosen = el.fillerBackend ? el.fillerBackend.value === "crisper" : !whisperAvailable;
+        var crisperNeedsModel = !!crisperWeights && crisperChosen;
+        if (crisperNeedsModel) {
+            showFillersHint = true;
+            showCrisperInstallAction = !weightsDownloadBlocked();
+            fillersHintMessage = weightsHintMessage(crisperWeights);
+        } else if (!whisperAvailable && !crisperAvailable) {
             showFillersHint = true;
             showCrisperInstallAction = true;
         }
 
-        if (el.fillersHint) {
+        if (el.fillersHint && !hintHasState(el.fillersHint)) {
             var fillersHintCopy = getHintCopyNode(el.fillersHint);
             if (fillersHintCopy) fillersHintCopy.textContent = fillersHintMessage;
         }
@@ -3886,6 +3973,11 @@
             var hideCrisperAction = !showFillersHint || !showCrisperInstallAction || (el.fillersHint && el.fillersHint.classList.contains("is-info"));
             el.installCrisperWhisperBtn.classList.toggle("hidden", hideCrisperAction);
             el.installCrisperWhisperBtn.disabled = hideCrisperAction;
+            if (!hintHasState(el.fillersHint)) {
+                el.installCrisperWhisperBtn.textContent = crisperNeedsModel
+                    ? t("install.download_model", "Download model")
+                    : t("install.crisper_whisper", "Install CrisperWhisper");
+            }
         }
 
         // Demucs hint
@@ -3938,13 +4030,21 @@
         _setHint(el.brollGenHint, el.runBrollGenBtn, capabilities.broll_generate === false);
 
         // Multimodal diarization hint
-        _setHint(el.mmDiarizeHint, el.runMmDiarizeBtn, capabilities.multimodal_diarize === false);
+        var mmWeights = capabilities.multimodal_diarize === false ? null : weightsMissing("multimodal_diarize");
+        _setHint(
+            el.mmDiarizeHint,
+            mmWeights ? null : el.runMmDiarizeBtn,
+            capabilities.multimodal_diarize === false || !!mmWeights
+        );
+        syncWeightsHint(el.mmDiarizeHint, el.installMmDiarizeBtn, mmWeights, "common.install_now", "Install Now");
 
         // Depth effects hint
         _setHint(el.depthHint, el.runDepthBtn, capabilities.depth_effects === false);
+        syncWeightsHint(el.depthHint, el.installDepthBtn, weightsMissing("depth_effects"), "common.install_now", "Install Now");
 
         // Emotion highlights hint
         _setHint(el.emotionHint, el.runEmotionHighlightsBtn, capabilities.deepface === false);
+        syncWeightsHint(el.emotionHint, el.installEmotionBtn, weightsMissing("emotion_highlights"), "common.install_now", "Install Now");
 
         // Social media posting hint
         _setHint(el.socialHint, null, capabilities.social_post === false);
@@ -5258,7 +5358,7 @@
     }
     
     function installDepth() {
-        startInlineInstallJob({
+        startInlineInstallJob(weightsInstallConfig("depth_effects", {
             endpoint: "/video/depth/install",
             hintEl: el.depthHint,
             actionBtn: el.installDepthBtn,
@@ -5268,11 +5368,11 @@
                 updateButtons();
                 showAlert(t("toast.depth_installed", "Depth Anything V2 installed successfully!"));
             }
-        });
+        }));
     }
 
     function installEmotion() {
-        startInlineInstallJob({
+        startInlineInstallJob(weightsInstallConfig("emotion_highlights", {
             endpoint: "/video/emotion/install",
             hintEl: el.emotionHint,
             actionBtn: el.installEmotionBtn,
@@ -5282,11 +5382,11 @@
                 updateButtons();
                 showAlert(t("toast.emotion_installed", "Emotion analysis installed successfully!"));
             }
-        });
+        }));
     }
 
     function installCrisperWhisper() {
-        startInlineInstallJob({
+        startInlineInstallJob(weightsInstallConfig("crisper_whisper", {
             endpoint: "/audio/crisper-whisper/install",
             hintEl: el.fillersHint,
             actionBtn: el.installCrisperWhisperBtn,
@@ -5300,7 +5400,7 @@
                 updateButtons();
                 showAlert(t("toast.crisper_whisper_installed", "CrisperWhisper installed successfully!"));
             }
-        });
+        }));
     }
 
     function installBrollGenerate() {
@@ -5321,7 +5421,7 @@
     }
 
     function installMultimodalDiarize() {
-        startInlineInstallJob({
+        startInlineInstallJob(weightsInstallConfig("multimodal_diarize", {
             endpoint: "/video/multimodal-diarize/install",
             hintEl: el.mmDiarizeHint,
             actionBtn: el.installMmDiarizeBtn,
@@ -5334,7 +5434,7 @@
                 updateButtons();
                 showAlert(t("toast.multimodal_diarization_installed", "Multimodal diarization installed successfully!"));
             }
-        });
+        }));
     }
 
     function installWatermark() {

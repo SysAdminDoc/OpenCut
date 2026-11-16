@@ -18,6 +18,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
+from opencut.core import model_weights
 from opencut.helpers import _try_import
 
 logger = logging.getLogger("opencut")
@@ -170,8 +171,9 @@ def preview(
     from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    processor = AutoImageProcessor.from_pretrained("depth-anything/Depth-Anything-V2-Small-hf")
-    model = AutoModelForDepthEstimation.from_pretrained("depth-anything/Depth-Anything-V2-Small-hf").to(device)
+    model_dir = model_weights.hf_model_dir(model_weights.depth_model_id("small"))
+    processor = AutoImageProcessor.from_pretrained(model_dir)
+    model = AutoModelForDepthEstimation.from_pretrained(model_dir).to(device)
 
     try:
         depth = _estimate_depth_frame(bgr, model, processor, device)
@@ -246,10 +248,12 @@ def render(
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     backend = _get_depth_backend()
-    processor = AutoImageProcessor.from_pretrained("depth-anything/Depth-Anything-V2-Small-hf")
-    model = AutoModelForDepthEstimation.from_pretrained(
-        "depth-anything/Depth-Anything-V2-Small-hf"
-    ).to(device)
+    model_dir = model_weights.hf_model_dir(
+        model_weights.depth_model_id("small"),
+        on_progress=model_weights.scaled_progress(on_progress, 5, 9),
+    )
+    processor = AutoImageProcessor.from_pretrained(model_dir)
+    model = AutoModelForDepthEstimation.from_pretrained(model_dir).to(device)
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():

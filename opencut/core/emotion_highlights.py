@@ -75,10 +75,17 @@ def analyze_video_emotions(
     except ImportError:
         raise ImportError("OpenCV required. Install: pip install opencv-python")
 
+    from opencut.core import model_weights
+
+    model_weights.prepare_deepface()
     try:
         from deepface import DeepFace
     except ImportError:
         raise ImportError("deepface required. Install: pip install deepface")
+    model_weights.ensure(
+        "emotion_highlights",
+        on_progress=model_weights.scaled_progress(on_progress, 1, 4),
+    )
 
     if not os.path.isfile(filepath):
         raise FileNotFoundError(f"Video not found: {filepath}")

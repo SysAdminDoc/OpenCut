@@ -458,6 +458,76 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
         });
       }
     }
+    if (backendFixtures.modelWeights) {
+      const method = route.request().method();
+      const fixture = backendFixtures.modelWeights;
+      if (url.pathname === "/health" && method === "GET") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            status: "ok",
+            csrf_token: "fixture-token",
+            capabilities: {
+              captions: true,
+              crisper_whisper: false,
+              deepface: false,
+              depth_effects: Boolean(fixture.depthReady),
+              multimodal_diarize: true,
+              model_weights: {
+                local_only: Boolean(fixture.localOnly),
+                components: {
+                  depth_effects: {
+                    label: "Depth Anything V2 Small",
+                    packages: true,
+                    state: fixture.depthReady ? "ready" : "missing",
+                    download_mb: 99,
+                  },
+                  crisper_whisper: {
+                    label: "CrisperWhisper",
+                    packages: true,
+                    state: "missing",
+                    download_mb: 3880,
+                  },
+                  emotion_highlights: {
+                    label: "deepface emotion model",
+                    packages: false,
+                    state: "missing",
+                    download_mb: 6,
+                  },
+                  multimodal_diarize: {
+                    label: "InsightFace buffalo_l",
+                    packages: true,
+                    state: "missing",
+                    download_mb: 289,
+                  },
+                },
+              },
+            },
+          }),
+        });
+      }
+      if (url.pathname === "/video/depth/install" && method === "POST") {
+        capturedRequests.push({ depthInstall: route.request().postDataJSON() || {} });
+        return route.fulfill({
+          status: 202,
+          contentType: "application/json",
+          body: JSON.stringify({ job_id: "weights-fixture" }),
+        });
+      }
+      if (url.pathname === "/status/weights-fixture" && method === "GET") {
+        fixture.depthReady = true;
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            status: "complete",
+            progress: 100,
+            result: { component: "depth_effects" },
+          }),
+        });
+      }
+    }
     if (backendFixtures.workflowPreflight) {
       const method = route.request().method();
       if (url.pathname === "/health" && method === "GET") {
@@ -1945,6 +2015,84 @@ test("CEP disabled Timeline, Deliverables and Rename controls say why", async ({
     .poll(() => page.locator("#renameAllBtn").getAttribute("title"))
     .toBe(null);
 
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP offers the model download when an add-on's weights are missing", async ({
+  page,
+}) => {
+  const { capturedRequests, pageErrors } = await openSurface(
+    page,
+    "cep",
+    "dark",
+    900,
+    { modelWeights: {} },
+  );
+  const depthHint = page.locator("#depthHint");
+  await expect(depthHint).not.toHaveClass(/\bhidden\b/);
+  await expect(depthHint.locator(".hint-copy")).toHaveText(
+    "Depth Anything V2 Small is installed, but its model (99 MB) isn't downloaded yet.",
+  );
+  await expect(page.locator("#installDepthBtn")).toHaveText("Download model");
+  await expect(depthHint.locator(".install-alt")).toHaveClass(/\bhidden\b/);
+  await expect(page.locator("#runDepthBtn")).toBeDisabled();
+
+  // Packages missing too: the hint keeps its install copy and command.
+  const emotionHint = page.locator("#emotionHint");
+  await expect(emotionHint).not.toHaveClass(/\bhidden\b/);
+  await expect(emotionHint.locator(".hint-copy")).toHaveText(
+    "Emotion analysis (deepface) not installed.",
+  );
+  await expect(page.locator("#installEmotionBtn")).toHaveText("Install Now");
+  await expect(emotionHint.locator(".install-alt")).not.toHaveClass(/\bhidden\b/);
+
+  // Multimodal diarization runs on other detectors meanwhile: advice only.
+  await expect(page.locator("#mmDiarizeHint")).not.toHaveClass(/\bhidden\b/);
+  await expect(page.locator("#mmDiarizeHint .hint-copy")).toContainText(
+    "InsightFace buffalo_l is installed",
+  );
+
+  // CrisperWhisper stays selectable and asks for its model once chosen.
+  await expect(page.locator("#fillersHint")).toHaveClass(/\bhidden\b/);
+  await page.evaluate(() => {
+    const select = document.getElementById("fillerBackend");
+    select.value = "crisper";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(page.locator("#fillersHint")).not.toHaveClass(/\bhidden\b/);
+  await expect(page.locator("#fillersHint .hint-copy")).toHaveText(
+    "CrisperWhisper is installed, but its model (3,880 MB) isn't downloaded yet.",
+  );
+  await expect(page.locator("#installCrisperWhisperBtn")).toHaveText("Download model");
+
+  // The download fetches only the model, then the hint clears.
+  await page.evaluate(() => document.getElementById("installDepthBtn").click());
+  await expect
+    .poll(() => capturedRequests.filter((entry) => entry.depthInstall).length)
+    .toBe(1);
+  expect(capturedRequests.find((entry) => entry.depthInstall).depthInstall).toEqual({
+    weights_only: true,
+  });
+  await expect(depthHint).toHaveClass(/\bhidden\b/);
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP local-only mode says why the model can't download", async ({ page }) => {
+  const { capturedRequests, pageErrors } = await openSurface(
+    page,
+    "cep",
+    "dark",
+    900,
+    { modelWeights: { localOnly: true } },
+  );
+  const depthHint = page.locator("#depthHint");
+  await expect(depthHint).not.toHaveClass(/\bhidden\b/);
+  await expect(depthHint.locator(".hint-copy")).toContainText(
+    "Local-only mode blocks the download. Turn it off in Settings",
+  );
+  await expect(page.locator("#installDepthBtn")).toHaveClass(/\bhidden\b/);
+  await expect(page.locator("#installDepthBtn")).toBeDisabled();
+  expect(capturedRequests.filter((entry) => entry.depthInstall)).toEqual([]);
   expect(pageErrors).toEqual([]);
 });
 
