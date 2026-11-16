@@ -103,9 +103,9 @@ longer guarantees the prompt goes away either, so this is a permanent part of
 installing OpenCut rather than something waiting on a certificate.
 
 The Premiere panel inside the Windows installer is signed, though. Adobe
-accepts self-signed certificates for panels, and the signature is timestamped.
-The installer still turns on `PlayerDebugMode` until the signed panel has been
-checked in a live Premiere without it.
+accepts self-signed certificates for panels, and the signature is timestamped,
+so the installer leaves Adobe's `PlayerDebugMode` off. Tick **Also allow
+unsigned Adobe panels** on the options page if another panel you use needs it.
 
 To proceed past the warning: click **More info**, then **Run anyway**.
 
@@ -300,8 +300,9 @@ On Premiere 2026 and later, look under **Window > Extensions (Legacy)**. Adobe
 moved CEP panels there when UXP became the primary extension platform, so the
 plain **Extensions** menu can be empty even though the install succeeded. On
 Premiere 2025 and earlier the panel is under **Window > Extensions**. If it is
-in neither, confirm the extension folder was copied and that `PlayerDebugMode`
-is set, then restart Premiere.
+in neither, confirm the extension folder was copied, then restart Premiere. A
+panel installed from source or with `Install.bat` is unsigned and also needs
+`PlayerDebugMode` set.
 
 **"Invalid or missing CSRF token" when you click an action:**
 The panel connects and reports healthy, then every action fails with this

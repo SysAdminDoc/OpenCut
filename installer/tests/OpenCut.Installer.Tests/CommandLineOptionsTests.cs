@@ -43,6 +43,16 @@ public class CommandLineOptionsTests
     }
 
     [Fact]
+    public void QuietInstallLeavesPlayerDebugModeOffUnlessAsked()
+    {
+        var defaults = InstallerCommandLineOptions.Parse(["--install", "--quiet"]);
+        var optedIn = InstallerCommandLineOptions.Parse(["--install", "--quiet", "--player-debug-mode"]);
+
+        Assert.False(defaults.Config.SetPlayerDebugMode);
+        Assert.True(optedIn.Config.SetPlayerDebugMode);
+    }
+
+    [Fact]
     public void ParseQuietUninstallKeepsSameSafetyFlags()
     {
         var options = InstallerCommandLineOptions.Parse(

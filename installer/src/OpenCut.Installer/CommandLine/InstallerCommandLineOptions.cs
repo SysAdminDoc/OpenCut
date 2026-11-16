@@ -76,6 +76,9 @@ public sealed class InstallerCommandLineOptions
                 case "--no-cep-extension":
                     config.InstallCepExtension = false;
                     break;
+                case "--player-debug-mode":
+                    config.SetPlayerDebugMode = true;
+                    break;
                 case "--no-player-debug-mode":
                     config.SetPlayerDebugMode = false;
                     break;

@@ -99,8 +99,8 @@ public partial class OptionsPage : Page
 
         CepStatusText.Text = cepEnabled
             ? (DebugModeCheck.IsChecked == true
-                ? "The CEP panel will be installed and Adobe debug mode will be enabled so the extension can load reliably."
-                : "The CEP panel will be installed, but Adobe debug mode will stay off until you enable it manually.")
+                ? "The signed CEP panel will be installed, and Adobe debug mode will be turned on so unsigned panels load too."
+                : "The signed CEP panel will be installed. Premiere loads it without Adobe debug mode.")
             : "Premiere CEP integration will be skipped. You can still run the OpenCut server and add the panel later.";
     }
 

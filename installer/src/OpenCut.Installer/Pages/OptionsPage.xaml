@@ -98,12 +98,12 @@
                         <CheckBox x:Name="CepCheck" Content="Install Premiere Pro CEP extension"
                                   IsChecked="True" Margin="0,14,0,0"
                                   Checked="CepCheck_Changed" Unchecked="CepCheck_Changed" />
-                        <CheckBox x:Name="DebugModeCheck" Content="Enable PlayerDebugMode (recommended for CEP)"
-                                  AutomationProperties.HelpText="Lets the Adobe CEP extension load reliably after installation."
-                                  IsChecked="True" Margin="18,6,0,0"
+                        <CheckBox x:Name="DebugModeCheck" Content="Also allow unsigned Adobe panels (PlayerDebugMode)"
+                                  AutomationProperties.HelpText="The OpenCut panel is signed and loads without this. Turn it on only if another panel you use needs debug mode."
+                                  IsChecked="False" Margin="18,6,0,0"
                                   Checked="AnyOptionChanged" Unchecked="AnyOptionChanged" />
                         <TextBlock x:Name="CepStatusText"
-                                   Text="The CEP panel will be installed and Adobe debug mode will be enabled so the extension can load reliably."
+                                   Text="The signed CEP panel will be installed. Premiere loads it without Adobe debug mode."
                                    Style="{StaticResource CaptionText}" Margin="0,10,0,0" />
                     </StackPanel>
                 </Border>

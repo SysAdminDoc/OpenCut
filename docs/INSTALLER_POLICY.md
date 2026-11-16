@@ -128,6 +128,14 @@ installers by policy. The one certificate a WPF build needs is the CEP panel
 signing certificate (`OPENCUT_CEP_CERT`, see `DEVELOPMENT.md`), and a
 self-signed one works. The Inno fallback still ships the panel unsigned.
 
+`PlayerDebugMode` follows from that. The WPF installer leaves it off, since
+Premiere loads a signed panel without it, and keeps a checkbox (and
+`--player-debug-mode` for quiet installs) for people who also run unsigned
+panels. The Inno script packs `extension\com.opencut.panel` straight from the
+checkout with no signing step, so it keeps writing `PlayerDebugMode` for CSXS
+7 to 18. `Install.ps1` and `install.py` are source and dev lanes and keep it on
+too.
+
 When the WPF release path completes cleanly, reassess the retirement
 schedule in §2.
 

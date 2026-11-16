@@ -105,10 +105,12 @@ Name: "{userstartup}\OpenCut"; Filename: "wscript.exe"; Parameters: """{app}\Ope
 ; App install path (for detection by other tools)
 Root: HKCU; Subkey: "Software\{#MyAppName}"; ValueType: string; ValueName: "InstallPath"; ValueData: "{app}"; Flags: uninsdeletekey
 
-; Enable unsigned CEP extensions (PlayerDebugMode). Cover CSXS 7 (CC 2014)
-; through 18 (PPro 2025+) so modern Premiere installs (CSXS 13+) actually
-; load the panel — the previous 7-12 range silently dropped support for
-; CC 2023+ users.
+; Enable unsigned CEP extensions (PlayerDebugMode). This lane packs
+; extension\com.opencut.panel straight from the checkout with no signing step,
+; so Premiere loads it only in debug mode. The WPF installer ships the signed
+; panel and leaves debug mode off. Cover CSXS 7 (CC 2014) through 18
+; (PPro 2025+) so modern Premiere installs (CSXS 13+) actually load the panel;
+; the previous 7-12 range silently dropped support for CC 2023+ users.
 ; PlayerDebugMode keys are written via [Run] with runasoriginaluser so
 ; they land in the invoking user's hive, not the elevated admin's.
 ; (PrivilegesRequired=admin causes HKCU to resolve to the wrong user.)

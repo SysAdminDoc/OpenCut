@@ -7,7 +7,9 @@ public class InstallConfig
     public bool CreateStartMenuShortcut { get; set; } = true;
     public bool CreateStartupShortcut { get; set; }
     public bool InstallCepExtension { get; set; } = true;
-    public bool SetPlayerDebugMode { get; set; } = true;
+    // The builder always signs the panel, so Premiere loads it without debug
+    // mode. Turning it on is an opt-in for users who also run unsigned panels.
+    public bool SetPlayerDebugMode { get; set; }
     public bool UpdatePath { get; set; } = true;
     public bool RegisterUninstaller { get; set; } = true;
     public bool DownloadWhisperModel { get; set; }

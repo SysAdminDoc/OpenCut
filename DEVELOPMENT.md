@@ -94,7 +94,7 @@ ZXPSignCmd -selfSignedCert US NA OpenCut OpenCut <password> "$env:LOCALAPPDATA\O
 
 Keep the certificate outside the checkout. `.gitignore` refuses `*.p12` and `*.pfx` in case one lands there.
 
-The builder copies the panel without `.debug`, signs it into `installer/dist/OpenCut-Panel-<version>.zxp`, and ships the signed files (with `mimetype` and `META-INF/signatures.xml`) inside the installer. The signature gets a timestamp from DigiCert's server, or from `OPENCUT_CEP_TSA_URL`, so it stays valid after the certificate expires. `scripts/smoke_wpf_installer.ps1` fails unless the installed panel matches its signature file for file and carries that timestamp. The installers still turn on `PlayerDebugMode` until a signed panel has been seen loading in Premiere without it.
+The builder copies the panel without `.debug`, signs it into `installer/dist/OpenCut-Panel-<version>.zxp`, and ships the signed files (with `mimetype` and `META-INF/signatures.xml`) inside the installer. The signature gets a timestamp from DigiCert's server, or from `OPENCUT_CEP_TSA_URL`, so it stays valid after the certificate expires. `scripts/smoke_wpf_installer.ps1` fails unless the installed panel matches its signature file for file and carries that timestamp. Because of that the WPF installer leaves `PlayerDebugMode` off unless you tick its checkbox or pass `--player-debug-mode`. The Inno fallback, `Install.ps1` and `install.py` deploy the unsigned source panel and keep turning it on.
 
 The installer builder publishes the WPF installer itself. If you only changed the installer project and want its exe without the rest, this is the command it runs:
 
