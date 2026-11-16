@@ -1236,6 +1236,7 @@
                         data,
                         t("destructive.preview_failed", "Could not preview this action: {error}")
                     );
+                    if (typeof options.afterPreviewFailed === "function") options.afterPreviewFailed(err, data);
                     return;
                 }
                 var plan = destructivePlanFromResponse(data);
@@ -8913,9 +8914,8 @@
                 showAlert(t("toast.whisper_cache_cleared", "Cache cleared! Cleared {count} location(s). Models will re-download on next use.")
                     .replace("{count}", data.cleared ? data.cleared.length : 0));
             },
-            afterExecute: function () {
-                if (_modelListLoaded) refreshModelList();
-            }
+            // The model list sits in Settings next to this button.
+            afterExecute: refreshModelList
         });
     }
 
@@ -11725,8 +11725,8 @@
     // Model Management
     // ================================================================
     var _modelListDelegationAdded = false;
-    // Set once the model list has been shown, so a cache clear refreshes it.
-    var _modelListLoaded = false;
+    // Counts scans, so one that answers after a newer scan started is dropped.
+    var _modelListScan = 0;
 
     function ensureModelListDelegation() {
         if (_modelListDelegationAdded || !el.modelList) return;
@@ -11753,7 +11753,10 @@
                     showToast(t("models.deleted", "Model deleted"), "success");
                 },
                 // A delete that stopped at a locked file still removed the rest.
-                afterExecute: refreshModelList
+                afterExecute: refreshModelList,
+                // A preview that can't find the model means the row is stale
+                // (the reinstall or Clear cache took it).
+                afterPreviewFailed: refreshModelList
             });
         });
     }
@@ -11766,7 +11769,7 @@
 
     function refreshModelList() {
         if (!el.modelList) return;
-        _modelListLoaded = true;
+        var scan = ++_modelListScan;
         ensureModelListDelegation();
         el.modelList.innerHTML = buildEmptyHintMarkup(
             t("models.scanning_title", "Scanning local models…"),
@@ -11778,7 +11781,10 @@
             t("models.scanning_status", "Scanning local models and checkpoints for the current machine."),
             "working"
         );
-        api("GET", "/models/list", null, function (err, data) {
+        // Its own path, so a scan after a delete never joins one that read the
+        // disk before it (the client merges identical GETs in flight).
+        api("GET", "/models/list?scan=" + scan, null, function (err, data) {
+            if (scan !== _modelListScan) return;
             if (err || !data) {
                 el.modelList.innerHTML = buildEmptyHintMarkup(
                     t("models.inventory_unavailable_title", "Model inventory unavailable"),

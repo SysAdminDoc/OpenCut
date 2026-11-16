@@ -212,6 +212,7 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
   const destructiveTokens = new Map();
   const destructivePreviewCounts = new Map();
   let queueTokenExpired = false;
+  let modelListScans = 0;
   const liveBridgeState = {
     running: true,
     stopOutcomes: [...(backendFixtures.liveBridge?.stopOutcomes || [])],
@@ -761,12 +762,28 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
         ],
       };
       if (method === "GET" && Object.hasOwn(listFixtures, url.pathname)) {
-        if (url.pathname === "/models/list") capturedRequests.push({ modelList: true });
-        return route.fulfill({
+        const isModelList = url.pathname === "/models/list";
+        let listBody = listFixtures[url.pathname];
+        if (isModelList) {
+          capturedRequests.push({ modelList: true });
+          modelListScans += 1;
+          if (backendFixtures.modelListSlowFirst) {
+            // The first scan read the disk before the clear and answers
+            // late. Every later one finds the cache empty.
+            if (modelListScans === 1) {
+              await new Promise((resolve) => setTimeout(resolve, 3000));
+            } else {
+              listBody = { models: [], total_mb: 0 };
+            }
+          }
+        }
+        await route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify(listFixtures[url.pathname]),
+          body: JSON.stringify(listBody),
         });
+        if (isModelList) capturedRequests.push({ modelListAnswered: true });
+        return;
       }
       const destructivePaths = new Set([
         "/presets/delete",
@@ -783,6 +800,14 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
           method,
           body,
         });
+        if (url.pathname === "/models/delete" && backendFixtures.modelDeleteGone) {
+          // Like the server when the model left the disk after the list loaded.
+          return route.fulfill({
+            status: 404,
+            contentType: "application/json",
+            body: JSON.stringify({ error: "Path not found" }),
+          });
+        }
         const definitions = {
           "/presets/delete": {
             operation: "user_data.preset.delete",
@@ -2103,6 +2128,72 @@ test("CEP model list refreshes after a delete that stopped partway", async ({
   await expect(page.locator("#alertText")).toContainText(
     "1 item(s) couldn't be deleted",
   );
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP model list refreshes when the model it shows is already gone", async ({
+  page,
+}) => {
+  const { pageErrors, capturedRequests } = await openSurface(
+    page,
+    "cep",
+    "dark",
+    900,
+    { destructiveProtocol: true, modelDeleteGone: true },
+  );
+  const listCalls = () =>
+    capturedRequests.filter((entry) => entry.modelList).length;
+
+  await page.locator("#navTabSettings").click();
+  await page.locator("#refreshModelsBtn").click();
+  const modelDelete = page.locator(".model-item-delete");
+  await expect(modelDelete).toBeVisible();
+  const listedBefore = listCalls();
+  await modelDelete.click();
+
+  // The preview can't find it, so the row was stale and the list reloads.
+  await expect(page.locator("#alertText")).toContainText("Path not found");
+  await expect.poll(listCalls).toBeGreaterThan(listedBefore);
+  await expect(page.locator(".panel-dialog-overlay")).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP model list drops a slow scan that a cache clear overtook", async ({
+  page,
+}) => {
+  const { pageErrors, capturedRequests } = await openSurface(
+    page,
+    "cep",
+    "dark",
+    900,
+    { destructiveProtocol: true, modelListSlowFirst: true },
+  );
+  const dialog = page.locator(".panel-dialog-overlay[role='dialog']");
+  const listCalls = () =>
+    capturedRequests.filter((entry) => entry.modelList).length;
+  const unanswered = () =>
+    listCalls() - capturedRequests.filter((entry) => entry.modelListAnswered).length;
+
+  // Opening Settings starts a scan that takes 3 seconds to answer.
+  await page.locator("#navTabSettings").click();
+  await expect.poll(listCalls).toBeGreaterThan(0);
+  const listedBefore = listCalls();
+  const clearCache = page.locator("#settingsClearCacheBtn");
+  await clearCache.scrollIntoViewIfNeeded();
+  await clearCache.click();
+  await dialog.getByRole("button", { name: "Clear Cache" }).click();
+  await expect(page.locator("#alertText")).toContainText(
+    "Cleared 1 location(s)",
+  );
+
+  // The clear starts a scan of its own instead of joining the slow one,
+  // and the slow answer, which still lists the model, is dropped.
+  await expect.poll(listCalls).toBeGreaterThan(listedBefore);
+  await expect.poll(unanswered, { timeout: 10000 }).toBe(0);
+  await expect(page.locator("#modelList")).toContainText(
+    "No local models found",
+  );
+  await expect(page.locator(".model-item")).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
 
