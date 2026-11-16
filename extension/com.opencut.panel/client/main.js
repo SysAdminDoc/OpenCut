@@ -2844,83 +2844,19 @@
     }
 
     // Add-ons that also load a model (depth, emotion, CrisperWhisper,
-    // multimodal diarization). The server reports each one's weights under
-    // capabilities.model_weights; when the packages are installed and the
-    // model isn't, the hint says so and its button downloads only the model.
-    function weightsMissing(component) {
-        var mw = capabilities.model_weights;
-        var entry = mw && mw.components ? mw.components[component] : null;
-        return entry && entry.packages && entry.state === "missing" ? entry : null;
-    }
-
-    function weightsDownloadBlocked() {
-        return !!(capabilities.model_weights && capabilities.model_weights.local_only);
-    }
-
-    function weightsHintMessage(entry) {
-        var size = Number(entry.download_mb) || 0;
-        var message = t("install.weights_missing", "{label} is installed, but its model ({size} MB) isn't downloaded yet.")
-            .replace("{label}", entry.label || "")
-            .replace("{size}", size.toLocaleString("en-US"));
-        if (weightsDownloadBlocked()) {
-            message += " " + t(
-                "install.weights_local_only",
-                "Local-only mode blocks the download. Turn it off in Settings to get the model, then turn it back on."
-            );
-        }
-        return message;
-    }
-
-    function hintHasState(hintEl) {
-        for (var i = 0; i < HINT_STATE_CLASSES.length; i++) {
-            if (hintEl.classList.contains(HINT_STATE_CLASSES[i])) return true;
-        }
-        return false;
-    }
-
-    // Puts a hint in the weights-missing state for `entry`, or back to its
-    // markup copy when `entry` is null. A hint showing install progress or
-    // an install error keeps that text.
-    function syncWeightsHint(hintEl, actionBtn, entry, labelKey, labelFallback) {
-        if (!hintEl || hintHasState(hintEl)) return;
-        var copy = getHintCopyNode(hintEl);
-        if (copy) {
-            if (!copy.hasAttribute("data-default-copy")) copy.setAttribute("data-default-copy", copy.textContent);
-            var copyKey = copy.getAttribute("data-i18n");
-            var defaultCopy = copy.getAttribute("data-default-copy");
-            copy.textContent = entry ? weightsHintMessage(entry) : (copyKey ? t(copyKey, defaultCopy) : defaultCopy);
-        }
-        var alt = hintEl.querySelector(".install-alt");
-        if (alt) alt.classList.toggle("hidden", !!entry);
-        if (actionBtn) {
-            actionBtn.textContent = entry ? t("install.download_model", "Download model") : t(labelKey, labelFallback);
-            var blocked = !!entry && weightsDownloadBlocked();
-            actionBtn.classList.toggle("hidden", blocked);
-            actionBtn.disabled = blocked;
-        }
-    }
-
-    // An install of an add-on whose packages are already there fetches only
-    // its model, and success marks the model ready in the cached payload.
-    function weightsInstallConfig(component, config) {
-        var entry = weightsMissing(component);
-        if (entry) {
-            config.payload = { weights_only: true };
-            config.startMessage = t("install.weights_start", "Downloading the {label} model… This may take a while.")
-                .replace("{label}", entry.label || "");
-        }
-        var onSuccess = config.onSuccess;
-        config.onSuccess = function(result, job) {
-            var mw = capabilities.model_weights;
-            var current = mw && mw.components ? mw.components[component] : null;
-            if (current) {
-                current.packages = true;
-                current.state = "ready";
-            }
-            if (typeof onSuccess === "function") onSuccess(result, job);
-        };
-        return config;
-    }
+    // multimodal diarization). capability-status.js reads their weights.
+    var capabilityStatus = OpenCutCapabilityStatus.createCapabilityStatus({
+        getCapabilities: function () { return capabilities; },
+        t: t,
+        getHintCopyNode: getHintCopyNode,
+        hintStateClasses: HINT_STATE_CLASSES
+    });
+    var weightsMissing = capabilityStatus.weightsMissing,
+        weightsDownloadBlocked = capabilityStatus.weightsDownloadBlocked,
+        weightsHintMessage = capabilityStatus.weightsHintMessage,
+        hintHasState = capabilityStatus.hintHasState,
+        syncWeightsHint = capabilityStatus.syncWeightsHint,
+        weightsInstallConfig = capabilityStatus.weightsInstallConfig;
 
     function hideHintState(hintEl, actionBtn) {
         if (!hintEl) return;

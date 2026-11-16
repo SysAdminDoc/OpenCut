@@ -121,7 +121,14 @@ describe("panel controller budgets", () => {
     // the port before dialling cost twelve lines, and moving the tracker into
     // client/ws-bridge-port.js gave five of them back, which is the point of
     // this budget: logic belongs in a module a test can call.
-    ["client/main.js", 18833],
+    // F466 raises the ceiling by thirty-six for add-on model weights. It
+    // first landed a hundred lines in main.js and nothing ran this test. The
+    // decisions (model missing, download blocked, hint text, the weights-only
+    // install) now live in client/capability-status.js. What stays is its
+    // fifteen-line factory wiring, the CrisperWhisper filler-backend choice
+    // between Whisper and a model download (thirteen), and the multimodal,
+    // depth and emotion hint call sites (eight).
+    ["client/main.js", 18869],
     ["client/update-controller.js", 300],
     ["client/results-controller.js", 300],
     ["client/settings-diagnostics-controller.js", 110],

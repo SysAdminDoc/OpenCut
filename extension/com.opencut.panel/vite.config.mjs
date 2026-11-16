@@ -60,6 +60,7 @@ const classicScriptFiles = [
   "navigation-controller.js",
   "collapsible-cards.js",
   "disabled-reasons.js",
+  "capability-status.js",
   "bootstrap.js",
   "transcript-correction-controller.js",
   "main.js",

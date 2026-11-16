@@ -22,6 +22,7 @@ export default [
       "client/navigation-controller.js",
       "client/collapsible-cards.js",
       "client/disabled-reasons.js",
+      "client/capability-status.js",
     ],
     languageOptions: {
       ecmaVersion: 2021,
@@ -38,6 +39,7 @@ export default [
         OpenCutHostWriteVerification: "readonly",
         OpenCutPanelBootstrapToken: "readonly",
         OpenCutWsBridgePort: "readonly",
+        OpenCutCapabilityStatus: "readonly",
         SystemPath: "readonly",
         module: "readonly",
       },
