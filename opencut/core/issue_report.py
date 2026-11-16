@@ -73,11 +73,10 @@ _QUERY_SECRET_NAME = (
     r"x-amz-security-token|x-amz-signature|x-api-key|x-auth-token|"
     r"x-goog-signature|x-opencut-token)"
 )
-_PRIVATE_KEY_RE = re.compile(
-    r"-----BEGIN(?: [A-Z0-9]+)? PRIVATE KEY-----.*?"
-    r"-----END(?: [A-Z0-9]+)? PRIVATE KEY-----",
-    re.IGNORECASE | re.DOTALL,
-)
+# Found separately and paired by _redact_private_keys. One ``BEGIN.*?END``
+# pattern rescanned the rest of the text from every BEGIN with no END.
+_PRIVATE_KEY_BEGIN_RE = re.compile(r"-----BEGIN(?: [A-Z0-9]+)? PRIVATE KEY-----", re.IGNORECASE)
+_PRIVATE_KEY_END_RE = re.compile(r"-----END(?: [A-Z0-9]+)? PRIVATE KEY-----", re.IGNORECASE)
 # ``name: value`` and ``NAME=value`` (a WSGI environ), plus the
 # ``('Name', 'value')`` pair of a header list, with ASGI's bytes too. The
 # pair form needs the opening bracket, so ``['Authorization',
@@ -93,7 +92,7 @@ _SECRET_HEADER_RE = re.compile(
     r"(?P<prefix>(?:(?P<open>\([ \t]*b?[\"'])|(?<![\w-]))(?P<env>http_)?(?:authorization|"
     r"proxy[-_]authorization|x[-_]api[-_]key|x[-_]auth[-_]token|x[-_]opencut[-_]token|"
     r"x[-_]amz[-_]security[-_]token|cookie|set[-_]cookie)"
-    r"(?:[\"']?[ \t]*(?::|(?P<eq>=))|(?(open)[\"'],|(?!)))[ \t]*+(?:b?(?P<vq>[\"']))?)"
+    r"(?:[\"']?[ \t]*(?::|(?P<eq>=))|(?(open)[\"'][ \t]*,|(?!)))[ \t]*+(?:b?(?P<vq>[\"']))?)"
     r"(?P<value>(?(vq)(?:\\.|(?!(?P=vq))[^\r\n\\])*"
     r"|(?(eq)(?(env)[^\r\n]*"
     rf"|(?!{re.escape(REDACTION_MARKER)})(?!(?:true|false|none|null|on|off|yes|no)"
@@ -134,8 +133,9 @@ _QUERY_SECRET_RE = re.compile(
     r"(?P<prefix>(?:[?&;]|&amp;|(?<![^\s\"'(\[,])|key_id=[0-9A-Fa-f]+:|"
     r"label=[^:=&\s\"']*:)"
     rf"{_QUERY_SECRET_NAME}=)"
-    r"(?P<value>(?:[bru]{1,2})?(?P<vq>[\"'])(?:\\.|(?!(?P=vq))[^\r\n\\])*(?P=vq)"
-    r"|[^&#\s\"'<>\r\n]+)",
+    rf"(?P<value>(?!{re.escape(REDACTION_MARKER)})"
+    r"(?:(?:[bru]{1,2})?(?P<vq>[\"'])(?:\\.|(?!(?P=vq))[^\r\n\\])*(?P=vq)"
+    r"|[^&#\s\"'<>\r\n]+))",
     re.IGNORECASE,
 )
 # ``token`` alone is too common a word, so it counts as a secret name when
@@ -145,21 +145,39 @@ _QUERY_SECRET_RE = re.compile(
 # letters and digits in 4 or more (``token:Ab3x``). A logging prefix
 # (``WARNING:root:token: ...``) or a path (``/run/secrets/token: ...``)
 # doesn't hide it. So a parser's ``Unexpected token: punc``, drawtext's
-# ``Token: 5a`` and a namespaced ``app:token:refresh-window`` stay.
+# ``Token: 5a`` and a namespaced ``app:token:refresh-window`` stay. A
+# prefix (``api_token``, ``X-Token``) or a camelCase head (``apiToken``)
+# makes it a credential name too, and so does an attribute assignment
+# (``self.token=``) or ``token = `` with spaces around the sign.
 _TOKEN_NAME = (
-    r"(?:(?(kq)token|(?!))|token(?=[ \t]*[:=][ \t]*(?:[bru]{1,2})?[\"'])"
+    r"(?:(?(kq)token|(?!))|(?(pfx)token|(?!))|(?(camel)token|(?!))"
+    r"|token(?=[ \t]*[:=][ \t]*(?:[bru]{1,2})?[\"'])"
+    r"|(?<=\.)token(?=[ \t]*=(?!=))|token(?=[ \t]+=[ \t])"
     r"|(?<![A-Za-z0-9_-])token(?=[ \t]*:(?:[ \t]+[^\s,;}\]\"']{8}"
     r"|[ \t]*+(?=[^\s,;}\]\"':]{4})(?=[^\s,;}\]\"':]*[0-9])(?=[^\s,;}\]\"':]*[A-Za-z]))))"
 )
-_ASSIGNED_SECRET_RE = re.compile(
-    rf"(?P<prefix>(?P<kq>[\"'])?(?<![A-Za-z0-9_-])_*(?!{_PLAIN_TOKEN_NAME}(?![\w-]))(?:[A-Za-z0-9]+[_-])*"
-    r"(?-i:(?:[a-z0-9]+(?:[A-Z][a-z0-9]+)*?(?=[A-Z]))?)"
+# A secret name and its ``:`` or ``=``, shared by the assignment and
+# container patterns.
+_ASSIGNED_LABEL = (
+    rf"(?P<kq>[\"'])?(?<![A-Za-z0-9_-])_*(?!{_PLAIN_TOKEN_NAME}(?![\w-]))(?P<pfx>(?:[A-Za-z0-9]+[_-])+)?"
+    r"(?-i:(?P<camel>[a-z0-9]+(?:[A-Z][a-z0-9]+)*?(?=[A-Z]))?)"
     rf"(?:{_KNOWN_SECRET_ENV}|{_SECRET_NAME}|{_TOKEN_NAME})\b"
-    r"(?(kq)(?P=kq))[ \t]*(?:(?P<colon>:)|=)[ \t]*+)"
-    # A list value goes whole. A bytes or raw string keeps its quotes.
-    # An unquoted true/false/none/null is a flag (``hasPassword=true``).
-    r"(?P<value>\[[^\[\]\r\n]*\]"
-    rf"|(?:[bru]{{1,2}})?(?P<vq>[\"'])(?!{re.escape(REDACTION_MARKER)})"
+    r"(?(kq)(?P=kq))[ \t]*(?:(?P<colon>:)|=)[ \t]*+"
+)
+# A secret name whose value is a list, a dict, or after ``=`` a call or
+# tuple. _redact_secret_containers removes the value through its closing
+# bracket.
+_SECRET_CONTAINER_RE = re.compile(
+    rf"(?P<prefix>{_ASSIGNED_LABEL})(?=[\[{{]|(?(colon)(?!)|\())",
+    re.IGNORECASE,
+)
+# What a container scan stops at: brackets, quotes, escapes and line ends.
+_CONTAINER_MARK_RE = re.compile(r"[\[\](){}\"'\\\r\n]")
+_ASSIGNED_SECRET_RE = re.compile(
+    rf"(?P<prefix>{_ASSIGNED_LABEL})"
+    # A bytes or raw string keeps its quotes. An unquoted
+    # true/false/none/null is a flag (``hasPassword=true``).
+    rf"(?P<value>(?:[bru]{{1,2}})?(?P<vq>[\"'])(?!{re.escape(REDACTION_MARKER)})"
     r"(?:\\.|(?!(?P=vq))[^\r\n\\])*(?P=vq)"
     rf"|(?![\"']?{re.escape(REDACTION_MARKER)})(?!(?:true|false|none|null)\b)"
     r"(?(colon)[^,;\r\n}\]\"']+|[^\s,;\r\n}\]]+))",
@@ -167,9 +185,10 @@ _ASSIGNED_SECRET_RE = re.compile(
 )
 # A quoted value (``-passphrase "correct horse"``) runs to its closing
 # quote, which stays. In an argument list (``"--api-key", "..."``) the
-# value is the next item, and an empty one is left alone.
+# value is the next item, and an empty one is left alone. FFmpeg's
+# ``-hls_enc_key`` and ``-cookies`` count too.
 _CLI_SECRET_RE = re.compile(
-    rf"(?P<prefix>(?<![\w-])--?(?:[A-Za-z0-9]+[_-])*{_SECRET_NAME}"
+    rf"(?P<prefix>(?<![\w-])--?(?:(?:[A-Za-z0-9]+[_-])*(?:{_SECRET_NAME}|enc[_-]?key)|cookies?)"
     r"(?:(?:=|[ \t]+)(?P<vq>[\"'])?|[\"'],[ \t]*[\"']))"
     r"(?P<value>(?(vq)(?:\\.|(?!(?P=vq))[^\r\n\\])+|[^\s\"']+))",
     re.IGNORECASE,
@@ -289,6 +308,77 @@ def _redact_assigned_value(match: re.Match[str]) -> str:
     return f"{match.group('prefix')}{quote}{REDACTION_MARKER}{quote}"
 
 
+def _redact_private_keys(text: str) -> str:
+    """Replace each PEM private key, BEGIN through the next END, with the
+    marker. A BEGIN with no END after it stays, and so does the rest."""
+    begin = _PRIVATE_KEY_BEGIN_RE.search(text)
+    if begin is None:
+        return text
+    parts = []
+    pos = 0
+    while begin is not None:
+        end = _PRIVATE_KEY_END_RE.search(text, begin.end())
+        if end is None:
+            break
+        parts.append(text[pos:begin.start()])
+        parts.append(REDACTION_MARKER)
+        pos = end.end()
+        begin = _PRIVATE_KEY_BEGIN_RE.search(text, pos)
+    parts.append(text[pos:])
+    return "".join(parts)
+
+
+def _redact_secret_containers(text: str) -> str:
+    """Replace a list, dict, call or tuple under a secret name with the
+    marker, through its matching close (``password=[['a'], ['S']]``,
+    ``{'password': ['x]y', 'S']}``). One that doesn't close on its line
+    is redacted to the end of the line."""
+    if "[" not in text and "{" not in text and "(" not in text:
+        return text
+    match = _SECRET_CONTAINER_RE.search(text)
+    if match is None:
+        return text
+    parts = []
+    pos = 0
+    while match is not None:
+        parts.append(text[pos:match.start()])
+        parts.append(match.group("prefix"))
+        parts.append(REDACTION_MARKER)
+        pos = _container_end(text, match.end())
+        match = _SECRET_CONTAINER_RE.search(text, pos)
+    parts.append(text[pos:])
+    return "".join(parts)
+
+
+def _container_end(text: str, start: int) -> int:
+    """Index just past the bracket that closes the one at ``start``,
+    skipping brackets inside quoted strings, or the end of the line."""
+    depth = 0
+    quote = ""
+    pos = start
+    while True:
+        mark = _CONTAINER_MARK_RE.search(text, pos)
+        if mark is None:
+            return len(text)
+        char = mark.group(0)
+        pos = mark.end()
+        if char in "\r\n":
+            return mark.start()
+        if char == "\\":
+            pos += 1
+        elif quote:
+            if char == quote:
+                quote = ""
+        elif char in "\"'":
+            quote = char
+        elif char in "[({":
+            depth += 1
+        else:
+            depth -= 1
+            if depth == 0:
+                return pos
+
+
 def _redact_sensitive_text(text: str) -> str:
     """Redact common secrets and home paths from diagnostic text.
 
@@ -304,7 +394,7 @@ def _redact_sensitive_text(text: str) -> str:
     if not text:
         return text
 
-    redacted = _PRIVATE_KEY_RE.sub(REDACTION_MARKER, str(text))
+    redacted = _redact_private_keys(str(text))
     return "\n".join(_redact_line(line) for line in redacted.split("\n"))
 
 
@@ -340,29 +430,25 @@ def _encode_like(value: Any, original: Any, encoded: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
-def _redact_structure(value: Any) -> Any:
-    """Redact a decoded JSON value: secret-named keys lose their value,
-    and every string is redacted as plain text."""
+def _redact_structure(value: Any, secret: bool = False) -> Any:
+    """Redact a decoded JSON value: every non-empty string under a
+    secret-named key, at any depth, is replaced, and every other string
+    is redacted as plain text. Numbers, booleans and keys stay."""
     if isinstance(value, dict):
         out = {}
         for key, item in value.items():
             name = _redact_plain_text(key) if isinstance(key, str) else key
             snake = _CAMEL_BOUNDARY_RE.sub("_", str(key))
-            secret = bool(_SECRET_KEY_RE.search(snake)) and not _PLAIN_TOKEN_KEY_RE.fullmatch(snake)
-            if secret and isinstance(item, str) and item:
-                out[name] = REDACTION_MARKER
-            elif secret and isinstance(item, list):
-                # A list of secrets (``"password": ["..."]``) loses each string.
-                out[name] = [
-                    REDACTION_MARKER if isinstance(entry, str) and entry else _redact_structure(entry)
-                    for entry in item
-                ]
-            else:
-                out[name] = _redact_structure(item)
+            key_secret = secret or (
+                bool(_SECRET_KEY_RE.search(snake)) and not _PLAIN_TOKEN_KEY_RE.fullmatch(snake)
+            )
+            out[name] = _redact_structure(item, key_secret)
         return out
     if isinstance(value, list):
-        return [_redact_structure(item) for item in value]
+        return [_redact_structure(item, secret) for item in value]
     if isinstance(value, str):
+        if secret and value:
+            return REDACTION_MARKER
         return _redact_plain_text(value)
     return value
 
@@ -401,7 +487,8 @@ def _redact_escaped_token(match: re.Match[str]) -> str:
 
 def _redact_unescaped(text: str) -> str:
     redacted = _scrub_paths(text)
-    redacted = _PRIVATE_KEY_RE.sub(REDACTION_MARKER, redacted)
+    redacted = _redact_private_keys(redacted)
+    redacted = _redact_secret_containers(redacted)
     redacted = _SECRET_HEADER_RE.sub(_redact_match_value, redacted)
     redacted = _URL_USERINFO_RE.sub(_redact_url_userinfo, redacted)
     redacted = _QUERY_SECRET_RE.sub(_redact_match_value, redacted)

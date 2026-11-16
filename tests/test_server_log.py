@@ -559,7 +559,24 @@ def test_a_list_under_a_secret_key_loses_its_strings():
     from opencut.core.issue_report import REDACTION_MARKER, _redact_structure
 
     out = _redact_structure({"password": ["LeakList38", {"note": "ok"}], "clips": ["a.mp4"]})
-    assert out == {"password": [REDACTION_MARKER, {"note": "ok"}], "clips": ["a.mp4"]}
+    assert out == {"password": [REDACTION_MARKER, {"note": REDACTION_MARKER}], "clips": ["a.mp4"]}
+
+
+def test_every_string_under_a_secret_key_is_redacted_at_any_depth():
+    from opencut.core.issue_report import REDACTION_MARKER, _redact_structure
+
+    out = _redact_structure(
+        {
+            "password": [["LeakNested01"]],
+            "secret": {"current": "LeakNested02", "previous": ["LeakNested03"], "count": 3, "empty": ""},
+            "clips": [["a.mp4"]],
+        }
+    )
+    assert out == {
+        "password": [[REDACTION_MARKER]],
+        "secret": {"current": REDACTION_MARKER, "previous": [REDACTION_MARKER], "count": 3, "empty": ""},
+        "clips": [["a.mp4"]],
+    }
 
 
 def test_redacting_long_lines_stays_fast():
@@ -934,3 +951,99 @@ def test_a_query_secret_holding_an_at_sign_is_redacted_whole(line, kept):
     from opencut.core.issue_report import _redact_sensitive_text
 
     assert _redact_sensitive_text(line) == kept
+
+
+# Shapes the redactor had never matched: token names with a prefix, a
+# camelCase head or an attribute dot, values that are lists, nested lists
+# or dicts, a header pair with spaces around its comma, and two FFmpeg
+# options.
+_SIXTH_REVIEW_LEAKS = {
+    "token name with a prefix": ("api_token: {}", "LeakH01"),
+    "camelCase token name": ("apiToken: {}", "LeakH02"),
+    "header-style token name": ("X-Api-Token: {}", "LeakH03"),
+    "short header-style token name": ("X-Token: {}", "LeakH04"),
+    "attribute token": ("self.token={}", "LeakH05"),
+    "spaced token assignment": ("token = {}", "LeakH06"),
+    "list value": ("password=['{}']", "LeakH07"),
+    "list value inside a call": ("Namespace(password=['{}'])", "LeakH08"),
+    "double-quoted list value": ('secret=["{}"]', "LeakH09"),
+    "list holding a bracket in a string": ("{{'password': ['x]y', '{}']}}", "LeakH10"),
+    "nested list value": ("password=[['a'], ['{}']]", "LeakH11"),
+    "JSON nested list": ('{{"password": [["{}"]]}}', "LeakH12"),
+    "JSON dict under a secret key": ('{{"password": {{"current": "{}"}}}}', "LeakH13"),
+    "header pair with spaced comma": ("( 'X-Auth-Token' , '{}' )", "LeakH14"),
+    "FFmpeg HLS key": ("ffmpeg -i in.mp4 -hls_enc_key {} out.m3u8", "LeakH15"),
+    "FFmpeg cookies": ('ffmpeg -cookies "sessionid={}; path=/" -i https://h/a.m3u8', "LeakH16"),
+}
+
+
+@pytest.mark.parametrize("name", sorted(_SIXTH_REVIEW_LEAKS))
+def test_sixth_review_credential_forms_are_redacted(name):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    template, secret = _SIXTH_REVIEW_LEAKS[name]
+    line = template.format(secret)
+    assert secret in line
+    json_line = json.dumps({"level": "WARNING", "message": f"job-1 {line}"})
+
+    assert secret not in _redact_sensitive_text(line)
+    assert secret not in _redact_sensitive_text(json_line)
+
+
+@pytest.mark.parametrize(
+    ("line", "kept"),
+    [
+        ("Namespace(password=['LeakH17'], verbose=True)", "Namespace(password=[REDACTED], verbose=True)"),
+        ("{'password': ['x]y', 'LeakH18'], 'clip': 'a.mp4'}", "{'password': [REDACTED], 'clip': 'a.mp4'}"),
+        ("opts password=[['a'], ['LeakH19']] codec=h264", "opts password=[REDACTED] codec=h264"),
+        ("cfg secret={'current': 'LeakH20'} next", "cfg secret=[REDACTED] next"),
+        ("cfg password=['LeakH21', 'unclosed", "cfg password=[REDACTED]"),
+    ],
+)
+def test_a_secret_container_is_redacted_whole_and_the_rest_kept(line, kept):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    assert _redact_sensitive_text(line) == kept
+
+
+@pytest.mark.parametrize(
+    "ordinary",
+    [
+        "max_tokens: 512",
+        "self.tokenizer=bpe",
+        "X-Token-Count: 5",
+        "if self.token == other:",
+        "yt-dlp --cookies-from-browser firefox https://example.com/v",
+        "ffmpeg -hls_enc_key_url https://keys.example.com/k -i in.mp4",
+        "CORS allow_headers=['Authorization', 'Content-Type']",
+        "loaded tokens=['<s>', '</s>'] from vocab",
+        "nextPageToken: CAoQAA",
+    ],
+)
+def test_sixth_review_ordinary_text_is_left_alone(ordinary):
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    assert _redact_sensitive_text(ordinary) == ordinary
+    wrapped = json.dumps({"message": ordinary})
+    assert json.loads(_redact_sensitive_text(wrapped)) == {"message": ordinary}
+
+
+def test_a_line_of_private_key_headers_redacts_fast():
+    """``BEGIN.*?END`` rescanned the rest of the line from every header,
+    about 1.7 seconds on a line of repeated headers with no END."""
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    line = "-----BEGIN PRIVATE KEY-----" * 7_500
+    assert len(line) > 200_000
+    for text in (line, json.dumps({"message": line})):
+        start = time.perf_counter()
+        _redact_sensitive_text(text)
+        assert time.perf_counter() - start < 0.5
+
+
+def test_private_keys_are_still_redacted_between_their_markers():
+    from opencut.core.issue_report import _redact_sensitive_text
+
+    key = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowLeakKey99\n-----END RSA PRIVATE KEY-----"
+    text = f"a {key} b {key} c -----BEGIN PRIVATE KEY----- no end"
+    assert _redact_sensitive_text(text) == "a [REDACTED] b [REDACTED] c -----BEGIN PRIVATE KEY----- no end"
