@@ -39,6 +39,12 @@ The scaffold follows the current Bolt UXP WebView split:
 - `webview-ui/src/webview-api.ts` contains functions the UXP host can call back
   into the WebView.
 
+There's no Bolt build here yet, so a strict type check stands in for one. Run
+`npm run typecheck:bolt` from `extension/com.opencut.panel` (after `npm ci`
+there). It compiles every file in this folder against Adobe's published
+`@adobe/premierepro` declarations, and `tests/test_uxp_webview_scaffold.py`
+runs the same check.
+
 Cutover sequence:
 
 1. Move the existing panel HTML/CSS/JS into `webview-ui/` without rewriting the

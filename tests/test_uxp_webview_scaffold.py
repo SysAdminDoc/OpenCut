@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 UXP_ROOT = REPO_ROOT / "extension" / "com.opencut.uxp"
@@ -84,6 +88,33 @@ def test_f252_webview_bridge_uses_uxp_host_postmessage():
     assert "opencut:host-call" in setup
     assert "pingWebview" in api
     assert "updateColorScheme" in api
+
+
+PANEL_ROOT = REPO_ROOT / "extension" / "com.opencut.panel"
+TSC = PANEL_ROOT / "node_modules" / "typescript" / "bin" / "tsc"
+
+
+def test_f252_scaffold_type_checks_against_the_premiere_typings():
+    """The scaffold has no Bolt build of its own, so strict tsc is its build.
+
+    It compiles against Adobe's published `@adobe/premierepro` declarations,
+    which is what catches a host API the scaffold calls with the wrong shape.
+    """
+    node = shutil.which("node")
+    if node is None or not TSC.is_file():
+        pytest.skip("run npm ci in extension/com.opencut.panel to type-check the scaffold")
+    result = subprocess.run(
+        [node, str(TSC), "-p", str(SCAFFOLD / "tsconfig.json")],
+        capture_output=True,
+        text=True,
+        timeout=240,
+        check=False,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    package = json.loads(_read(PANEL_ROOT / "package.json"))
+    assert "bolt-webview/tsconfig.json" in package["scripts"]["typecheck:bolt"]
+    assert package["devDependencies"]["typescript"]
 
 
 def test_f252_docs_record_dormant_scaffold_and_cutover():

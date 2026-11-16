@@ -84,6 +84,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - Eight silence, scene and audio tests pass when their file runs on its own. They mock `subprocess.run`, the FFmpeg security check ran through that mock, and it raised a `TypeError` on the mock's output. The check now grades output it can't read as an unknown build and refuses it, and the tests skip the check, which has tests of its own.
 - The panel parity and feature readiness checks pass again. A scan number added to the model list's request hid its `/models/list` call from the parity scan, and the readiness manifest hadn't been regenerated since the auto-editor hint and the NLLB probe moved.
 - The declared-versions check no longer excuses an old transformers. The declared stack, transformers 5.10 or newer on huggingface-hub 1.x, installs cleanly now, so an older transformers fails the check like any other mismatch.
+- The dormant Bolt WebView scaffold for the UXP panel is type-checked now. `npm run typecheck:bolt` in the CEP panel folder compiles it in strict mode against Adobe's published Premiere typings, and the Python suite runs the same check, so a host call with the wrong shape fails before the WebView cutover instead of inside Premiere.
 
 ### Release builds
 

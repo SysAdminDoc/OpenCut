@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": [],
+    "paths": {
+      "premierepro": ["../../com.opencut.panel/node_modules/@adobe/premierepro/src/premierepro.d.ts"]
+    }
+  },
+  "include": ["uxp.config.ts", "src/**/*.ts", "webview-ui/src/**/*.ts"]
+}
