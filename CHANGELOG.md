@@ -103,6 +103,8 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - `npm run lint` in the CEP panel checks every file in `client/` now. The script and the ESLint config each kept their own hand-written list, so twelve modules (the format, string, lookup and i18n helpers split out of `main.js` among them) never ran through `npm run lint`, and five more were linted with no rules switched on. Both use a `client/*.js` glob now, with Adobe's vendored `CSInterface.js` left out. All 34 files pass.
 - The faster-whisper GPU test no longer depends on which tests ran before it. The `/health` CPU mode tests left Whisper's CPU mode switched on in the home folder the whole run shares, so a later test on the same worker got the CPU. Those tests put the settings file back now, and the GPU test turns CPU mode off for itself.
 - The fresh-clone check leaves files under `node_modules` alone. `npm ci` installs them from the tracked lockfile, and the scaffold type-check test that runs the TypeScript compiler from there skips until it has, but the check failed on any machine where the panel's packages were installed.
+- The UXP Search page screenshot test has a current baseline with the new "Search by" row. The old picture was from 1.54.0, before that row existed, so the test failed on every run.
+- The live bridge stop tests hold the backend's answer until the test has seen the panel's "stopping" state. A fixed 150 ms delay let a slow run miss that state and fail.
 
 ### Release builds
 

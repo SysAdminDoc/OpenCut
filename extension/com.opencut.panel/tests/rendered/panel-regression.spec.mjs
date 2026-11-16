@@ -682,9 +682,9 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
       }
       if (url.pathname === "/ws/stop" && method === "POST") {
         capturedRequests.push({ liveBridgeStop: true });
-        await new Promise((resolve) =>
-          setTimeout(resolve, backendFixtures.liveBridge.stopDelayMs || 0),
-        );
+        // The test says when the backend answers. A fixed delay let a slow
+        // run miss the panel's "stopping" state, which lasted only 150 ms.
+        await backendFixtures.liveBridge.holdStop?.();
         const outcome = liveBridgeState.stopOutcomes.shift() || "success";
         if (outcome === "fail") {
           return route.fulfill({
@@ -3249,6 +3249,14 @@ for (const surfaceName of ["cep", "uxp"]) {
     page,
   }) => {
     const width = surfaceName === "cep" ? 900 : 520;
+    // Each /ws/stop waits here until the test releases it. The route makes
+    // a fresh hold in the same tick it records the request, so once the
+    // count reaches n, releaseStop belongs to request n.
+    let releaseStop = () => {};
+    const holdStop = () =>
+      new Promise((resolve) => {
+        releaseStop = resolve;
+      });
     const { surface, pageErrors, capturedRequests } = await openSurface(
       page,
       surfaceName,
@@ -3256,11 +3264,21 @@ for (const surfaceName of ["cep", "uxp"]) {
       width,
       {
         liveBridge: {
-          stopDelayMs: 150,
+          holdStop,
           stopOutcomes: ["fail", "success"],
         },
       },
     );
+    const answerStop = async (count) => {
+      await expect
+        .poll(
+          () =>
+            capturedRequests.filter((request) => request.liveBridgeStop)
+              .length,
+        )
+        .toBe(count);
+      releaseStop();
+    };
     await page
       .locator(`${surface.tabSelector}[${surface.tabAttribute}='settings']`)
       .click();
@@ -3304,6 +3322,7 @@ for (const surfaceName of ["cep", "uxp"]) {
     await expect(stop).toBeDisabled();
     await expect(status).toContainText(/connected/i);
     await expect(hint).toContainText(/stopping/i);
+    await answerStop(1);
     await expect(hint).toContainText(/still connected/i);
     await expect(errorToast).toContainText(/still connected/i);
     await expect(stop).toBeEnabled();
@@ -3312,6 +3331,7 @@ for (const surfaceName of ["cep", "uxp"]) {
     await stop.click();
     await expect(stop).toBeDisabled();
     await expect(status).toContainText(/connected/i);
+    await answerStop(2);
     await expect(successToast).toContainText(/bridge stopped/i);
     await expect(status).toContainText(/bridge stopped/i);
     await expect
