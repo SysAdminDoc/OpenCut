@@ -73,14 +73,21 @@ pyinstaller opencut_server.spec
 ```
 
 ### Windows Installer
-The WPF installer is the recommended path. It requires the .NET SDK, the
-PyInstaller server payload, and `ffmpeg/ffmpeg.exe` + `ffprobe.exe` in the
-project root:
+The WPF installer is the recommended path, and one command builds it. You need the .NET 10 SDK, Node.js, and the pinned FFmpeg build in `ffmpeg/ffmpeg.exe` and `ffmpeg/ffprobe.exe` (the package URL and hash are in `installer/InstallerBuilder.ps1`):
 
 ```powershell
-pyinstaller opencut_server.spec
-dotnet publish installer/src/OpenCut.Installer/OpenCut.Installer.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+pwsh -NoProfile -File scripts/build_release.ps1
 ```
+
+It makes `build/release-venv` from `requirements-release-lock.txt` and `requirements-build-lock.txt` with `--require-hashes`, and reuses it until either lock changes. Then it builds the panel bundle, freezes the server with PyInstaller and runs `installer/InstallerBuilder.ps1` with that Python. The installer and `payload.zip` land in `installer/dist/`. Pass `-SkipPanel` to keep an existing panel bundle, or `-RecreateVenv` to start the environment over.
+
+The installer builder publishes the WPF installer itself. If you only changed the installer project and want its exe without the rest, this is the command it runs:
+
+```powershell
+dotnet publish installer/src/OpenCut.Installer/OpenCut.Installer.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
+```
+
+Don't build a release with your everyday Python. Anything else installed there either ends up in the bundle or stops the build (PyInstaller quits when it finds two Qt bindings), and the installer's composition check wants an exact lock match.
 
 The Inno Setup fallback remains available for local recovery builds:
 

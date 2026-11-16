@@ -18,6 +18,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Release builds
 
+- `scripts/build_release.ps1` builds the Windows release in one command. It makes `build/release-venv` from the two hashed locks and keeps reusing it until a lock changes, then builds the panel, freezes the server and runs the installer builder with that Python. A machine-wide Python with PyQt6 and PySide6 both installed used to stop PyInstaller outright.
 - Release checks now run the whole test suite as a required `pytest-full` step, using the FFmpeg build in `ffmpeg/`. The gate used to run a fixed list of 115 tests, which is how 1.56.0 shipped with the OTIOZ and DRM key failures above still failing elsewhere in the suite. The step takes about four minutes on four workers and needs around 5 GB of memory.
 - `scripts/sync_badges.py` keeps `README.md` on LF line endings. On Windows it wrote every line back with CRLF, against the LF rule in `.gitattributes`.
 - The installer's release composition now reads `opencut` from the checkout being packaged. It used to import whatever copy the build Python had installed, so a clean build environment failed with "No module named 'opencut'" and an editable install from another folder put that folder's code into the evidence.
