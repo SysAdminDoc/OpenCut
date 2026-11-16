@@ -452,11 +452,14 @@ def test_faster_whisper_keeps_the_gpu_when_only_torch_lacks_kernels(
     import sys
 
     import opencut.core.captions as captions
+    import opencut.user_data as user_data
     from opencut.utils.config import CaptionConfig
 
     gpu_module, module = _blackwell_machine(monkeypatch, configured=configured)
     module.cuda.empty_cache = lambda: None
     monkeypatch.setitem(sys.modules, "torch", module)
+    # CPU mode on would skip the GPU before the code under test runs.
+    monkeypatch.setattr(user_data, "load_whisper_settings", lambda: {"cpu_mode": False})
     calls = []
 
     class FakeWhisperModel:

@@ -6,8 +6,32 @@ cache ran out, so the panel redrew the Whisper card from stale state.
 """
 
 import json
+import os
+
+import pytest
 
 from tests.conftest import csrf_headers
+
+
+@pytest.fixture(autouse=True)
+def _restore_whisper_settings():
+    """Both CPU mode tests end with it saved on, in the home every later test
+    on this worker shares. Left there, it sent the next faster-whisper test
+    to the CPU, so put the file back the way the test found it."""
+    from opencut import user_data
+
+    path = user_data._safe_user_filepath("whisper_settings.json")
+    before = None
+    if os.path.isfile(path):
+        with open(path, "rb") as handle:
+            before = handle.read()
+    yield
+    if before is None:
+        if os.path.exists(path):
+            os.unlink(path)
+    else:
+        with open(path, "wb") as handle:
+            handle.write(before)
 
 
 def _caps(client):
