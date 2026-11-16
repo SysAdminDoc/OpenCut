@@ -75,7 +75,8 @@ def test_every_documented_site_names_the_canonical_index(relative):
 def test_the_flashvsr_hint_names_the_documented_lane():
     from opencut.core.upscale_flashvsr import INSTALL_HINT
 
-    assert INSTALL_HINT.endswith(CUDA_WHEEL_INDEX_URL)
+    assert f"--index-url {CUDA_WHEEL_INDEX_URL} " in INSTALL_HINT
+    assert f"({CUDA_WHEEL_INDEX} is the default CUDA 13 build. It needs NVIDIA driver 580 " in INSTALL_HINT
 
 
 def test_no_stale_index_survives_anywhere_in_the_shipped_docs():

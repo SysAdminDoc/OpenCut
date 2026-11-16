@@ -24,7 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, List, Optional
 
-from opencut.gpu_lanes import DEFAULT_TORCH_INDEX, torch_index_url
+from opencut.gpu_lanes import CUDA_DRIVER_FLOOR, DEFAULT_TORCH_INDEX, TORCH_LANES, torch_index_url
 from opencut.helpers import _try_import
 
 
@@ -54,8 +54,12 @@ def check_flashvsr_available() -> bool:
     return _try_import("flashvsr") is not None and _try_import("torch") is not None
 
 
+_DEFAULT_CUDA = TORCH_LANES[DEFAULT_TORCH_INDEX].cuda_major
+
 INSTALL_HINT = (
-    f"pip install flashvsr torch --index-url {torch_index_url(DEFAULT_TORCH_INDEX)}"
+    f"pip install flashvsr torch --index-url {torch_index_url(DEFAULT_TORCH_INDEX)} "
+    f"({DEFAULT_TORCH_INDEX} is the default CUDA {_DEFAULT_CUDA} build. It needs NVIDIA "
+    f"driver {CUDA_DRIVER_FLOOR[_DEFAULT_CUDA]} or newer and a Turing or newer GPU.)"
 )
 
 

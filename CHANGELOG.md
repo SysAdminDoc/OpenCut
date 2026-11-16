@@ -25,6 +25,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - `OpenCut-Server.exe --remove-tools edge-tts` takes an optional tool back out. edge-tts and mediapipe leave the add-on packages folder along with the packages only they needed, while anything another add-on still uses, or that you installed for itself, stays. If something else still needs a package you named, nothing changes and the message says what needs it. A removal waits for a running install to finish, and one that stops partway puts everything back.
 - The setup's Optional Tools step names the Python that edge-tts and mediapipe need by asking the server it ships. The build runs `OpenCut-Server.exe --python-requirement` and the page reads the answer from its payload, so it stays right when the bundled Python changes. Before, the page had "Python 3.13" typed into it.
 - When auto-editor is missing, the panel's hint now says to run `OpenCut-Server.exe --install-tools auto-editor`, the same as the model docs. It used to suggest `pip install auto-editor`, which gets the old 29.x release into a Python the packaged server never loads.
+- The FlashVSR install hint says its PyTorch command is the default cu132 build and that it needs NVIDIA driver 580 or newer and a Turing or newer GPU, so someone on an older card knows it isn't theirs.
 
 ### Fixed
 
