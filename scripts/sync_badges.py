@@ -233,7 +233,7 @@ def cmd_sync() -> int:
         else:
             print(f"  OK   {target.label}")
     if changed_any and text != original:
-        README.write_text(text, encoding="utf-8")
+        README.write_text(text, encoding="utf-8", newline="\n")
         print(f"\nWrote {README.relative_to(ROOT)}.")
     else:
         print(f"\nNo changes needed in {README.relative_to(ROOT)}.")

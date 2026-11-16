@@ -152,5 +152,34 @@ class TestBadgeCheckCLI(unittest.TestCase):
             self.assertIn("Caption feature style count", result.stderr)
 
 
+class TestBadgeSyncWrite(unittest.TestCase):
+
+    def test_sync_keeps_the_readme_on_lf(self):
+        """A text-mode write turned every README line ending into CRLF on Windows."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp) / "opencut"
+            _copy_minimal_sync_tree(tmp_path)
+            readme_path = tmp_path / "README.md"
+            readme = readme_path.read_bytes().replace(b"\r\n", b"\n").decode("utf-8")
+            current = _load_module().ROUTE_BADGE_RE.search(readme).group(2)
+            readme_path.write_bytes(
+                readme.replace(f"/API%20Routes-{current}-orange", "/API%20Routes-99-orange")
+                .encode("utf-8")
+            )
+
+            result = subprocess.run(
+                [sys.executable, str(tmp_path / "scripts" / "sync_badges.py")],
+                cwd=tmp_path,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            written = readme_path.read_bytes()
+            self.assertIn(f"/API%20Routes-{current}-orange".encode(), written)
+            self.assertEqual(written.count(b"\r\n"), 0)
+
+
 if __name__ == "__main__":
     unittest.main()
