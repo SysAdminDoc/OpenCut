@@ -158,9 +158,30 @@ class TestNewerReleaseIsNotAssumedFixed:
     def test_a_later_tag_inherits_an_earlier_tags_backport(self):
         """Release branches only grow, so 8.1.4 descends from 8.1.3."""
         advisory = fp.SECURITY_ADVISORIES[0]
-        accepted, why = fp._grade_newer_release(advisory, (8, 1, 4))
-        assert accepted is True
-        assert "descends from 8.1.3" in why
+        graded = fp.grade_advisory(advisory, fp.parse_version_banner("ffmpeg version 8.1.4 Copyright"))
+        assert graded["status"] == "fixed"
+        assert "descends from 8.1.3" in graded["reason"]
+
+    def test_a_backport_into_an_older_series_counts_below_the_ceiling(self):
+        """The November advisories reach 9.0.2, so 8.1.x sits under the ceiling.
+
+        A recorded 8.1.4 backport is still evidence for 8.1.4 and its later
+        tags, and says nothing about 8.1.3 or the 9.0 branch.
+        """
+        advisory = next(a for a in fp.SECURITY_ADVISORIES if a.cve == "CVE-2026-125064")
+        assert advisory.affected_max_release == (9, 0, 2)
+        backported = dataclasses.replace(advisory, backported_in=((8, 1, 4),))
+
+        def status(version):
+            rec = fp.parse_version_banner(f"ffmpeg version {version} Copyright (c) 2000-2026")
+            return fp.grade_advisory(backported, rec)
+
+        assert status("8.1.4")["status"] == "fixed"
+        assert "backport" in status("8.1.4")["reason"]
+        assert "descends from 8.1.4" in status("8.1.5")["reason"]
+        assert status("8.1.3")["status"] == "vulnerable"
+        assert status("9.0.1")["status"] == "vulnerable"
+        assert status("9.0.2")["status"] == "vulnerable"
 
     def test_an_earlier_tag_does_not_inherit_a_later_backport(self):
         advisory = fp.SECURITY_ADVISORIES[0]

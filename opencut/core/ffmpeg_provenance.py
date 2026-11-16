@@ -600,6 +600,34 @@ def _series(version: tuple[int, int, int]) -> tuple[int, int]:
     return (version[0], version[1])
 
 
+def _recorded_backport(advisory: CveAdvisory, release: tuple[int, int, int]) -> str:
+    """Why a recorded backport covers *release*, or ``""`` when none does.
+
+    A tag in ``backported_in`` covers itself and the later tags of its series,
+    which descend from it because release branches only grow. This holds below
+    ``affected_max_release`` too: that ceiling spans every series, so a fix
+    picked onto 8.1 after the advisory named 9.0.2 is still a fix.
+    """
+    carrier = max(
+        (
+            tag
+            for tag in advisory.backported_in
+            if _series(tag) == _series(release) and tag <= release
+        ),
+        default=None,
+    )
+    if carrier is None:
+        return ""
+    version = ".".join(map(str, release))
+    if carrier == release:
+        return f"release {version} is recorded as carrying a backport of {advisory.fix_commit[:10]}"
+    return (
+        f"release {version} descends from {'.'.join(map(str, carrier))} on the "
+        f"{release[0]}.{release[1]} branch, which is recorded as carrying a backport of "
+        f"{advisory.fix_commit[:10]}"
+    )
+
+
 def _grade_newer_release(
     advisory: CveAdvisory,
     release: tuple[int, int, int],
@@ -616,25 +644,9 @@ def _grade_newer_release(
     """
     version = ".".join(map(str, release))
     series = f"{release[0]}.{release[1]}"
-    carrier = max(
-        (
-            tag
-            for tag in advisory.backported_in
-            if _series(tag) == _series(release) and tag <= release
-        ),
-        default=None,
-    )
-    if carrier == release:
-        return True, (
-            f"release {version} is recorded as carrying a backport of "
-            f"{advisory.fix_commit[:10]}"
-        )
-    if carrier is not None:
-        return True, (
-            f"release {version} descends from {'.'.join(map(str, carrier))} on the "
-            f"{series} branch, which is recorded as carrying a backport of "
-            f"{advisory.fix_commit[:10]}"
-        )
+    backport = _recorded_backport(advisory, release)
+    if backport:
+        return True, backport
 
     branch_point = RELEASE_BRANCH_POINTS.get(_series(release))
     if branch_point and branch_point >= advisory.fix_landed:
@@ -701,6 +713,11 @@ def grade_advisory(
         )
     elif rec.get("release"):
         release = rec["release"]
+        backport = _recorded_backport(advisory, release)
+        if backport:
+            entry["status"] = "fixed"
+            entry["reason"] = backport
+            return entry
         if advisory.affected_max_release is None or release > advisory.affected_max_release:
             verdict, why = _grade_newer_release(advisory, release)
             if verdict:
