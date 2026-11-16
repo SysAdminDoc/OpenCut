@@ -139,7 +139,8 @@ function Assert-CepPanelSignature {
     if ($result.ExitCode -ne 0 -or $result.Output -notmatch "Signature verified successfully") {
         throw "CEP signature check failed for ${Path} (exit $($result.ExitCode)): $($result.Output)"
     }
-    if ($RequireTimestamp -and $result.Output -notmatch "(?m)^Timestamp:\s*Valid") {
+    # "Valid timestamp, but outside certificate validity dates" also starts with Valid.
+    if ($RequireTimestamp -and $result.Output -notmatch "(?m)^Timestamp:\s*Valid and within certificate validity dates") {
         throw "CEP signature for ${Path} has no valid timestamp: $($result.Output)"
     }
     return $result.Output

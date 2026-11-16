@@ -167,6 +167,40 @@ def test_require_timestamp_rejects_an_untimestamped_signature(signed_panel):
     assert "no valid timestamp" in result.stdout
 
 
+def _fake_zxpsigncmd(tmp_path: Path, timestamp_line: str) -> Path:
+    # ZXPSignCmd 4.1.3 prints one of three states after "Timestamp: ". A DigiCert
+    # timestamped panel verified on 2026-11-15 printed the first one.
+    tool = tmp_path / "fake-zxpsigncmd.cmd"
+    tool.write_text(
+        f"@echo off\r\necho Timestamp: {timestamp_line}\r\necho Signature verified successfully\r\n",
+        encoding="ascii",
+    )
+    return tool
+
+
+@pytest.mark.parametrize(
+    ("timestamp_line", "accepted"),
+    [
+        ("Valid and within certificate validity dates at time of signing", True),
+        ("Valid timestamp, but outside certificate validity dates", False),
+        ("Invalid timestamp", False),
+    ],
+)
+def test_require_timestamp_accepts_only_an_in_validity_timestamp(tmp_path, timestamp_line, accepted):
+    tool = _fake_zxpsigncmd(tmp_path, timestamp_line)
+    result = _ps(
+        "try { Assert-CepPanelSignature -Path $env:OC_PATH -RequireTimestamp -ZxpSignCmd $env:OC_TOOL | Out-Null; "
+        "'VERIFIED' } catch { 'ERROR: ' + $_.Exception.Message; exit 3 }",
+        OC_PATH=str(tmp_path),
+        OC_TOOL=str(tool),
+    )
+    if accepted:
+        assert "VERIFIED" in result.stdout, result.stdout + result.stderr
+    else:
+        assert result.returncode == 3, result.stdout + result.stderr
+        assert "no valid timestamp" in result.stdout
+
+
 def test_signing_refuses_the_debug_port_file(tmp_path, certificate):
     panel = _make_panel(tmp_path)
     (panel / ".debug").write_text("<ExtensionList/>\n", encoding="utf-8")
