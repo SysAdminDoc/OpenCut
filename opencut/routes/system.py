@@ -143,16 +143,33 @@ def _path_size_bytes(path: str) -> tuple[int, list[str]]:
 
 
 def _delete_cache_target(path: str) -> tuple[bool, str | None]:
-    """Delete one planned cache target and return a per-path error when it fails."""
+    """Delete one planned cache target and return a per-path error when it fails.
+
+    A file something still has open (Windows locks a loaded model) mustn't
+    stop the rest of the folder going, so the delete carries on past it and
+    reports what stayed.
+    """
+    failures: list[str] = []
+
+    def _note(_func, failed_path, exc):
+        if isinstance(exc, tuple):  # 3.11's onerror passes exc_info
+            exc = exc[1]
+        failures.append(f"{failed_path}: {exc}")
+
     try:
         if os.path.isdir(path):
-            shutil.rmtree(path)
+            if sys.version_info >= (3, 12):
+                shutil.rmtree(path, onexc=_note)
+            else:
+                shutil.rmtree(path, onerror=_note)
         elif os.path.isfile(path):
             os.remove(path)
         else:
             return False, f"{path}: path not found"
     except OSError as exc:
         return False, f"{path}: {exc}"
+    if failures:
+        return False, f"{path}: {len(failures)} item(s) couldn't be deleted (first {failures[0]})"
     return True, None
 
 

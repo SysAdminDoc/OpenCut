@@ -24,6 +24,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Fixed
 
+- A cache delete (Clear cache, the Whisper reinstall, or deleting one from the model list) now carries on past a file that's still open and reports what stayed. Before, it stopped at the first file Windows had locked, so one model a running job had loaded left the rest of the folder on disk.
 - Clearing Whisper's cache (or reinstalling Whisper) no longer deletes the CrisperWhisper add-on. The cleanup picked every Hub cache folder with "whisper" in its name, and CrisperWhisper's matched. It also skips a cache path that isn't absolute, which an empty `XDG_CACHE_HOME` or `HF_HOME` produced, so it never plans folders inside whatever directory the server started in.
 - The Force CPU Mode checkbox in Settings now stays in step with the Whisper card when CPU mode changes while Settings is open, for example after a reinstall. Before, the card could say "CPU forced" with the box unticked, and the next click saved the opposite.
 - Changing Whisper's CPU mode, reinstalling Whisper, or connecting or disconnecting a social account now shows up on the panel's next health check, even one that was already running when the change was saved. The server used to report the old value for up to 30 seconds, so the Whisper card could show the wrong mode.

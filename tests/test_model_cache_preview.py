@@ -205,6 +205,43 @@ def test_whisper_clear_cache_reports_per_path_delete_errors(client, csrf_token, 
     assert paths["hf_whisper"].exists()
 
 
+def test_whisper_clear_cache_deletes_past_a_locked_file(client, csrf_token, monkeypatch, tmp_path):
+    """rmtree stopped at the first file it couldn't remove, so one model a job
+    still had open left the rest of the folder behind."""
+    _system_routes, paths = _isolate_whisper_caches(monkeypatch, tmp_path)
+    locked = paths["hf_whisper"] / "a-locked.bin"
+    locked.write_bytes(b"open")
+    rest = [paths["hf_whisper"] / "b-config.json", paths["hf_whisper"] / "snapshots" / "c.bin"]
+    rest[1].parent.mkdir()
+    for path in rest:
+        path.write_bytes(b"x")
+    real_unlink = os.unlink
+
+    def unlink(target, *args, **kwargs):
+        if os.path.basename(str(target)) == locked.name:
+            raise PermissionError(13, "The process cannot access the file", str(target))
+        return real_unlink(target, *args, **kwargs)
+
+    monkeypatch.setattr(os, "unlink", unlink)
+    monkeypatch.setattr(os, "remove", unlink)
+    preview = client.post("/whisper/clear-cache", json={"dry_run": True}, headers=_headers(csrf_token))
+
+    response = client.post(
+        "/whisper/clear-cache",
+        json={"confirm_token": preview.get_json()["confirm_token"]},
+        headers=_headers(csrf_token),
+    )
+
+    data = response.get_json()
+    assert data["success"] is False
+    assert [path for path in rest if path.exists()] == []
+    assert locked.exists()
+    hub_errors = [error for error in data["errors"] if error.startswith(str(paths["hf_whisper"]))]
+    assert len(hub_errors) == 1
+    assert locked.name in hub_errors[0]
+    assert not paths["whisper"].exists()
+
+
 def test_whisper_clear_cache_requires_confirm_token(client, csrf_token, monkeypatch, tmp_path):
     _system_routes, _paths = _isolate_whisper_caches(monkeypatch, tmp_path)
 
