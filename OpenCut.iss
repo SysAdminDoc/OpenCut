@@ -2,7 +2,7 @@
 ; Fully self-contained installer — bundles server exe, ffmpeg, and CEP extension
 
 #define MyAppName "OpenCut"
-#define MyAppVersion "1.56.0"
+#define MyAppVersion "1.57.0"
 #define MyAppPublisher "SysAdminDoc"
 #define MyAppURL "https://github.com/SysAdminDoc/OpenCut"
 #define BundledFfmpegVersion "2026-11-11-git-23c4540053-full_build-www.gyan.dev"

@@ -39,9 +39,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # Update the record when a channel is published; the generated manifest and
 # README gate will then make the corresponding command available together.
 PUBLICATION_VERIFIED_ON = "2026-11-15"
-LATEST_GITHUB_RELEASE = "1.56.0"
+LATEST_GITHUB_RELEASE = "1.57.0"
 LATEST_GITHUB_RELEASE_URL = (
-    "https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.56.0"
+    "https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.57.0"
 )
 PLATFORM_DISPLAY_NAMES = {
     "win32": "Windows",
