@@ -11782,8 +11782,9 @@
             "working"
         );
         // Its own path, so a scan after a delete never joins one that read the
-        // disk before it (the client merges identical GETs in flight).
-        api("GET", "/models/list?scan=" + scan, null, function (err, data) {
+        // disk before it (the client merges identical GETs in flight). The
+        // route stays a literal of its own so the panel parity scan sees it.
+        api("GET", "/models/list" + "?scan=" + scan, null, function (err, data) {
             if (scan !== _modelListScan) return;
             if (err || !data) {
                 el.modelList.innerHTML = buildEmptyHintMarkup(
