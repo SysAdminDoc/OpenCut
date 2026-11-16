@@ -45,7 +45,13 @@ $startInfo.UseShellExecute = $false
 $startInfo.CreateNoWindow = $true
 $startInfo.WorkingDirectory = Split-Path -Parent $serverFull
 $startInfo.Environment["OPENCUT_HOME"] = $dataFull
-foreach ($name in @("PYTHONPATH", "PYTHONHOME", "OPENCUT_PORT", "OPENCUT_HOST")) {
+# The PID file and the panel bootstrap secret still live under the home
+# folder, and the secret is also copied into Premiere's UXP plugin storage.
+# Keep all of them in the throwaway folder, away from the account's own server.
+$startInfo.Environment["USERPROFILE"] = $dataFull
+$startInfo.Environment["HOME"] = $dataFull
+$startInfo.Environment["OPENCUT_UXP_PLUGIN_STORAGE"] = ""
+foreach ($name in @("PYTHONPATH", "PYTHONHOME", "OPENCUT_PORT", "OPENCUT_HOST", "OPENCUT_PANEL_BOOTSTRAP_FILE")) {
     [void]$startInfo.Environment.Remove($name)
 }
 
