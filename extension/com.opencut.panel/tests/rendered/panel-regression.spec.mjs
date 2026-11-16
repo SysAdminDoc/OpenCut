@@ -3745,17 +3745,23 @@ for (const surfaceName of Object.keys(SURFACES)) {
         if (spare) spare.disabled = false;
       }, klass);
 
-      const disabled = page.locator(`button.${klass}:disabled`).first();
-      const enabled = page.locator(`button.${klass}:not(:disabled)`).first();
-      expect(await disabled.count(), `no disabled .${klass} to measure`).toBeGreaterThan(0);
-      expect(await enabled.count(), `no enabled .${klass} to measure`).toBeGreaterThan(0);
-      const read = (locator) =>
-        locator.evaluate((el) => {
+      // Pick both buttons and read both styles in one JS turn. Two separate
+      // locator reads let a slow run see the panel disable the "enabled"
+      // button in between (startup or offline state), so both read GrayText.
+      const { disabledStyle, enabledStyle } = await page.evaluate((selector) => {
+        const read = (el) => {
+          if (!el) return null;
           const s = getComputedStyle(el);
           return { color: s.color, border: s.borderTopColor };
-        });
-      const disabledStyle = await read(disabled);
-      const enabledStyle = await read(enabled);
+        };
+        const buttons = Array.from(document.querySelectorAll(`button.${selector}`));
+        return {
+          disabledStyle: read(buttons.find((button) => button.disabled)),
+          enabledStyle: read(buttons.find((button) => !button.disabled)),
+        };
+      }, klass);
+      expect(disabledStyle, `no disabled .${klass} to measure`).not.toBeNull();
+      expect(enabledStyle, `no enabled .${klass} to measure`).not.toBeNull();
       // The tinted background that carried "disabled" is replaced by the OS,
       // so text or border has to carry it instead.
       expect(
