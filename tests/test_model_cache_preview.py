@@ -264,10 +264,11 @@ def test_whisper_clear_cache_deletes_past_a_locked_file(client, csrf_token, monk
     """rmtree stopped at the first file it couldn't remove, so one model a job
     still had open left the rest of the folder behind."""
     _system_routes, paths = _isolate_whisper_caches(monkeypatch, tmp_path)
-    locked = paths["hf_whisper"] / "a-locked.bin"
+    snapshot = paths["hf_whisper"] / "snapshots" / "rev"
+    snapshot.mkdir(parents=True)
+    locked = snapshot / "a-locked.bin"
     locked.write_bytes(b"open")
-    rest = [paths["hf_whisper"] / "b-config.json", paths["hf_whisper"] / "snapshots" / "c.bin"]
-    rest[1].parent.mkdir()
+    rest = [paths["hf_whisper"] / "b-config.json", snapshot / "c.bin"]
     for path in rest:
         path.write_bytes(b"x")
     real_unlink = os.unlink
@@ -293,7 +294,8 @@ def test_whisper_clear_cache_deletes_past_a_locked_file(client, csrf_token, monk
     assert locked.exists()
     hub_errors = [error for error in data["errors"] if error.startswith(str(paths["hf_whisper"]))]
     assert len(hub_errors) == 1
-    assert locked.name in hub_errors[0]
+    # The folders it leaves behind aren't failures of their own.
+    assert "1 item(s)" in hub_errors[0] and locked.name in hub_errors[0], hub_errors[0]
     assert not paths["whisper"].exists()
 
 

@@ -5,6 +5,7 @@ OpenCut System Routes
 Health, shutdown, GPU, dependencies, model management, whisper installation.
 """
 
+import errno
 import importlib
 import logging
 import os
@@ -150,11 +151,19 @@ def _delete_cache_target(path: str) -> tuple[bool, str | None]:
     reports what stayed.
     """
     failures: list[str] = []
+    # Folders left non-empty by what stayed inside them, counted only when
+    # nothing else failed (say a file appeared mid-delete).
+    nonempty: list[str] = []
 
-    def _note(_func, failed_path, exc):
+    def _note(func, failed_path, exc):
         if isinstance(exc, tuple):  # 3.11's onerror passes exc_info
             exc = exc[1]
-        failures.append(f"{failed_path}: {exc}")
+        if isinstance(exc, FileNotFoundError):
+            return  # already gone, e.g. a second clear running alongside
+        if func is os.rmdir and getattr(exc, "errno", None) in (errno.ENOTEMPTY, errno.EEXIST):
+            nonempty.append(f"{failed_path}: {exc}")
+        else:
+            failures.append(f"{failed_path}: {exc}")
 
     try:
         if os.path.isdir(path):
@@ -168,8 +177,9 @@ def _delete_cache_target(path: str) -> tuple[bool, str | None]:
             return False, f"{path}: path not found"
     except OSError as exc:
         return False, f"{path}: {exc}"
-    if failures:
-        return False, f"{path}: {len(failures)} item(s) couldn't be deleted (first {failures[0]})"
+    left = failures or nonempty
+    if left:
+        return False, f"{path}: {len(left)} item(s) couldn't be deleted (first {left[0]})"
     return True, None
 
 
