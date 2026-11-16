@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 import subprocess
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
@@ -184,6 +184,10 @@ def test_the_test_suite_only_reads_files_a_clone_actually_has():
             if not target.exists():
                 continue
             if rel_target in tracked:
+                continue
+            if "node_modules" in PurePosixPath(rel_target).parts:
+                # `npm ci` installs these from the tracked lockfile, and the
+                # tests that run them (the scaffold's tsc) skip until it has.
                 continue
             offenders.append(f"{path.name} -> {rel_target}")
 

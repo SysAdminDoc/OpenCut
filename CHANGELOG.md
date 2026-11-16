@@ -102,6 +102,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - The UXP compatibility, surface ratchet and README badge checks pass again after the visual search panels landed. The compatibility metadata now points at the moved `main.js` lines, the ratchet floor goes up from 19.8% to 19.9% because the two visual search routes have a panel now, and the README counts the 394 test files that exist.
 - `npm run lint` in the CEP panel checks every file in `client/` now. The script and the ESLint config each kept their own hand-written list, so twelve modules (the format, string, lookup and i18n helpers split out of `main.js` among them) never ran through `npm run lint`, and five more were linted with no rules switched on. Both use a `client/*.js` glob now, with Adobe's vendored `CSInterface.js` left out. All 34 files pass.
 - The faster-whisper GPU test no longer depends on which tests ran before it. The `/health` CPU mode tests left Whisper's CPU mode switched on in the home folder the whole run shares, so a later test on the same worker got the CPU. Those tests put the settings file back now, and the GPU test turns CPU mode off for itself.
+- The fresh-clone check leaves files under `node_modules` alone. `npm ci` installs them from the tracked lockfile, and the scaffold type-check test that runs the TypeScript compiler from there skips until it has, but the check failed on any machine where the panel's packages were installed.
 
 ### Release builds
 
