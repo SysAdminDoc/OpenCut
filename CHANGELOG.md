@@ -12,6 +12,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Fixed
 
+- `Install.bat` and `Uninstall.bat` work again. In 1.56.0 they stopped with a parse error before doing anything, because Windows PowerShell reads `Install.ps1` in the ANSI code page and took the dashes in two FFmpeg messages for closing quotes.
 - The DRM content key you give the Shaka packaging job no longer ends up on disk. Job history in `jobs.db` saved it in plain text, and the server log recorded it inside the packager command line, so it also went out with issue reports. Both now show `[REDACTED]`, and the key ID stays readable.
 - An OTIOZ export with media bundling turned off no longer copies every source file into the bundle. It looked for OTIO's media policy in a module that never existed, quietly fell back to the default, and either packed the media in anyway or failed when a source wasn't a local file.
 - Setting `OPENCUT_HOME` now moves the server log, its rotated copies, `crash.log` and the add-on packages folder as well. They stayed in `~/.opencut` before, so a log export taken with `OPENCUT_HOME` set came back without the crash records.

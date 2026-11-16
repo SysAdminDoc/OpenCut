@@ -505,7 +505,7 @@ if ($ffmpegStatus.Safe) {
     Write-Err "$($ffmpegStatus.Version): $($ffmpegStatus.Reason)"
     exit 1
 } else {
-    Write-Warn "Existing FFmpeg is unavailable: $($ffmpegStatus.Version) — $($ffmpegStatus.Reason)"
+    Write-Warn "Existing FFmpeg is unavailable ($($ffmpegStatus.Version)): $($ffmpegStatus.Reason)"
     $installed = $false
 
     if (Test-CommandExists "winget") {
@@ -535,7 +535,7 @@ if ($ffmpegStatus.Safe) {
 
     $ffmpegStatus = Get-FFmpegSecurityStatus
     if (-not $ffmpegStatus.Safe) {
-        Write-Err "FFmpeg remains blocked: $($ffmpegStatus.Version) — $($ffmpegStatus.Reason)"
+        Write-Err "FFmpeg remains blocked ($($ffmpegStatus.Version)): $($ffmpegStatus.Reason)"
         Write-Err "Install a git-master snapshot dated 2026-11-06 or later (ffmpeg-git-full) from https://www.gyan.dev/ffmpeg/builds/"
         exit 1
     }
@@ -881,7 +881,7 @@ if ($pythonCmd) {
 
 # Check OpenCut
 # NOTE: native commands do not throw in PS 5.1, so try/catch never sees an
-# import failure — each probe must test $LASTEXITCODE instead.
+# import failure, so each probe must test $LASTEXITCODE instead.
 $ocVer = & $pythonCmd -c "import opencut; print(opencut.__version__)" 2>&1
 if ($LASTEXITCODE -eq 0) {
     Write-Ok "OpenCut package ..... OK (v$ocVer)"

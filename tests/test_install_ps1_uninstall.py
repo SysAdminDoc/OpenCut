@@ -6,6 +6,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -110,9 +111,7 @@ def test_resolver_returns_an_absolute_supported_interpreter():
 
 
 @pytest.mark.skipif(_powershell() is None, reason="PowerShell is not available")
-def test_install_script_parses_as_powershell():
-    shell = _powershell()
-    assert shell is not None
+def _parse_errors(shell: str) -> subprocess.CompletedProcess[str]:
     escaped_path = str(INSTALL_PS1).replace("'", "''")
     script = f"""
 $tokens = $null
@@ -120,11 +119,42 @@ $errors = $null
 [System.Management.Automation.Language.Parser]::ParseFile('{escaped_path}', [ref]$tokens, [ref]$errors) | Out-Null
 if ($errors.Count -gt 0) {{ $errors | ForEach-Object {{ Write-Output $_.Message }}; exit 1 }}
 """
-    completed = subprocess.run(
+    return subprocess.run(
         [shell, "-NoProfile", "-NonInteractive", "-Command", script],
         capture_output=True,
         text=True,
         timeout=120,
         check=False,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
+
+
+def test_install_script_parses_as_powershell():
+    shell = _powershell()
+    assert shell is not None
+    completed = _parse_errors(shell)
     assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows PowerShell 5.1 ships with Windows only")
+def test_install_script_parses_under_windows_powershell():
+    """Install.bat and Uninstall.bat run ``powershell``, which is 5.1."""
+    shell = shutil.which("powershell")
+    assert shell is not None
+    completed = _parse_errors(shell)
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
+def test_install_script_bytes_read_the_same_in_windows_powershell():
+    """Windows PowerShell reads a BOM-less script in the ANSI code page. A
+    UTF-8 em dash then decodes to a curly quote that ends the string early,
+    which broke Install.bat in 1.56.0. Keep the script ASCII or give it a BOM."""
+    data = INSTALL_PS1.read_bytes()
+    if data.startswith(b"\xef\xbb\xbf"):
+        return
+    offenders = [
+        number
+        for number, line in enumerate(data.split(b"\n"), 1)
+        if any(byte > 0x7E for byte in line)
+    ]
+    assert not offenders, f"non-ASCII bytes on Install.ps1 lines {offenders}"
