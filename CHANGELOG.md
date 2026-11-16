@@ -51,6 +51,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Tests
 
+- `npm run test:rendered` builds and checks the panel before Playwright starts. The rendered suite used to test whatever `client/dist` was left over from the last build, so a change could pass against an old bundle.
 - Both installer smoke runs now start the installed server on a free port and check that `/health` answers while its capability probes are still pending. They then wait for the probes to finish and fail if any of them crashed or timed out. The server's PID file and panel secret stay in the smoke's throwaway folder, so a run on a machine with OpenCut already set up leaves that install alone.
 - The rendered panel tests now boot the built panel too, the page Premiere actually loads. Until now they only loaded the source page, which is how the v1.56.0 bundle shipped without its live-updates helper.
 - The local-only egress test passes again. The new model weights downloader wasn't on its list of modules that open network connections.
