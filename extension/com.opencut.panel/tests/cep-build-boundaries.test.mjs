@@ -134,7 +134,11 @@ describe("panel controller budgets", () => {
     // keeps the toast and GPU badge in the health poll (four), the Whisper
     // card's checking state (twenty-six, the same shape as its installed and
     // missing states) and one more line for the failed-check tooltip.
-    ["client/main.js", 18900],
+    // Two more let the health poll refresh that card when the probe reports
+    // after Settings opened. Deciding when to refresh lives in
+    // client/capability-status.js, so main.js only records what it showed
+    // and asks.
+    ["client/main.js", 18902],
     ["client/update-controller.js", 300],
     ["client/results-controller.js", 300],
     ["client/settings-diagnostics-controller.js", 110],

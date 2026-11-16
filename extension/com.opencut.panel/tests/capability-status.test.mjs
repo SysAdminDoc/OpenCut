@@ -122,9 +122,33 @@ describe("capability status: probe results", () => {
     expect(status.whisperProbe(null)).toEqual({ checking: true, failureReason: "" });
   });
 
+  it("asks for a Whisper refresh only after Settings showed it and only on a change", () => {
+    const status = statusFor(() => ({}));
+    const checking = { status: "ok", capabilities: {} };
+    const ready = { status: "ok", capabilities: { captions: true, whisper_backend: "faster-whisper" } };
+    expect(status.whisperNeedsRefresh(ready)).toBe(false);
+    status.noteWhisperShown(checking);
+    expect(status.whisperNeedsRefresh({ status: "ok", capabilities: {} })).toBe(false);
+    expect(status.whisperNeedsRefresh(ready)).toBe(true);
+    status.noteWhisperShown(ready);
+    expect(status.whisperNeedsRefresh({ status: "ok", capabilities: { captions: true, whisper_backend: "faster-whisper" } })).toBe(false);
+    expect(status.whisperNeedsRefresh({ status: "ok", capabilities: { captions: true, whisper_backend: "faster-whisper", whisper_cpu_mode: true } })).toBe(true);
+    expect(status.whisperNeedsRefresh({
+      status: "ok",
+      capabilities: {},
+      capability_discovery: { failed: { captions: { state: "timeout", reason: "no answer in 30 s" } } },
+    })).toBe(true);
+    expect(status.whisperNeedsRefresh(null)).toBe(true);
+    status.noteWhisperShown({ status: "error" });
+    expect(status.whisperNeedsRefresh(null)).toBe(false);
+  });
+
   it("leaves main.js the wiring only", () => {
     expect(mainSource).toContain("capabilityStatus.probeFailureNotice(data.capability_discovery)");
     expect(mainSource).toContain("capabilityStatus.whisperProbe(healthData)");
+    expect(mainSource).toContain("capabilityStatus.whisperNeedsRefresh(data)");
+    expect(mainSource).toContain("capabilityStatus.noteWhisperShown(healthData)");
+    expect(mainSource).not.toContain("function whisperStateKey(");
     expect(mainSource).not.toContain("function reportCapabilityProbeFailures(");
   });
 });

@@ -458,6 +458,22 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
         });
       }
     }
+    if (backendFixtures.whisperProbe) {
+      // The test flips `done` once the panel has rendered the checking state.
+      if (url.pathname === "/health" && route.request().method() === "GET") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            status: "ok",
+            csrf_token: "fixture-token",
+            capabilities: backendFixtures.whisperProbe.done
+              ? { captions: true, whisper_backend: "faster-whisper" }
+              : {},
+          }),
+        });
+      }
+    }
     if (backendFixtures.modelWeights) {
       const method = route.request().method();
       const fixture = backendFixtures.modelWeights;
@@ -2015,6 +2031,27 @@ test("CEP disabled Timeline, Deliverables and Rename controls say why", async ({
     .poll(() => page.locator("#renameAllBtn").getAttribute("title"))
     .toBe(null);
 
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP Whisper status leaves Checking when the probe finishes after Settings opened", async ({
+  page,
+}) => {
+  // Settings read /health once when it opened, so a Whisper check that
+  // finished later left "Checking" up until the tab was opened again.
+  const whisperProbe = { done: false };
+  const { pageErrors } = await openSurface(page, "cep", "dark", 900, { whisperProbe });
+  await page.locator(".nav-tab[data-nav='settings']").click();
+  const status = page.locator("#whisperStatusText");
+  await expect(status).toHaveText("Checking");
+  await expect(status).toHaveAttribute("data-state", "working");
+
+  whisperProbe.done = true;
+  await expect(status).toHaveText("Installed", { timeout: 15000 });
+  await expect(status).toHaveAttribute("data-state", "ready");
+  await expect(page.locator("#whisperStatusLine")).toHaveText(
+    "faster-whisper is ready for captions, search indexing, and chapter generation.",
+  );
   expect(pageErrors).toEqual([]);
 });
 

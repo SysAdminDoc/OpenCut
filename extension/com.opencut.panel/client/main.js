@@ -2577,6 +2577,7 @@
                 setConnectionBadge("online", t("conn.connected", "Connected"));
                 if (data.csrf_token) setCsrfToken(data.csrf_token);
                 if (data.capabilities) capabilities = data.capabilities;
+                if (capabilityStatus.whisperNeedsRefresh(data)) updateWhisperSettingsState(data);
                 var probeNotice = capabilityStatus.probeFailureNotice(data.capability_discovery);
                 if (probeNotice) showToast(probeNotice, "warning");
                 var probedGpu = capabilityStatus.probedGpuName();
@@ -8715,6 +8716,7 @@
     }
 
     function updateWhisperSettingsState(healthData) {
+        capabilityStatus.noteWhisperShown(healthData);
         if (!healthData || healthData.status !== "ok") {
             if (el.whisperStatusText) {
                 el.whisperStatusText.textContent = t("whisper.status_unavailable", "Unavailable");

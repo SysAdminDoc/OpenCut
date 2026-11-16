@@ -169,10 +169,33 @@
             };
         }
 
+        /* Everything Settings' Whisper card shows, as one comparable string. */
+        function whisperStateKey(healthData) {
+            if (!healthData || healthData.status !== "ok") return "unavailable";
+            var caps = healthData.capabilities || {};
+            var probe = whisperProbe(healthData);
+            return [probe.checking, probe.failureReason, !!caps.captions,
+                !!caps.whisper_cpu_mode, caps.whisper_backend || ""].join("|");
+        }
+
+        /* Settings fetches /health once when it opens, and the Whisper check
+         * often finishes after that. The health poll re-renders the card only
+         * when what it would show changed, so the polite live line doesn't
+         * repeat itself every poll, and never before Settings rendered it. */
+        var whisperShownKey = null;
+        function noteWhisperShown(healthData) {
+            whisperShownKey = whisperStateKey(healthData);
+        }
+        function whisperNeedsRefresh(healthData) {
+            return whisperShownKey !== null && whisperStateKey(healthData) !== whisperShownKey;
+        }
+
         return {
             probeFailureNotice: probeFailureNotice,
             probedGpuName: probedGpuName,
             whisperProbe: whisperProbe,
+            noteWhisperShown: noteWhisperShown,
+            whisperNeedsRefresh: whisperNeedsRefresh,
             weightsMissing: weightsMissing,
             weightsDownloadBlocked: weightsDownloadBlocked,
             weightsHintMessage: weightsHintMessage,
