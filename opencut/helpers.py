@@ -122,8 +122,8 @@ def _require_safe_media_binary(binary: str) -> str:
 def get_ffmpeg_path() -> str:
     """Return a cached, CVE-floor-verified FFmpeg binary path.
 
-    Missing, unparseable, and pre-8.1.3 releases fail before any media command
-    is started. A cache entry is invalidated when the executable's mtime or
+    Missing, unparseable, and below-floor builds (every tagged release today)
+    fail before any media command is started. A cache entry is invalidated when the executable's mtime or
     size changes, so replacing a PATH binary forces a fresh version probe.
     """
     global _ffmpeg_path

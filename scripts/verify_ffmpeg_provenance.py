@@ -234,9 +234,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote provenance manifest -> {args.manifest}")
 
     print(f"ffmpeg binary:   {ffmpeg_bin}")
-    print(f"required floor:  release>={record['required_release_floor']} "
-          f"OR git-master>={record['required_snapshot_floor_date']} "
-          f"(ref commit {record['reference_git_commit']})")
+    print(f"required floor:  {record['security_floor']}")
+    if not record["release_lane_open"]:
+        print(f"release lane:    closed. {record['release_lane_note']}")
     print(f"CVEs addressed:  {', '.join(record['cves_addressed'])}")
     print(f"required fixes:  {', '.join(record['required_fix_commits'])}")
 

@@ -137,12 +137,43 @@ class TestNewerReleaseIsNotAssumedFixed:
         assert "branched on" in result["reason"]
         assert "not evidence" in result["reason"]
 
-    def test_a_later_patch_in_the_affected_series_is_accepted(self):
-        """8.1.3 is the declared fix for every advisory that stops at 8.1.2."""
+    def test_a_later_patch_counts_only_through_a_recorded_backport(self):
+        """F451: 8.1.3 used to clear the July advisories on its number alone."""
         rec = fp.parse_version_banner("ffmpeg version 8.1.3 Copyright (c) 2000-2026")
+        checked = 0
         for adv in fp.SECURITY_ADVISORIES:
-            if adv.affected_max_release in ((8, 1, 1), (8, 1, 2)):
-                assert fp.grade_advisory(adv, rec)["status"] == "fixed", adv.cve
+            if adv.affected_max_release not in ((8, 1, 1), (8, 1, 2)):
+                continue
+            checked += 1
+            graded = fp.grade_advisory(adv, rec)
+            assert graded["status"] == "fixed", adv.cve
+            assert "backport" in graded["reason"], adv.cve
+
+            unrecorded = dataclasses.replace(adv, backported_in=())
+            graded = fp.grade_advisory(unrecorded, rec)
+            assert graded["status"] == "vulnerable", adv.cve
+            assert "not evidence" in graded["reason"], adv.cve
+        assert checked == 17
+
+    def test_a_later_tag_inherits_an_earlier_tags_backport(self):
+        """Release branches only grow, so 8.1.4 descends from 8.1.3."""
+        advisory = fp.SECURITY_ADVISORIES[0]
+        accepted, why = fp._grade_newer_release(advisory, (8, 1, 4))
+        assert accepted is True
+        assert "descends from 8.1.3" in why
+
+    def test_an_earlier_tag_does_not_inherit_a_later_backport(self):
+        advisory = fp.SECURITY_ADVISORIES[0]
+        assert (9, 0, 2) in advisory.backported_in
+        accepted, why = fp._grade_newer_release(advisory, (9, 0, 1))
+        assert accepted is False
+        assert "not evidence" in why
+
+    def test_a_series_branched_between_fixes_clears_only_the_earlier_ones(self):
+        """9.1 branched 2026-10-23: after libssh's fix, before G.726 and EXIF."""
+        result = fp.check_security_floor("ffmpeg version 9.1.0 Copyright (c) 2000-2026")
+        assert result["ok"] is False
+        assert set(result["unresolved_cves"]) == {"CVE-2026-125064", "CVE-2026-125180"}
 
     def test_8_1_3_is_refused_on_the_advisories_that_reach_9_0_2(self):
         result = fp.check_security_floor("ffmpeg version 8.1.3 Copyright (c) 2000-2026")
@@ -187,15 +218,40 @@ class TestNewerReleaseIsNotAssumedFixed:
 
 
 class TestClosedLaneIsStatedInCode:
-    def test_the_closed_lane_carries_a_reason(self):
-        if not fp.RELEASE_LANE_OPEN:
-            assert "8.1.3 was never published" in fp.RELEASE_LANE_CLOSED_REASON
-            assert "branched" in fp.RELEASE_LANE_CLOSED_REASON
+    def test_the_lane_is_computed_from_the_published_tags(self):
+        assert fp.RELEASE_LANE_OPEN is any(
+            not gaps for gaps in fp.RELEASE_LANE_GAPS.values()
+        )
+        assert set(fp.RELEASE_LANE_GAPS) == set(fp.PUBLISHED_RELEASES)
+
+    def test_both_published_tags_miss_exactly_the_late_2026_fixes(self):
+        """Checked upstream 2026-11-15: n8.1.3 and n9.0.2 carry every June and
+        July fix and none of the three NVD listed after 9.0.2."""
+        for release in ((8, 1, 3), (9, 0, 2)):
+            assert release in fp.PUBLISHED_RELEASES
+            assert fp.RELEASE_LANE_GAPS[release] == fp.LATE_2026_CVES, release
+
+    def test_the_closed_lane_reason_names_every_missing_fix(self):
+        if fp.RELEASE_LANE_OPEN:
+            return
+        reason = fp.RELEASE_LANE_CLOSED_REASON
+        by_cve = {adv.cve: adv for adv in fp.SECURITY_ADVISORIES}
+        for release, gaps in fp.RELEASE_LANE_GAPS.items():
+            assert ".".join(map(str, release)) in reason
+            for cve in gaps:
+                assert f"{cve} ({by_cve[cve].fix_commit[:10]})" in reason
+        assert fp.SNAPSHOT_FLOOR_DATE in reason
+        assert "never published" not in reason
 
     def test_provenance_reports_the_lane_state(self):
         record = fp.provenance_record(banner="ffmpeg version 8.1.2 Copyright")
         assert record["release_lane_open"] is fp.RELEASE_LANE_OPEN
-        assert record["release_branch_points"]["9.0"] == "2026-06-26"
+        assert record["release_branch_points"] == {
+            "8.1": "2026-03-08",
+            "9.0": "2026-06-26",
+            "9.1": "2026-10-23",
+        }
+        assert record["security_floor"] == fp.SECURITY_FLOOR_SUMMARY
         if not fp.RELEASE_LANE_OPEN:
             assert record["release_lane_note"]
 

@@ -99,7 +99,7 @@ def test_floor_release_813_is_refused_for_fixes_after_9_0_2():
 
 
 def test_floor_release_810_is_below():
-    # "8.1" parses as 8.1.0 which is below the 8.1.3 floor.
+    # "8.1" parses as 8.1.0, which predates every 8.1 backport.
     res = fp.check_security_floor(BANNER_81)
     assert res["ok"] is False
     assert res["lane"] == "release"
@@ -162,7 +162,10 @@ def test_cves_listed_in_every_result():
 
 def test_provenance_record_documents_floor_without_binary():
     rec = fp.provenance_record(banner="")
-    assert rec["required_release_floor"] == "8.1.3"
+    assert rec["required_release_floor"] == "8.1.4"
+    assert rec["security_floor"] == fp.SECURITY_FLOOR_SUMMARY
+    assert rec["release_lane_open"] is False
+    assert rec["published_releases"]["8.1.3"]["missing"] == list(fp.LATE_2026_CVES)
     assert rec["required_snapshot_floor_date"] == "2026-11-06"
     assert rec["reference_git_commit"] == "23c454005319dee4a5bcae5c370f75fdeb325230"
     assert rec["required_fix_commits"] == list(fp.SECURITY_FIX_COMMITS)
@@ -185,7 +188,7 @@ def test_require_security_floor_raises_actionable_error(monkeypatch):
         fp.require_security_floor("unsafe-ffmpeg")
     except fp.FfmpegSecurityError as exc:
         assert exc.code == "FFMPEG_SECURITY_FLOOR"
-        assert "8.1.3" in str(exc)
+        assert f"git-master snapshot dated >= {fp.SNAPSHOT_FLOOR_DATE}" in str(exc)
         assert "CVE-2026-64832" in str(exc)
         assert exc.grade["version"].startswith("8.1.1")
     else:  # pragma: no cover - defensive

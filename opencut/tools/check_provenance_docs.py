@@ -102,16 +102,31 @@ def collect_release_provenance_facts() -> list[DocFact]:
     ]
 
     release_floor = ".".join(str(part) for part in provenance.RELEASE_FLOOR)
-    if provenance.RELEASE_LANE_OPEN:
-        facts.append(
-            DocFact(
-                "ffmpeg_provenance.RELEASE_FLOOR",
-                release_floor,
-                RELEASE_PROVENANCE_DOC,
-                rendered=f">= {release_floor}",
-            )
+    facts.append(
+        DocFact(
+            "ffmpeg_provenance.RELEASE_FLOOR",
+            release_floor,
+            RELEASE_PROVENANCE_DOC,
+            rendered=f"`{release_floor}`",
         )
+    )
+    if provenance.RELEASE_LANE_OPEN:
+        # A version number is not evidence, so the document names the exact
+        # tags that cleared the matrix rather than a ">=" floor.
+        for release in provenance.RELEASE_LANE_CLEARED:
+            tag = ".".join(str(part) for part in release)
+            facts.append(
+                DocFact("ffmpeg_provenance.RELEASE_LANE_CLEARED", tag, RELEASE_PROVENANCE_DOC)
+            )
     else:
+        # Each fix the newest tags lack has to be named, so the document can't
+        # keep a stale reason (it once said 8.1.3 was never published).
+        for release, gaps in provenance.RELEASE_LANE_GAPS.items():
+            tag = ".".join(str(part) for part in release)
+            for cve in gaps:
+                facts.append(
+                    DocFact(f"ffmpeg_provenance.RELEASE_LANE_GAPS[{tag}]", cve, RELEASE_PROVENANCE_DOC)
+                )
         # The document must not advertise a lane the code refuses. Requiring the
         # word keeps a future reopening from silently leaving stale prose.
         facts.append(

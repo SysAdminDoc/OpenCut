@@ -5,24 +5,29 @@ namespace OpenCut.Installer.Tests;
 public class FfmpegSecurityVerifierTests
 {
     [Fact]
-    public void Release812IsRejectedForJuly2026Cves()
+    public void Release812IsRejected()
     {
         var grade = FfmpegSecurityVerifier.GradeBanner("ffmpeg version 8.1.2-test");
 
         Assert.False(grade.IsSafe);
         Assert.Equal("release", grade.Lane);
-        Assert.Contains("predates 8.1.3", grade.Reason);
-        Assert.Contains("CVE-2026-64832", grade.Reason);
+        Assert.Contains("release 8.1.2 is refused", grade.Reason);
     }
 
-    [Fact]
-    public void Release813ReenablesReleaseLane()
+    [Theory]
+    [InlineData("ffprobe version 8.1.3-essentials_build-www.gyan.dev", "8.1.3")]
+    [InlineData("ffmpeg version 9.0.2-full_build-www.gyan.dev", "9.0.2")]
+    [InlineData("ffmpeg version n9.1", "9.1.0")]
+    public void PublishedReleasesMissTheLateFixesAndAreRejected(string banner, string version)
     {
-        var grade = FfmpegSecurityVerifier.GradeBanner(
-            "ffprobe version 8.1.3-essentials_build-www.gyan.dev");
+        var grade = FfmpegSecurityVerifier.GradeBanner(banner);
 
-        Assert.True(grade.IsSafe);
+        Assert.False(grade.IsSafe);
         Assert.Equal("release", grade.Lane);
+        Assert.Contains($"release {version} is refused", grade.Reason);
+        Assert.Contains("CVE-2026-125064", grade.Reason);
+        Assert.Contains("CVE-2026-125180", grade.Reason);
+        Assert.Contains("CVE-2026-107675", grade.Reason);
     }
 
     [Fact]

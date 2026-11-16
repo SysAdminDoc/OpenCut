@@ -43,19 +43,23 @@ def check_python():
 
 
 def check_ffmpeg():
+    from opencut.core.ffmpeg_provenance import SNAPSHOT_FLOOR_DATE, probe_binary_security
+
+    advice = (
+        f"Install a git-master snapshot dated {SNAPSHOT_FLOOR_DATE} or later "
+        "(ffmpeg-git-full) from https://www.gyan.dev/ffmpeg/builds/"
+    )
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         print("  [!!] FFmpeg not found on PATH.")
-        print("       Install FFmpeg 8.1.3+ or a dated post-fix full snapshot from https://www.gyan.dev/ffmpeg/builds/")
+        print(f"       {advice}")
         sys.exit(1)
-
-    from opencut.core.ffmpeg_provenance import probe_binary_security
 
     grade = probe_binary_security(ffmpeg, timeout=5)
     if not grade.get("ok"):
         print(f"  [!!] FFmpeg blocked: {grade.get('version') or 'unknown'}")
         print(f"       {grade.get('reason')}")
-        print("       CVE-2026-64832/64833/64835/66041 require FFmpeg 8.1.3+ or a dated post-fix snapshot.")
+        print(f"       {advice}")
         sys.exit(1)
 
     print(

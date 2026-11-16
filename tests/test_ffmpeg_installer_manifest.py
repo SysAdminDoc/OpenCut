@@ -73,7 +73,7 @@ def test_pinned_installer_version_matches_provenance_module():
     from opencut.core import ffmpeg_provenance as fp
 
     assert fp.PINNED_INSTALLER_VERSION == FFMPEG_VERSION
-    assert fp.RELEASE_FLOOR == (8, 1, 3)
+    assert fp.RELEASE_FLOOR == (8, 1, 4)
     assert "CVE-2026-8461" in fp.JUNE_2026_CVES
     assert set(("CVE-2026-64832", "CVE-2026-64833", "CVE-2026-64835", "CVE-2026-66041")) <= set(fp.SECURITY_CVES)
     # A literal count here failed on every legitimate grading pass. What the

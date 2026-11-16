@@ -129,7 +129,7 @@ cd OpenCut
 ```
 
 Then right-click `Install.bat` and select **Run as Administrator**. The installer will:
-1. Install or upgrade FFmpeg and reject releases below 8.1.3 or snapshots before 2026-11-06
+1. Check FFmpeg and refuse tagged releases and snapshots older than 2026-11-06, since no tagged release carries every graded fix yet
 2. Verify Python 3.11-3.14 is on your PATH (unsupported versions are rejected before installation)
 3. Install all Python dependencies (Flask, click, rich, etc.)
 4. Install the OpenCut Python package
@@ -144,10 +144,9 @@ After the installer finishes, you are ready to use OpenCut. See **Launch** below
 
 If you prefer manual control or are on macOS/Linux, follow these steps:
 
-1. **Install a dated post-fix git-master snapshot** of FFmpeg and make sure it is on your system PATH. OpenCut blocks older and unparseable builds before media processing because 8.1.2 is affected by CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, and CVE-2026-66041. No tagged release currently clears those: 8.1.2 closed the 8.1 line, 8.1.3 was never published, and the 9.0 series branched on 2026-06-26 before those fixes landed on master. A 9.0.x build is refused until someone shows the fixes were backported onto that branch. A higher version number on its own is not evidence:
+1. **Install a dated post-fix git-master snapshot** of FFmpeg and make sure it is on your system PATH. OpenCut blocks older and unparseable builds before media processing. No tagged release clears the graded advisories yet. The newest tags, 8.1.3 and 9.0.2, both carry the June and July 2026 fixes but miss the ones for CVE-2026-125064, CVE-2026-125180 and CVE-2026-107675. A tagged release is accepted only once each fix is shown to be on its branch, because a higher version number on its own is not evidence:
    - Windows: download the `ffmpeg-git-full` snapshot from https://www.gyan.dev/ffmpeg/builds/ (the bundled build is `2026-11-11-git-23c4540053-full_build-www.gyan.dev`, source commit `23c454005319dee4a5bcae5c370f75fdeb325230`) and add its `bin` folder to your PATH
-   - macOS: `brew install ffmpeg`
-   - Linux: `sudo apt install ffmpeg` (Debian/Ubuntu) or equivalent for your distro
+   - macOS and Linux: Homebrew and distro packages ship tagged releases, which are refused. Build the pinned source snapshot the way the `Dockerfile` does (it checks the archive's SHA-256 and passes `--extra-version=-2026-11-11-git-23c4540053` so OpenCut can read the snapshot date), or run the Docker image
    - Verify: `python scripts/verify_ffmpeg_provenance.py` must report `RESULT: OK`
 
 `RESULT: OK` means the build clears every advisory OpenCut grades against a
@@ -314,7 +313,7 @@ with the origin that asked.
 Most AI features are optional dependencies. Open the **Settings** tab in the panel and scroll to the **Dependency Dashboard**. It shows every optional package with its install status and the exact pip command to install missing ones. Or install all audited extras at once: `pip install -e ".[all]"`.
 
 **FFmpeg missing or blocked:**
-The server requires FFmpeg 8.1.3+ (or a dated post-fix snapshot from 2026-11-06 onward) on your PATH. Run `python scripts/verify_ffmpeg_provenance.py` to see the detected version and reason. If missing or below the floor, install the current `ffmpeg-git-full` build from https://www.gyan.dev/ffmpeg/builds/ or build the checksum-verified upstream source snapshot. Restart the terminal and OpenCut server after upgrading. `Install.ps1 -SkipFFmpeg` skips automatic installation only; it cannot bypass this security check.
+The server requires a git-master FFmpeg snapshot dated 2026-11-06 or later on your PATH, since no tagged release carries every graded fix yet. Run `python scripts/verify_ffmpeg_provenance.py` to see the detected version and reason. If missing or below the floor, install the current `ffmpeg-git-full` build from https://www.gyan.dev/ffmpeg/builds/ or build the checksum-verified upstream source snapshot. Restart the terminal and OpenCut server after upgrading. `Install.ps1 -SkipFFmpeg` skips automatic installation only; it cannot bypass this security check.
 
 **Python not found or wrong version:**
 OpenCut requires Python 3.11-3.14. Run `python --version` to check. On Windows, if Python is installed but not on PATH, use `py -3.12 -m opencut.server` instead, or re-run the Python installer and check "Add Python to PATH". Python 3.15+ is rejected until the dependency matrix has verified it.
@@ -989,7 +988,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-15,200+ estimated tests across 381 root test files covering route smoke tests,
+15,200+ estimated tests across 382 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -1058,7 +1057,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (15,200+ estimated tests, 381 root test files)
+tests/               # pytest test suite (15,200+ estimated tests, 382 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

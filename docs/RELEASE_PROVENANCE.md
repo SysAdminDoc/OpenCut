@@ -52,13 +52,26 @@ predate them.
 `python -m opencut.tools.check_provenance_docs --check` fails the release gate if
 anything below drifts from it. There are two lanes, and only one of them is open:
 
-- **Release lane is closed.** `RELEASE_LANE_OPEN` is `False`. No published FFmpeg
-  release clears the advisory matrix: 8.1.2 is affected by the July 2026 batch,
-  the 8.1.3 that would carry the fix was never published, and the 9.0 series was
-  branched on 2026-06-26, before those fixes landed on master. `RELEASE_FLOOR` is
-  `8.1.3` because that is where a qualifying release would have to appear, not
-  because such a build exists. A higher version number is not evidence; the
-  branch point is.
+- **Release lane is closed.** `RELEASE_LANE_OPEN` is computed from the
+  advisory matrix, not set by hand, and it's `False` today. A tagged release
+  clears an advisory only when the fix is recorded in that advisory's
+  `backported_in` for the tag itself or an earlier tag of the same series, or
+  when its series branched from master after the fix landed. A recorded tag
+  was checked upstream: the fix commit is an ancestor of it, a
+  `cherry picked from` line names the fix, or a reviewed backport makes the same
+  change. A higher version number is not evidence. The newest tags were checked
+  fix by fix on 2026-11-15:
+
+  | Advisory | Fix on master | n8.1.3 (2026-09-21) | n9.0.2 (2026-09-17) |
+  |---|---|---|---|
+  | The 16 July 2026 advisories | listed in `SECURITY_ADVISORIES` | picked onto release/8.1, with reviewed backports `c8bfe73e26` (hqdn3d) and `1005b294ff` (IAMF) | picked onto release/9.0 |
+  | CVE-2026-8461 (MagicYUV) | `374b726ffa`, `5806e8b9f3` | picked before n8.1.2 | 9.0 branched after the fix |
+  | CVE-2026-125064 (G.726) | `ec887b13a8` | missing | missing |
+  | CVE-2026-125180 (EXIF) | `30fff47764` | missing | missing |
+  | CVE-2026-107675 (libssh) | `2b822b7fb6` | missing | missing |
+
+  `RELEASE_FLOOR` is `8.1.4`, the lowest number a qualifying tag could carry.
+  It labels messages and is never used to accept a build.
 - **Snapshot lane** is the only way through. A gyan.dev or BtbN git-master
   snapshot dated `2026-11-06` or later, which is `SNAPSHOT_FLOOR_DATE`.
 

@@ -140,7 +140,10 @@ function Remove-OpenCutArtifact {
 }
 
 function Get-FFmpegSecurityStatus {
-    $required = "release>=8.1.3 OR git-master>=2026-11-06"
+    # Keep in step with SNAPSHOT_FLOOR_DATE and RELEASE_LANE_CLOSED_REASON in
+    # opencut/core/ffmpeg_provenance.py (tests/test_ffmpeg_release_lane.py).
+    $snapshotFloor = "2026-11-06"
+    $releaseLaneClosed = "no published FFmpeg release carries the fixes for CVE-2026-125064, CVE-2026-125180 and CVE-2026-107675 yet (8.1.3 and 9.0.2 both lack them)"
     $command = Get-Command ffmpeg -ErrorAction SilentlyContinue
     if (-not $command) {
         return [pscustomobject]@{ Safe = $false; Version = "missing"; Reason = "FFmpeg was not found" }
@@ -158,17 +161,13 @@ function Get-FFmpegSecurityStatus {
 
     $token = $Matches[1]
     if ($token -match "^(\d{4}-\d{2}-\d{2})-git-[0-9a-f]{7,40}") {
-        $safe = $Matches[1] -ge "2026-11-06"
-        $reason = if ($safe) { "Post-fix snapshot lane (fixes through CVE-2026-125180)" } else { "Snapshot predates 2026-11-06, when the CVE-2026-125180 fix landed" }
+        $safe = [string]::CompareOrdinal($Matches[1], $snapshotFloor) -ge 0
+        $reason = if ($safe) { "Post-fix snapshot lane (fixes through CVE-2026-125180)" } else { "Snapshot predates $snapshotFloor, when the CVE-2026-125180 fix landed" }
         return [pscustomobject]@{ Safe = $safe; Version = $token; Reason = $reason }
     }
 
     if ($token -match "^n?(\d+)\.(\d+)(?:\.(\d+))?") {
-        $patch = if ($Matches[3]) { [int]$Matches[3] } else { 0 }
-        $version = [version]::new([int]$Matches[1], [int]$Matches[2], $patch)
-        $safe = $version -ge [version]::new(8, 1, 3)
-        $reason = if ($safe) { "Release lane clears $required" } else { "Release predates 8.1.3 (CVE-2026-64832/64833/64835/66041)" }
-        return [pscustomobject]@{ Safe = $safe; Version = $token; Reason = $reason }
+        return [pscustomobject]@{ Safe = $false; Version = $token; Reason = "Release $token is refused: $releaseLaneClosed" }
     }
 
     return [pscustomobject]@{ Safe = $false; Version = $token; Reason = "Unrecognized FFmpeg build token" }
@@ -537,7 +536,7 @@ if ($ffmpegStatus.Safe) {
     $ffmpegStatus = Get-FFmpegSecurityStatus
     if (-not $ffmpegStatus.Safe) {
         Write-Err "FFmpeg remains blocked: $($ffmpegStatus.Version) — $($ffmpegStatus.Reason)"
-        Write-Err "Install FFmpeg 8.1.3+ or a dated post-fix full snapshot from https://www.gyan.dev/ffmpeg/builds/"
+        Write-Err "Install a git-master snapshot dated 2026-11-06 or later (ffmpeg-git-full) from https://www.gyan.dev/ffmpeg/builds/"
         exit 1
     }
     Write-Ok "FFmpeg verified after install: $($ffmpegStatus.Version)"
@@ -868,7 +867,7 @@ $allGood = $true
 if ((Get-FFmpegSecurityStatus).Safe) {
     Write-Ok "FFmpeg .............. OK (security floor verified)"
 } else {
-    Write-Err "FFmpeg .............. BLOCKED (requires 8.1.3+ or post-fix snapshot >= 2026-11-06)"
+    Write-Err "FFmpeg .............. BLOCKED (requires a git-master snapshot >= 2026-11-06)"
     $allGood = $false
 }
 

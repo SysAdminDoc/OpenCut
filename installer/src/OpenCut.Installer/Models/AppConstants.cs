@@ -10,7 +10,7 @@ public static class AppConstants
     public const string AppGuid = "{8A7B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D}";
     public const string BundledFfmpegVersion = "2026-11-11-git-23c4540053-full_build-www.gyan.dev";
     public const string BundledFfprobeVersion = "2026-11-11-git-23c4540053-full_build-www.gyan.dev";
-    public const string BundledFfmpegSecurityFloor = "release>=8.1.3 OR git-master>=2026-11-06 (commit 23c454005319dee4a5bcae5c370f75fdeb325230)";
+    public const string BundledFfmpegSecurityFloor = "git-master>=2026-11-06 (commit 23c454005319dee4a5bcae5c370f75fdeb325230); no tagged release clears the matrix yet";
     public const string BundledFfmpegSecurityCve = "CVE-2026-8461, CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, CVE-2026-66041, CVE-2026-125064, CVE-2026-125180, CVE-2026-107675";
     public static readonly string[] BundledFfmpegSecurityFixCommits =
     [

@@ -47,7 +47,7 @@ def test_shared_resolver_rejects_release_811(monkeypatch, tmp_path):
         lambda path: (_ for _ in ()).throw(fp.FfmpegSecurityError(path, grade)),
     )
 
-    with pytest.raises(fp.FfmpegSecurityError, match="8.1.3"):
+    with pytest.raises(fp.FfmpegSecurityError, match="git-master snapshot"):
         helpers.get_ffmpeg_path()
 
 
@@ -119,7 +119,7 @@ def test_feature_checks_and_preflight_report_unsafe_ffmpeg_unavailable(monkeypat
     assert checks.ffmpeg_security_available() is False
     result = preflight._probe_check("ffmpeg", True)
     assert result["ok"] is False
-    assert "8.1.3+" in result["fix"]
+    assert fp.SNAPSHOT_FLOOR_DATE in result["fix"]
 
 
 _FEATURE_PROBES = (

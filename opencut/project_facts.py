@@ -21,6 +21,8 @@ from opencut.core.ffmpeg_provenance import (
     PINNED_INSTALLER_SOURCE_URL,
     PINNED_INSTALLER_VERSION,
     RELEASE_FLOOR,
+    RELEASE_LANE_OPEN,
+    SECURITY_FLOOR_SUMMARY,
     SNAPSHOT_FLOOR_DATE,
 )
 from opencut.dependency_support import (
@@ -116,6 +118,8 @@ def build_project_facts(repo_root: Path | None = None) -> dict[str, Any]:
         "routes": _route_facts(root),
         "ffmpeg": {
             "release_floor": release_floor,
+            "release_lane_open": RELEASE_LANE_OPEN,
+            "security_floor": SECURITY_FLOOR_SUMMARY,
             "snapshot_floor_date": SNAPSHOT_FLOOR_DATE,
             "pinned_installer_build": PINNED_INSTALLER_VERSION,
             "pinned_installer_commit": PINNED_INSTALLER_COMMIT,

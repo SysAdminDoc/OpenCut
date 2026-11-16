@@ -13,8 +13,17 @@ public sealed record FfmpegSecurityGrade(
 
 public sealed partial class FfmpegSecurityVerifier
 {
-    private static readonly Version ReleaseFloor = new(8, 1, 3);
     private static readonly DateOnly SnapshotFloor = new(2026, 11, 6);
+
+    // No published FFmpeg release clears the advisory matrix. 8.1.3 and 9.0.2
+    // were checked fix by fix and both miss these three fixes, and a higher
+    // version number is not evidence, so every tagged release is refused. Keep
+    // in step with RELEASE_LANE_CLOSED_REASON in opencut/core/ffmpeg_provenance.py
+    // (tests/test_ffmpeg_release_lane.py checks the CVEs and commits).
+    internal const string ReleaseLaneClosedReason =
+        "no published FFmpeg release carries the fixes for CVE-2026-125064 (ec887b13a8), " +
+        "CVE-2026-125180 (30fff47764) and CVE-2026-107675 (2b822b7fb6); " +
+        "8.1.3 and 9.0.2 both lack them";
 
     public void VerifyPayload(string ffmpegDirectory)
     {
@@ -103,14 +112,7 @@ public sealed partial class FfmpegSecurityVerifier
             releaseMatch.Groups[3].Success
                 ? int.Parse(releaseMatch.Groups[3].Value, CultureInfo.InvariantCulture)
                 : 0);
-        var releaseSafe = release >= ReleaseFloor;
-        return new(
-            releaseSafe,
-            "release",
-            token,
-                releaseSafe
-                ? $"release {release} is at/after {ReleaseFloor}"
-                : $"release {release} predates {ReleaseFloor} for CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, and CVE-2026-66041");
+        return new(false, "release", token, $"release {release} is refused: {ReleaseLaneClosedReason}");
     }
 
     [GeneratedRegex(@"\bversion\s+([^\s]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]

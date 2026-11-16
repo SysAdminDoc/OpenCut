@@ -7,7 +7,8 @@
 #define MyAppURL "https://github.com/SysAdminDoc/OpenCut"
 #define BundledFfmpegVersion "2026-11-11-git-23c4540053-full_build-www.gyan.dev"
 #define BundledFfprobeVersion "2026-11-11-git-23c4540053-full_build-www.gyan.dev"
-#define BundledFfmpegSecurityFloor "release>=8.1.3 OR git-master>=2026-11-06 (commit 23c454005319dee4a5bcae5c370f75fdeb325230)"
+#define BundledFfmpegSecurityFloor "git-master>=2026-11-06 (commit 23c454005319dee4a5bcae5c370f75fdeb325230); no tagged release clears the matrix yet"
+#define BundledFfmpegSnapshotFloor "2026-11-06"
 #define BundledFfmpegSecurityCve "CVE-2026-8461, CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, CVE-2026-66041, CVE-2026-125064, CVE-2026-125180, CVE-2026-107675"
 #define BundledFfmpegFixCommit1 "374b726ffa878ee1cadb987bd1e1e20cc7ed8845"
 #define BundledFfmpegFixCommit2 "5806e8b9f34f1b0663b3017ef9dd1aa5d08116d1"
@@ -291,25 +292,30 @@ end;
 
 function IsPostFixSnapshotDate(DateText: string): Boolean;
 var
-  YearValue, MonthValue, DayValue: Integer;
+  I: Integer;
 begin
   Result := False;
   if Length(DateText) <> 10 then
     Exit;
-  if (Copy(DateText, 5, 1) <> '-') or (Copy(DateText, 8, 1) <> '-') then
-    Exit;
-  YearValue := StrToIntDef(Copy(DateText, 1, 4), 0);
-  MonthValue := StrToIntDef(Copy(DateText, 6, 2), 0);
-  DayValue := StrToIntDef(Copy(DateText, 9, 2), 0);
-  Result := (YearValue > 2026) or
-    ((YearValue = 2026) and (MonthValue > 7)) or
-    ((YearValue = 2026) and (MonthValue = 7) and (DayValue >= 6));
+  for I := 1 to 10 do
+  begin
+    if (I = 5) or (I = 8) then
+    begin
+      if DateText[I] <> '-' then
+        Exit;
+    end
+    else if (DateText[I] < '0') or (DateText[I] > '9') then
+      Exit;
+  end;
+  { ISO dates order as strings, so the floor is one define shared with the
+    manifest instead of a second hand-coded year/month/day test. }
+  Result := CompareStr(DateText, '{#BundledFfmpegSnapshotFloor}') >= 0;
 end;
 
 function FfmpegBannerClearsFloor(Banner: string): Boolean;
 var
-  LowerBanner, Token, DateText: string;
-  VersionPos, SeparatorPos, MajorValue, MinorValue, PatchValue: Integer;
+  LowerBanner, Token: string;
+  VersionPos, SeparatorPos: Integer;
 begin
   Result := False;
   LowerBanner := Lowercase(Banner);
@@ -323,30 +329,14 @@ begin
 
   if Pos('-git-', Lowercase(Token)) > 0 then
   begin
-    DateText := Copy(Token, 1, 10);
-    Result := IsPostFixSnapshotDate(DateText);
+    Result := IsPostFixSnapshotDate(Copy(Token, 1, 10));
     Exit;
   end;
 
-  if (Length(Token) > 0) and (Lowercase(Copy(Token, 1, 1)) = 'n') then
-    Delete(Token, 1, 1);
-  SeparatorPos := Pos('-', Token);
-  if SeparatorPos > 0 then
-    Token := Copy(Token, 1, SeparatorPos - 1);
-  SeparatorPos := Pos('.', Token);
-  if SeparatorPos = 0 then
-    Exit;
-  MajorValue := StrToIntDef(Copy(Token, 1, SeparatorPos - 1), 0);
-  Delete(Token, 1, SeparatorPos);
-  SeparatorPos := Pos('.', Token);
-  if SeparatorPos = 0 then
-    Exit;
-  MinorValue := StrToIntDef(Copy(Token, 1, SeparatorPos - 1), 0);
-  Delete(Token, 1, SeparatorPos);
-  PatchValue := StrToIntDef(Token, 0);
-  Result := (MajorValue > 8) or
-    ((MajorValue = 8) and (MinorValue > 1)) or
-    ((MajorValue = 8) and (MinorValue = 1) and (PatchValue >= 3));
+  { Tagged releases are refused. 8.1.3 and 9.0.2 were checked fix by fix and
+    both lack the fixes for CVE-2026-125064, CVE-2026-125180 and
+    CVE-2026-107675 (RELEASE_LANE_CLOSED_REASON in
+    opencut/core/ffmpeg_provenance.py), and a version number is not evidence. }
 end;
 
 procedure VerifyInstalledMediaBinary(BinaryPath, DisplayName: string);
@@ -367,7 +357,7 @@ begin
   Banner := Output.StdOut[0];
   if not FfmpegBannerClearsFloor(Banner) then
     RaiseException(
-      DisplayName + ' is below the {#BundledFfmpegSecurityFloor} floor for ' +
+      DisplayName + ' does not clear the FFmpeg security floor ({#BundledFfmpegSecurityFloor}) for ' +
       '{#BundledFfmpegSecurityCve}: ' + Banner);
   Log(DisplayName + ' security floor verified: ' + Banner);
 end;
