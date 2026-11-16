@@ -414,3 +414,47 @@ def test_a_failure_with_a_multi_line_reason_stays_on_its_status_line(monkeypatch
         "[failed] mediapipe: pip couldn't install mediapipe: ERROR: Could not find a version"
         " that satisfies the requirement ERROR: No matching distribution"
     ]
+
+
+# ---------------------------------------------------------------------------
+# --remove-tools
+# ---------------------------------------------------------------------------
+def test_removing_tools_takes_out_auto_editor_and_the_pip_tools(monkeypatch, data_dir):
+    lines = []
+    bin_dir = data_dir / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "auto-editor.exe").write_bytes(b"exe")
+    asked = []
+
+    def remove(projects, report):
+        asked.append(list(projects))
+        return ["edge-tts 7.0"] if projects == ["edge-tts"] else []
+
+    monkeypatch.setattr(package_store, "remove", remove)
+
+    code = optional_tools.remove_tools(["auto-editor", "Edge-TTS", "mediapipe"], lines.append)
+
+    assert code == 0
+    assert not (bin_dir / "auto-editor.exe").exists()
+    assert asked == [["edge-tts"], ["mediapipe"]]
+    assert lines == [
+        f"[ok] auto-editor is no longer in {bin_dir}",
+        "[ok] edge-tts is removed. Restart OpenCut if it's running.",
+        "[ok] mediapipe wasn't installed",
+    ]
+
+
+def test_a_tool_another_one_needs_reports_why_it_stayed(monkeypatch, data_dir):
+    lines = []
+
+    def remove(projects, report):
+        raise RuntimeError("Nothing was removed, because mediapipe still needs numpy")
+
+    monkeypatch.setattr(package_store, "remove", remove)
+
+    assert optional_tools.remove_tools(["edge-tts", "nope"], lines.append) == 2
+    assert optional_tools.remove_tools(["edge-tts"], lines.append) == 1
+    assert lines == [
+        "[failed] nope: choose from auto-editor, edge-tts, mediapipe",
+        "[failed] edge-tts: Nothing was removed, because mediapipe still needs numpy",
+    ]

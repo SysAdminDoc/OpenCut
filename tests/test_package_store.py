@@ -38,11 +38,15 @@ def data_dir(tmp_path, monkeypatch):
     return data
 
 
-def _dist(folder, name, version, files=None, *, requires=(), wheel_tags=("py3-none-any",), top_level=()):
+def _dist(
+    folder, name, version, files=None, *, requires=(), wheel_tags=("py3-none-any",), top_level=(), requested=False
+):
     """Write what ``pip install --target`` leaves for one wheel, RECORD included."""
     folder = Path(folder)
     info = folder / f"{re.sub(r'[-.]+', '_', name)}-{version}.dist-info"
     info.mkdir(parents=True)
+    if requested:  # pip marks the projects it was asked for
+        (info / "REQUESTED").write_bytes(b"")
     meta = ["Metadata-Version: 2.1", f"Name: {name}", f"Version: {version}"]
     meta += [f"Requires-Dist: {req}" for req in requires]
     (info / "METADATA").write_text("\n".join(meta) + "\n", encoding="utf-8")
@@ -435,3 +439,203 @@ def test_the_startup_check_skips_when_an_install_holds_the_store(another_install
 
     assert (packages / "native" / "__init__.py").exists()
     assert not (data_dir / "packages-inventory.json").exists()
+
+
+# ---------------------------------------------------------------------------
+# Removing an add-on
+# ---------------------------------------------------------------------------
+def _two_add_ons(packages):
+    """edge-tts and mediapipe as an install leaves them, sharing certifi and bin/."""
+    _dist(packages, "edge-tts", "7.0", {"edge_tts/__init__.py": b"tts", "bin/edge-tts.exe": b"tts exe"},
+          requires=["aiohttp>=3", "certifi"], requested=True)
+    _dist(packages, "aiohttp", "3.9", {"aiohttp/__init__.py": b"aiohttp"}, requires=["yarl"])
+    _dist(packages, "yarl", "1.9", {"yarl/__init__.py": b"yarl"})
+    _dist(packages, "certifi", "2026.1", {"certifi/__init__.py": b"certifi"})
+    _dist(packages, "mediapipe", "0.10", {"mediapipe/__init__.py": b"mp", "bin/mp.exe": b"mp exe"},
+          requires=["numpy", "certifi"], requested=True)
+    _dist(packages, "numpy", "2.1", {"numpy/__init__.py": b"numpy"})
+
+
+def test_removing_an_add_on_takes_the_dependencies_only_it_needed(data_dir):
+    packages = data_dir / "packages"
+    _two_add_ons(packages)
+    lines = []
+
+    removed = package_store.remove(["Edge_TTS"], report=lines.append)
+
+    assert removed == ["aiohttp 3.9", "edge-tts 7.0", "yarl 1.9"]
+    assert sorted(package_store.read_dists(str(packages))) == ["certifi", "mediapipe", "numpy"]
+    assert not (packages / "edge_tts").exists() and not (packages / "aiohttp").exists()
+    assert sorted(p.name for p in (packages / "bin").iterdir()) == ["mp.exe"]
+    assert (packages / "certifi" / "__init__.py").read_bytes() == b"certifi"
+    assert lines == [f"Removed aiohttp 3.9, edge-tts 7.0, yarl 1.9 from {packages}"]
+    assert _leftovers(data_dir) == []
+
+
+def test_a_project_installed_for_itself_stays_when_the_add_on_that_needed_it_goes(data_dir):
+    packages = data_dir / "packages"
+    _dist(packages, "tool", "1.0", {"tool/__init__.py": b"t"}, requires=["numpy"], requested=True)
+    _dist(packages, "numpy", "2.1", {"numpy/__init__.py": b"numpy"}, requested=True)
+
+    assert package_store.remove(["tool"]) == ["tool 1.0"]
+    assert sorted(package_store.read_dists(str(packages))) == ["numpy"]
+
+
+def test_a_requirement_behind_an_extra_keeps_its_library(data_dir):
+    """Nothing records which extras an install asked for, so an optional need counts."""
+    packages = data_dir / "packages"
+    _dist(packages, "tool", "1.0", {"tool/__init__.py": b"t"}, requires=["numpy"], requested=True)
+    _dist(packages, "other", "1.0", {"other/__init__.py": b"o"}, requires=['numpy; extra == "fast"'],
+          requested=True)
+    _dist(packages, "numpy", "2.1", {"numpy/__init__.py": b"numpy"})
+
+    assert package_store.remove(["tool"]) == ["tool 1.0"]
+    assert (packages / "numpy" / "__init__.py").exists()
+
+
+def test_an_add_on_that_another_one_needs_is_not_removed(data_dir):
+    packages = data_dir / "packages"
+    _two_add_ons(packages)
+    before = _tree(packages)
+
+    with pytest.raises(RuntimeError, match="Nothing was removed, because mediapipe still needs numpy"):
+        package_store.remove(["numpy", "edge-tts"])
+
+    assert _tree(packages) == before
+    assert _leftovers(data_dir) == []
+
+
+def test_removal_keeps_the_files_shared_folders_hold_for_packages_that_stay(data_dir):
+    packages = data_dir / "packages"
+    _dist(packages, "nvidia-cublas", "12.0", {"nvidia/cublas/lib/cublas.dll": b"cublas"}, requested=True)
+    _dist(packages, "nvidia-cudnn", "9.0", {
+        "nvidia/cudnn/lib/cudnn.dll": b"cudnn",
+        "__pycache__/six.cpython-313.pyc": b"six pyc",
+    }, requested=True)
+    _dist(packages, "typing-extensions", "4.0", {
+        "typing_extensions.py": b"te", "__pycache__/typing_extensions.cpython-313.pyc": b"te pyc",
+    }, requested=True)
+
+    assert package_store.remove(["nvidia-cudnn"]) == ["nvidia-cudnn 9.0"]
+
+    assert (packages / "nvidia" / "cublas" / "lib" / "cublas.dll").read_bytes() == b"cublas"
+    assert not (packages / "nvidia" / "cudnn").exists()
+    assert sorted(p.name for p in (packages / "__pycache__").iterdir()) == ["typing_extensions.cpython-313.pyc"]
+
+
+def test_a_name_the_store_does_not_have_changes_nothing(data_dir):
+    packages = data_dir / "packages"
+    _two_add_ons(packages)
+    before = _tree(packages)
+
+    assert package_store.remove(["whisperx"]) == []
+    assert _tree(packages) == before
+
+
+def test_a_removal_that_fails_partway_puts_everything_back(monkeypatch, data_dir):
+    packages = data_dir / "packages"
+    _two_add_ons(packages)
+    before = _tree(packages)
+    real_replace = os.replace
+    moves = []
+
+    def replace(src, dst):
+        moves.append(src)
+        if len(moves) == 3:
+            raise PermissionError(13, "The process cannot access the file", src)
+        real_replace(src, dst)
+
+    monkeypatch.setattr(package_store.os, "replace", replace)
+
+    with pytest.raises(RuntimeError, match="Everything that was there is back"):
+        package_store.remove(["edge-tts"])
+
+    assert _tree(packages) == before
+    assert _leftovers(data_dir) == []
+
+
+_KILL_REMOVAL = """\
+import os, sys
+from opencut import helpers
+from opencut.core import package_store
+
+helpers.OPENCUT_DIR = sys.argv[1]
+real_replace = os.replace
+calls = []
+
+def replace(src, dst):
+    calls.append(dst)
+    if len(calls) == 3:  # two entries are aside, then the power goes
+        os._exit(9)
+    real_replace(src, dst)
+
+os.replace = replace
+package_store.remove(["edge-tts"])
+"""
+
+
+def test_a_removal_killed_partway_is_put_back_by_the_next_store_change(data_dir, tmp_path):
+    packages = data_dir / "packages"
+    _two_add_ons(packages)
+    before = _tree(packages)
+    script = tmp_path / "kill_removal.py"
+    script.write_text(_KILL_REMOVAL, encoding="utf-8")
+    env = dict(os.environ, PYTHONPATH=os.pathsep.join(filter(None, [str(REPO_ROOT), os.environ.get("PYTHONPATH")])))
+
+    killed = subprocess.run(
+        [sys.executable, str(script), str(data_dir)],
+        env=env, capture_output=True, text=True, timeout=120, creationflags=NO_WINDOW,
+    )
+
+    assert killed.returncode == 9, killed.stderr
+    assert _tree(packages) != before
+    assert package_store.remove(["not-installed"]) == []
+    assert _tree(packages) == before
+    assert not [p for p in data_dir.iterdir() if p.name.startswith(".packages-replaced-")]
+
+
+def test_a_removal_waits_for_an_install_then_says_so(another_install, monkeypatch, data_dir):
+    packages = data_dir / "packages"
+    _two_add_ons(packages)
+    before = _tree(packages)
+    monkeypatch.setattr(package_store.store_lock.__wrapped__, "__defaults__", (package_store._log, 0.3))
+
+    with pytest.raises(package_store.StoreBusy):
+        package_store.remove(["edge-tts"])
+
+    assert _tree(packages) == before
+
+
+def test_a_reinstall_keeps_the_mark_of_a_project_someone_installed_for_itself(monkeypatch, data_dir):
+    packages = data_dir / "packages"
+    _dist(packages, "shared", "1.0", {"shared/__init__.py": b"shared 1.0"}, requested=True)
+
+    def stage(target):
+        _dist(target, "new-tool", "1.0", {"new_tool/__init__.py": b"new"}, requires=["shared>=1"], requested=True)
+        _dist(target, "shared", "1.5", {"shared/__init__.py": b"shared 1.5"})
+
+    _pip(monkeypatch, stage)
+    package_store.install(["new-tool"], keep_shared=False)
+
+    assert (packages / "shared-1.5.dist-info" / "REQUESTED").is_file()
+    assert package_store.remove(["new-tool"]) == ["new-tool 1.0"]
+    assert (packages / "shared" / "__init__.py").read_bytes() == b"shared 1.5"
+
+
+def test_the_server_removes_a_tool_from_the_command_line(data_dir):
+    packages = data_dir / "packages"
+    _two_add_ons(packages)
+    env = dict(
+        os.environ,
+        OPENCUT_HOME=str(data_dir),
+        PYTHONPATH=os.pathsep.join(filter(None, [str(REPO_ROOT), os.environ.get("PYTHONPATH")])),
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-m", "opencut.server", "--remove-tools", "edge-tts"],
+        env=env, capture_output=True, text=True, encoding="utf-8", timeout=300, creationflags=NO_WINDOW,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "[ok] edge-tts is removed. Restart OpenCut if it's running." in result.stdout.splitlines()
+    assert sorted(package_store.read_dists(str(packages))) == ["certifi", "mediapipe", "numpy"]

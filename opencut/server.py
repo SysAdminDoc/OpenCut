@@ -1207,6 +1207,12 @@ def main():
             default=None,
             help="Install optional tools (comma-separated: auto-editor, edge-tts, mediapipe) and exit",
         )
+        parser.add_argument(
+            "--remove-tools",
+            metavar="NAMES",
+            default=None,
+            help="Remove optional tools, and what only they needed, then exit",
+        )
         parser.add_argument("--import-check", metavar="MODULE", default=None, help=argparse.SUPPRESS)
         parser.add_argument("--import-path", metavar="DIR", default=None, help=argparse.SUPPRESS)
         parser.add_argument(
@@ -1237,12 +1243,14 @@ def main():
             _file_handler.close()
             return capability_probe.run_child(args.capability_probe)
 
-        if args.install_tools is not None:
+        if args.install_tools is not None or args.remove_tools is not None:
             from opencut.core import optional_tools
 
             if hasattr(sys.stdout, "reconfigure"):
                 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-            return optional_tools.install_tools(args.install_tools.split(","))
+            if args.install_tools is not None:
+                return optional_tools.install_tools(args.install_tools.split(","))
+            return optional_tools.remove_tools(args.remove_tools.split(","))
 
         if args.rotate_auth or args.print_auth:
             from opencut import auth as _auth

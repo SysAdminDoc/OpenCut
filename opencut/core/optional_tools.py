@@ -141,21 +141,61 @@ def install_pip_tool(name: str, report: Report = _print) -> None:
     package_store.install([requirement], modules=[module], report=report)
 
 
-# ---------------------------------------------------------------------------
-# --install-tools
-# ---------------------------------------------------------------------------
-def install_tools(names: Iterable[str], report: Report = _print) -> int:
-    """Install each named tool. 0 when all landed, 1 when any failed, 2 for unknown names.
+def remove_pip_tool(name: str, report: Report = _print) -> list[str]:
+    """Take a :data:`PIP_TOOLS` entry, and what only it needed, out of the store."""
+    from packaging.requirements import Requirement
 
-    Every tool ends with one ``[ok] <name>`` or ``[failed] <name>`` line,
-    which the WPF installer turns into its log level.
-    """
+    return package_store.remove([Requirement(PIP_TOOLS[name][0]).name], report=report)
+
+
+# ---------------------------------------------------------------------------
+# --install-tools and --remove-tools
+# ---------------------------------------------------------------------------
+def _tool_names(names: Iterable[str], report: Report) -> list[str] | None:
     requested = list(dict.fromkeys(n.strip().lower() for n in names if n.strip()))
     unknown = [n for n in requested if n not in TOOL_NAMES]
     if unknown or not requested:
         report(
             f"[failed] {', '.join(unknown) or 'nothing'}: choose from {', '.join(TOOL_NAMES)}"
         )
+        return None
+    return requested
+
+
+def remove_tools(names: Iterable[str], report: Report = _print) -> int:
+    """Remove each named tool. Exit codes and ``[ok]``/``[failed]`` lines as :func:`install_tools`."""
+    requested = _tool_names(names, report)
+    if requested is None:
+        return 2
+    failed = 0
+    for name in requested:
+        try:
+            if name == "auto-editor":
+                path = os.path.join(tools_bin_dir(), "auto-editor.exe")
+                if os.path.lexists(path):
+                    os.remove(path)
+                    report(f"[ok] auto-editor is no longer in {tools_bin_dir()}")
+                else:
+                    report(f"[ok] auto-editor wasn't in {tools_bin_dir()}")
+            elif remove_pip_tool(name, report):
+                report(f"[ok] {name} is removed. Restart OpenCut if it's running.")
+            else:
+                report(f"[ok] {name} wasn't installed")
+        except Exception as exc:  # noqa: BLE001 - report it and go on to the next tool
+            logger.warning("Optional tool %s was not removed: %s", name, exc)
+            report(f"[failed] {name}: {' '.join(str(exc).split())}")
+            failed += 1
+    return 1 if failed else 0
+
+
+def install_tools(names: Iterable[str], report: Report = _print) -> int:
+    """Install each named tool. 0 when all landed, 1 when any failed, 2 for unknown names.
+
+    Every tool ends with one ``[ok] <name>`` or ``[failed] <name>`` line,
+    which the WPF installer turns into its log level.
+    """
+    requested = _tool_names(names, report)
+    if requested is None:
         return 2
     failed = 0
     for name in requested:

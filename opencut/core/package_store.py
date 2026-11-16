@@ -805,7 +805,165 @@ def install(
             for module in modules:
                 report(f"Checking that the OpenCut server can import {module}...")
                 smoke_import(module, staging, on_process)
+            # A project someone installed for itself stays theirs when a
+            # reinstall of something else replaces it as a dependency.
+            for name, dist in staged.items():
+                if name in store and name not in keep and _requested(packages, store[name]):
+                    open(os.path.join(staging, dist.info, _REQUESTED), "a").close()
             merge_staged_packages(staging, packages)
         finally:
             shutil.rmtree(staging, ignore_errors=True)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Remove
+# ---------------------------------------------------------------------------
+_REQUESTED = "REQUESTED"  # pip writes it into the .dist-info of each project it was asked for
+
+
+def _requested(packages: str, dist: Dist) -> bool:
+    return os.path.isfile(os.path.join(packages, dist.info, _REQUESTED))
+
+
+def _dependency_names(dist: Dist, store: dict[str, Dist], every_extra: bool) -> set[str]:
+    """The store projects ``dist`` requires. ``every_extra`` counts optional ones too."""
+    if not every_extra:
+        names = {canonical(req.name) for req in _requirements(dist)}
+    else:
+        from packaging.requirements import InvalidRequirement, Requirement
+
+        names = set()
+        for line in dist.requires:
+            try:
+                names.add(canonical(Requirement(line).name))
+            except InvalidRequirement:
+                continue
+    names.discard(dist.name)
+    return names & store.keys()
+
+
+def _closure(start: Iterable[str], store: dict[str, Dist], every_extra: bool) -> set[str]:
+    seen: set[str] = set()
+    todo = list(start)
+    while todo:
+        name = todo.pop()
+        if name not in seen:
+            seen.add(name)
+            todo.extend(_dependency_names(store[name], store, every_extra))
+    return seen
+
+
+def plan_removal(
+    store: dict[str, Dist], targets: Iterable[str], requested: Iterable[str]
+) -> tuple[list[str], list[str]]:
+    """Which projects removing ``targets`` takes out of the store, and what stops it.
+
+    A target goes with each dependency only the projects leaving needed. A
+    project stays when something that stays requires it, counting optional
+    requirements, since nothing records which extras an install asked for.
+    So does one someone installed for itself (``requested``, pip's
+    ``REQUESTED`` marker), and so does anything nothing requires. A target
+    that something staying requires comes back as a reason instead.
+    """
+    targets = set(targets) & store.keys()
+    requested = set(requested)
+    required_by: dict[str, set[str]] = {name: set() for name in store}
+    for dist in store.values():
+        for dep in _dependency_names(dist, store, every_extra=True):
+            required_by[dep].add(dist.name)
+    roots = {
+        name for name in store
+        if name not in targets and (name in requested or not required_by[name])
+    }
+    staying = _closure(roots, store, every_extra=True)
+    blocked = []
+    for name in sorted(targets & staying):
+        needers = sorted(store[other].display for other in required_by[name] if other in staying)
+        blocked.append(f"{', '.join(needers)} still need{'s' if len(needers) == 1 else ''} {store[name].display}")
+    if blocked:
+        return [], blocked
+    return sorted(_closure(targets, store, every_extra=False) - staying), []
+
+
+def _take_out(packages: str, leaving: Sequence[Dist], staying: Sequence[Dist]) -> None:
+    """Move what ``leaving`` owns out of the store, keeping files ``staying`` owns.
+
+    Like a merge, every move is journaled before it happens and nothing is
+    deleted until all of them worked, so a failure or a kill partway puts
+    the store back as it was.
+    """
+    others: set[str] = set()
+    for dist in staying:
+        others |= _owned(dist)
+    shared = others | _ancestors(others)
+    covers = set()
+    for dist in leaving:
+        for rel in _owned(dist):
+            if rel in others:
+                continue
+            parts = rel.split("/")
+            # The highest folder no other project has files in goes whole.
+            covers.add(next("/".join(parts[:depth]) for depth in range(1, len(parts) + 1)
+                            if "/".join(parts[:depth]) not in shared))
+    aside = tempfile.mkdtemp(prefix=_ASIDE_PREFIX, dir=os.path.dirname(packages))
+    journal = _Journal(os.path.join(aside, _JOURNAL))
+    set_aside: list[tuple[str, str]] = []
+    try:
+        for rel in sorted(covers):
+            path = os.path.join(packages, *rel.split("/"))
+            if not os.path.lexists(path):
+                continue
+            holder = os.path.join(aside, str(len(set_aside)))
+            journal.write("aside", path, holder)
+            os.replace(path, holder)
+            set_aside.append((path, holder))
+        journal.write("done")
+    except BaseException as exc:
+        restored = _put_back([], set_aside)
+        journal.close()
+        if restored:
+            shutil.rmtree(aside, ignore_errors=True)
+        if isinstance(exc, OSError):
+            where = "is back" if restored else f"is in {aside}"
+            raise RuntimeError(
+                f"couldn't remove {', '.join(d.display for d in leaving)} from {packages} ({exc}). "
+                f"Everything that was there {where}. If OpenCut is running, close it and "
+                "Premiere Pro, then try again."
+            ) from exc
+        raise
+    journal.close()
+    shutil.rmtree(aside, ignore_errors=True)
+    for top in sorted({rel.split("/", 1)[0] for rel in covers} & shared):
+        path = os.path.join(packages, top)
+        if os.path.isdir(path) and not os.path.islink(path):
+            _prune_empty_dirs(path)
+
+
+def remove(projects: Iterable[str], *, report: Report = _log) -> list[str]:
+    """Take add-on projects out of the store. Returns the names of what it removed.
+
+    Each project goes with the dependencies nothing else needs
+    (:func:`plan_removal`). It holds the store lock, so it never runs during
+    an install, and raises ``RuntimeError`` without changing anything when a
+    project that stays still needs one of them.
+    """
+    packages = packages_dir()
+    targets = {canonical(project) for project in projects if project.strip()}
+    with store_lock(report):
+        _sweep_leftovers(os.path.dirname(packages))
+        store = read_dists(packages)
+        requested = {name for name, dist in store.items() if _requested(packages, dist)}
+        removing, blocked = plan_removal(store, targets, requested)
+        if blocked:
+            raise RuntimeError(f"Nothing was removed, because {'; '.join(blocked)}")
+        if not removing:
+            return []
+        _take_out(
+            packages,
+            [store[name] for name in removing],
+            [dist for name, dist in store.items() if name not in removing],
+        )
+    removed = [f"{store[name].display} {store[name].version}" for name in removing]
+    report(f"Removed {', '.join(removed)} from {packages}")
+    return removed
