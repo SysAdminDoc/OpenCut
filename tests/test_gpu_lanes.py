@@ -208,3 +208,58 @@ def test_install_py_prints_the_lane_and_its_reason(monkeypatch, capsys, tmp_path
     else:
         assert f"--index-url https://download.pytorch.org/whl/{expected}" in out
     assert ("nvidia-cudnn-cu12==9.10.2.21" in out) is (expected == "cu132")
+
+
+@pytest.mark.parametrize(
+    "projects, installed, gpus, expected",
+    [
+        (["torch"], None, [RTX_5090], "cu132"),
+        (["torch"], None, [RTX_3080], "cu126"),
+        (["torch"], None, [], "cpu"),
+        # torch itself moves to the host's lane, whatever build is installed.
+        (["torch"], "cu128", [RTX_5090], "cu132"),
+        (["torch", "torchvision"], "cu132", [RTX_3080], "cu126"),
+        # Each torchvision and torchaudio release pins one torch build.
+        (["torchvision"], "cu128", [RTX_5090], "cu128"),
+        (["torchaudio"], "cpu", [RTX_5090], "cpu"),
+        (["torchvision"], None, [RTX_3080], "cu126"),
+        # PyPI keeps everything else.
+        (["torch", "transformers"], None, [RTX_5090], None),
+        (["transformers"], None, [RTX_5090], None),
+        ([], None, [RTX_5090], None),
+    ],
+)
+def test_torch_family_installs_read_the_lane_table(monkeypatch, projects, installed, gpus, expected):
+    monkeypatch.setattr(gpu_lanes.sys, "platform", "win32")
+    monkeypatch.setattr(gpu_lanes, "installed_torch_index", lambda: installed)
+    monkeypatch.setattr(gpu_lanes, "host_torch_lane", lambda: gpu_lanes.choose_torch_lane(gpus))
+
+    assert gpu_lanes.torch_family_index(projects) == expected
+    assert gpu_lanes.torch_family_pip_args(projects) == (
+        [] if expected is None else ["--index-url", f"https://download.pytorch.org/whl/{expected}"]
+    )
+
+
+def test_macos_keeps_pypi_for_torch(monkeypatch):
+    monkeypatch.setattr(gpu_lanes.sys, "platform", "darwin")
+    monkeypatch.setattr(gpu_lanes, "host_torch_lane", lambda: gpu_lanes.choose_torch_lane([RTX_5090]))
+
+    assert gpu_lanes.torch_family_pip_args(["torch"]) == []
+
+
+@pytest.mark.parametrize(
+    "version, expected",
+    [("2.15.0+cu132", "cu132"), ("2.11.0+cu128", "cu128"), ("2.15.0+cpu", "cpu"), ("2.15.0", None), (None, None)],
+)
+def test_the_installed_torch_index_comes_from_its_local_version(monkeypatch, version, expected):
+    import importlib.metadata
+
+    def _version(name):
+        assert name == "torch"
+        if version is None:
+            raise importlib.metadata.PackageNotFoundError(name)
+        return version
+
+    monkeypatch.setattr(importlib.metadata, "version", _version)
+
+    assert gpu_lanes.installed_torch_index() == expected

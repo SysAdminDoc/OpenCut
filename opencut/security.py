@@ -652,7 +652,10 @@ def safe_pip_install(
             "pip couldn't install %s into %s: %s", package, _target_dir, (exc.result.stderr or "")[-300:]
         )
 
-    _base = [python, "-m", "pip", "install", package, "--prefer-binary", "-q"]
+    from opencut.gpu_lanes import torch_family_pip_args
+
+    project = re.split(r"[\[>=<!~]", package, maxsplit=1)[0]
+    _base = [python, "-m", "pip", "install", package, *torch_family_pip_args([project]), "--prefer-binary", "-q"]
     strategies = []
     if not frozen:
         strategies = [

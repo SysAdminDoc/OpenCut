@@ -198,7 +198,82 @@ def test_a_cpu_lane_adds_no_constraint(monkeypatch, data_dir):
 
     [pip] = [cmd for cmd in fake.commands if "pip" in cmd]
     assert "-c" not in pip
+    assert "--index-url" not in pip
     assert _leftovers(data_dir) == []
+
+
+def _torch_lane(monkeypatch, installed, gpu):
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    monkeypatch.setattr(gpu_lanes.sys, "platform", "win32")
+    monkeypatch.setattr(gpu_lanes, "onnxruntime_gpu_requirement", lambda: None)
+    monkeypatch.setattr(gpu_lanes, "installed_torch_index", lambda: installed)
+    monkeypatch.setattr(gpu_lanes, "host_torch_lane", lambda: gpu_lanes.choose_torch_lane([gpu]))
+
+
+RTX_3080 = {"name": "RTX 3080", "driver_version": "546.33", "compute_capability": "8.6"}
+RTX_5090 = {"name": "RTX 5090", "driver_version": "581.57", "compute_capability": "12.0"}
+
+
+@pytest.mark.parametrize(
+    "asked, installed, gpu, requirement, index",
+    [
+        ("torch", None, RTX_3080, "torch>=2.10.0", "cu126"),
+        ("torch", "cu128", RTX_5090, "torch>=2.10.0", "cu132"),
+        ("torchvision", "cu128", RTX_5090, "torchvision>=0.25.0", "cu128"),
+    ],
+)
+def test_a_torch_install_comes_from_the_lane_index(monkeypatch, data_dir, asked, installed, gpu, requirement, index):
+    """PyPI's Windows torch is a CPU build, so an install from the panel never ran on the GPU."""
+    _torch_lane(monkeypatch, installed, gpu)
+    lines = []
+    module = asked.replace("-", "_")
+    fake = _pip(monkeypatch, lambda target: _dist(target, asked, "2.15.0+" + index, {f"{module}/__init__.py": b""}))
+
+    package_store.install([asked], report=lines.append)
+
+    [pip] = [cmd for cmd in fake.commands if "pip" in cmd]
+    url = f"https://download.pytorch.org/whl/{index}"
+    assert requirement in pip
+    assert pip[pip.index("--index-url") + 1] == url
+    assert f"Installing {requirement} from {url} with C:/Python313/python.exe..." in lines
+    assert _leftovers(data_dir) == []
+
+
+def test_torch_beside_another_project_is_refused_before_pip_runs(monkeypatch, data_dir):
+    _torch_lane(monkeypatch, None, RTX_5090)
+    fake = _pip(monkeypatch, lambda target: pytest.fail("pip ran"))
+
+    with pytest.raises(ValueError, match="Install torch on its own, apart from transformers"):
+        package_store.install(["torch", "transformers"])
+
+    assert fake.commands == []
+    assert _leftovers(data_dir) == []
+
+
+def test_the_source_fallbacks_keep_the_lane_index(monkeypatch, data_dir):
+    """pip failing in the store mustn't land a PyPI torch through ``--user``."""
+    _torch_lane(monkeypatch, None, RTX_5090)
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    failed = subprocess.CompletedProcess(["pip"], 1, "", "no space left")
+
+    def _store(*args, **kwargs):
+        raise package_store.PipFailed("pip couldn't install torch", failed)
+
+    commands = []
+
+    def _fallback(cmd, **kwargs):
+        commands.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(package_store, "install", _store)
+    monkeypatch.setattr(security.subprocess, "run", _fallback)
+    monkeypatch.setattr(security, "_verify_package_importable", lambda *args: True)
+
+    security.safe_pip_install("torch")
+
+    [pip] = commands
+    assert pip[pip.index("--index-url") + 1] == "https://download.pytorch.org/whl/cu132"
+    assert pip[4] == "torch>=2.10.0"
 
 
 # ---------------------------------------------------------------------------

@@ -413,6 +413,50 @@ def onnxruntime_gpu_requirement() -> Optional[str]:
     return None if cuda_major is None else ONNXRUNTIME_GPU_REQUIREMENT.get(cuda_major)
 
 
+#: The projects PyTorch builds once per wheel index. PyPI carries one build of
+#: each, and on Windows that's the CPU build.
+TORCH_FAMILY = frozenset({"torch", "torchvision", "torchaudio"})
+
+_LOCAL_INDEX_RE = re.compile(r"\+(cu\d{2,3}|cpu)\b")
+
+
+def installed_torch_index() -> Optional[str]:
+    """The index the installed torch came from (``2.15.0+cu132`` is cu132), or None."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        installed = version("torch")
+    except PackageNotFoundError:
+        return None
+    match = _LOCAL_INDEX_RE.search(installed or "")
+    return match.group(1) if match else None
+
+
+def torch_family_index(projects) -> Optional[str]:
+    """The PyTorch index a pip install of ``projects`` should use, or None.
+
+    None unless every project is torch, torchvision or torchaudio, and on
+    macOS, where PyPI carries PyTorch's own builds. torchvision or torchaudio
+    without torch follows the installed torch's index, since each release
+    pins one torch build and a different one would replace it. Otherwise
+    the host's lane decides.
+    """
+    names = {re.sub(r"[-_.]+", "-", str(project)).lower() for project in projects}
+    if not names or not names <= TORCH_FAMILY or sys.platform == "darwin":
+        return None
+    if "torch" not in names:
+        installed = installed_torch_index()
+        if installed:
+            return installed
+    return host_torch_lane().index
+
+
+def torch_family_pip_args(projects) -> list:
+    """``--index-url`` for :func:`torch_family_index`, or nothing."""
+    index = torch_family_index(projects)
+    return [] if index is None else ["--index-url", torch_index_url(index)]
+
+
 def plan_backends(lane: TorchLanePlan) -> dict:
     """What every GPU backend installs and how it runs under ``lane``."""
     cuda_major = lane.cuda_major

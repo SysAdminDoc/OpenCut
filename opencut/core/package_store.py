@@ -766,10 +766,20 @@ def install(
     """
     from packaging.requirements import Requirement
 
-    from opencut import security
+    from opencut import gpu_lanes, security
 
     requirements = [security.runtime_security_requirement(r) for r in requirements]
     requested = {canonical(Requirement(r).name) for r in requirements}
+    torch_family = sorted(requested & gpu_lanes.TORCH_FAMILY)
+    if torch_family and len(torch_family) < len(requested):
+        # One pip run reads one index, and PyPI's Windows torch is a CPU build.
+        raise ValueError(
+            f"Install {', '.join(torch_family)} on its own, apart from "
+            f"{', '.join(sorted(requested - gpu_lanes.TORCH_FAMILY))}, so it comes from "
+            "the PyTorch index for this machine's GPU."
+        )
+    index_args = gpu_lanes.torch_family_pip_args(requested)
+    source = f" from {index_args[1]}" if index_args else ""
     python = python or security.install_python()
     packages = packages_dir()
     os.makedirs(packages, exist_ok=True)
@@ -785,11 +795,11 @@ def install(
         # Named like a staging folder so a killed install's copy gets swept too.
         constraints = tempfile.mkdtemp(prefix=f".{label}-staging-", dir=data_dir)
         try:
-            report(f"Installing {' '.join(requirements)} with {python}...")
+            report(f"Installing {' '.join(requirements)}{source} with {python}...")
             try:
                 result = _run(
                     [
-                        python, "-m", "pip", "install", *requirements, *pip_args,
+                        python, "-m", "pip", "install", *requirements, *pip_args, *index_args,
                         *_lane_constraints(constraints),
                         "--target", staging, "--prefer-binary",
                         "--disable-pip-version-check", "--no-input", "-q",
