@@ -145,6 +145,43 @@ def test_whisper_clear_cache_skips_relative_paths_from_an_empty_xdg_cache_home(
     assert response.get_json()["plan"] == []
 
 
+def test_whisper_clear_cache_plans_a_hub_cache_rooted_on_the_current_drive(
+    client, csrf_token, monkeypatch, tmp_path,
+):
+    """HF_HUB_CACHE=/hf/hub has no drive, so 3.13's os.path.isabs calls it
+    relative, but the Hub puts it on the current drive and loads from it."""
+    _isolate_whisper_caches(monkeypatch, tmp_path)
+    repo = tmp_path / "hub" / "models--Systran--faster-whisper-base"
+    repo.mkdir(parents=True)
+    (repo / "model.bin").write_bytes(b"x")
+    monkeypatch.chdir(tmp_path)  # same drive as tmp_path
+    monkeypatch.setenv("HF_HUB_CACHE", os.path.splitdrive(str(tmp_path / "hub"))[1])
+
+    response = client.post("/whisper/clear-cache", json={"dry_run": True}, headers=_headers(csrf_token))
+
+    planned = {os.path.normcase(os.path.abspath(entry["path"])) for entry in response.get_json()["plan"]}
+    assert os.path.normcase(str(repo)) in planned
+
+
+def test_models_list_skips_a_hub_cache_that_follows_the_cwd(client, csrf_token, monkeypatch, tmp_path):
+    """With XDG_CACHE_HOME="" the list showed models under the server's cwd
+    that /models/delete then refused."""
+    import opencut.routes.system_model_routes as model_routes
+
+    _isolate_whisper_caches(monkeypatch, tmp_path)
+    monkeypatch.setenv("XDG_CACHE_HOME", "")
+    cwd = tmp_path / "cwd"
+    (cwd / "huggingface" / "hub" / "models--org--speech").mkdir(parents=True)
+    (cwd / "torch" / "hub" / "checkpoints").mkdir(parents=True)
+    (cwd / "torch" / "hub" / "checkpoints" / "depth.pth").write_bytes(b"x")
+    monkeypatch.chdir(cwd)
+    monkeypatch.setitem(model_routes._models_cache, "data", None)
+
+    listed = client.get("/models/list", headers=_headers(csrf_token)).get_json()["models"]
+
+    assert [model["path"] for model in listed if model["source"] in ("huggingface", "torch")] == []
+
+
 def test_models_list_and_delete_follow_hf_hub_cache_and_torch_home(client, csrf_token, monkeypatch, tmp_path):
     """/models/list read ~/.cache/huggingface/hub and $TORCH_HOME/checkpoints,
     and /models/delete refused anything outside ~/.cache, so a moved cache

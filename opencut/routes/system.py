@@ -216,7 +216,7 @@ def _build_whisper_cache_plan() -> dict:
     for category, cache_dir in cache_paths:
         # An empty XDG_CACHE_HOME or HF_HOME (or LOCALAPPDATA off Windows)
         # leaves a path relative to whatever folder the server started in.
-        if not cache_dir or not os.path.isabs(cache_dir) or not os.path.exists(cache_dir):
+        if not model_weights.is_rooted(cache_dir) or not os.path.exists(cache_dir):
             continue
         if category == "huggingface-whisper":
             try:

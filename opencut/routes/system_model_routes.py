@@ -122,7 +122,9 @@ def list_models():
     models = []
     # The Hub cache the loaders use, wherever HF_HUB_CACHE or HF_HOME put it
     hf_cache = model_weights.hf_cache_dir()
-    if os.path.isdir(hf_cache):
+    # A cache that follows the cwd (empty XDG_CACHE_HOME or HF_HOME) isn't
+    # listed, since /models/delete won't touch it.
+    if model_weights.is_rooted(hf_cache) and os.path.isdir(hf_cache):
         for entry in os.listdir(hf_cache):
             path = os.path.join(hf_cache, entry)
             if os.path.isdir(path) and entry.startswith("models--"):
@@ -135,7 +137,7 @@ def list_models():
                 models.append({"name": name, "path": path, "size_mb": round(size / (1024 * 1024), 1), "source": "huggingface"})
     # Check torch hub cache
     torch_cache = model_weights.torch_hub_dir()
-    if os.path.isdir(torch_cache):
+    if model_weights.is_rooted(torch_cache) and os.path.isdir(torch_cache):
         checkpoints = os.path.join(torch_cache, "checkpoints")
         if os.path.isdir(checkpoints):
             for f in os.listdir(checkpoints):
@@ -201,7 +203,7 @@ def delete_model():
         allowed_roots.append(WHISPER_MODELS_DIR)
     # An empty XDG_CACHE_HOME or HF_HOME resolves a cache relative to the
     # server's cwd, and that must not make the cwd deletable.
-    allowed_roots = [root for root in allowed_roots if os.path.isabs(root)]
+    allowed_roots = [root for root in allowed_roots if model_weights.is_rooted(root)]
     if not is_path_within_any(path, allowed_roots):
         return jsonify({"error": "Cannot delete files outside of model cache directories"}), 403
     # One model at a time: never a cache folder itself or one that holds a listed folder.
@@ -210,7 +212,7 @@ def delete_model():
         os.path.join(default_torch, "hub", "checkpoints"),
         os.path.join(model_weights.torch_hub_dir(), "checkpoints"),
     ]
-    if any(is_path_within(folder, path) for folder in listed_folders if os.path.isabs(folder)):
+    if any(is_path_within(folder, path) for folder in listed_folders if model_weights.is_rooted(folder)):
         return jsonify({"error": "Cannot delete a whole model cache folder, only a model inside it"}), 403
     if not os.path.isdir(path) and not os.path.isfile(path):
         return jsonify({"error": "Path not found"}), 404

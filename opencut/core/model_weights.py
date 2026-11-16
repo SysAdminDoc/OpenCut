@@ -245,6 +245,19 @@ def whisper_cache_dir() -> str:
     return os.path.join(os.getenv("XDG_CACHE_HOME", default), "whisper")
 
 
+def is_rooted(path: str) -> bool:
+    """True when *path* doesn't depend on the server's working directory.
+
+    An empty ``XDG_CACHE_HOME`` or ``HF_HOME`` leaves the caches above
+    relative. ``os.path.isabs`` can't be the test on Windows: 3.13 calls
+    ``/hf/hub`` relative (it has no drive) where 3.11 calls it absolute, and
+    the loaders put it on the current drive either way. ``hub`` and
+    ``C:hub`` follow the cwd.
+    """
+    rest = os.path.splitdrive(path or "")[1]
+    return rest[:1] in {os.sep, os.altsep or os.sep}
+
+
 def _hf_repo_dir(repo_id: str) -> str:
     return os.path.join(hf_cache_dir(), "models--" + repo_id.replace("/", "--"))
 

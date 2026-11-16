@@ -763,3 +763,15 @@ def test_whisper_cache_dir_matches_openai_whispers_default(monkeypatch, tmp_path
     _hub_env(monkeypatch, tmp_path, env)
 
     assert os.path.normpath(model_weights.whisper_cache_dir()) == _expected_dir(tmp_path, parts)
+
+
+_ROOTED_CASES = [("", False), ("hub", False), ("huggingface/hub", False), ("/hf/hub", True)]
+if os.name == "nt":
+    _ROOTED_CASES += [(r"C:\hf\hub", True), (r"\hf\hub", True), ("C:hub", False), ("//server/share/hub", True)]
+
+
+@pytest.mark.parametrize("path, rooted", _ROOTED_CASES)
+def test_is_rooted_means_independent_of_the_cwd(path, rooted):
+    """os.path.isabs("/hf/hub") is True on 3.11 and False on 3.13 for Windows,
+    and the loaders put it on the current drive on both."""
+    assert model_weights.is_rooted(path) is rooted
