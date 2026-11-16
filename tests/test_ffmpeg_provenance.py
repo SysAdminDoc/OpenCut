@@ -26,7 +26,7 @@ BANNER_81 = (
     "the FFmpeg developers"
 )
 BANNER_GIT_POSTFIX = (
-    "ffmpeg version 2026-08-03-git-01a25f74cc-full_build-www.gyan.dev Copyright "
+    "ffmpeg version 2026-11-11-git-23c4540053-full_build-www.gyan.dev Copyright "
     "(c) 2000-2026 the FFmpeg developers"
 )
 BANNER_GIT_PREFIX = (
@@ -49,8 +49,8 @@ def test_parse_release_banner():
 def test_parse_git_snapshot_banner():
     rec = fp.parse_version_banner(BANNER_GIT_POSTFIX)
     assert rec["is_git_snapshot"] is True
-    assert rec["snapshot_date"] == "2026-08-03"
-    assert rec["git_commit"] == "01a25f74cc"
+    assert rec["snapshot_date"] == "2026-11-11"
+    assert rec["git_commit"] == "23c4540053"
     assert rec["flavor"] == "full"
     assert rec["release"] is None
 
@@ -91,10 +91,11 @@ def test_floor_release_812_is_rejected_for_july_cves():
     assert "CVE-2026-64832" in res["reason"]
 
 
-def test_floor_release_813_reenables_release_lane():
+def test_floor_release_813_is_refused_for_fixes_after_9_0_2():
     res = fp.check_security_floor(BANNER_813)
-    assert res["ok"] is True
+    assert res["ok"] is False
     assert res["lane"] == "release"
+    assert "CVE-2026-125064" in res["reason"]
 
 
 def test_floor_release_810_is_below():
@@ -108,8 +109,8 @@ def test_floor_git_postfix_snapshot_passes():
     res = fp.check_security_floor(BANNER_GIT_POSTFIX)
     assert res["ok"] is True
     assert res["lane"] == "snapshot"
-    assert res["git_commit"] == "01a25f74cc"
-    assert res["snapshot_date"] == "2026-08-03"
+    assert res["git_commit"] == "23c4540053"
+    assert res["snapshot_date"] == "2026-11-11"
     assert res["flavor"] == "full"
 
 
@@ -117,7 +118,7 @@ def test_pinned_snapshot_requires_the_bundled_commit():
     current = fp.check_security_floor(BANNER_GIT_POSTFIX)
     assert fp.is_pinned_snapshot(current) is True
     other = fp.check_security_floor(
-        "ffmpeg version 2026-08-03-git-aaaaaaaaaa-full_build-www.gyan.dev"
+        "ffmpeg version 2026-11-11-git-aaaaaaaaaa-full_build-www.gyan.dev"
     )
     assert fp.is_pinned_snapshot(other) is False
 
@@ -162,8 +163,8 @@ def test_cves_listed_in_every_result():
 def test_provenance_record_documents_floor_without_binary():
     rec = fp.provenance_record(banner="")
     assert rec["required_release_floor"] == "8.1.3"
-    assert rec["required_snapshot_floor_date"] == "2026-07-06"
-    assert rec["reference_git_commit"] == "01a25f74cc446a683318bab13dfd98a467082ef7"
+    assert rec["required_snapshot_floor_date"] == "2026-11-06"
+    assert rec["reference_git_commit"] == "23c454005319dee4a5bcae5c370f75fdeb325230"
     assert rec["required_fix_commits"] == list(fp.SECURITY_FIX_COMMITS)
     assert rec["pinned_installer_version"] == fp.PINNED_INSTALLER_VERSION
     assert "CVE-2026-6385" in rec["cves_addressed"]

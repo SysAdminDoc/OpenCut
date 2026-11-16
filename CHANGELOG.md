@@ -4,6 +4,10 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ## Unreleased
 
+### Security
+
+- The bundled FFmpeg moves to the 2026-11-11 snapshot (git `23c4540053`), which has the fixes for CVE-2026-125064 in the G.726 audio decoder, CVE-2026-125180 in the EXIF parser and CVE-2026-107675 in libssh SFTP. The 2026-08-03 build in 1.56.0 predates all three. The installers and the server now refuse snapshots older than 2026-11-06, and release smoke checks that the shipped `ffmpeg.exe` and `ffprobe.exe` match the pinned archive's hashes and version banner and were built with GnuTLS and whisper.
+
 ### Fixed
 
 - The DRM content key you give the Shaka packaging job no longer ends up on disk. Job history in `jobs.db` saved it in plain text, and the server log recorded it inside the packager command line, so it also went out with issue reports. Both now show `[REDACTED]`, and the key ID stays readable.

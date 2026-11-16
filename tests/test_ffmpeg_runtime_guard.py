@@ -17,7 +17,7 @@ from opencut.core import ffmpeg_provenance as fp
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SAFE_BANNER = "ffmpeg version 2026-08-03-git-01a25f74cc-full_build-www.gyan.dev\n"
+SAFE_BANNER = "ffmpeg version 2026-11-11-git-23c4540053-full_build-www.gyan.dev\n"
 UNSAFE_BANNER = "ffmpeg version 8.1.2-essentials_build-www.gyan.dev\n"
 
 
@@ -252,9 +252,9 @@ def test_distribution_lanes_pin_and_verify_the_same_floor():
     install_ps1 = (REPO_ROOT / "Install.ps1").read_text(encoding="utf-8")
     builder = (REPO_ROOT / "installer" / "InstallerBuilder.ps1").read_text(encoding="utf-8")
 
-    assert "FFMPEG_VERSION=2026-08-03-git-01a25f74cc" in dockerfile
-    assert "02f09346860e4b0549eb03003443c66dceb9f355c2db4f01746db33984f1e3cf" in dockerfile
-    assert "01a25f74cc446a683318bab13dfd98a467082ef7" in dockerfile
+    assert "FFMPEG_VERSION=2026-11-11-git-23c4540053" in dockerfile
+    assert "81c206f525b8206a5e3406fd0aacd92fd7070dff6a5cf28842b82e65640aa1e1" in dockerfile
+    assert "23c454005319dee4a5bcae5c370f75fdeb325230" in dockerfile
     assert "verify_ffmpeg_provenance.py /opt/ffmpeg/bin/ffmpeg" in dockerfile
     assert "    ffmpeg \\\n" not in dockerfile
     assert "probe_binary_security" in install_py

@@ -140,7 +140,7 @@ function Remove-OpenCutArtifact {
 }
 
 function Get-FFmpegSecurityStatus {
-    $required = "release>=8.1.3 OR git-master>=2026-07-06"
+    $required = "release>=8.1.3 OR git-master>=2026-11-06"
     $command = Get-Command ffmpeg -ErrorAction SilentlyContinue
     if (-not $command) {
         return [pscustomobject]@{ Safe = $false; Version = "missing"; Reason = "FFmpeg was not found" }
@@ -158,8 +158,8 @@ function Get-FFmpegSecurityStatus {
 
     $token = $Matches[1]
     if ($token -match "^(\d{4}-\d{2}-\d{2})-git-[0-9a-f]{7,40}") {
-        $safe = $Matches[1] -ge "2026-07-06"
-        $reason = if ($safe) { "Post-fix snapshot lane (CVE-2026-64832/64833/64835/66041)" } else { "Snapshot predates 2026-07-06 (CVE-2026-64832/64833/64835/66041)" }
+        $safe = $Matches[1] -ge "2026-11-06"
+        $reason = if ($safe) { "Post-fix snapshot lane (fixes through CVE-2026-125180)" } else { "Snapshot predates 2026-11-06, when the CVE-2026-125180 fix landed" }
         return [pscustomobject]@{ Safe = $safe; Version = $token; Reason = $reason }
     }
 
@@ -868,7 +868,7 @@ $allGood = $true
 if ((Get-FFmpegSecurityStatus).Safe) {
     Write-Ok "FFmpeg .............. OK (security floor verified)"
 } else {
-    Write-Err "FFmpeg .............. BLOCKED (requires 8.1.3+ or post-fix snapshot >= 2026-07-06)"
+    Write-Err "FFmpeg .............. BLOCKED (requires 8.1.3+ or post-fix snapshot >= 2026-11-06)"
     $allGood = $false
 }
 

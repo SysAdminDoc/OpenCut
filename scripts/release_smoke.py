@@ -938,7 +938,18 @@ def step_ffmpeg_provenance(_args: argparse.Namespace) -> StepResult:
             "fail",
             skipped_reason="scripts/verify_ffmpeg_provenance.py missing",
         )
-    result = _run([sys.executable, str(script)], cwd=REPO_ROOT)
+    cmd = [sys.executable, str(script)]
+    payload = REPO_ROOT / "ffmpeg"
+    if (payload / "ffmpeg.exe").is_file():
+        # The Windows payload must be the pinned archive's exact binaries:
+        # banner, hash and configure switches, ffprobe included.
+        cmd += [
+            str(payload / "ffmpeg.exe"),
+            "--ffprobe",
+            str(payload / "ffprobe.exe"),
+            "--pinned-payload",
+        ]
+    result = _run(cmd, cwd=REPO_ROOT)
     status = "ok" if result.returncode == 0 else "fail"
     return StepResult(
         "ffmpeg-provenance",

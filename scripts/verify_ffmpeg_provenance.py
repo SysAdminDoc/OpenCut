@@ -82,6 +82,47 @@ def _configuration(banner: str) -> str:
     return ""
 
 
+def _banner_token(banner: str) -> str:
+    first = banner.splitlines()[0] if banner.strip() else ""
+    match = re.search(r"\bversion\s+(\S+)", first)
+    return match.group(1) if match else ""
+
+
+def _pinned_payload_mismatches(record: dict, artifact_paths: list[Path]) -> list[str]:
+    """Where the shipped binaries differ from the pinned archive's contents.
+
+    The archive hash alone says nothing about the files actually copied into
+    the payload, so each binary's banner, hash and configure switches are
+    compared against the pin.
+    """
+    problems: list[str] = []
+    pins = (
+        ("package", fp.PINNED_INSTALLER_ARCHIVE_URL, fp.PINNED_INSTALLER_ARCHIVE_SHA256),
+        ("source", fp.PINNED_INSTALLER_SOURCE_URL, fp.PINNED_INSTALLER_SOURCE_SHA256),
+    )
+    for key, url, sha256 in pins:
+        if record[key]["url"] != url:
+            problems.append(f"{key} URL is not the pinned {url}")
+        if record[key]["sha256"] != sha256:
+            problems.append(f"{key} SHA-256 differs from the pin")
+    hashes = {a["name"].lower(): a["sha256"] for a in record["artifacts"]}
+    for path in artifact_paths:
+        name = path.name.lower()
+        token = _banner_token(_banner(str(path)))
+        if token != fp.PINNED_INSTALLER_VERSION:
+            problems.append(f"{name} banner {token or '?'} is not {fp.PINNED_INSTALLER_VERSION}")
+        expected = fp.PINNED_INSTALLER_BINARY_SHA256.get(name)
+        if expected is None:
+            problems.append(f"{name} has no pinned hash")
+        elif hashes.get(name) != expected:
+            problems.append(f"{name} SHA-256 differs from the pinned archive")
+    configuration = record["build"]["configuration"]
+    for switch in fp.PINNED_INSTALLER_REQUIRED_CONFIGURE:
+        if switch not in configuration.split():
+            problems.append(f"configuration lacks {switch}")
+    return problems
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("ffmpeg", nargs="?", default=None, help="ffmpeg binary (default: bundled)")
@@ -105,9 +146,23 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="forbid release evidence unless a passing snapshot matches the bundled full-build commit",
     )
+    parser.add_argument(
+        "--pinned-payload",
+        action="store_true",
+        help="--require-pinned-snapshot with the pinned package and source filled in (release smoke)",
+    )
     args = parser.parse_args(argv)
+    if args.pinned_payload:
+        args.require_pinned_snapshot = True
+        args.package_url = args.package_url or fp.PINNED_INSTALLER_ARCHIVE_URL
+        args.package_sha256 = args.package_sha256 or fp.PINNED_INSTALLER_ARCHIVE_SHA256
+        args.source_url = args.source_url or fp.PINNED_INSTALLER_SOURCE_URL
+        args.source_sha256 = args.source_sha256 or fp.PINNED_INSTALLER_SOURCE_SHA256
 
     ffmpeg_bin = args.ffmpeg or _default_ffmpeg()
+    if Path(ffmpeg_bin).is_file():
+        # Windows can't launch a relative path such as ffmpeg/ffmpeg.exe.
+        ffmpeg_bin = str(Path(ffmpeg_bin).resolve())
     banner = _banner(ffmpeg_bin)
     record = fp.provenance_record(banner=banner)
 
@@ -171,6 +226,7 @@ def main(argv: list[str] | None = None) -> int:
             release_missing.append("binary package URL")
         if not re.fullmatch(r"[0-9a-f]{64}", record["package"]["sha256"]):
             release_missing.append("binary package SHA-256")
+        release_missing.extend(_pinned_payload_mismatches(record, artifact_paths))
 
     if args.manifest and not release_missing:
         Path(args.manifest).parent.mkdir(parents=True, exist_ok=True)

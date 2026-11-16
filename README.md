@@ -129,7 +129,7 @@ cd OpenCut
 ```
 
 Then right-click `Install.bat` and select **Run as Administrator**. The installer will:
-1. Install or upgrade FFmpeg and reject releases below 8.1.3 or snapshots before 2026-07-06
+1. Install or upgrade FFmpeg and reject releases below 8.1.3 or snapshots before 2026-11-06
 2. Verify Python 3.11-3.14 is on your PATH (unsupported versions are rejected before installation)
 3. Install all Python dependencies (Flask, click, rich, etc.)
 4. Install the OpenCut Python package
@@ -145,7 +145,7 @@ After the installer finishes, you are ready to use OpenCut. See **Launch** below
 If you prefer manual control or are on macOS/Linux, follow these steps:
 
 1. **Install a dated post-fix git-master snapshot** of FFmpeg and make sure it is on your system PATH. OpenCut blocks older and unparseable builds before media processing because 8.1.2 is affected by CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, and CVE-2026-66041. No tagged release currently clears those: 8.1.2 closed the 8.1 line, 8.1.3 was never published, and the 9.0 series branched on 2026-06-26 before those fixes landed on master. A 9.0.x build is refused until someone shows the fixes were backported onto that branch. A higher version number on its own is not evidence:
-   - Windows: download the `ffmpeg-git-full` snapshot from https://www.gyan.dev/ffmpeg/builds/ (the bundled build is `2026-08-03-git-01a25f74cc-full_build-www.gyan.dev`, source commit `01a25f74cc446a683318bab13dfd98a467082ef7`) and add its `bin` folder to your PATH
+   - Windows: download the `ffmpeg-git-full` snapshot from https://www.gyan.dev/ffmpeg/builds/ (the bundled build is `2026-11-11-git-23c4540053-full_build-www.gyan.dev`, source commit `23c454005319dee4a5bcae5c370f75fdeb325230`) and add its `bin` folder to your PATH
    - macOS: `brew install ffmpeg`
    - Linux: `sudo apt install ffmpeg` (Debian/Ubuntu) or equivalent for your distro
    - Verify: `python scripts/verify_ffmpeg_provenance.py` must report `RESULT: OK`
@@ -159,9 +159,9 @@ output rather than letting a pass read as a clean bill of health; the current
 list lives in `UNGRADED_ADVISORIES` in `opencut/core/ffmpeg_provenance.py`.
 
 The bundled Windows archive is pinned to SHA-256
-`8c32ed9800ff421bbcfda96beb0a66783a64a7cd98869b87ec1b494d3c855fcc`. Its
+`6fa482b30da6b3a5b51ae4776d1873488a949724d0302aa5e96cad143e483776`. Its
 corresponding FFmpeg source archive is pinned to SHA-256
-`02f09346860e4b0549eb03003443c66dceb9f355c2db4f01746db33984f1e3cf`.
+`81c206f525b8206a5e3406fd0aacd92fd7070dff6a5cf28842b82e65640aa1e1`.
 
 2. **Clone and install the Python package:**
    ```bash
@@ -230,7 +230,7 @@ host secret, then recreate the affected services with
 lane. A direct, owner-writable `0600` secret-file backend supports
 `opencut-server --rotate-auth`, while a `0400` file returns the explicit
 `REMOTE_AUTH_TOKEN_FILE_READ_ONLY` error. The image builds the exact FFmpeg
-snapshot commit `01a25f74cc446a683318bab13dfd98a467082ef7` from the
+snapshot commit `23c454005319dee4a5bcae5c370f75fdeb325230` from the
 checksum-pinned upstream source archive and fails its build-time provenance
 gate if the binary falls below OpenCut's security floor. Image assembly also
 installs Python from the universal `requirements-release-lock.txt` with
@@ -314,7 +314,7 @@ with the origin that asked.
 Most AI features are optional dependencies. Open the **Settings** tab in the panel and scroll to the **Dependency Dashboard**. It shows every optional package with its install status and the exact pip command to install missing ones. Or install all audited extras at once: `pip install -e ".[all]"`.
 
 **FFmpeg missing or blocked:**
-The server requires FFmpeg 8.1.3+ (or a dated post-fix snapshot from 2026-07-06 onward) on your PATH. Run `python scripts/verify_ffmpeg_provenance.py` to see the detected version and reason. If missing or below the floor, install the current `ffmpeg-git-full` build from https://www.gyan.dev/ffmpeg/builds/ or build the checksum-verified upstream source snapshot. Restart the terminal and OpenCut server after upgrading. `Install.ps1 -SkipFFmpeg` skips automatic installation only; it cannot bypass this security check.
+The server requires FFmpeg 8.1.3+ (or a dated post-fix snapshot from 2026-11-06 onward) on your PATH. Run `python scripts/verify_ffmpeg_provenance.py` to see the detected version and reason. If missing or below the floor, install the current `ffmpeg-git-full` build from https://www.gyan.dev/ffmpeg/builds/ or build the checksum-verified upstream source snapshot. Restart the terminal and OpenCut server after upgrading. `Install.ps1 -SkipFFmpeg` skips automatic installation only; it cannot bypass this security check.
 
 **Python not found or wrong version:**
 OpenCut requires Python 3.11-3.14. Run `python --version` to check. On Windows, if Python is installed but not on PATH, use `py -3.12 -m opencut.server` instead, or re-run the Python installer and check "Add Python to PATH". Python 3.15+ is rejected until the dependency matrix has verified it.

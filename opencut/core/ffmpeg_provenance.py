@@ -95,16 +95,17 @@ RELEASE_LANE_CLOSED_REASON = (
     "tag is shown to contain them."
 )
 
-# Minimum acceptable *git-master snapshot* date. The four July-2026 fixes
-# landed on master by 2026-06-29; the first dated Gyan full build after the
-# fixes is 2026-07-06. ISO ``YYYY-MM-DD``.
-SNAPSHOT_FLOOR_DATE = "2026-07-06"
+# Minimum acceptable *git-master snapshot* date: the latest ``fix_landed`` in
+# SECURITY_ADVISORIES (the EXIF fix for CVE-2026-125180, 2026-11-06). A
+# snapshot dated earlier misses at least one graded fix. ISO ``YYYY-MM-DD``.
+SNAPSHOT_FLOOR_DATE = "2026-11-06"
 
 # The exact post-fix master snapshot used by the bundled Windows payload. Keep
 # the full source SHA here even though Gyan's banner exposes a ten-character
-# abbreviated commit.
-REFERENCE_GIT_COMMIT = "01a25f74cc446a683318bab13dfd98a467082ef7"
-REFERENCE_GIT_DATE = "2026-08-03"
+# abbreviated commit. Every fix commit in SECURITY_ADVISORIES is an ancestor
+# of it (checked against upstream with the GitHub compare API, behind_by 0).
+REFERENCE_GIT_COMMIT = "23c454005319dee4a5bcae5c370f75fdeb325230"
+REFERENCE_GIT_DATE = "2026-11-11"
 
 # Upstream MagicYUV fix commits for CVE-2026-8461. They remain part of the
 # complete provenance record even though the current snapshot is newer.
@@ -154,6 +155,20 @@ JULY_2026_FIX_COMMITS: tuple[str, ...] = (
     "e7cbfd1c507b57a806a5825b87d609963e862c8c",
     "aafb5c655edc76a753275c383ebb139feb032718",
     "b506fafec9a19fcbc2be5271875fd4a63d6615bc",
+)
+
+# Advisories NVD published 2026-10-08 .. 2026-11-09 against "FFmpeg through
+# 9.0.2" whose components the bundled full build compiles in. Same order as
+# their SECURITY_ADVISORIES entries.
+LATE_2026_CVES: tuple[str, ...] = (
+    "CVE-2026-125064",  # G.726 ADPCM decoder NULL dereference
+    "CVE-2026-125180",  # EXIF parser memory exhaustion
+    "CVE-2026-107675",  # libssh SFTP missing host key verification
+)
+LATE_2026_FIX_COMMITS: tuple[str, ...] = (
+    "ec887b13a88afbaf44fb28c3045bda5d434da8dc",
+    "30fff47764e59f02ac7868bb832ed51a88f949fd",
+    "2b822b7fb6ed195546bc9fd9bdb794e98222bdce",
 )
 
 
@@ -330,6 +345,36 @@ SECURITY_ADVISORIES: tuple[CveAdvisory, ...] = (
         affected_max_release=(8, 1, 2),
         capability_tokens=("!--disable-encoder=png",),
     ),
+    # Graded 2026-11-15 (F464). Each fix commit is the one NVD references,
+    # confirmed upstream to touch the named file; `fix_landed` is its
+    # committer date on master.
+    CveAdvisory(
+        cve="CVE-2026-125064",
+        component="G.726 ADPCM decoder (libavcodec/g726.c)",
+        fix_commit="ec887b13a88afbaf44fb28c3045bda5d434da8dc",
+        fix_landed="2026-11-03",
+        affected_max_release=(9, 0, 2),
+        capability_tokens=("!--disable-decoder=adpcm_g726,adpcm_g726le",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-125180",
+        component="EXIF parser (libavcodec/exif.c)",
+        fix_commit="30fff47764e59f02ac7868bb832ed51a88f949fd",
+        fix_landed="2026-11-06",
+        affected_max_release=(9, 0, 2),
+        # exif.o is an unconditional libavcodec object with no configure
+        # switch, so only a build without libavcodec lacks it.
+        capability_tokens=("!--disable-avcodec",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-107675",
+        component="libssh SFTP protocol (libavformat/libssh.c)",
+        fix_commit="2b822b7fb6ed195546bc9fd9bdb794e98222bdce",
+        fix_landed="2026-09-12",
+        affected_max_release=(9, 0, 2),
+        # libssh is opt-in, so a build without it never compiles the protocol.
+        capability_tokens=("--enable-libssh",),
+    ),
 )
 
 #: Advisories from the same 2026-07-22..24 disclosure batch that are published
@@ -371,20 +416,33 @@ def advisory_coverage() -> dict:
 # The human-readable version string and exact redistribution inputs the
 # installers pin. Kept here so Python, C#, Inno, Docker, and release metadata
 # all agree on one full snapshot.
-PINNED_INSTALLER_VERSION = "2026-08-03-git-01a25f74cc-full_build-www.gyan.dev"
+PINNED_INSTALLER_VERSION = "2026-11-11-git-23c4540053-full_build-www.gyan.dev"
 PINNED_INSTALLER_COMMIT = REFERENCE_GIT_COMMIT
 PINNED_INSTALLER_ARCHIVE_URL = (
     "https://www.gyan.dev/ffmpeg/builds/packages/"
-    "ffmpeg-2026-08-03-git-01a25f74cc-full_build.7z"
+    "ffmpeg-2026-11-11-git-23c4540053-full_build.7z"
 )
 PINNED_INSTALLER_ARCHIVE_SHA256 = (
-    "8c32ed9800ff421bbcfda96beb0a66783a64a7cd98869b87ec1b494d3c855fcc"
+    "6fa482b30da6b3a5b51ae4776d1873488a949724d0302aa5e96cad143e483776"
 )
 PINNED_INSTALLER_SOURCE_URL = (
-    "https://github.com/FFmpeg/FFmpeg/archive/01a25f74cc446a683318bab13dfd98a467082ef7.tar.gz"
+    "https://github.com/FFmpeg/FFmpeg/archive/23c454005319dee4a5bcae5c370f75fdeb325230.tar.gz"
 )
 PINNED_INSTALLER_SOURCE_SHA256 = (
-    "02f09346860e4b0549eb03003443c66dceb9f355c2db4f01746db33984f1e3cf"
+    "81c206f525b8206a5e3406fd0aacd92fd7070dff6a5cf28842b82e65640aa1e1"
+)
+# SHA-256 of each executable inside the pinned archive's ``bin`` folder. The
+# release gate compares the shipped payload against these, so a swapped or
+# re-downloaded binary can't ride on the archive's hash.
+PINNED_INSTALLER_BINARY_SHA256: dict[str, str] = {
+    "ffmpeg.exe": "96e55c7fcae492911986b90d5de8d905cd01755d79eb3c90257eb35b9aecda16",
+    "ffprobe.exe": "a86d6f661a3c5bf1d43a7b0381c2b111a405239abb781ab8cf842d6a666c2ec3",
+}
+# ``configure`` switches the payload must keep: the TLS backend for https
+# inputs and the ``whisper`` filter local transcription uses.
+PINNED_INSTALLER_REQUIRED_CONFIGURE: tuple[str, ...] = (
+    "--enable-gnutls",
+    "--enable-whisper",
 )
 
 # The June-2026 FFmpeg advisories this floor also carries forward.
@@ -404,13 +462,15 @@ JUNE_2026_CVES: tuple[str, ...] = (
 
 # Keep the old name as a compatibility surface for callers that only need the
 # original June advisory set. New records use the complete combined tuples.
-SECURITY_CVES: tuple[str, ...] = JUNE_2026_CVES + JULY_2026_CVES
-SECURITY_FIX_COMMITS: tuple[str, ...] = MAGICYUV_FIX_COMMITS + JULY_2026_FIX_COMMITS
+SECURITY_CVES: tuple[str, ...] = JUNE_2026_CVES + JULY_2026_CVES + LATE_2026_CVES
+SECURITY_FIX_COMMITS: tuple[str, ...] = (
+    MAGICYUV_FIX_COMMITS + JULY_2026_FIX_COMMITS + LATE_2026_FIX_COMMITS
+)
 
 # ``ffmpeg version <token> ...`` — capture the build token (release or git).
 _VERSION_RE = re.compile(r"version\s+([^\s]+)")
 # gyan.dev git snapshots embed an ISO date and the ``git-<hash>`` commit:
-#   2026-08-03-git-01a25f74cc-full_build-www.gyan.dev
+#   2026-11-11-git-23c4540053-full_build-www.gyan.dev
 # BtbN / native ``git describe`` snapshots use ``N-<rev>-g<hash>`` (no date):
 #   N-118000-gabcdef1234
 _SNAPSHOT_DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")

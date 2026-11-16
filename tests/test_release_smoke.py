@@ -628,3 +628,24 @@ def test_pytest_full_that_collected_nothing_says_so(monkeypatch, tmp_path):
 
     assert result.status == "fail"
     assert "collected no tests" in result.message
+
+
+def test_step_ffmpeg_provenance_pins_the_windows_payload(monkeypatch, tmp_path):
+    module = load_module()
+    calls = []
+    for rel in ("ffmpeg/ffmpeg.exe", "scripts/verify_ffmpeg_provenance.py"):
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_bytes(b"x")
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+
+    def _fake_run(cmd, cwd=None, env=None):  # noqa: ANN001
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, "RESULT: OK", "")
+
+    monkeypatch.setattr(module, "_run", _fake_run)
+
+    result = module.step_ffmpeg_provenance(argparse.Namespace())
+
+    assert result.status == "ok"
+    assert "--pinned-payload" in calls[0]
+    assert calls[0][calls[0].index("--ffprobe") + 1].endswith("ffprobe.exe")

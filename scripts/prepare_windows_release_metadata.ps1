@@ -34,12 +34,12 @@ New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 & $PythonExe (Join-Path $RepoRoot "scripts\verify_ffmpeg_provenance.py") $ffmpeg `
     --ffprobe $ffprobe `
     --release `
-    --source-url "https://github.com/FFmpeg/FFmpeg/archive/01a25f74cc446a683318bab13dfd98a467082ef7.tar.gz" `
-    --source-sha256 "02f09346860e4b0549eb03003443c66dceb9f355c2db4f01746db33984f1e3cf" `
-    --package-url "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2026-08-03-git-01a25f74cc-full_build.7z" `
-    --package-sha256 "8c32ed9800ff421bbcfda96beb0a66783a64a7cd98869b87ec1b494d3c855fcc" `
-    --build-origin "gyan.dev git-full snapshot 2026-08-03; FFmpeg commit 01a25f74cc446a683318bab13dfd98a467082ef7" `
-    --corresponding-source "Download and verify the exact FFmpeg source archive at source.url/source.sha256, then build commit 01a25f74cc446a683318bab13dfd98a467082ef7 with the recorded configuration. The Windows payload is the Gyan git-full package at package.url/package.sha256." `
+    --source-url "https://github.com/FFmpeg/FFmpeg/archive/23c454005319dee4a5bcae5c370f75fdeb325230.tar.gz" `
+    --source-sha256 "81c206f525b8206a5e3406fd0aacd92fd7070dff6a5cf28842b82e65640aa1e1" `
+    --package-url "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2026-11-11-git-23c4540053-full_build.7z" `
+    --package-sha256 "6fa482b30da6b3a5b51ae4776d1873488a949724d0302aa5e96cad143e483776" `
+    --build-origin "gyan.dev git-full snapshot 2026-11-11; FFmpeg commit 23c454005319dee4a5bcae5c370f75fdeb325230" `
+    --corresponding-source "Download and verify the exact FFmpeg source archive at source.url/source.sha256, then build commit 23c454005319dee4a5bcae5c370f75fdeb325230 with the recorded configuration. The Windows payload is the Gyan git-full package at package.url/package.sha256." `
     --require-pinned-snapshot `
     --manifest $provenance
 if ($LASTEXITCODE -ne 0) {

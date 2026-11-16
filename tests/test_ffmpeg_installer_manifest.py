@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-FFMPEG_VERSION = "2026-08-03-git-01a25f74cc-full_build-www.gyan.dev"
+FFMPEG_VERSION = "2026-11-11-git-23c4540053-full_build-www.gyan.dev"
 
 
 def test_wpf_installer_constants_pin_bundled_ffmpeg_version():
@@ -77,10 +77,25 @@ def test_pinned_installer_version_matches_provenance_module():
     assert "CVE-2026-8461" in fp.JUNE_2026_CVES
     assert set(("CVE-2026-64832", "CVE-2026-64833", "CVE-2026-64835", "CVE-2026-66041")) <= set(fp.SECURITY_CVES)
     # A literal count here failed on every legitimate grading pass. What the
-    # pins actually need is that the list is exactly its two parts with no
+    # pins actually need is that the list is exactly its parts with no
     # duplicates, and that each entry is a real full-length commit hash.
     assert len(fp.SECURITY_FIX_COMMITS) == (
-        len(fp.MAGICYUV_FIX_COMMITS) + len(fp.JULY_2026_FIX_COMMITS)
+        len(fp.MAGICYUV_FIX_COMMITS) + len(fp.JULY_2026_FIX_COMMITS) + len(fp.LATE_2026_FIX_COMMITS)
     )
     assert len(set(fp.SECURITY_FIX_COMMITS)) == len(fp.SECURITY_FIX_COMMITS)
     assert all(re.fullmatch(r"[0-9a-f]{40}", c) for c in fp.SECURITY_FIX_COMMITS)
+
+
+def test_installers_report_the_late_2026_fixes():
+    from opencut.core import ffmpeg_provenance as fp
+
+    constants = (
+        REPO_ROOT / "installer" / "src" / "OpenCut.Installer" / "Models" / "AppConstants.cs"
+    ).read_text(encoding="utf-8")
+    inno = (REPO_ROOT / "OpenCut.iss").read_text(encoding="utf-8")
+    for text in (constants, inno):
+        for cve in fp.LATE_2026_CVES:
+            assert cve in text
+        for commit in fp.LATE_2026_FIX_COMMITS:
+            assert commit in text
+    assert "BundledFfmpegFixCommit9}" in inno

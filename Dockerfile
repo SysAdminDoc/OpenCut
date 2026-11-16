@@ -20,9 +20,9 @@
 # Stage 0: build the exact post-fix master snapshot from upstream source.
 # Debian's distro package can lag the patched commits, so it is never accepted
 # as the container's media runtime.
-ARG FFMPEG_VERSION=2026-08-03-git-01a25f74cc
-ARG FFMPEG_SOURCE_COMMIT=01a25f74cc446a683318bab13dfd98a467082ef7
-ARG FFMPEG_SOURCE_SHA256=02f09346860e4b0549eb03003443c66dceb9f355c2db4f01746db33984f1e3cf
+ARG FFMPEG_VERSION=2026-11-11-git-23c4540053
+ARG FFMPEG_SOURCE_COMMIT=23c454005319dee4a5bcae5c370f75fdeb325230
+ARG FFMPEG_SOURCE_SHA256=81c206f525b8206a5e3406fd0aacd92fd7070dff6a5cf28842b82e65640aa1e1
 FROM python:3.12-slim-bookworm AS ffmpeg-build
 
 ARG FFMPEG_VERSION
@@ -54,7 +54,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && tar --extract --gzip --file /tmp/ffmpeg.tar.gz --directory /tmp/ffmpeg-src --strip-components=1 \
     && cd /tmp/ffmpeg-src \
     && ./configure \
-        --extra-version="-2026-08-03-git-01a25f74cc" \
+        --extra-version="-2026-11-11-git-23c4540053" \
         --prefix=/opt/ffmpeg \
         --disable-debug \
         --disable-doc \
@@ -103,8 +103,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=ffmpeg-build /opt/ffmpeg /opt/ffmpeg
 ENV PATH="/opt/ffmpeg/bin:${PATH}"
-RUN ffmpeg -version | grep -F "2026-08-03-git-01a25f74cc" \
-    && ffprobe -version | grep -F "2026-08-03-git-01a25f74cc"
+RUN ffmpeg -version | grep -F "2026-11-11-git-23c4540053" \
+    && ffprobe -version | grep -F "2026-11-11-git-23c4540053"
 
 WORKDIR /app
 

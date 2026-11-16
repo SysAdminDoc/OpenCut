@@ -5,20 +5,23 @@
 #define MyAppVersion "1.56.0"
 #define MyAppPublisher "SysAdminDoc"
 #define MyAppURL "https://github.com/SysAdminDoc/OpenCut"
-#define BundledFfmpegVersion "2026-08-03-git-01a25f74cc-full_build-www.gyan.dev"
-#define BundledFfprobeVersion "2026-08-03-git-01a25f74cc-full_build-www.gyan.dev"
-#define BundledFfmpegSecurityFloor "release>=8.1.3 OR git-master>=2026-07-06 (commit 01a25f74cc446a683318bab13dfd98a467082ef7)"
-#define BundledFfmpegSecurityCve "CVE-2026-8461, CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, CVE-2026-66041"
+#define BundledFfmpegVersion "2026-11-11-git-23c4540053-full_build-www.gyan.dev"
+#define BundledFfprobeVersion "2026-11-11-git-23c4540053-full_build-www.gyan.dev"
+#define BundledFfmpegSecurityFloor "release>=8.1.3 OR git-master>=2026-11-06 (commit 23c454005319dee4a5bcae5c370f75fdeb325230)"
+#define BundledFfmpegSecurityCve "CVE-2026-8461, CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, CVE-2026-66041, CVE-2026-125064, CVE-2026-125180, CVE-2026-107675"
 #define BundledFfmpegFixCommit1 "374b726ffa878ee1cadb987bd1e1e20cc7ed8845"
 #define BundledFfmpegFixCommit2 "5806e8b9f34f1b0663b3017ef9dd1aa5d08116d1"
 #define BundledFfmpegFixCommit3 "4c6217477fc64305055b37d9d1d0d76d30e37f97"
 #define BundledFfmpegFixCommit4 "6f80e2765492700622596af720534cef33dd31b4"
 #define BundledFfmpegFixCommit5 "1836ef96846937a6cc2443698a693104f5c0b21e"
 #define BundledFfmpegFixCommit6 "4da9812e25894fb51d62a8875cfa8eb39b5e20f5"
-#define BundledFfmpegSourceCommit "01a25f74cc446a683318bab13dfd98a467082ef7"
-#define BundledFfmpegSourceSha256 "02f09346860e4b0549eb03003443c66dceb9f355c2db4f01746db33984f1e3cf"
-#define BundledFfmpegPackageUrl "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2026-08-03-git-01a25f74cc-full_build.7z"
-#define BundledFfmpegPackageSha256 "8c32ed9800ff421bbcfda96beb0a66783a64a7cd98869b87ec1b494d3c855fcc"
+#define BundledFfmpegFixCommit7 "ec887b13a88afbaf44fb28c3045bda5d434da8dc"
+#define BundledFfmpegFixCommit8 "30fff47764e59f02ac7868bb832ed51a88f949fd"
+#define BundledFfmpegFixCommit9 "2b822b7fb6ed195546bc9fd9bdb794e98222bdce"
+#define BundledFfmpegSourceCommit "23c454005319dee4a5bcae5c370f75fdeb325230"
+#define BundledFfmpegSourceSha256 "81c206f525b8206a5e3406fd0aacd92fd7070dff6a5cf28842b82e65640aa1e1"
+#define BundledFfmpegPackageUrl "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2026-11-11-git-23c4540053-full_build.7z"
+#define BundledFfmpegPackageSha256 "6fa482b30da6b3a5b51ae4776d1873488a949724d0302aa5e96cad143e483776"
 #ifndef InstallerPrivilegesRequired
 #define InstallerPrivilegesRequired "admin"
 #endif
@@ -274,7 +277,10 @@ begin
       JsonEscape('{#BundledFfmpegFixCommit3}') + '", "' +
       JsonEscape('{#BundledFfmpegFixCommit4}') + '", "' +
       JsonEscape('{#BundledFfmpegFixCommit5}') + '", "' +
-      JsonEscape('{#BundledFfmpegFixCommit6}') + '"],' + #13#10 +
+      JsonEscape('{#BundledFfmpegFixCommit6}') + '", "' +
+      JsonEscape('{#BundledFfmpegFixCommit7}') + '", "' +
+      JsonEscape('{#BundledFfmpegFixCommit8}') + '", "' +
+      JsonEscape('{#BundledFfmpegFixCommit9}') + '"],' + #13#10 +
     '  "bundled_ffmpeg_source_commit": "' + JsonEscape('{#BundledFfmpegSourceCommit}') + '",' + #13#10 +
     '  "bundled_ffmpeg_source_sha256": "' + JsonEscape('{#BundledFfmpegSourceSha256}') + '",' + #13#10 +
     '  "bundled_ffmpeg_package_url": "' + JsonEscape('{#BundledFfmpegPackageUrl}') + '",' + #13#10 +

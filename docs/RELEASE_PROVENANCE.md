@@ -60,12 +60,12 @@ anything below drifts from it. There are two lanes, and only one of them is open
   because such a build exists. A higher version number is not evidence; the
   branch point is.
 - **Snapshot lane** is the only way through. A gyan.dev or BtbN git-master
-  snapshot dated `2026-07-06` or later, which is `SNAPSHOT_FLOOR_DATE`.
+  snapshot dated `2026-11-06` or later, which is `SNAPSHOT_FLOOR_DATE`.
 
 The bundled build is therefore a snapshot, not a release:
-`2026-08-03-git-01a25f74cc-full_build-www.gyan.dev` from
-<https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2026-08-03-git-01a25f74cc-full_build.7z>
-(SHA256 `8c32ed9800ff421bbcfda96beb0a66783a64a7cd98869b87ec1b494d3c855fcc`).
+`2026-11-11-git-23c4540053-full_build-www.gyan.dev` from
+<https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2026-11-11-git-23c4540053-full_build.7z>
+(SHA256 `6fa482b30da6b3a5b51ae4776d1873488a949724d0302aa5e96cad143e483776`).
 That pin lives in `installer/src/OpenCut.Installer/Models/AppConstants.cs` and
 `OpenCut.iss`, and both installers record `bundled_ffmpeg_security_floor` into
 `~/.opencut/installer.json`.
@@ -77,7 +77,16 @@ That pin lives in `installer/src/OpenCut.Installer/Models/AppConstants.cs` and
 python scripts/verify_ffmpeg_provenance.py
 # Record ground-truth provenance (version, git commit/date, lane, CVEs) to JSON:
 python scripts/verify_ffmpeg_provenance.py --manifest dist/ffmpeg-provenance.json
+# Release smoke: the Windows payload must be the pinned archive's exact files:
+python scripts/verify_ffmpeg_provenance.py ffmpeg/ffmpeg.exe --ffprobe ffmpeg/ffprobe.exe --pinned-payload
 ```
+
+`--pinned-payload` (and the installer builders' `--require-pinned-snapshot`)
+compares both banners with `PINNED_INSTALLER_VERSION`, each binary's SHA-256
+with `PINNED_INSTALLER_BINARY_SHA256`, and the configure line with
+`PINNED_INSTALLER_REQUIRED_CONFIGURE` (`--enable-gnutls` and
+`--enable-whisper`). A payload copied from any other download fails even when
+its version passes the advisory matrix.
 
 At runtime, `GET /system/capabilities` carries `ffmpeg.security` and emits a
 `ffmpeg_below_security_floor` finding when a stale binary is detected.

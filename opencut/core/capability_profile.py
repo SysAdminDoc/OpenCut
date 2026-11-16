@@ -339,7 +339,7 @@ def _derive_findings(profile: CapabilityProfile) -> List[CapabilityFinding]:
                     message=(
                         f"FFmpeg ({security.get('version') or 'unknown'}) is blocked: "
                         f"{security.get('reason', '')}. Install FFmpeg 8.1.3+ or a dated "
-                        "post-fix snapshot >= 2026-07-06 before processing untrusted media "
+                        "post-fix snapshot >= 2026-11-06 before processing untrusted media "
                         "(CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, CVE-2026-66041)."
                     ),
                 )
@@ -365,7 +365,7 @@ def _derive_findings(profile: CapabilityProfile) -> List[CapabilityFinding]:
                     message=(
                         f"Bundled FFmpeg ({security.get('version') or 'unknown'}) is below the "
                         f"June-2026 security floor: {security.get('reason', '')}. Rebuild from "
-                        "gyan.dev 8.1.3 (or a git-master snapshot >= 2026-07-06) so crafted-media "
+                        "gyan.dev 8.1.3 (or a git-master snapshot >= 2026-11-06) so crafted-media "
                         "CVEs (CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, CVE-2026-66041) are patched."
                     ),
                 )

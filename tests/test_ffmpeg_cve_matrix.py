@@ -70,7 +70,7 @@ class TestCoverageIsHonest:
 class TestVerdictStatesItsScope:
     #: A build that clears everything the matrix grades.
     CLEAN_BANNER = (
-        "ffmpeg version 2026-08-03-git-01a25f74cc-full_build-www.gyan.dev "
+        "ffmpeg version 2026-11-11-git-23c4540053-full_build-www.gyan.dev "
         "Copyright (c) 2000-2026 the FFmpeg developers"
     )
 
@@ -138,9 +138,16 @@ class TestNewerReleaseIsNotAssumedFixed:
         assert "not evidence" in result["reason"]
 
     def test_a_later_patch_in_the_affected_series_is_accepted(self):
-        """8.1.3 would be the advisory's own declared fix."""
+        """8.1.3 is the declared fix for every advisory that stops at 8.1.2."""
+        rec = fp.parse_version_banner("ffmpeg version 8.1.3 Copyright (c) 2000-2026")
+        for adv in fp.SECURITY_ADVISORIES:
+            if adv.affected_max_release in ((8, 1, 1), (8, 1, 2)):
+                assert fp.grade_advisory(adv, rec)["status"] == "fixed", adv.cve
+
+    def test_8_1_3_is_refused_on_the_advisories_that_reach_9_0_2(self):
         result = fp.check_security_floor("ffmpeg version 8.1.3 Copyright (c) 2000-2026")
-        assert result["ok"] is True
+        assert result["ok"] is False
+        assert set(result["unresolved_cves"]) == set(fp.LATE_2026_CVES)
 
     def test_the_affected_release_itself_still_fails(self):
         assert fp.check_security_floor("ffmpeg version 8.1.2 Copyright")["ok"] is False
@@ -174,7 +181,7 @@ class TestNewerReleaseIsNotAssumedFixed:
     def test_the_pinned_snapshot_still_passes(self):
         """The lane users are actually told to use must keep working."""
         result = fp.check_security_floor(
-            "ffmpeg version 2026-08-03-git-01a25f74cc-full_build-www.gyan.dev Copyright"
+            "ffmpeg version 2026-11-11-git-23c4540053-full_build-www.gyan.dev Copyright"
         )
         assert result["ok"] is True
 
@@ -221,3 +228,104 @@ def test_every_graded_advisory_is_reported_in_the_public_constants():
 def test_no_advisory_is_both_graded_and_listed_as_ungraded():
     graded = {advisory.cve for advisory in fp.SECURITY_ADVISORIES}
     assert graded.isdisjoint(set(fp.UNGRADED_ADVISORIES))
+
+
+# ---------------------------------------------------------------------------
+# F464: the 2026-11 refresh past three NVD-listed fixes
+# ---------------------------------------------------------------------------
+
+LATE_CVES = {"CVE-2026-125064", "CVE-2026-125180", "CVE-2026-107675"}
+OLD_PIN_BANNER = "ffmpeg version 2026-08-03-git-01a25f74cc-full_build-www.gyan.dev Copyright"
+OLD_PIN_CONFIGURE = "--enable-gpl --enable-gnutls --enable-libssh --enable-whisper"
+
+
+def test_the_previous_pin_is_refused_on_exactly_the_late_2026_fixes():
+    """2026-08-03 predates all three fixes and nothing else in the matrix."""
+    result = fp.check_security_floor(OLD_PIN_BANNER, OLD_PIN_CONFIGURE)
+    assert result["ok"] is False
+    assert set(result["unresolved_cves"]) == LATE_CVES
+
+
+def test_the_new_pin_clears_the_late_2026_fixes_by_date_too():
+    """Even without the known-good commit shortcut, the snapshot date clears them."""
+    rec = fp.parse_version_banner(
+        "ffmpeg version 2026-11-11-git-bbbbbbbbbb-full_build-www.gyan.dev"
+    )
+    for adv in fp.SECURITY_ADVISORIES:
+        if adv.cve in LATE_CVES:
+            assert fp.grade_advisory(adv, rec, OLD_PIN_CONFIGURE)["status"] == "fixed"
+
+
+def test_snapshot_floor_is_the_latest_graded_fix():
+    assert fp.SNAPSHOT_FLOOR_DATE == max(adv.fix_landed for adv in fp.SECURITY_ADVISORIES)
+    assert fp.REFERENCE_GIT_DATE >= fp.SNAPSHOT_FLOOR_DATE
+
+
+def test_late_2026_components_can_be_proven_absent():
+    by_cve = {adv.cve: adv for adv in fp.SECURITY_ADVISORIES}
+    rec = fp.parse_version_banner(OLD_PIN_BANNER)
+
+    def status(cve, configure):
+        return fp.grade_advisory(by_cve[cve], rec, configure)["status"]
+
+    # libssh is opt-in, so leaving it out removes the SFTP protocol.
+    assert status("CVE-2026-107675", "--enable-gpl --enable-gnutls") == "not_applicable"
+    assert status("CVE-2026-107675", OLD_PIN_CONFIGURE) == "vulnerable"
+    # g726 builds by default; only disabling both decoders removes g726.o.
+    both = "--disable-decoder=adpcm_g726,adpcm_g726le"
+    assert status("CVE-2026-125064", both) == "not_applicable"
+    assert status("CVE-2026-125064", "--disable-decoder=adpcm_g726le") == "vulnerable"
+    # exif.o has no switch of its own.
+    assert status("CVE-2026-125180", "--disable-decoder=mjpeg") == "vulnerable"
+    assert status("CVE-2026-125180", "--disable-avcodec") == "not_applicable"
+
+
+def _load_verifier():
+    import importlib.util
+
+    path = os.path.join(REPO_ROOT, "scripts", "verify_ffmpeg_provenance.py")
+    spec = importlib.util.spec_from_file_location("verify_ffmpeg_provenance_under_test", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _fake_payload(tmp_path, monkeypatch, *, probe_hash=None, configure=None):
+    verifier = _load_verifier()
+    ffmpeg = tmp_path / "ffmpeg.exe"
+    ffprobe = tmp_path / "ffprobe.exe"
+    ffmpeg.write_bytes(b"ffmpeg")
+    ffprobe.write_bytes(b"ffprobe")
+    configure = configure or "--enable-gpl --enable-gnutls --enable-libssh --enable-whisper"
+    banner = (
+        f"ffmpeg version {fp.PINNED_INSTALLER_VERSION} Copyright (c) 2000-2026\n"
+        f"configuration: {configure}\n"
+    )
+    hashes = {
+        "ffmpeg.exe": fp.PINNED_INSTALLER_BINARY_SHA256["ffmpeg.exe"],
+        "ffprobe.exe": probe_hash or fp.PINNED_INSTALLER_BINARY_SHA256["ffprobe.exe"],
+    }
+    monkeypatch.setattr(verifier, "_banner", lambda _path: banner)
+    monkeypatch.setattr(verifier, "_sha256", lambda path: hashes[path.name.lower()])
+    return verifier, [str(ffmpeg), "--ffprobe", str(ffprobe), "--pinned-payload"]
+
+
+def test_pinned_payload_accepts_the_pinned_binaries(tmp_path, monkeypatch, capsys):
+    verifier, argv = _fake_payload(tmp_path, monkeypatch)
+    assert verifier.main(argv) == 0
+    assert "RESULT: OK" in capsys.readouterr().out
+
+
+def test_pinned_payload_refuses_a_swapped_binary(tmp_path, monkeypatch, capsys):
+    verifier, argv = _fake_payload(tmp_path, monkeypatch, probe_hash="0" * 64)
+    assert verifier.main(argv) == 3
+    assert "ffprobe.exe SHA-256 differs from the pinned archive" in capsys.readouterr().err
+
+
+def test_pinned_payload_refuses_a_build_without_whisper(tmp_path, monkeypatch, capsys):
+    verifier, argv = _fake_payload(
+        tmp_path, monkeypatch, configure="--enable-gpl --enable-gnutls --enable-libssh"
+    )
+    assert verifier.main(argv) == 3
+    assert "configuration lacks --enable-whisper" in capsys.readouterr().err

@@ -29,10 +29,21 @@ public class FfmpegSecurityVerifierTests
     public void DatedPostFixSnapshotIsAccepted()
     {
         var grade = FfmpegSecurityVerifier.GradeBanner(
-            "ffmpeg version 2026-08-03-git-01a25f74cc-full_build-www.gyan.dev");
+            "ffmpeg version 2026-11-11-git-23c4540053-full_build-www.gyan.dev");
 
         Assert.True(grade.IsSafe);
         Assert.Equal("snapshot", grade.Lane);
+    }
+
+    [Fact]
+    public void SnapshotBeforeTheExifFixIsRejected()
+    {
+        var grade = FfmpegSecurityVerifier.GradeBanner(
+            "ffmpeg version 2026-08-03-git-01a25f74cc-full_build-www.gyan.dev");
+
+        Assert.False(grade.IsSafe);
+        Assert.Equal("snapshot", grade.Lane);
+        Assert.Contains("CVE-2026-125180", grade.Reason);
     }
 
     [Fact]

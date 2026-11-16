@@ -14,7 +14,7 @@ public sealed record FfmpegSecurityGrade(
 public sealed partial class FfmpegSecurityVerifier
 {
     private static readonly Version ReleaseFloor = new(8, 1, 3);
-    private static readonly DateOnly SnapshotFloor = new(2026, 7, 6);
+    private static readonly DateOnly SnapshotFloor = new(2026, 11, 6);
 
     public void VerifyPayload(string ffmpegDirectory)
     {
@@ -90,7 +90,7 @@ public sealed partial class FfmpegSecurityVerifier
                 token,
                 safe
                     ? $"snapshot {snapshotDate:yyyy-MM-dd} is at/after {SnapshotFloor:yyyy-MM-dd}"
-                    : $"snapshot {snapshotDate:yyyy-MM-dd} predates {SnapshotFloor:yyyy-MM-dd} for CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, and CVE-2026-66041");
+                    : $"snapshot {snapshotDate:yyyy-MM-dd} predates {SnapshotFloor:yyyy-MM-dd}, when the last graded fix (CVE-2026-125180) landed");
         }
 
         var releaseMatch = ReleaseRegex().Match(token);
