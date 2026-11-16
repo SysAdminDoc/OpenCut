@@ -317,6 +317,8 @@ with the origin that asked.
 **"Module not found" errors for AI features:**
 Most AI features are optional dependencies. Open the **Settings** tab in the panel and scroll to the **Dependency Dashboard**. It shows every optional package with its install status and the exact pip command to install missing ones. Or install all audited extras at once: `pip install -e ".[all]"`.
 
+With the Windows installer, run `OpenCut-Server.exe --install-tools auto-editor,edge-tts,mediapipe` from the install's `server` folder to add those tools where the packaged server loads them. That's what the installer's optional tools checkbox does. auto-editor is a checked download. edge-tts and mediapipe need 64-bit Python 3.13 from python.org, and the server imports each one before keeping it.
+
 **FFmpeg missing or blocked:**
 The server requires a git-master FFmpeg snapshot dated 2026-11-06 or later on your PATH, since no tagged release carries every graded fix yet. Run `python scripts/verify_ffmpeg_provenance.py` to see the detected version and reason. If missing or below the floor, install the current `ffmpeg-git-full` build from https://www.gyan.dev/ffmpeg/builds/ or build the checksum-verified upstream source snapshot. Restart the terminal and OpenCut server after upgrading. `Install.ps1 -SkipFFmpeg` skips automatic installation only; it cannot bypass this security check.
 
@@ -993,7 +995,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-15,400+ estimated tests across 385 root test files covering route smoke tests,
+15,400+ estimated tests across 386 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -1062,7 +1064,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (15,400+ estimated tests, 385 root test files)
+tests/               # pytest test suite (15,400+ estimated tests, 386 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

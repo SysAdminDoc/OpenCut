@@ -1186,7 +1186,27 @@ def main():
             action="store_true",
             help="Print the OS-vault API token (secret-file values are never echoed)",
         )
+        parser.add_argument(
+            "--install-tools",
+            metavar="NAMES",
+            default=None,
+            help="Install optional tools (comma-separated: auto-editor, edge-tts, mediapipe) and exit",
+        )
+        parser.add_argument("--import-check", metavar="MODULE", default=None, help=argparse.SUPPRESS)
+        parser.add_argument("--import-path", metavar="DIR", default=None, help=argparse.SUPPRESS)
         args = parser.parse_args()
+
+        if args.import_check is not None:
+            from opencut.core import optional_tools
+
+            return optional_tools.run_import_check(args.import_check, args.import_path)
+
+        if args.install_tools is not None:
+            from opencut.core import optional_tools
+
+            if hasattr(sys.stdout, "reconfigure"):
+                sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            return optional_tools.install_tools(args.install_tools.split(","))
 
         if args.rotate_auth or args.print_auth:
             from opencut import auth as _auth

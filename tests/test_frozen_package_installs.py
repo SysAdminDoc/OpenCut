@@ -23,9 +23,10 @@ OTHER_TAG = f"{sys.version_info[0]}.{sys.version_info[1] - 1}"
 MATCHING = r"C:\Python\match\python.exe"
 MISMATCHED = rf"C:\Python{OTHER_TAG.replace('.', '')}\python.exe"
 LAUNCHER = r"C:\Windows\py.exe"
+ABI = security.runtime_abi()
 
 
-def _machine(monkeypatch, *, launcher_version=None, path_python_version=OTHER_TAG):
+def _machine(monkeypatch, *, launcher_version=None, path_python_version=OTHER_TAG, path_abi=None):
     """PATH holds ``python`` at ``path_python_version`` and maybe a ``py`` launcher."""
     found = {"python": MISMATCHED if path_python_version == OTHER_TAG else MATCHING}
     if launcher_version:
@@ -36,9 +37,12 @@ def _machine(monkeypatch, *, launcher_version=None, path_python_version=OTHER_TA
         if cmd[0] == LAUNCHER:
             if cmd[1] != f"-{TAG}" or launcher_version != TAG:
                 return subprocess.CompletedProcess(cmd, 103, "", "No suitable Python runtime found")
-            return subprocess.CompletedProcess(cmd, 0, f"{MATCHING}\n{TAG}\n", "")
+            return subprocess.CompletedProcess(cmd, 0, f"{MATCHING}\n{TAG}\n{ABI}\n", "")
         executable = found["python"]
-        return subprocess.CompletedProcess(cmd, 0, f"{executable}\n{path_python_version}\n", "")
+        abi = path_abi or ABI
+        return subprocess.CompletedProcess(
+            cmd, 0, f"{executable}\n{path_python_version}\n{abi}\n", ""
+        )
 
     monkeypatch.setattr(security.subprocess, "run", fake_run)
 
@@ -56,6 +60,30 @@ def test_no_matching_python_means_no_installer_rather_than_a_wrong_one(monkeypat
 def test_a_matching_python_on_path_is_used_without_a_launcher(monkeypatch):
     _machine(monkeypatch, launcher_version=None, path_python_version=TAG)
     assert security._find_system_python() == MATCHING
+
+
+def test_a_same_version_python_with_another_abi_is_skipped(monkeypatch):
+    """A 32-bit Python of the same minor picks win32 wheels the server can't load."""
+    other_bits = ABI.replace("64bit", "32bit") if "64bit" in ABI else ABI.replace("32bit", "64bit")
+    _machine(monkeypatch, path_python_version=TAG, path_abi=other_bits)
+    assert security._find_system_python() is None
+
+
+def test_the_probe_prints_this_interpreters_abi():
+    """The real probe, so its ABI string and runtime_abi() can't drift apart."""
+    probed = security._probe_interpreter([sys.executable])
+    assert probed is not None
+    executable, version, abi = probed
+    assert version == sys.version_info[:2]
+    assert abi == ABI
+    assert os.path.isfile(executable)
+
+
+def test_the_packages_folder_follows_the_data_folder(monkeypatch, tmp_path):
+    from opencut import helpers
+
+    monkeypatch.setattr(helpers, "OPENCUT_DIR", str(tmp_path))
+    assert security.user_packages_dir() == str(tmp_path / "packages")
 
 
 def test_source_installs_keep_their_fallback_order(monkeypatch):
@@ -99,7 +127,7 @@ def test_safe_pip_install_targets_only_the_packages_dir_with_the_matching_python
 
 def test_safe_pip_install_names_the_python_it_needs(monkeypatch, frozen):
     monkeypatch.setattr(security, "_find_system_python", lambda: None)
-    with pytest.raises(RuntimeError, match=rf"needs Python {TAG}"):
+    with pytest.raises(RuntimeError, match=rf"needs \d+-bit Python {TAG}\."):
         security.safe_pip_install("rembg")
 
 
@@ -193,7 +221,7 @@ def test_whisper_install_without_a_matching_python_says_which_one(
     job = _job(client, csrf_token, "/install-whisper", {"backend": "openai-whisper"})
 
     assert job["status"] == "error"
-    assert f"needs Python {TAG}" in job["error"]
+    assert f"-bit Python {TAG}. Install it" in job["error"]
     commands = _every_command(recorded)
     assert [cmd for cmd in commands if "pip" in cmd] == []
     # Never the server exe itself: ``OpenCut-Server.exe -m pip`` starts a second server.

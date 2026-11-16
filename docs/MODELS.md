@@ -62,7 +62,7 @@ Total optional AI/model surfaces: **69**. Each row carries license, hardware, in
 
 | Backend | License | Hardware | Privacy | Install |
 |---|---|---|---|---|
-| [auto-editor](https://github.com/WyattBlue/auto-editor) | Unlicense (public domain) | cpu | local-only | `Native v30+ binary: https://github.com/WyattBlue/auto-editor/releases — or legacy pip: pip install auto-editor` |
+| [auto-editor](https://github.com/WyattBlue/auto-editor) | Unlicense (public domain) | cpu | local-only | `OpenCut-Server.exe --install-tools auto-editor (python -m opencut.server --install-tools auto-editor from a checkout) fetches the pinned native build, or download v30+ from https://github.com/WyattBlue/auto-editor/releases` |
 | [B-roll suggestion pipeline](https://github.com/openai/whisper) | MIT (orchestration; underlying providers vary) | cpu/gpu | local + optional cloud (LLM dependency) | `pip install transformers torch` |
 | [OpenCV / face-tracker auto-zoom](https://github.com/opencv/opencv-python) | Apache-2.0 | cpu | local-only | `pip install opencv-python` |
 

@@ -1,21 +1,11 @@
 using Microsoft.Win32;
+using OpenCut.Installer.Models;
 using OpenCut.Installer.Services;
 
 namespace OpenCut.Installer.Tests;
 
 public class DependencyInstallerTests
 {
-    [Fact]
-    public void SupportedPythonResolutionReturnsAnAbsoluteExecutable()
-    {
-        var path = PythonResolver.FindSupportedPath()
-            ?? throw new InvalidOperationException("A supported Python interpreter is required for this installer test.");
-
-        Assert.True(Path.IsPathFullyQualified(path));
-        Assert.True(File.Exists(path));
-        Assert.Equal(".exe", Path.GetExtension(path), ignoreCase: true);
-    }
-
     [Fact]
     public void WindowsHelpersResolveInsideSystem32()
     {
@@ -69,14 +59,13 @@ public class DependencyInstallerTests
     }
 
     [Theory]
-    [InlineData("auto-editor", "auto-editor>=29.3,<30")]
-    [InlineData("edge-tts", "edge-tts>=6.1,<7")]
-    [InlineData("mediapipe", "mediapipe>=0.10,<1")]
-    [InlineData("MEDIAPIPE", "mediapipe>=0.10,<1")]
-    public void OptionalToolsResolveOnlyToAuditedRequirements(string package, string expected)
+    [InlineData("auto-editor", "auto-editor")]
+    [InlineData("edge-tts", "edge-tts")]
+    [InlineData(" MEDIAPIPE ", "mediapipe")]
+    public void OptionalToolsNormalizeToTheNamesTheServerInstalls(string name, string expected)
     {
-        Assert.True(DependencyInstaller.TryGetSupportedRequirement(package, out var requirement));
-        Assert.Equal(expected, requirement);
+        Assert.True(DependencyInstaller.TryNormalizeTool(name, out var tool));
+        Assert.Equal(expected, tool);
     }
 
     [Theory]
@@ -84,8 +73,52 @@ public class DependencyInstallerTests
     [InlineData("audiocraft")]
     [InlineData("resemble-enhance")]
     [InlineData("edge-tts; whoami")]
-    public void UnsupportedOrInjectedPackageNamesAreRejected(string package)
+    [InlineData("edge-tts,mediapipe")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void UnsupportedOrInjectedToolNamesAreRejected(string? name)
     {
-        Assert.False(DependencyInstaller.TryGetSupportedRequirement(package, out _));
+        Assert.False(DependencyInstaller.TryNormalizeTool(name, out _));
+    }
+
+    [Fact]
+    public void TheServerGetsOneInstallToolsArgumentWithEachToolOnce()
+    {
+        var arguments = DependencyInstaller.BuildArguments(["edge-tts", "auto-editor", "edge-tts"]);
+
+        Assert.Equal(["--install-tools", "edge-tts,auto-editor"], arguments);
+    }
+
+    [Theory]
+    [InlineData("[ok] edge-tts is ready", LogLevel.Success)]
+    [InlineData("[failed] mediapipe: no wheel", LogLevel.Warning)]
+    [InlineData("Downloading auto-editor 31.8.0 (45 MB)...", LogLevel.Info)]
+    [InlineData("  [ok] indented is just output", LogLevel.Info)]
+    public void ServerStatusLinesSetTheLogLevel(string line, LogLevel expected)
+    {
+        Assert.Equal(expected, DependencyInstaller.LevelFor(line));
+    }
+
+    [Fact]
+    public void AMissingServerSkipsTheToolsWithAWarning()
+    {
+        var config = new InstallConfig
+        {
+            InstallPath = Path.Combine(Path.GetTempPath(), $"OpenCut.NoServer.{Guid.NewGuid():N}"),
+            InstallOptionalDeps = true,
+        };
+        config.SelectedDeps.Add("auto-editor");
+        var reports = new List<InstallProgress>();
+
+        new DependencyInstaller().InstallDeps(config, new ImmediateProgress(reports), 1, 1);
+
+        var last = Assert.Single(reports, r => r.Level != LogLevel.Info);
+        Assert.Equal(LogLevel.Warning, last.Level);
+        Assert.Contains("Server executable not found", last.Message);
+    }
+
+    private sealed class ImmediateProgress(List<InstallProgress> reports) : IProgress<InstallProgress>
+    {
+        public void Report(InstallProgress value) => reports.Add(value);
     }
 }

@@ -76,9 +76,20 @@ class TestResolution:
 
     def test_bundled_lookup_finds_a_real_file(self, tmp_path, monkeypatch):
         """Guard against a search wired to directories that never match."""
-        home = tmp_path / "home"
-        binary = _make_binary(home / ".opencut" / "bin")
-        monkeypatch.setattr(os.path, "expanduser", lambda _p: str(home))
+        from opencut import helpers
+
+        data = tmp_path / "data"
+        binary = _make_binary(data / "bin")
+        monkeypatch.setattr(helpers, "OPENCUT_DIR", str(data))
+
+        assert auto_edit._bundled_auto_editor() == str(binary)
+
+    def test_install_tools_puts_the_binary_where_the_lookup_starts(self, tmp_path, monkeypatch):
+        from opencut import helpers
+        from opencut.core import optional_tools
+
+        monkeypatch.setattr(helpers, "OPENCUT_DIR", str(tmp_path / "data"))
+        binary = _make_binary(Path(optional_tools.tools_bin_dir()))
 
         assert auto_edit._bundled_auto_editor() == str(binary)
 

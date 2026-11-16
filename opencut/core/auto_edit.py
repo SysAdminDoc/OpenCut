@@ -63,9 +63,11 @@ class AutoEditResult:
 # ---------------------------------------------------------------------------
 INSTALL_HINT = (
     "auto-editor was rewritten in Nim and left PyPI at 29.3.1 (2025-11-04); "
-    "every 2026 capability ships only in the native binary. Download it from "
-    "https://github.com/WyattBlue/auto-editor/releases and put it on PATH, "
-    "drop it in ~/.opencut/bin, or point OPENCUT_AUTO_EDITOR at it. "
+    "every 2026 capability ships only in the native binary. Run "
+    "OpenCut-Server.exe --install-tools auto-editor (python -m opencut.server "
+    "from a checkout) to fetch the pinned build into ~/.opencut/bin, or download "
+    "it from https://github.com/WyattBlue/auto-editor/releases and put it on "
+    "PATH or point OPENCUT_AUTO_EDITOR at it. "
     'The frozen pip package (pip install "auto-editor>=29.3,<30") still works '
     "but receives no fixes."
 )
@@ -81,9 +83,14 @@ def _binary_names():
 
 
 def _bundled_auto_editor():
-    """An auto-editor binary provisioned alongside OpenCut, if there is one."""
+    """An auto-editor binary provisioned alongside OpenCut, if there is one.
+
+    ``<data folder>/bin`` comes first, which is where ``--install-tools`` puts it.
+    """
+    from opencut import helpers
+
     roots = [
-        os.path.join(os.path.expanduser("~"), ".opencut"),
+        helpers.OPENCUT_DIR,
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     ]
     for root in roots:

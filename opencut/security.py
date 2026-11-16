@@ -13,8 +13,10 @@ import os
 import re
 import secrets
 import shutil
+import struct
 import subprocess
 import sys
+import sysconfig
 import threading
 import time
 from contextlib import contextmanager
@@ -364,15 +366,37 @@ def validate_path(path: str, allowed_base: str = None) -> str:
 # Safe pip install
 # ---------------------------------------------------------------------------
 def user_packages_dir() -> str:
-    """``~/.opencut/packages``, where a packaged server finds add-on packages."""
-    return os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+    """``<data folder>/packages``, where a packaged server finds add-on packages.
+
+    The data folder is ``OPENCUT_HOME`` when set, else ``~/.opencut``, the same
+    folder the server puts on ``sys.path``.
+    """
+    from opencut import helpers
+
+    return os.path.join(helpers.OPENCUT_DIR, "packages")
 
 
-_VERSION_PROBE = "import sys; print(sys.executable); print('%d.%d' % sys.version_info[:2])"
+def runtime_abi() -> str:
+    """What a native wheel built by another interpreter has to match here.
+
+    The implementation and minor version (``cpython-313``), the pointer width
+    (a 32-bit Python picks win32 wheels) and free threading (3.13t has an ABI
+    of its own). ``_VERSION_PROBE`` prints the same string for a candidate.
+    """
+    free_threaded = "-t" if sysconfig.get_config_var("Py_GIL_DISABLED") else ""
+    return f"{sys.implementation.cache_tag}-{struct.calcsize('P') * 8}bit{free_threaded}"
 
 
-def _probe_interpreter(cmd: list) -> Optional[Tuple[str, Tuple[int, int]]]:
-    """Return ``(real executable, (major, minor))`` for an interpreter command."""
+_VERSION_PROBE = (
+    "import struct, sys, sysconfig; print(sys.executable); "
+    "print('%d.%d' % sys.version_info[:2]); "
+    "print('%s-%dbit%s' % (sys.implementation.cache_tag, struct.calcsize('P') * 8, "
+    "'-t' if sysconfig.get_config_var('Py_GIL_DISABLED') else ''))"
+)
+
+
+def _probe_interpreter(cmd: list) -> Optional[Tuple[str, Tuple[int, int], str]]:
+    """Return ``(real executable, (major, minor), abi)`` for an interpreter command."""
     try:
         result = subprocess.run(
             [*cmd, "-c", _VERSION_PROBE], capture_output=True, text=True, timeout=10,
@@ -380,26 +404,28 @@ def _probe_interpreter(cmd: list) -> Optional[Tuple[str, Tuple[int, int]]]:
     except (OSError, subprocess.SubprocessError):
         return None
     lines = [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
-    if result.returncode != 0 or len(lines) < 2:
+    if result.returncode != 0 or len(lines) < 3:
         return None
     try:
-        major, minor = (int(part) for part in lines[-1].split("."))
+        major, minor = (int(part) for part in lines[-2].split("."))
     except ValueError:
         return None
-    return lines[-2], (major, minor)
+    return lines[-3], (major, minor), lines[-1]
 
 
 def _find_system_python() -> Optional[str]:
     """Find a Python that can install packages this frozen build will load.
 
-    A packaged server imports add-on packages from ``~/.opencut/packages`` with
-    its bundled CPython, so whatever installs them has to be the same minor
-    version. A native module built for another one doesn't raise ImportError,
-    it aborts the server on import, the way issue #8's server died. Returns the
-    interpreter's real executable, or None when no matching Python is present.
+    A packaged server imports add-on packages from :func:`user_packages_dir`
+    with its bundled CPython, so whatever installs them has to share its ABI
+    (:func:`runtime_abi`). A native module built for another one doesn't raise
+    ImportError, it aborts the server on import, the way issue #8's server
+    died. Returns the interpreter's real executable, or None when no matching
+    Python is present.
     """
     want = sys.version_info[:2]
     tag = f"{want[0]}.{want[1]}"
+    abi = runtime_abi()
     candidates = []
     launcher = shutil.which("py")
     if launcher:
@@ -413,23 +439,24 @@ def _find_system_python() -> Optional[str]:
         probed = _probe_interpreter(cmd)
         if probed is None:
             continue
-        executable, version = probed
-        if version == want:
-            logger.debug("Package installs use %s (Python %s)", executable, tag)
+        executable, version, candidate_abi = probed
+        if version == want and candidate_abi == abi:
+            logger.debug("Package installs use %s (%s)", executable, abi)
             return executable
-        skipped.append(f"{executable} (Python {version[0]}.{version[1]})")
+        skipped.append(f"{executable} ({candidate_abi})")
     if skipped:
-        logger.info("No Python %s for package installs; skipped %s", tag, ", ".join(skipped))
+        logger.info("No %s Python for package installs; skipped %s", abi, ", ".join(skipped))
     return None
 
 
 def frozen_install_requirement() -> str:
     """Why a packaged build can't install add-on packages, for user-facing errors."""
     tag = f"{sys.version_info[0]}.{sys.version_info[1]}"
+    bits = struct.calcsize("P") * 8
     return (
-        f"The packaged OpenCut server runs Python {tag} and loads add-on packages from "
-        f"{user_packages_dir()}, so installing them needs Python {tag}. "
-        f"Install Python {tag} from python.org, then try again."
+        f"The packaged OpenCut server runs {bits}-bit Python {tag} and loads add-on "
+        f"packages from {user_packages_dir()}, so installing them needs {bits}-bit "
+        f"Python {tag}. Install it from python.org, then try again."
     )
 
 

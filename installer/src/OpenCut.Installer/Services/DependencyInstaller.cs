@@ -1,23 +1,42 @@
 using System.Diagnostics;
+using System.Text;
 using OpenCut.Installer.Models;
 
 namespace OpenCut.Installer.Services;
 
 /// <summary>
-/// Installs optional Python packages via pip using system Python.
+/// Installs the optional tools by running <c>OpenCut-Server.exe --install-tools</c>.
+/// The server owns the pins and puts each tool where it loads it from: the
+/// pinned auto-editor build in the data folder's <c>bin</c>, and edge-tts and
+/// mediapipe in its <c>packages</c> folder once it has imported them.
 /// </summary>
 public class DependencyInstaller
 {
-    private static readonly IReadOnlyDictionary<string, string> SupportedRequirements =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["auto-editor"] = "auto-editor>=29.3,<30",
-            ["edge-tts"] = "edge-tts>=6.1,<7",
-            ["mediapipe"] = "mediapipe>=0.10,<1",
-        };
+    /// <summary>Kept in step with <c>opencut.core.optional_tools.TOOL_NAMES</c>.</summary>
+    internal static readonly string[] SupportedTools = ["auto-editor", "edge-tts", "mediapipe"];
 
-    internal static bool TryGetSupportedRequirement(string package, out string requirement) =>
-        SupportedRequirements.TryGetValue(package, out requirement!);
+    // Two pip installs, two import checks and a 45 MB download, with room to spare.
+    private static readonly TimeSpan Timeout = TimeSpan.FromMinutes(45);
+
+    internal static bool TryNormalizeTool(string? name, out string tool)
+    {
+        var trimmed = name?.Trim() ?? "";
+        tool = SupportedTools.FirstOrDefault(
+            supported => string.Equals(supported, trimmed, StringComparison.OrdinalIgnoreCase)) ?? "";
+        return tool.Length > 0;
+    }
+
+    internal static IReadOnlyList<string> BuildArguments(IEnumerable<string> tools) =>
+        ["--install-tools", string.Join(",", tools.Distinct(StringComparer.OrdinalIgnoreCase))];
+
+    internal static LogLevel LevelFor(string line)
+    {
+        if (line.StartsWith("[ok]", StringComparison.Ordinal))
+            return LogLevel.Success;
+        if (line.StartsWith("[failed]", StringComparison.Ordinal))
+            return LogLevel.Warning;
+        return LogLevel.Info;
+    }
 
     public void InstallDeps(InstallConfig config, IProgress<InstallProgress> progress, int step, int totalSteps)
     {
@@ -29,83 +48,98 @@ public class DependencyInstaller
             return;
         }
 
-        // Find system Python
-        var python = PythonResolver.FindSupportedPath();
-        if (python == null)
+        var tools = new List<string>();
+        foreach (var name in config.SelectedDeps)
+        {
+            if (TryNormalizeTool(name, out var tool))
+                tools.Add(tool);
+            else
+                Report(progress, step, totalSteps, stepName,
+                    $"Unsupported optional tool '{name}'. Choose auto-editor, edge-tts or mediapipe.",
+                    LogLevel.Error);
+        }
+        if (tools.Count == 0)
+            return;
+
+        var serverExe = Path.Combine(config.ServerPath, AppConstants.ServerExeName);
+        if (!File.Exists(serverExe))
         {
             Report(progress, step, totalSteps, stepName,
-                "Python 3.11-3.14 wasn't found in PATH. Optional tools were skipped. Install a supported Python from python.org.",
-                LogLevel.Warning);
+                "Server executable not found, so the optional tools were skipped.", LogLevel.Warning);
             return;
         }
 
-        Report(progress, step, totalSteps, stepName, $"Using Python: {python}");
-
-        foreach (var package in config.SelectedDeps)
+        Report(progress, step, totalSteps, stepName, $"Installing {string.Join(", ", tools.Distinct())}...");
+        try
         {
-            if (!TryGetSupportedRequirement(package, out var requirement))
+            var psi = new ProcessStartInfo
+            {
+                FileName = serverExe,
+                WorkingDirectory = config.ServerPath,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            foreach (var argument in BuildArguments(tools))
+                psi.ArgumentList.Add(argument);
+            psi.Environment["PYTHONIOENCODING"] = "utf-8";
+
+            using var process = Process.Start(psi);
+            if (process == null)
             {
                 Report(progress, step, totalSteps, stepName,
-                    $"Unsupported optional tool '{package}'. Choose auto-editor, edge-tts, or mediapipe.",
-                    LogLevel.Error);
-                continue;
+                    "Failed to start the server to install the optional tools.", LogLevel.Error);
+                return;
             }
-            Report(progress, step, totalSteps, stepName, $"Installing {package}...");
-            try
+
+            var stderr = new StringBuilder();
+            var sawStatus = false;
+            process.ErrorDataReceived += (_, e) =>
             {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = python,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                psi.ArgumentList.Add("-m");
-                psi.ArgumentList.Add("pip");
-                psi.ArgumentList.Add("install");
-                psi.ArgumentList.Add(requirement);
-                psi.ArgumentList.Add("-q");
+                if (e.Data != null)
+                    lock (stderr) stderr.AppendLine(e.Data);
+            };
+            process.BeginErrorReadLine();
 
-                using var process = Process.Start(psi);
-                if (process == null)
-                {
-                    Report(progress, step, totalSteps, stepName,
-                        $"Failed to start pip for {package}.", LogLevel.Error);
-                    continue;
-                }
-
-                // Consume both streams to prevent pipe deadlock
-                var stdoutTask = process.StandardOutput.ReadToEndAsync();
-                var stderrTask = process.StandardError.ReadToEndAsync();
-
-                if (!process.WaitForExit(300000)) // 5 min per package
-                {
-                    try { process.Kill(entireProcessTree: true); } catch { /* best effort */ }
-                    Report(progress, step, totalSteps, stepName,
-                        $"Timed out installing {package} (5 min).", LogLevel.Warning);
-                    continue;
-                }
-
-                var stderr = stderrTask.Result;
-
-                if (process.ExitCode == 0)
-                {
-                    Report(progress, step, totalSteps, stepName,
-                        $"{package} installed successfully.", LogLevel.Success);
-                }
-                else
-                {
-                    var msg = string.IsNullOrWhiteSpace(stderr) ? $"exit code {process.ExitCode}" : stderr.Trim();
-                    Report(progress, step, totalSteps, stepName,
-                        $"Failed to install {package}: {msg}", LogLevel.Warning);
-                }
-            }
-            catch (Exception ex)
+            var stdoutTask = Task.Run(() =>
             {
+                string? line;
+                while ((line = process.StandardOutput.ReadLine()) != null)
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                        continue;
+                    var level = LevelFor(line);
+                    sawStatus |= level != LogLevel.Info;
+                    Report(progress, step, totalSteps, stepName, line, level);
+                }
+            });
+
+            if (!process.WaitForExit(Timeout))
+            {
+                try { process.Kill(entireProcessTree: true); } catch { /* best effort */ }
                 Report(progress, step, totalSteps, stepName,
-                    $"Error installing {package}: {ex.Message}", LogLevel.Warning);
+                    $"Optional tools timed out ({Timeout.TotalMinutes:0} min).", LogLevel.Warning);
+                return;
             }
+            stdoutTask.Wait(TimeSpan.FromSeconds(10));
+            process.WaitForExit();
+
+            if (process.ExitCode != 0 && !sawStatus)
+            {
+                string detail;
+                lock (stderr) detail = stderr.ToString().Trim();
+                Report(progress, step, totalSteps, stepName,
+                    $"Optional tools failed (exit {process.ExitCode}): {(detail.Length > 0 ? detail : "no output")}",
+                    LogLevel.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Report(progress, step, totalSteps, stepName,
+                $"Error installing optional tools: {ex.Message}", LogLevel.Warning);
         }
     }
 

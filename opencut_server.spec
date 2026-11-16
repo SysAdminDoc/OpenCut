@@ -79,7 +79,51 @@ for mod in external_hiddenimports:
         # backend can raise anything at import time; never fail the build.
         pass
 
-all_hiddenimports = opencut_hiddenimports + valid_imports
+# Add-on packages (``--install-tools`` puts edge-tts, mediapipe and their
+# dependencies in the data folder) run on this runtime and expect the whole
+# standard library. PyInstaller only bundles the stdlib modules OpenCut itself
+# reaches, so mediapipe failed on matplotlib's ``import plistlib``, and
+# zoneinfo, mailbox, dbm and others were missing too. Bundle the standard
+# library, less the GUI, test and installer parts no add-on loads.
+import importlib.util as _ilu
+import pkgutil as _pkgutil
+
+_STDLIB_SKIP = {
+    'tkinter', '_tkinter', 'turtle', 'turtledemo', 'idlelib', 'test',
+    'ensurepip', '__hello__', '__phello__',
+}
+_STDLIB_SKIP_SUBMODULES = {'test', 'tests', 'idle_test', '__main__'}
+
+
+def _stdlib_submodules(path, prefix):
+    for info in _pkgutil.iter_modules([path]):
+        if info.name in _STDLIB_SKIP_SUBMODULES:
+            continue
+        name = f'{prefix}.{info.name}'
+        yield name
+        if info.ispkg:
+            yield from _stdlib_submodules(os.path.join(path, info.name), name)
+
+
+def _stdlib_hiddenimports():
+    found = []
+    for name in sorted(sys.stdlib_module_names):
+        if name in _STDLIB_SKIP:
+            continue
+        try:
+            spec = _ilu.find_spec(name)
+        except (ImportError, ValueError):
+            spec = None
+        if spec is None:
+            # Another platform's module (posix, termios, _scproxy).
+            continue
+        found.append(name)
+        for path in spec.submodule_search_locations or ():
+            found.extend(_stdlib_submodules(path, name))
+    return found
+
+
+all_hiddenimports = opencut_hiddenimports + valid_imports + _stdlib_hiddenimports()
 
 # Collect runtime JSON data and native DLLs for optional backends.
 #
