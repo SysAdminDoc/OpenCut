@@ -227,6 +227,24 @@ def hf_cache_dir() -> str:
     return _expand_path(os.getenv("HF_HUB_CACHE", legacy))
 
 
+def torch_hub_dir() -> str:
+    """``torch.hub.get_dir()`` without importing torch.
+
+    ``$TORCH_HOME/hub``, else ``$XDG_CACHE_HOME/torch/hub``, else
+    ``~/.cache/torch/hub``. Checkpoints live in its ``checkpoints`` folder.
+    """
+    torch_home = os.path.expanduser(
+        os.getenv("TORCH_HOME", os.path.join(os.getenv("XDG_CACHE_HOME", "~/.cache"), "torch"))
+    )
+    return os.path.join(torch_home, "hub")
+
+
+def whisper_cache_dir() -> str:
+    """Where openai-whisper's ``load_model`` downloads without a ``download_root``."""
+    default = os.path.join(os.path.expanduser("~"), ".cache")
+    return os.path.join(os.getenv("XDG_CACHE_HOME", default), "whisper")
+
+
 def _hf_repo_dir(repo_id: str) -> str:
     return os.path.join(hf_cache_dir(), "models--" + repo_id.replace("/", "--"))
 

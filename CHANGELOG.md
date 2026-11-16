@@ -24,6 +24,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Fixed
 
+- Clear cache, the Whisper reinstall and the model list now use the same cache folders the model loaders use when `HF_HUB_CACHE`, `HF_HOME`, `XDG_CACHE_HOME` or `TORCH_HOME` move them. A reinstall used to leave the broken download in place, and it could delete another tool's Whisper models.
 - Settings updates Whisper's status on its own once the backend finishes checking for it. On a fresh start it used to say Checking until you left Settings and came back.
 - The MCP server and the CLI pick up a new panel secret without a restart. They kept the first one they read, so after a reinstall or a cleaned-out profile gave OpenCut a new secret, a client that was still running got refused until you restarted it.
 - Starting OpenCut while its port is busy can't close an unrelated app anymore. The cleanup force-killed whatever process had the number in a leftover `server.pid`, and Windows reuses those numbers, so a stale file could take down another program and everything it started. It now kills that process only when it's the one listening on the port.

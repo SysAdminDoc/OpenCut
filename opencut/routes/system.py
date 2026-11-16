@@ -174,13 +174,18 @@ def _cache_plan_entry(path: str, *, category: str) -> dict:
 
 def _build_whisper_cache_plan() -> dict:
     """Enumerate Whisper cache targets without deleting them."""
+    from opencut.core import model_weights
+
     entries: list[dict] = []
     errors: list[str] = []
     cache_paths = [
-        ("huggingface-whisper", os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")),
-        ("whisper-cache", os.path.join(os.path.expanduser("~"), ".cache", "whisper")),
-        ("opencut-models", os.path.join(os.environ.get("LOCALAPPDATA", ""), "OpenCut", "models")),
+        ("huggingface-whisper", model_weights.hf_cache_dir()),
+        ("whisper-cache", model_weights.whisper_cache_dir()),
     ]
+    # Unset off Windows; joined anyway it would be a path relative to the cwd.
+    local_appdata = os.environ.get("LOCALAPPDATA", "")
+    if local_appdata:
+        cache_paths.append(("opencut-models", os.path.join(local_appdata, "OpenCut", "models")))
     for category, cache_dir in cache_paths:
         if not cache_dir or not os.path.exists(cache_dir):
             continue

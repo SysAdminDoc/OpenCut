@@ -734,3 +734,32 @@ def test_clearing_a_corrupt_whisper_model_empties_the_cache_it_loads_from(monkey
 
     assert not tmp_path.joinpath(*real, "models--Systran--faster-whisper-base").exists()
     assert tmp_path.joinpath(*decoy, "models--Systran--faster-whisper-base", "model.bin").exists()
+
+
+def _expected_dir(tmp_path, parts):
+    # "~" stands for the home conftest gives every test, whatever HOME says.
+    if parts[0] == "~":
+        return os.path.normpath(os.path.join(os.path.expanduser("~"), *parts[1:]))
+    return str(tmp_path.joinpath(*parts))
+
+
+@pytest.mark.parametrize("env, parts", [
+    ({"TORCH_HOME": "{tmp}/th", "XDG_CACHE_HOME": "{tmp}/xdg"}, ("th", "hub")),
+    ({"XDG_CACHE_HOME": "{tmp}/xdg"}, ("xdg", "torch", "hub")),
+    ({}, ("~", ".cache", "torch", "hub")),
+])
+def test_torch_hub_dir_matches_torch_hub_get_dir(monkeypatch, tmp_path, env, parts):
+    monkeypatch.delenv("TORCH_HOME", raising=False)
+    _hub_env(monkeypatch, tmp_path, env)
+
+    assert os.path.normpath(model_weights.torch_hub_dir()) == _expected_dir(tmp_path, parts)
+
+
+@pytest.mark.parametrize("env, parts", [
+    ({"XDG_CACHE_HOME": "{tmp}/xdg"}, ("xdg", "whisper")),
+    ({}, ("~", ".cache", "whisper")),
+])
+def test_whisper_cache_dir_matches_openai_whispers_default(monkeypatch, tmp_path, env, parts):
+    _hub_env(monkeypatch, tmp_path, env)
+
+    assert os.path.normpath(model_weights.whisper_cache_dir()) == _expected_dir(tmp_path, parts)

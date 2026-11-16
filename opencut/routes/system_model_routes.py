@@ -115,9 +115,11 @@ def list_models():
         if _models_cache["data"] is not None and (now - _models_cache["ts"]) < _MODELS_CACHE_TTL:
             return jsonify(_models_cache["data"])
 
+    from opencut.core import model_weights
+
     models = []
-    # Check HuggingFace cache
-    hf_cache = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
+    # The Hub cache the loaders use, wherever HF_HUB_CACHE or HF_HOME put it
+    hf_cache = model_weights.hf_cache_dir()
     if os.path.isdir(hf_cache):
         for entry in os.listdir(hf_cache):
             path = os.path.join(hf_cache, entry)
@@ -130,7 +132,7 @@ def list_models():
                             size += os.path.getsize(os.path.join(root, f))
                 models.append({"name": name, "path": path, "size_mb": round(size / (1024 * 1024), 1), "source": "huggingface"})
     # Check torch hub cache
-    torch_cache = os.environ.get("TORCH_HOME", os.path.join(os.path.expanduser("~"), ".cache", "torch", "hub"))
+    torch_cache = model_weights.torch_hub_dir()
     if os.path.isdir(torch_cache):
         checkpoints = os.path.join(torch_cache, "checkpoints")
         if os.path.isdir(checkpoints):
@@ -187,9 +189,14 @@ def delete_model():
         return jsonify({"error": str(e)}), 400
 
     # Security: only allow deletion within known cache directories
+    from opencut.core import model_weights
+
+    # The folders /models/list reads, plus the default roots above them.
     allowed_roots = [
         os.path.join(os.path.expanduser("~"), ".cache", "huggingface"),
         os.path.join(os.path.expanduser("~"), ".cache", "torch"),
+        model_weights.hf_cache_dir(),
+        model_weights.torch_hub_dir(),
     ]
     if WHISPER_MODELS_DIR:
         allowed_roots.append(WHISPER_MODELS_DIR)

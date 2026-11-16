@@ -349,6 +349,40 @@ def test_whisper_reinstall_in_a_packaged_build_leaves_the_users_python_alone(
     assert checks == [[sys.executable, "--import-check", "whisper", "--import-path", staging]]
 
 
+def test_whisper_reinstall_clears_whisper_from_the_hub_cache_the_loaders_use(
+    monkeypatch, tmp_path, inline_jobs, recorded, client, csrf_token,
+):
+    """It cleared ~/.cache/huggingface/hub whatever HF_HUB_CACHE said, so the
+    corrupt model a reinstall is for survived it, and a whisper repo another
+    tool kept in the default cache was deleted."""
+    for name in ("HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE", "HF_HOME", "XDG_CACHE_HOME"):
+        monkeypatch.delenv(name, raising=False)
+    home = tmp_path / "home"
+    # The old code read the default cache through expanduser, so the decoy
+    # has to sit where expanduser points.
+    monkeypatch.setattr(os.path, "expanduser", lambda value: str(home) if value == "~" else value)
+    monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path / "hub"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg"))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "localappdata"))
+    corrupt = tmp_path / "hub" / "models--Systran--faster-whisper-base"
+    unrelated = tmp_path / "hub" / "models--bert--base"
+    elsewhere = home / ".cache" / "huggingface" / "hub" / "models--openai--whisper-tiny"
+    openai_cache = tmp_path / "xdg" / "whisper"
+    local_models = tmp_path / "localappdata" / "OpenCut" / "models"
+    for directory in (corrupt, unrelated, elsewhere, openai_cache, local_models):
+        directory.mkdir(parents=True)
+        (directory / "model.bin").write_bytes(b"x")
+
+    job = _job(client, csrf_token, "/whisper/reinstall", {"backend": "faster-whisper"})
+
+    assert job["status"] == "complete", job.get("error")
+    assert not corrupt.exists()
+    assert not openai_cache.exists()
+    assert not local_models.exists()
+    assert (unrelated / "model.bin").exists()
+    assert (elsewhere / "model.bin").exists()
+
+
 @pytest.mark.parametrize("route", ["/install-whisper", "/whisper/reinstall"])
 def test_whisperx_gets_the_dependency_policy_reason_instead_of_a_pip_run(
     monkeypatch, frozen, inline_jobs, recorded, client, csrf_token, route,

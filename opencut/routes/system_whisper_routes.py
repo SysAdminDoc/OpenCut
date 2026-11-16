@@ -22,12 +22,10 @@ from .system import (
     jsonify,
     load_whisper_settings,
     logger,
-    os,
     request,
     require_csrf,
     safe_bool,
     save_whisper_settings,
-    shutil,
     suppress,
     sys,
     system_bp,
@@ -285,24 +283,12 @@ def whisper_reinstall(job_id, filepath, data):
         _update_job(job_id, progress=20, message="Clearing model cache...")
         logger.info("Reinstall: Clearing cache")
 
-        cache_paths = [
-            os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"),
-            os.path.join(os.path.expanduser("~"), ".cache", "whisper"),
-            os.path.join(os.environ.get("LOCALAPPDATA", ""), "OpenCut", "models"),
-        ]
-
-        for cache_dir in cache_paths:
-            if not cache_dir or not os.path.exists(cache_dir):
-                continue
-            try:
-                if "huggingface" in cache_dir:
-                    for item in os.listdir(cache_dir):
-                        if "whisper" in item.lower():
-                            shutil.rmtree(os.path.join(cache_dir, item), ignore_errors=True)
-                else:
-                    shutil.rmtree(cache_dir, ignore_errors=True)
-            except Exception:
-                pass
+        # The same targets Clear cache shows: only the whisper repos in the
+        # Hub cache, wherever HF_HUB_CACHE or HF_HOME put it.
+        for entry in _build_whisper_cache_plan()["entries"]:
+            removed, error = _delete_cache_target(entry["path"])
+            if not removed:
+                logger.warning("Reinstall: couldn't clear %s", error)
 
         if _is_cancelled(job_id):
             return {"backend": backend, "installed": False, "cancelled": True}
