@@ -118,6 +118,13 @@ _models_cache = {"data": None, "ts": 0}
 _models_cache_lock = threading.Lock()
 _MODELS_CACHE_TTL = 300  # 5 minutes
 
+
+def _forget_models_list() -> None:
+    """Make the next /models/list read the disk again."""
+    with _models_cache_lock:
+        _models_cache["data"] = None
+        _models_cache["ts"] = 0
+
 # ---------------------------------------------------------------------------
 # Server Start Time (for uptime calculation)
 # ---------------------------------------------------------------------------
@@ -148,7 +155,8 @@ def _delete_cache_target(path: str) -> tuple[bool, str | None]:
 
     A file something still has open (Windows locks a loaded model) mustn't
     stop the rest of the folder going, so the delete carries on past it and
-    reports what stayed.
+    reports what stayed. Whatever happens, the model list is read fresh next
+    time, since even a delete that failed partway changed what's on disk.
     """
     failures: list[str] = []
     # Folders left non-empty by what stayed inside them, counted only when
@@ -177,6 +185,8 @@ def _delete_cache_target(path: str) -> tuple[bool, str | None]:
             return False, f"{path}: path not found"
     except OSError as exc:
         return False, f"{path}: {exc}"
+    finally:
+        _forget_models_list()
     left = failures or nonempty
     if left:
         return False, f"{path}: {len(left)} item(s) couldn't be deleted (first {left[0]})"

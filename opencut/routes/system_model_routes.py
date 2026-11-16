@@ -255,10 +255,6 @@ def delete_model():
                 "deleted": [],
                 "errors": errors,
             }), 500
-        # Invalidate models cache after deletion
-        with _models_cache_lock:
-            _models_cache["data"] = None
-            _models_cache["ts"] = 0
         return jsonify({
             "success": True,
             "dry_run": False,

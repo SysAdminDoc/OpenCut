@@ -336,6 +336,74 @@ def test_whisper_clear_cache_deletes_past_a_locked_file(client, csrf_token, monk
     assert not paths["whisper"].exists()
 
 
+def test_models_list_drops_what_a_partial_delete_removed(client, csrf_token, monkeypatch, tmp_path):
+    """A delete that left one locked file answered 500 without resetting the
+    list cache, so the model list showed the full old size for 5 minutes."""
+    import opencut.routes.system_model_routes as model_routes
+
+    _isolate_whisper_caches(monkeypatch, tmp_path)
+    hub = tmp_path / "hub"
+    monkeypatch.setenv("HF_HUB_CACHE", str(hub))
+    repo = hub / "models--org--speech"
+    repo.mkdir(parents=True)
+    locked = repo / "a-locked.bin"
+    locked.write_bytes(b"open")
+    weights = repo / "b-weights.bin"
+    weights.write_bytes(b"x" * (2 * 1024 * 1024))
+    monkeypatch.setitem(model_routes._models_cache, "data", None)
+
+    def listed_size():
+        models = client.get("/models/list", headers=_headers(csrf_token)).get_json()["models"]
+        return [model["size_mb"] for model in models if model["path"] == str(repo)]
+
+    assert listed_size() == [2.0]
+    real_unlink = os.unlink
+
+    def unlink(target, *args, **kwargs):
+        if os.path.basename(str(target)) == locked.name:
+            raise PermissionError(13, "The process cannot access the file", str(target))
+        return real_unlink(target, *args, **kwargs)
+
+    monkeypatch.setattr(os, "unlink", unlink)
+    monkeypatch.setattr(os, "remove", unlink)
+    preview = client.post("/models/delete", json={"path": str(repo), "dry_run": True}, headers=_headers(csrf_token))
+    response = client.post(
+        "/models/delete",
+        json={"path": str(repo), "confirm_token": preview.get_json()["confirm_token"]},
+        headers=_headers(csrf_token),
+    )
+
+    assert response.status_code == 500, response.get_json()
+    assert locked.exists() and not weights.exists()
+    assert listed_size() == [0.0]
+
+
+def test_whisper_clear_cache_drops_cleared_models_from_the_list(client, csrf_token, monkeypatch, tmp_path):
+    """Clear cache deletes Hub folders the model list shows, but never reset
+    the list cache, so they stayed listed for 5 minutes."""
+    import opencut.routes.system_model_routes as model_routes
+
+    _system_routes, paths = _isolate_whisper_caches(monkeypatch, tmp_path)
+    monkeypatch.setitem(model_routes._models_cache, "data", None)
+
+    def listed_paths():
+        models = client.get("/models/list", headers=_headers(csrf_token)).get_json()["models"]
+        return {model["path"] for model in models}
+
+    assert str(paths["hf_whisper"]) in listed_paths()
+    preview = client.post("/whisper/clear-cache", json={"dry_run": True}, headers=_headers(csrf_token))
+    response = client.post(
+        "/whisper/clear-cache",
+        json={"confirm_token": preview.get_json()["confirm_token"]},
+        headers=_headers(csrf_token),
+    )
+
+    assert response.get_json()["success"] is True, response.get_json()
+    after = listed_paths()
+    assert str(paths["hf_whisper"]) not in after
+    assert str(paths["hf_other"]) in after
+
+
 def test_whisper_clear_cache_requires_confirm_token(client, csrf_token, monkeypatch, tmp_path):
     _system_routes, _paths = _isolate_whisper_caches(monkeypatch, tmp_path)
 
