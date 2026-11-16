@@ -146,8 +146,8 @@ def list_models():
                 if os.path.isfile(fp):
                     size = os.path.getsize(fp) / (1024 * 1024)
                     models.append({"name": f, "path": fp, "size_mb": round(size, 1), "source": "torch"})
-    # Check custom whisper models dir
-    if WHISPER_MODELS_DIR and os.path.isdir(WHISPER_MODELS_DIR):
+    # Check custom whisper models dir (a relative one follows the cwd, like above)
+    if WHISPER_MODELS_DIR and model_weights.is_rooted(WHISPER_MODELS_DIR) and os.path.isdir(WHISPER_MODELS_DIR):
         for entry in os.listdir(WHISPER_MODELS_DIR):
             path = os.path.join(WHISPER_MODELS_DIR, entry)
             if os.path.isdir(path):

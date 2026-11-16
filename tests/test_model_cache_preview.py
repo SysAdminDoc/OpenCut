@@ -182,6 +182,25 @@ def test_models_list_skips_a_hub_cache_that_follows_the_cwd(client, csrf_token, 
     assert [model["path"] for model in listed if model["source"] in ("huggingface", "torch")] == []
 
 
+def test_models_list_skips_a_relative_whisper_models_dir(client, csrf_token, monkeypatch, tmp_path):
+    """A relative WHISPER_MODELS_DIR was listed from the server's cwd while
+    /models/delete refused its models with a 403."""
+    import opencut.routes.system_model_routes as model_routes
+
+    _isolate_whisper_caches(monkeypatch, tmp_path)
+    cwd = tmp_path / "cwd"
+    stray = cwd / "whisper-models" / "large-v3"
+    stray.mkdir(parents=True)
+    (stray / "model.bin").write_bytes(b"x")
+    monkeypatch.chdir(cwd)
+    monkeypatch.setattr(model_routes, "WHISPER_MODELS_DIR", "whisper-models")
+    monkeypatch.setitem(model_routes._models_cache, "data", None)
+
+    models = client.get("/models/list", headers=_headers(csrf_token)).get_json()["models"]
+
+    assert [model for model in models if model["source"] == "whisper"] == []
+
+
 def test_models_list_and_delete_follow_hf_hub_cache_and_torch_home(client, csrf_token, monkeypatch, tmp_path):
     """/models/list read ~/.cache/huggingface/hub and $TORCH_HOME/checkpoints,
     and /models/delete refused anything outside ~/.cache, so a moved cache
