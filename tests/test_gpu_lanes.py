@@ -223,6 +223,11 @@ def test_install_py_prints_the_lane_and_its_reason(monkeypatch, capsys, tmp_path
         (["torchvision"], "cu128", [RTX_5090], "cu128"),
         (["torchaudio"], "cpu", [RTX_5090], "cpu"),
         (["torchvision"], None, [RTX_3080], "cu126"),
+        # An untagged torch is a PyPI build (CPU-only on Windows), so its
+        # torchvision comes from PyPI too, never a CUDA lane over a CPU torch.
+        (["torchvision"], "pypi", [RTX_5090], None),
+        (["torchaudio", "torchvision"], "pypi", [RTX_3080], None),
+        (["torch"], "pypi", [RTX_5090], "cu132"),
         # PyPI keeps everything else.
         (["torch", "transformers"], None, [RTX_5090], None),
         (["transformers"], None, [RTX_5090], None),
@@ -249,7 +254,14 @@ def test_macos_keeps_pypi_for_torch(monkeypatch):
 
 @pytest.mark.parametrize(
     "version, expected",
-    [("2.15.0+cu132", "cu132"), ("2.11.0+cu128", "cu128"), ("2.15.0+cpu", "cpu"), ("2.15.0", None), (None, None)],
+    [
+        ("2.15.0+cu132", "cu132"),
+        ("2.11.0+cu128", "cu128"),
+        ("2.15.0+cpu", "cpu"),
+        ("2.15.0", "pypi"),
+        ("2.16.0a0+git5f2c1e", None),
+        (None, None),
+    ],
 )
 def test_the_installed_torch_index_comes_from_its_local_version(monkeypatch, version, expected):
     import importlib.metadata

@@ -420,14 +420,23 @@ TORCH_FAMILY = frozenset({"torch", "torchvision", "torchaudio"})
 _LOCAL_INDEX_RE = re.compile(r"\+(cu\d{2,3}|cpu)\b")
 
 
+PYPI_INDEX = "pypi"
+
+
 def installed_torch_index() -> Optional[str]:
-    """The index the installed torch came from (``2.15.0+cu132`` is cu132), or None."""
+    """The index the installed torch came from (``2.15.0+cu132`` is cu132), or None.
+
+    A version with no local tag at all is a PyPI build, :data:`PYPI_INDEX`.
+    None means no torch, or a tag that names no index (a source build).
+    """
     from importlib.metadata import PackageNotFoundError, version
 
     try:
         installed = version("torch")
     except PackageNotFoundError:
         return None
+    if installed and "+" not in installed:
+        return PYPI_INDEX
     match = _LOCAL_INDEX_RE.search(installed or "")
     return match.group(1) if match else None
 
@@ -438,14 +447,17 @@ def torch_family_index(projects) -> Optional[str]:
     None unless every project is torch, torchvision or torchaudio, and on
     macOS, where PyPI carries PyTorch's own builds. torchvision or torchaudio
     without torch follows the installed torch's index, since each release
-    pins one torch build and a different one would replace it. Otherwise
-    the host's lane decides.
+    pins one torch build and a different one would replace it. Over a PyPI
+    torch that's PyPI (None), which keeps a CUDA torchvision off a CPU torch
+    on Windows. Otherwise the host's lane decides.
     """
     names = {re.sub(r"[-_.]+", "-", str(project)).lower() for project in projects}
     if not names or not names <= TORCH_FAMILY or sys.platform == "darwin":
         return None
     if "torch" not in names:
         installed = installed_torch_index()
+        if installed == PYPI_INDEX:
+            return None
         if installed:
             return installed
     return host_torch_lane().index
