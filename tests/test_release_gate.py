@@ -387,3 +387,19 @@ def test_readme_states_artifacts_are_unsigned_and_how_to_verify():
     assert "Get-FileHash" in readme
     assert "sha256sum" in readme
     assert "release-digests.json" in readme
+
+
+def test_receipt_without_the_full_suite_is_refused(tmp_path):
+    module = _module()
+    now = datetime(2026, 11, 15, 12, 0, tzinfo=timezone.utc)
+    payload = _receipt(module, now)
+    payload["steps"] = [step for step in payload["steps"] if step["name"] != "pytest-full"]
+    path = tmp_path / "receipt.json"
+    _write(path, payload)
+
+    with pytest.raises(module.ReleaseGateError, match="pytest-full"):
+        module.validate_receipt(
+            path,
+            now=now + timedelta(minutes=5),
+            source_state={"commit": "abc123", "branch": "main", "dirty_paths": []},
+        )

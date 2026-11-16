@@ -22,6 +22,8 @@ Steps (in order):
 12. ``contrast-audit`` — WCAG AA contrast check for committed panel tokens
 13. ``ruff`` — lint the python package
 14. ``pytest-fast`` — focused test ids covering release gates
+14b. ``pytest-full`` — the whole default-marker suite, run against the
+     pinned FFmpeg in ``ffmpeg/`` with one BLAS thread per worker
 15. ``pip-audit`` — Python dependency advisories for requirements, lockfile, and ``pyproject[all]``
 16. ``jsx-mock`` — ExtendScript host harness for ``host/index.jsx``
 17. ``panel-unit`` — CEP/UXP panel Vitest utility tests
@@ -42,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import importlib.util
 import json
 import os
 import shutil
@@ -1205,8 +1208,8 @@ def step_ruff(_args: argparse.Namespace) -> StepResult:
 
 
 # Release-gate test ids that exercise the most fragile invariants. Keep the
-# list small enough to finish in seconds; the full suite still runs locally
-# during release validation.
+# list small enough to finish in seconds so a broken gate fails early; the
+# ``pytest-full`` step runs everything else.
 RELEASE_GATE_TESTS: List[str] = [
     "tests/test_bootstrap_check.py",
     "tests/test_project_facts.py",
@@ -1352,6 +1355,75 @@ def step_pytest_fast(args: argparse.Namespace) -> StepResult:
             else "release-gate tests failed"
         ),
         stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
+#: Workers for the full-suite step. Four finished the suite in about four
+#: minutes on a 24-core host and stayed inside a 7 GB job cap.
+FULL_SUITE_WORKERS = 4
+
+
+def _pinned_ffmpeg_dir() -> Optional[Path]:
+    """The FFmpeg build the installer ships, when this checkout has it."""
+    ffmpeg_dir = REPO_ROOT / "ffmpeg"
+    exe = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
+    return ffmpeg_dir if (ffmpeg_dir / exe).is_file() else None
+
+
+def _full_suite_env(ffmpeg_dir: Path) -> dict:
+    env = dict(os.environ)
+    # The pinned build, first on PATH too: tests that shell out to a bare
+    # ``ffmpeg`` would otherwise get whatever the host has, and a host build
+    # below the advisory floor fails hundreds of tests that have nothing wrong.
+    env["OPENCUT_FFMPEG_DIR"] = str(ffmpeg_dir)
+    env["PATH"] = str(ffmpeg_dir) + os.pathsep + env.get("PATH", "")
+    # One BLAS thread per worker. On a many-core host every worker otherwise
+    # starts one thread per core with its own buffers, and a memory-capped run
+    # dies in OpenBLAS or can't start a thread.
+    for name in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
+        env[name] = "1"
+    return env
+
+
+def step_pytest_full(args: argparse.Namespace) -> StepResult:
+    """Run every test the default markers select, with the shipped FFmpeg."""
+    start = time.time()
+    ffmpeg_dir = _pinned_ffmpeg_dir()
+    if ffmpeg_dir is None:
+        return StepResult(
+            "pytest-full",
+            "fail",
+            duration_ms=int((time.time() - start) * 1000),
+            message="ffmpeg/ has no pinned FFmpeg build; put the release build there and rerun",
+        )
+    cmd = [sys.executable, "-m", "pytest", "-q", "--tb=short", "tests"]
+    if importlib.util.find_spec("xdist") is not None:
+        cmd[3:3] = ["-n", str(min(FULL_SUITE_WORKERS, os.cpu_count() or 1))]
+    if getattr(args, "pytest_extra", None):
+        cmd.extend(args.pytest_extra)
+    result = _run(cmd, cwd=REPO_ROOT, env=_full_suite_env(ffmpeg_dir))
+    duration = int((time.time() - start) * 1000)
+    if result.returncode == PYTEST_NO_TESTS_COLLECTED:
+        return StepResult(
+            "pytest-full",
+            "fail",
+            exit_code=result.returncode,
+            duration_ms=duration,
+            message="the full suite collected no tests; the step proved nothing",
+            stdout_tail=_tail(result.stdout),
+            stderr_tail=_tail(result.stderr),
+        )
+    status = "ok" if result.returncode == 0 else "fail"
+    summary = (result.stdout or "").strip().splitlines()[-1:] or [""]
+    return StepResult(
+        "pytest-full",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=f"full suite passed: {summary[0]}" if status == "ok" else "full suite failed",
+        # Long enough to keep pytest's short summary of every failure.
+        stdout_tail=_tail(result.stdout, 40),
         stderr_tail=_tail(result.stderr),
     )
 
@@ -1870,6 +1942,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("contrast-audit", step_contrast_audit, "Check CEP/UXP panel token contrast"),
     StepDefinition("ruff", step_ruff, "Lint the Python package"),
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
+    StepDefinition("pytest-full", step_pytest_full, "Run the whole suite against the pinned FFmpeg"),
     StepDefinition("media-conformance", step_media_conformance, "Run the synthetic media corpus against real FFmpeg"),
     StepDefinition("standards-conformance", step_standards_conformance, "Validate standards-labelled output with reference implementations"),
     StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt, requirements-lock.txt, and pyproject[all]"),

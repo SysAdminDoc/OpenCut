@@ -42,6 +42,9 @@ REQUIRED_STEPS = frozenset(
         "contrast-audit",
         "ruff",
         "pytest-fast",
+        # The fast ids alone let a release ship with failures elsewhere in
+        # the suite (an OTIOZ export and a DRM key leak, 2026-11-15).
+        "pytest-full",
         "pip-audit",
         # F394: the only automated coverage of the ExtendScript host, which is
         # what writes to a real Premiere sequence.

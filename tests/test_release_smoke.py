@@ -536,9 +536,95 @@ def test_a_step_that_collected_nothing_says_so(monkeypatch):
     monkeypatch.setattr(
         module.sys, "executable", module.sys.executable, raising=False
     )
+    # The step skips when no usable FFmpeg is found, which on a host whose
+    # FFmpeg is below the advisory floor hid the exit-5 path under test.
+    import opencut.helpers as helpers
+
+    monkeypatch.setattr(helpers, "get_ffmpeg_path", lambda: "ffmpeg")
+    monkeypatch.setattr(helpers, "get_ffprobe_path", lambda: "ffprobe")
 
     result = module.step_media_conformance(argparse.Namespace(pytest_extra=None))
 
     assert result.status == "fail"
     assert "collected no tests" in result.message
     assert "proved nothing" in result.message
+
+
+def _fake_checkout_with_ffmpeg(module, monkeypatch, tmp_path: Path) -> Path:
+    ffmpeg_dir = tmp_path / "ffmpeg"
+    ffmpeg_dir.mkdir()
+    exe = "ffmpeg.exe" if module.os.name == "nt" else "ffmpeg"
+    (ffmpeg_dir / exe).write_bytes(b"")
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    return ffmpeg_dir
+
+
+def test_pytest_full_runs_the_suite_against_the_pinned_ffmpeg(monkeypatch, tmp_path):
+    module = load_module()
+    ffmpeg_dir = _fake_checkout_with_ffmpeg(module, monkeypatch, tmp_path)
+    monkeypatch.setenv("PATH", "C:/host-tools")
+    monkeypatch.setenv("OPENBLAS_NUM_THREADS", "24")
+    calls = []
+
+    def _fake_run(cmd, cwd=None, env=None):  # noqa: ANN001
+        calls.append((cmd, cwd, env))
+        return subprocess.CompletedProcess(cmd, 0, "12025 passed in 254.00s", "")
+
+    monkeypatch.setattr(module, "_run", _fake_run)
+
+    result = module.step_pytest_full(argparse.Namespace(pytest_extra=["-p", "extra"]))
+
+    assert result.status == "ok", result
+    assert "12025 passed" in result.message
+    cmd, cwd, env = calls[0]
+    assert cmd[1:3] == ["-m", "pytest"]
+    assert "tests" in cmd
+    assert cmd[-2:] == ["-p", "extra"]
+    assert cwd == tmp_path
+    assert env["OPENCUT_FFMPEG_DIR"] == str(ffmpeg_dir)
+    assert env["PATH"].split(module.os.pathsep)[0] == str(ffmpeg_dir)
+    assert "C:/host-tools" in env["PATH"]
+    for name in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
+        assert env[name] == "1"
+
+
+def test_pytest_full_reports_failures_with_their_summary(monkeypatch, tmp_path):
+    module = load_module()
+    _fake_checkout_with_ffmpeg(module, monkeypatch, tmp_path)
+    out = "\n".join([f"line {n}" for n in range(30)] + ["FAILED tests/test_a.py::test_b - boom", "1 failed, 9 passed"])
+    monkeypatch.setattr(module, "_run", lambda cmd, cwd=None, env=None: subprocess.CompletedProcess(cmd, 1, out, ""))
+
+    result = module.step_pytest_full(argparse.Namespace(pytest_extra=[]))
+
+    assert result.status == "fail"
+    assert result.exit_code == 1
+    assert "FAILED tests/test_a.py::test_b" in result.stdout_tail
+
+
+def test_pytest_full_refuses_to_run_without_the_pinned_ffmpeg(monkeypatch, tmp_path):
+    """Run against the host's FFmpeg, hundreds of tests fail for no real reason."""
+    module = load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    ran = []
+    monkeypatch.setattr(module, "_run", lambda *a, **k: ran.append(a))
+
+    result = module.step_pytest_full(argparse.Namespace(pytest_extra=[]))
+
+    assert result.status == "fail"
+    assert "ffmpeg/" in result.message
+    assert not ran
+
+
+def test_pytest_full_that_collected_nothing_says_so(monkeypatch, tmp_path):
+    module = load_module()
+    _fake_checkout_with_ffmpeg(module, monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        module,
+        "_run",
+        lambda cmd, cwd=None, env=None: subprocess.CompletedProcess(cmd, module.PYTEST_NO_TESTS_COLLECTED, "", ""),
+    )
+
+    result = module.step_pytest_full(argparse.Namespace(pytest_extra=[]))
+
+    assert result.status == "fail"
+    assert "collected no tests" in result.message
