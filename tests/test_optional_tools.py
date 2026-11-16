@@ -243,7 +243,7 @@ def test_no_matching_python_names_the_one_to_install(monkeypatch, data_dir):
     monkeypatch.setattr(security, "_find_system_python", lambda: None)
     monkeypatch.setattr(optional_tools, "_run", lambda *a, **k: pytest.fail("ran pip"))
 
-    with pytest.raises(RuntimeError, match=r"needs \d+-bit Python \d+\.\d+\."):
+    with pytest.raises(RuntimeError, match=r"needs .+ Python \d+\.\d+\. Install it from python\.org"):
         optional_tools.install_pip_tool("mediapipe", report=lambda _line: None)
 
 

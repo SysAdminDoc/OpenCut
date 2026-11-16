@@ -380,26 +380,40 @@ def runtime_abi() -> str:
     """What a native wheel built by another interpreter has to match here.
 
     The implementation and minor version (``cpython-313``), the pointer width
-    (a 32-bit Python picks win32 wheels) and free threading (3.13t has an ABI
-    of its own). ``_VERSION_PROBE`` prints the same string for a candidate.
+    (a 32-bit Python picks win32 wheels), free threading (3.13t has an ABI of
+    its own) and the platform (an ARM64 Python on Windows on ARM is 64-bit too,
+    but pip picks win_arm64 wheels for it). ``_VERSION_PROBE`` prints the same
+    string for a candidate.
     """
     free_threaded = "-t" if sysconfig.get_config_var("Py_GIL_DISABLED") else ""
-    return f"{sys.implementation.cache_tag}-{struct.calcsize('P') * 8}bit{free_threaded}"
+    return (
+        f"{sys.implementation.cache_tag}-{struct.calcsize('P') * 8}bit{free_threaded}"
+        f"-{sysconfig.get_platform()}"
+    )
 
 
 _VERSION_PROBE = (
     "import struct, sys, sysconfig; print(sys.executable); "
     "print('%d.%d' % sys.version_info[:2]); "
-    "print('%s-%dbit%s' % (sys.implementation.cache_tag, struct.calcsize('P') * 8, "
-    "'-t' if sysconfig.get_config_var('Py_GIL_DISABLED') else ''))"
+    "print('%s-%dbit%s-%s' % (sys.implementation.cache_tag, struct.calcsize('P') * 8, "
+    "'-t' if sysconfig.get_config_var('Py_GIL_DISABLED') else '', sysconfig.get_platform()))"
 )
+
+# python.org's names for its Windows installers, for the error that asks for one.
+_INSTALLER_NAMES = {"win-amd64": "64-bit (x64)", "win-arm64": "ARM64", "win32": "32-bit"}
 
 
 def _probe_interpreter(cmd: list) -> Optional[Tuple[str, Tuple[int, int], str]]:
-    """Return ``(real executable, (major, minor), abi)`` for an interpreter command."""
+    """Return ``(real executable, (major, minor), abi)`` for an interpreter command.
+
+    The candidate writes UTF-8 whatever its console code page, so a Python
+    under a user folder with an accented name comes back as a path that exists.
+    """
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
     try:
         result = subprocess.run(
-            [*cmd, "-c", _VERSION_PROBE], capture_output=True, text=True, timeout=10,
+            [*cmd, "-c", _VERSION_PROBE], capture_output=True, encoding="utf-8",
+            errors="replace", env=env, timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -452,10 +466,11 @@ def _find_system_python() -> Optional[str]:
 def frozen_install_requirement() -> str:
     """Why a packaged build can't install add-on packages, for user-facing errors."""
     tag = f"{sys.version_info[0]}.{sys.version_info[1]}"
-    bits = struct.calcsize("P") * 8
+    platform = sysconfig.get_platform()
+    name = _INSTALLER_NAMES.get(platform, f"{struct.calcsize('P') * 8}-bit {platform}")
     return (
-        f"The packaged OpenCut server runs {bits}-bit Python {tag} and loads add-on "
-        f"packages from {user_packages_dir()}, so installing them needs {bits}-bit "
+        f"The packaged OpenCut server runs {name} Python {tag} and loads add-on "
+        f"packages from {user_packages_dir()}, so installing them needs {name} "
         f"Python {tag}. Install it from python.org, then try again."
     )
 

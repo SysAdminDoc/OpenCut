@@ -129,11 +129,11 @@
                     <StackPanel>
                         <TextBlock Text="Optional Tools" Foreground="{DynamicResource TextBrush}"
                                    FontSize="15" FontWeight="SemiBold" />
-                        <TextBlock Text="The OpenCut server installs these where it loads them and checks each one first. auto-editor is a pinned download. edge-tts and mediapipe also need 64-bit Python 3.13 from python.org."
+                        <TextBlock Text="The OpenCut server installs these where it loads them and checks each one first. auto-editor is a pinned download. edge-tts and mediapipe also need 64-bit (x64) Python 3.13 from python.org."
                                    Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
 
                         <CheckBox x:Name="OptionalDepsCheck" Content="Install optional tools"
-                                  AutomationProperties.HelpText="Installs the selected tools for the OpenCut server. edge-tts and mediapipe need 64-bit Python 3.13."
+                                  AutomationProperties.HelpText="Installs the selected tools for the OpenCut server. edge-tts and mediapipe need 64-bit (x64) Python 3.13."
                                   Margin="0,14,0,0"
                                   Checked="OptionalDepsCheck_Changed" Unchecked="OptionalDepsCheck_Changed" />
                         <StackPanel x:Name="OptionalDepsPanel" Margin="20,8,0,0" Visibility="Collapsed">

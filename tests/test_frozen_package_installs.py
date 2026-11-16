@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import sysconfig
 from concurrent.futures import Future
 
 import pytest
@@ -79,6 +80,64 @@ def test_the_probe_prints_this_interpreters_abi():
     assert os.path.isfile(executable)
 
 
+def test_an_arm64_python_does_not_pass_for_the_x64_one(monkeypatch, tmp_path):
+    """Windows on ARM: an ARM64 3.13 is 64-bit too, but pip picks win_arm64 wheels
+    for it and mediapipe ships none. The real probe has to tell them apart."""
+    other = "win-arm64" if sysconfig.get_platform() != "win-arm64" else "win-amd64"
+    shim = tmp_path / "reports_another_platform.py"
+    shim.write_text(
+        f"import sys, sysconfig\nsysconfig.get_platform = lambda: {other!r}\nexec(sys.argv[2])\n",
+        encoding="utf-8",
+    )
+    probed = security._probe_interpreter([sys.executable, str(shim)])
+    assert probed is not None and probed[1] == sys.version_info[:2]
+    assert probed[2] != ABI
+
+    found = {"py": LAUNCHER, "python": MATCHING}
+    monkeypatch.setattr(security.shutil, "which", lambda name: found.get(name))
+    monkeypatch.setattr(
+        security,
+        "_probe_interpreter",
+        lambda cmd: probed if cmd[0] == LAUNCHER else (MATCHING, sys.version_info[:2], ABI),
+    )
+    assert security._find_system_python() == MATCHING
+
+
+@pytest.mark.parametrize("io_encoding", [None, "utf-8"])
+def test_a_python_under_a_non_ascii_user_folder_comes_back_as_a_real_path(
+    monkeypatch, tmp_path, io_encoding,
+):
+    """The installer runs the server with PYTHONIOENCODING=utf-8, which every probed
+    Python inherits. Read as the code page, an accented folder name came back garbled."""
+    folder = tmp_path / "Jos\u00e9" / "Python313"
+    folder.mkdir(parents=True)
+    claimed = str(folder / "python.exe")
+    shim = tmp_path / "claims_a_non_ascii_executable.py"
+    shim.write_text(
+        f"import sys\nsys.executable = {claimed!r}\nexec(sys.argv[2])\n", encoding="utf-8"
+    )
+    if io_encoding:
+        monkeypatch.setenv("PYTHONIOENCODING", io_encoding)
+    else:
+        monkeypatch.delenv("PYTHONIOENCODING", raising=False)
+    monkeypatch.delenv("PYTHONUTF8", raising=False)
+
+    probed = security._probe_interpreter([sys.executable, str(shim)])
+
+    assert probed is not None
+    assert probed[0] == claimed
+    assert probed[2] == ABI
+
+
+@pytest.mark.parametrize(
+    "platform, name",
+    [("win-amd64", "64-bit (x64)"), ("win-arm64", "ARM64"), ("win32", "32-bit")],
+)
+def test_the_missing_python_message_names_the_python_org_installer(monkeypatch, platform, name):
+    monkeypatch.setattr(security.sysconfig, "get_platform", lambda: platform)
+    assert f"needs {name} Python {TAG}. Install it from python.org" in security.frozen_install_requirement()
+
+
 def test_the_packages_folder_follows_the_data_folder(monkeypatch, tmp_path):
     from opencut import helpers
 
@@ -127,7 +186,7 @@ def test_safe_pip_install_targets_only_the_packages_dir_with_the_matching_python
 
 def test_safe_pip_install_names_the_python_it_needs(monkeypatch, frozen):
     monkeypatch.setattr(security, "_find_system_python", lambda: None)
-    with pytest.raises(RuntimeError, match=rf"needs \d+-bit Python {TAG}\."):
+    with pytest.raises(RuntimeError, match=rf"needs .+ Python {TAG}\. Install it from python\.org"):
         security.safe_pip_install("rembg")
 
 
@@ -221,7 +280,7 @@ def test_whisper_install_without_a_matching_python_says_which_one(
     job = _job(client, csrf_token, "/install-whisper", {"backend": "openai-whisper"})
 
     assert job["status"] == "error"
-    assert f"-bit Python {TAG}. Install it" in job["error"]
+    assert f" Python {TAG}. Install it" in job["error"]
     commands = _every_command(recorded)
     assert [cmd for cmd in commands if "pip" in cmd] == []
     # Never the server exe itself: ``OpenCut-Server.exe -m pip`` starts a second server.
