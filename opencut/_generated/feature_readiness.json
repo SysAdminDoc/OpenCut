@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "generated_at": "2026-08-23T11:51:27Z",
+  "generated_at": "2026-11-16T15:03:43Z",
   "source": "opencut/_generated/route_manifest.json",
-  "total_records": 74,
-  "total_routes": 101,
+  "total_records": 73,
+  "total_routes": 100,
   "records": [
     {
       "feature_id": "auto.ab-av1",
@@ -122,7 +122,7 @@
       "label": "auto-editor",
       "category": "editing",
       "state": "available",
-      "install_hint": "Native v30+ binary: https://github.com/WyattBlue/auto-editor/releases — or legacy pip: pip install auto-editor",
+      "install_hint": "OpenCut-Server.exe --install-tools auto-editor (python -m opencut.server --install-tools auto-editor from a checkout) fetches the pinned native build, or download v30+ from https://github.com/WyattBlue/auto-editor/releases",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/auto-edit"
@@ -722,24 +722,6 @@
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
       "requires_gpu": true,
-      "minimum_vram_mb": 0
-    },
-    {
-      "feature_id": "captions.translate.nllb",
-      "label": "NLLB-200 distilled caption translation",
-      "category": "captions",
-      "state": "available",
-      "install_hint": "pip install ctranslate2 sentencepiece 'huggingface-hub>=1.26,<2'",
-      "docs": "docs/MODELS.md",
-      "routes": [
-        "/captions/enhanced/capabilities"
-      ],
-      "check_name": "check_nllb_available",
-      "impl_module": "captions_enhanced",
-      "source": "generated",
-      "notes": "Auto-derived from route functions that call this check probe.",
-      "hardware": "cpu/gpu",
-      "requires_gpu": false,
       "minimum_vram_mb": 0
     },
     {

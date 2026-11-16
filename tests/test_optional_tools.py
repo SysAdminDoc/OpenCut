@@ -458,3 +458,16 @@ def test_a_tool_another_one_needs_reports_why_it_stayed(monkeypatch, data_dir):
         "[failed] nope: choose from auto-editor, edge-tts, mediapipe",
         "[failed] edge-tts: Nothing was removed, because mediapipe still needs numpy",
     ]
+
+
+def test_every_auto_editor_hint_points_at_install_tools():
+    """The panel reads the registry's hint, the model docs read the card's."""
+    from opencut import registry
+    from opencut.model_cards import CARDS
+
+    card = next(c for c in CARDS if c.check_name == "check_auto_editor_available")
+    record = registry.get_feature("editing.auto-editor")
+
+    assert "OpenCut-Server.exe --install-tools auto-editor" in card.install_hint
+    assert record is not None and record.install_hint == card.install_hint
+    assert "pip install auto-editor" not in record.install_hint

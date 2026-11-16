@@ -638,7 +638,7 @@ _FEATURES: List[FeatureRecord] = [
         label="auto-editor automatic cuts",
         category="editing",
         state=STATE_AVAILABLE,
-        install_hint="Native v30+ binary: https://github.com/WyattBlue/auto-editor/releases — or legacy pip: pip install auto-editor",
+        install_hint="OpenCut-Server.exe --install-tools auto-editor (python -m opencut.server --install-tools auto-editor from a checkout) fetches the pinned native build, or download v30+ from https://github.com/WyattBlue/auto-editor/releases",
         routes=["/timeline/auto-editor"],
         probe=_check("check_auto_editor_available"),
     ),
