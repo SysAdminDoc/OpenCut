@@ -229,6 +229,17 @@ def _bootstrap_origin_blocked(origin_key: str) -> bool:
     return origin_key == "null" or origin_key.startswith("file:")
 
 
+def forget_capability_facts():
+    """Drop the cached cheap facts after a setting they read is saved.
+
+    Without this /health kept the old Whisper CPU mode or social login for
+    up to 30 s, so the panel redrew from stale state on the next poll.
+    """
+    with _caps_cache_lock:
+        _caps_cache["data"] = None
+        _caps_cache["ts"] = 0.0
+
+
 def invalidate_caps_cache():
     """Called after install routes modify available dependencies.
 
@@ -237,9 +248,7 @@ def invalidate_caps_cache():
     Settings tab's dependency grid keeps showing the just-installed package
     as missing for up to 60 seconds, and the user re-clicks Install.
     """
-    with _caps_cache_lock:
-        _caps_cache["data"] = None
-        _caps_cache["ts"] = 0.0
+    forget_capability_facts()
     # An install can supply a dependency an optional module was missing.
     forget_retryable_import_failures()
     # ...and changes what the probe child can import, so probe again.

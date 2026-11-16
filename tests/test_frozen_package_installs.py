@@ -383,6 +383,28 @@ def test_whisper_reinstall_clears_whisper_from_the_hub_cache_the_loaders_use(
     assert (elsewhere / "model.bin").exists()
 
 
+def test_whisper_reinstall_cpu_mode_reaches_health_on_the_next_poll(
+    monkeypatch, tmp_path, inline_jobs, recorded, client, csrf_token,
+):
+    """The reinstall saves its CPU mode, but /health kept the cached old one."""
+    for name in ("HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE", "HF_HOME"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path / "hub"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg"))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "localappdata"))
+    client.post("/whisper/settings", json={"cpu_mode": False}, headers=csrf_headers(csrf_token))
+    from opencut.routes.system import invalidate_caps_cache
+
+    invalidate_caps_cache()
+    assert client.get("/health").get_json()["capabilities"]["whisper_cpu_mode"] is False
+
+    job = _job(client, csrf_token, "/whisper/reinstall",
+               {"backend": "faster-whisper", "cpu_mode": True})
+
+    assert job["status"] == "complete", job.get("error")
+    assert client.get("/health").get_json()["capabilities"]["whisper_cpu_mode"] is True
+
+
 @pytest.mark.parametrize("route", ["/install-whisper", "/whisper/reinstall"])
 def test_whisperx_gets_the_dependency_policy_reason_instead_of_a_pip_run(
     monkeypatch, frozen, inline_jobs, recorded, client, csrf_token, route,

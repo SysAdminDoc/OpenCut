@@ -18,6 +18,7 @@ from .system import (
     async_job,
     build_destructive_plan,
     destructive_confirmation_required_response,
+    forget_capability_facts,
     get_json_dict,
     jsonify,
     load_whisper_settings,
@@ -184,6 +185,7 @@ def whisper_settings():
             settings["model"] = _m
 
     save_whisper_settings(settings)
+    forget_capability_facts()  # /health reports cpu_mode as whisper_cpu_mode.
     logger.info(f"Whisper settings updated: {settings}")
 
     return jsonify({"success": True, "settings": settings})
@@ -349,6 +351,7 @@ def whisper_reinstall(job_id, filepath, data):
         settings = load_whisper_settings()
         settings["cpu_mode"] = cpu_mode
         save_whisper_settings(settings)
+        forget_capability_facts()
 
         # The store already had a child server import the module.
         logger.info(f"Whisper reinstalled: {backend}, cpu_mode={cpu_mode}")

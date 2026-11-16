@@ -24,6 +24,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 
 ### Fixed
 
+- Changing Whisper's CPU mode, reinstalling Whisper, or connecting or disconnecting a social account now shows up on the panel's next health check. The server used to report the old value for up to 30 seconds, so the Whisper card could show the wrong mode.
 - The server no longer fails to start when it can't list which processes hold its port while clearing out an old copy. It skips the PID-file kill and moves on to the next cleanup step.
 - Clear cache, the Whisper reinstall and the model list now use the same cache folders the model loaders use when `HF_HUB_CACHE`, `HF_HOME`, `XDG_CACHE_HOME` or `TORCH_HOME` move them. A reinstall used to leave the broken download in place, and it could delete another tool's Whisper models.
 - Settings updates Whisper's status on its own once the backend finishes checking for it. On a fresh start it used to say Checking until you left Settings and came back.

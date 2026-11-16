@@ -11,6 +11,7 @@ __all__ = [
 from .system import (
     _update_job,
     async_job,
+    forget_capability_facts,
     get_json_dict,
     jsonify,
     require_csrf,
@@ -103,6 +104,7 @@ def social_connect():
             user_id=data.get("user_id"),
             username=data.get("username"),
         )
+        forget_capability_facts()  # /health's social_post reads these.
         return jsonify({"success": True, "message": f"Connected to {platform}"})
     except Exception as e:
         return safe_error(e, "social_connect")
@@ -124,6 +126,7 @@ def social_disconnect():
     try:
         from opencut.core.social_post import disconnect_platform
         disconnect_platform(platform)
+        forget_capability_facts()
         return jsonify({"success": True, "message": f"Disconnected from {platform}"})
     except Exception as e:
         return safe_error(e, "social_disconnect")
