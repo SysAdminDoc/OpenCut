@@ -110,7 +110,6 @@ def test_resolver_returns_an_absolute_supported_interpreter():
     assert Path(resolved).suffix.lower() == ".exe"
 
 
-@pytest.mark.skipif(_powershell() is None, reason="PowerShell is not available")
 def _parse_errors(shell: str) -> subprocess.CompletedProcess[str]:
     escaped_path = str(INSTALL_PS1).replace("'", "''")
     script = f"""
@@ -129,6 +128,7 @@ if ($errors.Count -gt 0) {{ $errors | ForEach-Object {{ Write-Output $_.Message 
     )
 
 
+@pytest.mark.skipif(_powershell() is None, reason="PowerShell is not available")
 def test_install_script_parses_as_powershell():
     shell = _powershell()
     assert shell is not None
