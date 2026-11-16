@@ -197,6 +197,8 @@ function Install-PinnedFFmpeg {
         release is refused today, so the installer fetches the same snapshot
         the packaged installers ship. The archive and each executable are
         checked against their SHA-256 before anything reaches Destination.
+        Windows 10 and Windows 11 before 23H2 ship a tar without liblzma that
+        can't unpack the .7z, so they download the .zip of the same build.
         Keep the defaults in step with PINNED_INSTALLER_* in
         opencut/core/ffmpeg_provenance.py (tests/test_install_ps1_ffmpeg.py).
     #>
@@ -204,14 +206,26 @@ function Install-PinnedFFmpeg {
         [Parameter(Mandatory = $true)][string]$Destination,
         [string]$ArchiveUrl = "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2026-11-11-git-23c4540053-full_build.7z",
         [string]$ArchiveSha256 = "6fa482b30da6b3a5b51ae4776d1873488a949724d0302aa5e96cad143e483776",
+        [string]$ZipArchiveUrl = "https://github.com/GyanD/codexffmpeg/releases/download/2026-11-11-git-23c4540053/ffmpeg-2026-11-11-git-23c4540053-full_build.zip",
+        [string]$ZipArchiveSha256 = "c7463db30f5d40f36e0eb3bc9601b8ce0c01fb3cad2dda572a5ff2ca6e68ec7a",
         [hashtable]$BinarySha256 = @{
             "ffmpeg.exe"  = "96e55c7fcae492911986b90d5de8d905cd01755d79eb3c90257eb35b9aecda16"
             "ffprobe.exe" = "a86d6f661a3c5bf1d43a7b0381c2b111a405239abb781ab8cf842d6a666c2ec3"
-        }
+        },
+        [string]$TarPath = (Join-Path $env:SystemRoot "System32\tar.exe")
     )
-    $tar = Join-Path $env:SystemRoot "System32\tar.exe"
-    if (-not (Test-Path -LiteralPath $tar)) {
-        throw "Windows tar.exe was not found at $tar (it ships with Windows 10 1803 and later)"
+    if (-not (Test-Path -LiteralPath $TarPath)) {
+        throw "Windows tar.exe was not found at $TarPath (it ships with Windows 10 1803 and later)"
+    }
+    # bsdtar 3.5.2 (Windows 10, Windows 11 before 23H2) reports only zlib and
+    # fails on the .7z's LZMA2. The .zip is 263 MB instead of 75 MB.
+    $savedPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $tarVersion = (& $TarPath --version 2>&1 | ForEach-Object { "$_" }) -join " "
+    $ErrorActionPreference = $savedPreference
+    if ($tarVersion -notmatch "liblzma/") {
+        $ArchiveUrl = $ZipArchiveUrl
+        $ArchiveSha256 = $ZipArchiveSha256
     }
     $work = Join-Path ([IO.Path]::GetTempPath()) ("opencut-ffmpeg-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $work -Force | Out-Null
@@ -228,7 +242,7 @@ function Install-PinnedFFmpeg {
 
         $extracted = Join-Path $work "extracted"
         New-Item -ItemType Directory -Path $extracted | Out-Null
-        & $tar -xf $archive -C $extracted
+        & $TarPath -xf $archive -C $extracted
         if ($LASTEXITCODE -ne 0) {
             throw "tar could not extract the FFmpeg archive (exit code $LASTEXITCODE)"
         }
@@ -611,7 +625,7 @@ if ($ffmpegStatus.Safe) {
     exit 1
 } else {
     Write-Warn "Existing FFmpeg is unavailable ($($ffmpegStatus.Version)): $($ffmpegStatus.Reason)"
-    Write-Info "Downloading the FFmpeg snapshot OpenCut pins (about 75 MB) into $localFfmpegDir..."
+    Write-Info "Downloading the FFmpeg snapshot OpenCut pins (75 MB, or 263 MB on Windows 10) into $localFfmpegDir..."
     try {
         Install-PinnedFFmpeg -Destination $localFfmpegDir
         $env:Path = "$localFfmpegDir;$env:Path"

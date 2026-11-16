@@ -444,6 +444,18 @@ PINNED_INSTALLER_ARCHIVE_URL = (
 PINNED_INSTALLER_ARCHIVE_SHA256 = (
     "6fa482b30da6b3a5b51ae4776d1873488a949724d0302aa5e96cad143e483776"
 )
+# The same build as a .zip, for Install.ps1 on Windows 10 and Windows 11
+# before 23H2. Their tar (bsdtar 3.5.2) has no liblzma and can't unpack the
+# .7z. Its bin folder holds the same PINNED_INSTALLER_BINARY_SHA256 files
+# (checked 2026-11-15). gyan.dev only serves the .7z, so this comes from
+# Gyan's GitHub release of the same build.
+PINNED_INSTALLER_ZIP_ARCHIVE_URL = (
+    "https://github.com/GyanD/codexffmpeg/releases/download/2026-11-11-git-23c4540053/"
+    "ffmpeg-2026-11-11-git-23c4540053-full_build.zip"
+)
+PINNED_INSTALLER_ZIP_ARCHIVE_SHA256 = (
+    "c7463db30f5d40f36e0eb3bc9601b8ce0c01fb3cad2dda572a5ff2ca6e68ec7a"
+)
 PINNED_INSTALLER_SOURCE_URL = (
     "https://github.com/FFmpeg/FFmpeg/archive/23c454005319dee4a5bcae5c370f75fdeb325230.tar.gz"
 )
