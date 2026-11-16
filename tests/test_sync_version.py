@@ -5,8 +5,6 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
-import pytest
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SYNC_VERSION_PATH = REPO_ROOT / "scripts" / "sync_version.py"
 
@@ -235,24 +233,20 @@ def test_smoke_manifest_version_is_tracked():
     assert _targets(module, "installer/src/OpenCut.Installer/Properties/app.smoke.manifest")
 
 
-def test_version_bump_refuses_invalid_release_receipt(monkeypatch, capsys):
+def test_version_bump_runs_before_the_gate_without_a_receipt(monkeypatch, tmp_path):
+    # The gate runs once, on the bump commit, so the bump itself can't wait
+    # for a receipt. A checkout with no build/ folder at all must still bump.
     module = _sync_version_module()
-    calls = []
+    init_py = tmp_path / "opencut" / "__init__.py"
+    init_py.parent.mkdir()
+    init_py.write_bytes(b'__version__ = "1.43.0"\n')
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    monkeypatch.setattr(module, "INIT_PY", init_py)
+    monkeypatch.setattr(module, "TARGETS", [])
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(module.sys, "argv", ["sync_version.py", "--set", "1.44.0"])
 
-    def reject_receipt(_path):
-        raise module.ReleaseGateError("receipt is stale")
+    module.main()
 
-    monkeypatch.setattr(module, "validate_receipt", reject_receipt)
-    monkeypatch.setattr(module, "set_version", lambda version: calls.append(version))
-    monkeypatch.setattr(
-        module.sys,
-        "argv",
-        ["sync_version.py", "--set", "1.44.0", "--receipt", "missing.json"],
-    )
-
-    with pytest.raises(SystemExit) as exc:
-        module.main()
-
-    assert exc.value.code == 1
-    assert calls == []
-    assert "Version bump refused: receipt is stale" in capsys.readouterr().out
+    assert not (tmp_path / "build").exists()
+    assert init_py.read_bytes() == b'__version__ = "1.44.0"\n'

@@ -41,7 +41,6 @@ REQUIRED_STEPS = frozenset(
         "caption-unicode",
         "contrast-audit",
         "ruff",
-        "pytest-fast",
         # The fast ids alone let a release ship with failures elsewhere in
         # the suite (an OTIOZ export and a DRM key leak, 2026-11-15).
         "pytest-full",
@@ -56,6 +55,10 @@ REQUIRED_STEPS = frozenset(
         "panel-source",
     }
 )
+# Steps verify leaves out. Every pytest-fast id lives under tests/, which
+# pytest-full runs with the same markers, so running both spent about three
+# minutes of each gate on tests that had already passed.
+VERIFY_SKIPPED_STEPS = ("pytest-fast",)
 
 
 class ReleaseGateError(RuntimeError):
@@ -248,7 +251,13 @@ def run_verification(receipt_path: Path) -> dict[str, Any]:
             "commit or revert release-sensitive changes before verification: " + ", ".join(source["dirty_paths"])
         )
     result = _run(
-        [sys.executable, str(REPO_ROOT / "scripts" / "release_smoke.py"), "--strict", "--json"],
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "release_smoke.py"),
+            "--strict",
+            "--json",
+            *(f"--skip={name}" for name in VERIFY_SKIPPED_STEPS),
+        ],
         timeout=3600,
     )
     try:

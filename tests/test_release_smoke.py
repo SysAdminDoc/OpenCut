@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 from typing import List
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "release_smoke.py"
 
@@ -628,6 +630,47 @@ def test_pytest_full_that_collected_nothing_says_so(monkeypatch, tmp_path):
 
     assert result.status == "fail"
     assert "collected no tests" in result.message
+
+
+def test_pytest_full_worker_count_follows_the_override(monkeypatch, tmp_path):
+    pytest.importorskip("xdist")
+    module = load_module()
+    _fake_checkout_with_ffmpeg(module, monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENCUT_GATE_PYTEST_WORKERS", "2")
+    calls = []
+    monkeypatch.setattr(
+        module,
+        "_run",
+        lambda cmd, cwd=None, env=None: calls.append(cmd) or subprocess.CompletedProcess(cmd, 0, "9 passed", ""),
+    )
+
+    result = module.step_pytest_full(argparse.Namespace(pytest_extra=[]))
+
+    assert result.status == "ok", result
+    assert calls[0][calls[0].index("-n") + 1] == "2"
+
+
+def test_pytest_full_refuses_a_worker_override_it_cannot_read(monkeypatch, tmp_path):
+    module = load_module()
+    _fake_checkout_with_ffmpeg(module, monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENCUT_GATE_PYTEST_WORKERS", "two")
+    ran = []
+    monkeypatch.setattr(module, "_run", lambda *a, **k: ran.append(a))
+
+    result = module.step_pytest_full(argparse.Namespace(pytest_extra=[]))
+
+    assert result.status == "fail"
+    assert "OPENCUT_GATE_PYTEST_WORKERS" in result.message
+    assert not ran
+
+
+def test_every_fast_gate_id_runs_in_the_full_suite():
+    """release_gate verify skips pytest-fast because pytest-full covers it."""
+    module = load_module()
+
+    outside = [test_id for test_id in module.RELEASE_GATE_TESTS if not test_id.startswith("tests/")]
+
+    assert outside == []
 
 
 def test_step_ffmpeg_provenance_pins_the_windows_payload(monkeypatch, tmp_path):

@@ -977,23 +977,27 @@ pre-commit install --hook-type pre-push
 
 ### Fail-closed local releases
 
-Release actions use a short-lived receipt bound to a clean `main` commit. Run
-the complete Python, Node, rendered-panel, manifest, lock, provenance, and
-source checks with:
+Release actions use a short-lived receipt bound to a clean `main` commit. Bump
+the version and commit it first, so the gate checks the exact commit you'll tag:
+
+```bash
+python scripts/sync_version.py --set 1.44.0
+```
+
+Then run the complete Python, Node, rendered-panel, manifest, lock, provenance,
+and source checks on that commit:
 
 ```bash
 python scripts/release_gate.py verify --receipt build/release-receipt.json
 ```
 
 The command writes a machine-readable receipt only when every required check
-passes. A version change must consume that fresh receipt:
+passes. It runs the whole pytest suite on up to 4 workers and the rendered panel
+tests on 2. Set `OPENCUT_GATE_PYTEST_WORKERS` or `OPENCUT_RENDERED_WORKERS` to
+change that on a machine with less memory or more.
 
-```bash
-python scripts/sync_version.py --set 1.44.0 --receipt build/release-receipt.json
-```
-
-After committing the synchronized version and generating a fresh receipt,
-smoke-test an unsigned installer before creating its local tag:
+With the receipt in hand, smoke-test an unsigned installer before creating its
+local tag:
 
 ```powershell
 python scripts/release_gate.py promote `

@@ -112,6 +112,7 @@ Notable changes to OpenCut. The git history carries the detailed record.
 - Release checks now run the whole test suite as a required `pytest-full` step, using the FFmpeg build in `ffmpeg/`. The gate used to run a fixed list of 115 tests, which is how 1.56.0 shipped with the OTIOZ and DRM key failures above still failing elsewhere in the suite. The step takes about four minutes on four workers and needs around 5 GB of memory.
 - `scripts/sync_badges.py` keeps `README.md` on LF line endings. On Windows it wrote every line back with CRLF, against the LF rule in `.gitattributes`.
 - The installer's release composition now reads `opencut` from the checkout being packaged. It used to import whatever copy the build Python had installed, so a clean build environment failed with "No module named 'opencut'" and an editable install from another folder put that folder's code into the evidence.
+- A release runs the gate once now. Bump and commit the version first, then run `release_gate.py verify` on that commit. `sync_version.py --set` no longer asks for a receipt, which used to mean a full gate before the bump and a second one after it. The gate also skips `pytest-fast`, since all 115 of its tests already run in `pytest-full`, and the rendered panel tests run on two workers instead of one. `OPENCUT_GATE_PYTEST_WORKERS` and `OPENCUT_RENDERED_WORKERS` change those counts on a machine with less memory or more.
 
 ## 1.56.0: Security floors and packaged-app fixes
 

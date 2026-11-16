@@ -1,9 +1,19 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Each test builds its own page and backend mocks, so the tests spread across
+// workers. A worker is a Node process plus a Chromium, about 1 GB with the axe
+// scans, which keeps the default low enough for a memory-capped release gate.
+// OPENCUT_RENDERED_WORKERS sets another count.
+const DEFAULT_WORKERS = 2;
+const requestedWorkers = process.env.OPENCUT_RENDERED_WORKERS?.trim();
+if (requestedWorkers && !/^[1-9]\d*$/.test(requestedWorkers)) {
+  throw new Error(`OPENCUT_RENDERED_WORKERS must be a whole number of 1 or more, not "${requestedWorkers}"`);
+}
+
 export default defineConfig({
   testDir: "./tests/rendered",
-  fullyParallel: false,
-  workers: 1,
+  fullyParallel: true,
+  workers: requestedWorkers ? Number(requestedWorkers) : DEFAULT_WORKERS,
   timeout: 90_000,
   expect: {
     timeout: 10_000,

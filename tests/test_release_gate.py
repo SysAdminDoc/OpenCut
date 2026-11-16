@@ -244,6 +244,32 @@ def test_source_drift_during_smoke_never_writes_receipt(monkeypatch, tmp_path):
     assert not target.exists()
 
 
+def test_verify_leaves_out_the_fast_ids_that_the_full_suite_runs(monkeypatch, tmp_path):
+    module = _module()
+    target = tmp_path / "receipt.json"
+    commands = []
+    monkeypatch.setattr(
+        module,
+        "current_source_state",
+        lambda: {"commit": "abc123", "branch": "main", "dirty_paths": []},
+    )
+
+    def _fake_run(command, **_kwargs):
+        commands.append(command)
+        skipped = {arg.split("=", 1)[1] for arg in command if arg.startswith("--skip=")}
+        steps = [{"name": name, "status": "ok"} for name in sorted(module.REQUIRED_STEPS) if name not in skipped]
+        return module.subprocess.CompletedProcess(command, 0, json.dumps({"status": "ok", "steps": steps}), "")
+
+    monkeypatch.setattr(module, "_run", _fake_run)
+
+    receipt = module.run_verification(target)
+
+    assert "--skip=pytest-fast" in commands[0]
+    assert "pytest-full" in {step["name"] for step in receipt["steps"]}
+    assert "pytest-fast" not in {step["name"] for step in receipt["steps"]}
+    assert target.is_file()
+
+
 def test_artifact_promotion_requires_smoke_before_tag(monkeypatch, tmp_path):
     module = _module()
     receipt = tmp_path / "receipt.json"

@@ -21,9 +21,11 @@ Steps (in order):
 11. ``caption-unicode`` — RTL/CJK/bidi caption export-preservation gate
 12. ``contrast-audit`` — WCAG AA contrast check for committed panel tokens
 13. ``ruff`` — lint the python package
-14. ``pytest-fast`` — focused test ids covering release gates
+14. ``pytest-fast`` — focused test ids covering release gates (``release_gate.py
+    verify`` leaves it out, since pytest-full runs every one of them)
 14b. ``pytest-full`` — the whole default-marker suite, run against the
      pinned FFmpeg in ``ffmpeg/`` with one BLAS thread per worker
+     (``OPENCUT_GATE_PYTEST_WORKERS`` sets the worker count)
 15. ``pip-audit`` — Python dependency advisories for requirements, lockfile, and ``pyproject[all]``
 16. ``jsx-mock`` — ExtendScript host harness for ``host/index.jsx``
 17. ``panel-unit`` — CEP/UXP panel Vitest utility tests
@@ -1373,6 +1375,19 @@ def step_pytest_fast(args: argparse.Namespace) -> StepResult:
 #: Workers for the full-suite step. Four finished the suite in about four
 #: minutes on a 24-core host and stayed inside a 7 GB job cap.
 FULL_SUITE_WORKERS = 4
+#: Overrides the worker count, for a host with less room (each worker holds
+#: about 1.5 GB at its peak) or more.
+FULL_SUITE_WORKERS_ENV = "OPENCUT_GATE_PYTEST_WORKERS"
+
+
+def _full_suite_workers() -> int:
+    """Workers for pytest-full; raises ValueError on a bad override."""
+    raw = os.environ.get(FULL_SUITE_WORKERS_ENV, "").strip()
+    if not raw:
+        return min(FULL_SUITE_WORKERS, os.cpu_count() or 1)
+    if not raw.isdigit() or int(raw) < 1:
+        raise ValueError(f"{FULL_SUITE_WORKERS_ENV} must be a whole number of 1 or more, not {raw!r}")
+    return int(raw)
 
 
 def _pinned_ffmpeg_dir() -> Optional[Path]:
@@ -1408,9 +1423,18 @@ def step_pytest_full(args: argparse.Namespace) -> StepResult:
             duration_ms=int((time.time() - start) * 1000),
             message="ffmpeg/ has no pinned FFmpeg build; put the release build there and rerun",
         )
+    try:
+        workers = _full_suite_workers()
+    except ValueError as exc:
+        return StepResult(
+            "pytest-full",
+            "fail",
+            duration_ms=int((time.time() - start) * 1000),
+            message=str(exc),
+        )
     cmd = [sys.executable, "-m", "pytest", "-q", "--tb=short", "tests"]
     if importlib.util.find_spec("xdist") is not None:
-        cmd[3:3] = ["-n", str(min(FULL_SUITE_WORKERS, os.cpu_count() or 1))]
+        cmd[3:3] = ["-n", str(workers)]
     if getattr(args, "pytest_extra", None):
         cmd.extend(args.pytest_extra)
     result = _run(cmd, cwd=REPO_ROOT, env=_full_suite_env(ffmpeg_dir))

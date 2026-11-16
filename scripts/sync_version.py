@@ -8,18 +8,16 @@ that contain version strings to match.
 Usage:
     python scripts/sync_version.py              # Sync current version to all files
     python scripts/sync_version.py --set 1.3.0  # Set new version, then sync
+
+A bump needs no release-gate receipt. The gate runs once, on the bump
+commit, and ``release_gate.py validate``/``promote`` refuse to tag anything
+whose receipt names a different commit.
 """
 
 import argparse
 import re
 import sys
 from pathlib import Path
-
-SCRIPT_DIR = Path(__file__).resolve().parent
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
-
-from release_gate import DEFAULT_RECEIPT, ReleaseGateError, validate_receipt  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 INIT_PY = ROOT / "opencut" / "__init__.py"
@@ -347,12 +345,6 @@ def main() -> None:
         "--set", dest="new_version", metavar="X.Y.Z", help="Set a new version in __init__.py before syncing"
     )
     parser.add_argument(
-        "--receipt",
-        type=Path,
-        default=DEFAULT_RECEIPT,
-        help="Fresh successful release-gate receipt required with --set",
-    )
-    parser.add_argument(
         "--check", action="store_true", help="Check all files are in sync (exit 1 if not). Does not modify files."
     )
     args = parser.parse_args()
@@ -360,11 +352,6 @@ def main() -> None:
     if args.new_version:
         if not re.match(r"^\d+\.\d+\.\d+$", args.new_version):
             print(f"ERROR: Invalid version format '{args.new_version}' (expected X.Y.Z)")
-            sys.exit(1)
-        try:
-            validate_receipt(args.receipt)
-        except ReleaseGateError as exc:
-            print(f"ERROR: Version bump refused: {exc}")
             sys.exit(1)
         set_version(args.new_version)
 
